@@ -32,27 +32,6 @@ jobs:
       - name: Install Strawberry Perl
         uses: shogo82148/actions-setup-perl@v1
 
-      - name: Install OpenSSL
-        shell: pwsh
-        run: |
-          choco install openssl -y
-
-      - name: Configure OpenSSL Environment
-        shell: pwsh
-        run: |
-          $openssl = "C:\Program Files\OpenSSL-Win64"
-
-          if (!(Test-Path $openssl)) {
-            throw "OpenSSL installation not found at $openssl"
-          }
-
-          $includeDir = Join-Path $openssl "include"
-          $libDir = Join-Path $openssl "lib"
-
-          "OPENSSL_DIR=$openssl" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "OPENSSL_INCLUDE_DIR=$includeDir" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "OPENSSL_LIB_DIR=$libDir" | Out-File -FilePath $env:GITHUB_ENV -Append
-
       - name: Cache Cargo Registry
         uses: actions/cache@v4
         with:
@@ -78,10 +57,6 @@ jobs:
           }
 
       - name: Build Tauri Application
-        env:
-          OPENSSL_DIR: C:\Program Files\OpenSSL-Win64
-          OPENSSL_INCLUDE_DIR: C:\Program Files\OpenSSL-Win64\include
-          OPENSSL_LIB_DIR: C:\Program Files\OpenSSL-Win64\lib
         run: npm run tauri build
 
       - name: Show Build Outputs
