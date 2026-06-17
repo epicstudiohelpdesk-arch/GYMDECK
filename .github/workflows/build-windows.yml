@@ -1,12 +1,115 @@
-name: Test Workflow
+name: Build GymDeck Windows MSI
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
 
 jobs:
-  test:
+  build-windows:
+    name: Build Windows MSI
     runs-on: windows-latest
 
     steps:
-      - name: Hello
-        run: echo Hello
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Strawberry Perl
+        uses: shogo82148/actions-setup-perl@v1
+
+      - name: Install OpenSSL
+        shell: pwsh
+        run: |
+          choco install openssl -y
+
+      - name: Locate OpenSSL
+        shell: pwsh
+        run: |
+          $openssl = "C:\Program Files\OpenSSL-Win64"
+
+          if (Test-Path $openssl) {
+            Add-Content $env:GITHUB_ENV "OPENSSL_DIR=$openssl"
+            Add-Content $env:GITHUB_ENV "OPENSSL_INCLUDE_DIR=$openssl\include"
+
+            Write-Host "OpenSSL found at $openssl"
+            Get-ChildItem $openssl -Recurse -ErrorAction SilentlyContinue
+          } else {
+            Write-Host "OpenSSL installation path not found"
+          }
+
+      - name: Cache Cargo Registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Verify Dist Folder
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist")) {
+            throw "dist folder not found"
+          }
+
+          Get-ChildItem dist
+
+      - name: Verify Tauri Configuration
+        shell: pwsh
+        run: |
+          Get-Content src-tauri/tauri.conf.json
+
+      - name: Build Tauri Application
+        run: npm run tauri build
+
+      - name: Show Build Outputs
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "src-tauri/target/release/bundle") {
+            Get-ChildItem src-tauri/target/release/bundle -Recurse
+          }
+
+      - name: Upload MSI
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GymDeck-MSI
+          path: src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+
+      - name: Upload EXE
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GymDeck-EXE
+          path: |
+            src-tauri/target/release/*.exe
+            src-tauri/target/release/bundle/**/*.exe
+          if-no-files-found: ignore
