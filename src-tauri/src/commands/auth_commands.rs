@@ -1,0 +1,151 @@
+use tauri::State;
+use serde::{Deserialize, Serialize};
+use crate::services::auth_service::AuthService;
+use crate::encryption::secrets::SecureString;
+use crate::errors::AppError;
+use crate::auth::rate_limit::RateLimiter;
+use crate::sessions::manager::SessionManager;
+
+// Assume DatabaseManager state is injected by Tauri during setup
+// We wrap it securely to prevent direct DB access leaks.
+pub struct AppState {
+    pub db: crate::database::manager::DatabaseManager,
+    pub async_db: crate::database::async_manager::AsyncDbManager,
+    pub rate_limiter: RateLimiter,
+    pub session_manager: SessionManager,
+}
+
+#[derive(Deserialize)]
+pub struct LoginPayload {
+    pub email: String,
+    pub password: String, // Kept in memory temporarily, dropped/zeroized via SecureString
+}
+
+#[derive(Serialize)]
+pub struct LoginResponse {
+    pub success: bool,
+    pub redirect: String,
+}
+
+#[derive(Deserialize)]
+pub struct SignupPayload {
+    pub gym_name: String,
+    pub name: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Serialize)]
+pub struct SignupResponse {
+    pub success: bool,
+    pub redirect: String,
+}
+
+#[derive(Deserialize)]
+pub struct ReauthPayload {
+    pub email: String,
+    pub password: String,
+}
+
+/// Step-up authentication for sensitive actions.
+#[tauri::command]
+pub async fn sensitive_action_reauth_command(
+    state: State<'_, AppState>,
+    payload: ReauthPayload,
+) -> Result<bool, AppError> {
+    
+    if state.rate_limiter.check_and_consume(&payload.email).await.is_err() {
+        return Err(AppError::Authentication);
+    }
+
+    let secure_password = SecureString::new(payload.password);
+    
+    match AuthService::login(&state.db, &payload.email, &secure_password) {
+        Ok(_) => Ok(true),
+        Err(_) => {
+            state.rate_limiter.penalize(&payload.email, 2).await;
+            Err(AppError::Authentication)
+        }
+    }
+}
+
+/// Hardened IPC Boundary for Signup.
+#[tauri::command]
+pub async fn signup_command(
+    state: State<'_, AppState>,
+    payload: SignupPayload,
+) -> Result<SignupResponse, AppError> {
+    
+    if state.rate_limiter.check_and_consume(&payload.email).await.is_err() {
+        return Err(AppError::Authentication);
+    }
+
+    let secure_password = SecureString::new(payload.password);
+    
+    let (user_id, gym_id) = AuthService::signup(
+        &state.db, 
+        &payload.gym_name,
+        &payload.name, 
+        &payload.email, 
+        &secure_password
+    )?;
+
+    state.session_manager.create_and_bind_session(user_id, gym_id).await?;
+
+    Ok(SignupResponse {
+        success: true,
+        redirect: "/login?registered=true".to_string(),
+    })
+}
+
+/// Hardened IPC Boundary for Login.
+#[tauri::command]
+pub async fn login_command(
+    state: State<'_, AppState>,
+    payload: LoginPayload,
+) -> Result<LoginResponse, AppError> {
+    
+    if let Err(_limit_err) = state.rate_limiter.check_and_consume(&payload.email).await {
+        return Err(AppError::Authentication);
+    }
+
+    let secure_password = SecureString::new(payload.password);
+    
+    match AuthService::login(&state.db, &payload.email, &secure_password) {
+        Ok((user_id, gym_id)) => {
+            state.session_manager.create_and_bind_session(user_id, gym_id).await?;
+            Ok(LoginResponse {
+                success: true,
+                redirect: "/dashboard".to_string(),
+            })
+        },
+        Err(e) => {
+            state.rate_limiter.penalize(&payload.email, 2).await;
+            Err(e)
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn restore_session_command(
+    state: State<'_, AppState>,
+) -> Result<LoginResponse, AppError> {
+    // Validates trust fingerprint and issues memory-only active token
+    match state.session_manager.restore_session().await {
+        Ok(_) => Ok(LoginResponse { success: true, redirect: "/dashboard".to_string() }),
+        Err(e) => Err(e),
+    }
+}
+
+#[tauri::command]
+pub async fn lock_session_command(
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    state.session_manager.lock_session().await
+}
+
+#[tauri::command]
+pub async fn logout_command(state: State<'_, AppState>) -> Result<(), AppError> {
+    state.session_manager.revoke_session().await?;
+    AuthService::logout()
+}

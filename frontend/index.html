@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GymDeck | Dashboard</title>
+    <script>
+      (() => {
+        const authKey = "gymdeck-authenticated";
+        const isAuthenticated =
+          sessionStorage.getItem(authKey) === "true" ||
+          localStorage.getItem(authKey) === "true";
+
+        if (!isAuthenticated) {
+          sessionStorage.setItem("gymdeck-enter", "auth");
+          window.location.replace("../index.html");
+        }
+      })();
+    </script>
+    <script>
+      const mode = sessionStorage.getItem("gymdeck-enter");
+      if (mode === "dashboard") {
+        document.documentElement.classList.add("dashboard-enter");
+        // Removed removeItem here to allow script.js to detect login state
+      }
+    </script>
+    <link rel="preconnect" href="/" />
+    <link rel="preconnect" href="https://api.dicebear.com" />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .brand-mark { width: 42px !important; height: 42px !important; display: grid !important; place-items: center !important; }
+      .brand-mark svg { width: 18px !important; height: 18px !important; }
+    </style>
+    <link rel="preload" href="/fonts/plus-jakarta-sans-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="dns-prefetch" href="https://api.dicebear.com" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar" id="sidebar-menu">
+        <a class="brand" href="./index.html">
+          <div class="brand-mark">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 2.5c1.05 3.98 2.03 4.97 6 6-3.97 1.03-4.95 2.02-6 6-1.05-3.98-2.03-4.97-6-6 3.97-1.03 4.95-2.02 6-6Z"
+              />
+            </svg>
+          </div>
+          <div class="brand-copy">
+            <strong><span class="font-ethnocentric tracking-normal">GymDeck</span></strong>
+            <span>Operations Hub</span>
+          </div>
+          <span class="brand-status" aria-label="Online"></span>
+        </a>
+
+        <div class="sidebar-menu-shell">
+          <div class="sidebar-menu-scroll">
+            <div class="sidebar-group sidebar-group-overview">
+              <p class="sidebar-title">Core Operations</p>
+              <nav class="nav-list" aria-label="Primary operations">
+                <a class="nav-item active" href="#" data-view="dashboard" aria-current="page">
+                  <span class="icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3" y="3" width="7" height="18" rx="2" />
+                      <rect x="14" y="3" width="7" height="8" rx="2" />
+                      <rect x="14" y="15" width="7" height="6" rx="2" />
+                    </svg>
+                  </span>
+                  <span class="nav-label">Dashboard</span>
+                </a>
+
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M16 19c-.4-2.4-2.1-3.6-5-3.6s-4.6 1.2-5 3.6" />
+                        <circle cx="11" cy="9" r="3.4" />
+                        <path d="M17 10.5a3 3 0 0 1 3 3" />
+                        <path d="M17 7.5a3 3 0 0 1 3 3" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Member Management</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="members">Member Directory</a>
+                    <a class="nav-subitem" href="#" data-view="leads-prospects">Leads & Prospects</a>
+                    <a class="nav-subitem" href="#" data-view="past-members">Past Members</a>
+                  </div>
+                </div>
+
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <circle cx="12" cy="11" r="3"/>
+                        <path d="M7 16c0-1.5 2.2-2.5 5-2.5s5 1 5 2.5"/>
+                      </svg>
+                    </span>
+                    <span class="nav-label">Memberships</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="membership-plans">Membership Plans</a>
+                    <a class="nav-subitem" href="#" data-view="expiring-memberships">Expiring Memberships</a>
+                    <a class="nav-subitem" href="#" data-view="freeze-pause">Freeze / Pause</a>
+                    <a class="nav-subitem" href="#" data-view="renew-membership">Renew Membership</a>
+                  </div>
+                </div>
+
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 4h8l3 3v13H7z" />
+                        <path d="M14 4v4h4" />
+                        <path d="m9 13 2 2 4-4" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Attendance</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="daily-checkin">Daily Check-in</a>
+                    <a class="nav-subitem" href="#" data-view="manual-entry">Manual Entry</a>
+                    <a class="nav-subitem" href="#" data-view="attendance-reports">Attendance Reports</a>
+                  </div>
+                </div>
+
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="4" y="4" width="16" height="16" rx="3" />
+                        <path d="M8.5 12.2 10.8 14.5 15.8 9.5" />
+                        <path d="M8 7.5h8" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Payments &amp; Billing</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="payments">Collect Fees</a>
+                    <a class="nav-subitem" href="#" data-view="pending-dues">Pending Dues</a>
+                    <a class="nav-subitem" href="#" data-view="payment-history">Payment History</a>
+                    <a class="nav-subitem" href="#" data-view="generate-receipt">Generate Receipt</a>
+                  </div>
+                </div>
+              </nav>
+            </div>
+
+            <div class="sidebar-group sidebar-group-management">
+              <p class="sidebar-title">Management</p>
+              <nav class="nav-list" aria-label="Management">
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="9" cy="9" r="3" />
+                        <circle cx="16.5" cy="14.5" r="2.5" />
+                        <path d="M3.5 18c.8-2.7 2.8-4 5.5-4s4.7 1.3 5.5 4" />
+                        <path d="M13.5 18c.4-1.8 1.7-2.8 4-2.8 1.3 0 2.4.3 3 .8" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Trainers &amp; Staff</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="trainers">All Trainers</a>
+                    <a class="nav-subitem" href="#" data-view="assign-trainer">Assign Trainer</a>
+                    <a class="nav-subitem" href="#" data-view="trainer-schedule">Trainer Schedule</a>
+                    <a class="nav-subitem" href="#" data-view="staff-roles">Staff Roles</a>
+                  </div>
+                </div>
+
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 12h12" />
+                        <path d="M5 9v6" />
+                        <path d="M19 9v6" />
+                        <path d="M8 8v8" />
+                        <path d="M16 8v8" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Personal Training</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="personal-training">PT Clients</a>
+                    <a class="nav-subitem" href="#" data-view="pt-packages">PT Packages</a>
+                    <a class="nav-subitem" href="#" data-view="session-tracking">Session Tracking</a>
+                    <a class="nav-subitem" href="#" data-view="trainer-earnings">Trainer Earnings</a>
+                  </div>
+                </div>
+
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 12h3l8-5v10l-8-5H4z" />
+                        <path d="M18 9.5a4 4 0 0 1 0 5" />
+                        <path d="M20.5 7a7 7 0 0 1 0 10" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Communication</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="notify-members">Send Notification</a>
+                  </div>
+                </div>
+              </nav>
+            </div>
+
+            <div class="sidebar-group sidebar-group-insights">
+              <p class="sidebar-title">Insights</p>
+              <nav class="nav-list" aria-label="Insights">
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 19V9" />
+                        <path d="M10 19V5" />
+                        <path d="M15 19v-7" />
+                        <path d="M20 19V7" />
+                        <path d="M4 19h17" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Reports &amp; Analytics</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="revenue-reports">Revenue Report</a>
+                    <a class="nav-subitem" href="#" data-view="attendance-analytics">Attendance Trends</a>
+                    <a class="nav-subitem" href="#" data-view="member-growth">Membership Growth</a>
+                    <a class="nav-subitem" href="#" data-view="trainer-performance">Trainer Performance</a>
+                  </div>
+                </div>
+
+                <div class="nav-dropdown" data-nav-dropdown>
+                  <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                    <span class="icon">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h3.2l1.8 2H17.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" />
+                      </svg>
+                    </span>
+                    <span class="nav-label">Documents</span>
+                    <span class="nav-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="m8 10 4 4 4-4" />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="nav-sublist">
+                    <a class="nav-subitem" href="#" data-view="documents">Member Documents</a>
+                    <a class="nav-subitem" href="#" data-view="id-proofs">ID Proofs</a>
+                    <a class="nav-subitem" href="#" data-view="agreements">Agreements</a>
+                  </div>
+                </div>
+              </nav>
+            </div>
+          </div>
+          <div class="sidebar-scroll-indicator" data-sidebar-scroll-indicator aria-hidden="true">
+            <span data-sidebar-scroll-thumb></span>
+          </div>
+        </div>
+
+        <div class="sidebar-system">
+          <p class="sidebar-title">System</p>
+          <nav class="nav-list" aria-label="System">
+            <div class="nav-dropdown" data-nav-dropdown>
+              <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3.2" />
+                    <path d="m12 2 1 2.6 2.8.6-.7 2.8 2 2-2 2 .7 2.8-2.8.6L12 22l-1-2.6-2.8-.6.7-2.8-2-2 2-2-.7-2.8 2.8-.6L12 2Z" />
+                  </svg>
+                </span>
+                <span class="nav-label">Settings</span>
+                <span class="nav-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="m8 10 4 4 4-4" />
+                  </svg>
+                </span>
+              </button>
+              <div class="nav-sublist">
+                <a class="nav-subitem" href="#" data-view="gym-profile">Gym Profile</a>
+                <a class="nav-subitem" href="#" data-view="app-settings">App Settings</a>
+                <a class="nav-subitem" href="#" data-view="backup-restore">Backup &amp; Restore</a>
+                <a class="nav-subitem" href="#" data-view="sync-status">Device Sync (QR)</a>
+              </div>
+            </div>
+
+            <div class="nav-dropdown" data-nav-dropdown>
+              <button class="nav-item nav-parent" type="button" data-nav-dropdown-toggle aria-expanded="false">
+                <span class="icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3.4" />
+                    <path d="M5.5 20c.8-3.6 3.1-5.4 6.5-5.4s5.7 1.8 6.5 5.4" />
+                  </svg>
+                </span>
+                <span class="nav-label">Account</span>
+                <span class="nav-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="m8 10 4 4 4-4" />
+                  </svg>
+                </span>
+              </button>
+              <div class="nav-sublist">
+                <a class="nav-subitem" href="#" data-view="account">Profile</a>
+                <a class="nav-subitem logout" href="#">Logout</a>
+              </div>
+            </div>
+          </nav>
+        </div>
+      </aside>
+      <button class="sidebar-overlay" aria-label="Close menu"></button>
+      <div class="logout-dialog-backdrop" hidden></div>
+      <section
+        class="logout-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-dialog-title"
+        aria-describedby="logout-dialog-copy"
+        hidden
+      >
+        <p class="logout-dialog-kicker">Confirm action</p>
+        <h2 id="logout-dialog-title">Log out of <span class="font-ethnocentric tracking-normal">GymDeck</span>?</h2>
+        <p id="logout-dialog-copy">
+          You’ll be redirected to the sign-in page. Do you really want to continue?
+        </p>
+        <div class="logout-dialog-actions">
+          <button class="dialog-btn dialog-btn-muted" type="button" data-logout-cancel>Cancel</button>
+          <button class="dialog-btn dialog-btn-danger" type="button" data-logout-confirm>Yes, log out</button>
+        </div>
+      </section>
+      <div class="document-modal-backdrop" hidden></div>
+      <section
+        class="document-modal luxury-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="document-modal-title"
+        hidden
+      >
+        <div class="luxury-modal-container single-card">
+          <!-- The Refined Profile Card (Matching Screenshot + Requested Controls) -->
+          <div class="luxury-profile-card">
+            <!-- Top Right: Close Button -->
+            <button class="btn-card-top-close" type="button" data-document-close aria-label="Close">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+
+            <div class="card-portrait-wrap">
+               <img src="" alt="" class="card-portrait" data-document-image />
+            </div>
+            
+            <div class="card-glass-overlay">
+               <div class="card-content">
+                  <div class="card-identity">
+                     <div class="card-name-row">
+                        <h2 class="card-name" data-document-member>Member Record</h2>
+                        <div class="card-verify-check">
+                           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        </div>
+                     </div>
+                     <p class="card-bio">Transforming strength into legacy. Elite member committed to peak performance.</p>
+                  </div>
+
+                  <div class="card-footer-refined">
+                    <div class="card-stats">
+                       <div class="stat-item">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                          <span class="stat-value" data-document-joined>May 2026</span>
+                       </div>
+                       <div class="stat-item">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                          <span class="stat-value" data-document-id>#0482</span>
+                       </div>
+                    </div>
+
+                    <!-- Bottom Right: Download Button -->
+                    <div class="download-btn-container">
+                       <button class="btn-card-bottom-download" type="button" aria-label="Download Record">
+                          <div class="icon-wrap-main">
+                             <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                          </div>
+                          <div class="icon-wrap-success" hidden>
+                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          </div>
+                       </button>
+                       <span class="download-tooltip">Download Image</span>
+                    </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- Unified Member Registration Modal -->
+      <div class="member-form-backdrop" hidden></div>
+      <section
+        class="member-form-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="member-form-title"
+        aria-describedby="member-form-copy"
+        hidden
+      >
+        <div class="drawer-handle"></div>
+        
+        <!-- Sliding Page Container -->
+        <div class="member-form-modal-container">
+          <!-- Page 1: Registration Form -->
+          <div class="member-form-page" data-member-form-page="1">
+            <div class="member-form-top">
+              <div>
+                <p class="member-form-kicker">New Registration</p>
+                <h2 id="member-form-title">Add New Member</h2>
+              </div>
+              <button class="document-close-btn" type="button" aria-label="Close add member form" data-add-member-close>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 6 18 18" />
+                  <path d="M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <p id="member-form-copy" class="member-form-copy">
+              Start a clean new profile with all the key member information captured in one focused flow.
+            </p>
+            <p class="member-form-alert" data-member-form-alert hidden></p>
+            <form class="member-form-grid" novalidate>
+              <label class="member-field" data-field-label="Full Name">
+                <span>Full Name <em>*</em></span>
+                <input type="text" placeholder="Enter member name" required />
+                <small class="member-field-error" hidden>Please enter the member's full name.</small>
+              </label>
+              <label class="member-field" data-field-label="Contact Number">
+                <span>Contact Number <em>*</em></span>
+                <input type="tel" placeholder="Enter primary contact" required />
+                <small class="member-field-error" hidden>Please enter the primary contact number.</small>
+              </label>
+              <label class="member-field" data-field-label="Alternate Contact">
+                <span>Alternate Contact <em>*</em></span>
+                <input type="tel" placeholder="Enter alternate contact" required />
+                <small class="member-field-error" hidden>Please enter the alternate contact number.</small>
+              </label>
+              <label class="member-field" data-field-label="Email Address">
+                <span>Email Address</span>
+                <input type="email" placeholder="Enter email address" />
+                <small class="member-field-error" hidden>Please enter a valid email address.</small>
+              </label>
+              <label class="member-field" data-field-label="Date of Birth">
+                <span>Date of Birth <em>*</em></span>
+                <div class="date-input-wrap" data-date-picker>
+                  <input
+                    class="date-display-input"
+                    type="text"
+                    placeholder="Select date of birth"
+                    readonly
+                    required
+                    data-member-dob-display
+                  />
+                  <input type="hidden" data-member-dob-input />
+                  <button class="date-picker-btn" type="button" aria-label="Open date picker" data-member-dob-trigger>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 4v4" />
+                      <path d="M17 4v4" />
+                      <rect x="4" y="6.5" width="16" height="13" rx="3" />
+                      <path d="M4 10h16" />
+                      <path d="M8 13h3" />
+                    </svg>
+                  </button>
+                  <section class="date-picker-panel" data-date-picker-panel hidden>
+                    <div class="date-picker-header">
+                      <div class="date-picker-header-copy">
+                        <span class="date-picker-label">Choose Date</span>
+                        <button class="date-picker-title" type="button" data-date-picker-title>
+                          <strong data-date-picker-month>April 2026</strong>
+                          <span>Choose Year</span>
+                        </button>
+                      </div>
+                      <div class="date-picker-nav">
+                        <button type="button" aria-label="Previous month" data-date-picker-prev>
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m14 6-6 6 6 6" />
+                          </svg>
+                        </button>
+                        <button type="button" aria-label="Next month" data-date-picker-next>
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m10 6 6 6-6 6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="date-picker-weekdays" aria-hidden="true">
+                      <span>Sun</span>
+                      <span>Mon</span>
+                      <span>Tue</span>
+                      <span>Wed</span>
+                      <span>Thu</span>
+                      <span>Fri</span>
+                      <span>Sat</span>
+                    </div>
+                    <div class="date-picker-grid" data-date-picker-grid></div>
+                    <div class="date-picker-years" data-date-picker-years hidden></div>
+                    <div class="date-picker-actions">
+                      <button type="button" data-date-picker-clear>Clear</button>
+                      <button type="button" data-date-picker-today>Done</button>
+                    </div>
+                  </section>
+                </div>
+                <small class="member-field-error" hidden>Please select the member's date of birth.</small>
+              </label>
+              <label class="member-field" data-field-label="Height">
+                <span>Height</span>
+                <input type="text" placeholder="e.g. 175 cm" />
+                <small class="member-field-error" hidden></small>
+              </label>
+              <label class="member-field" data-field-label="Weight">
+                <span>Weight</span>
+                <input type="text" placeholder="e.g. 70 kg" />
+                <small class="member-field-error" hidden></small>
+              </label>
+              <label class="member-field member-field-span-2" data-field-label="Address">
+                <span>Address <em>*</em></span>
+                <textarea rows="1" placeholder="Enter complete residential address" required style="min-height: 56px;"></textarea>
+                <small class="member-field-error" hidden>Please enter the residential address.</small>
+              </label>
+            </form>
+            <div class="member-form-actions">
+              <button class="dialog-btn dialog-btn-muted" type="button" data-add-member-close>Cancel</button>
+              <button class="dialog-btn dialog-btn-danger" type="button" data-member-save>
+                <span>NEXT</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Page 2: Profile Photo Upload -->
+          <div class="member-form-page" data-member-form-page="2">
+            <div class="member-form-top">
+              <div>
+                <p class="member-form-kicker">Identity Capture</p>
+                <h2 id="photo-upload-title">Capture Member Photo</h2>
+              </div>
+              <button class="document-close-btn" type="button" aria-label="Close photo upload" data-add-member-close>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 6 18 18" />
+                  <path d="M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <p class="member-form-copy">
+              Please upload a clear profile photo of the member for identification and membership card generation.
+            </p>
+
+            <div class="photo-capture-container">
+                <div class="photo-preview-circle" data-member-photo-trigger>
+                    <img src="" alt="" data-member-photo-preview hidden />
+                    <div class="photo-placeholder-icon">
+                        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        <span>Upload Photo</span>
+                    </div>
+                    <input type="file" accept="image/*" data-member-photo-input hidden />
+                </div>
+                <div class="photo-capture-meta">
+                    <p class="photo-capture-recommendation">Recommended: High quality JPG or PNG</p>
+                    <button type="button" class="btn-change-photo" data-member-photo-trigger data-photo-change-btn>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        <span>Change Photo</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="member-form-actions">
+              <button class="dialog-btn dialog-btn-muted" type="button" data-photo-upload-back>← Back</button>
+              <button class="dialog-btn dialog-btn-danger" type="button" data-photo-upload-next>
+                <span>NEXT</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Page 3: Document Upload -->
+          <div class="member-form-page" data-member-form-page="3">
+            <div class="member-form-top">
+              <div>
+                <p class="member-form-kicker">Document Upload</p>
+                <h2 id="doc-upload-title">Upload Member Documents</h2>
+              </div>
+              <button class="document-close-btn" type="button" aria-label="Close document upload" data-add-member-close>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 6 18 18" />
+                  <path d="M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <p class="member-form-copy" data-doc-upload-copy>
+              Member saved successfully. Add supporting documents to complete the profile.
+            </p>
+            <p class="member-form-alert" data-doc-upload-alert hidden></p>
+
+            <div class="doc-upload-grid">
+              <!-- Residential Proof -->
+              <div class="doc-upload-card" data-doc-type="pan">
+                <div class="doc-upload-card-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                </div>
+                <div class="doc-upload-card-content">
+                  <strong>Residential Proof</strong>
+                  <span>Utility bill, rent agreement, or address proof</span>
+                  <div class="doc-upload-card-actions">
+                    <input
+                      class="doc-upload-input"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                      data-doc-upload-input="pan"
+                      hidden
+                    />
+                    <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="pan">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Upload
+                    </button>
+                    <span class="doc-upload-meta" data-doc-upload-meta="pan">No file</span>
+                    <div class="doc-upload-preview" data-doc-upload-preview="pan" hidden>
+                      <img class="doc-upload-preview-image" src="" alt="" data-doc-upload-image="pan" hidden />
+                      <iframe class="doc-upload-preview-pdf" src="" title="PDF preview" data-doc-upload-pdf="pan" hidden></iframe>
+                      <button class="doc-upload-remove" type="button" aria-label="Remove" data-doc-upload-remove="pan">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M6 6 18 18" />
+                          <path d="M18 6 6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Aadhaar Card -->
+              <div class="doc-upload-card" data-doc-type="aadhaar">
+                <div class="doc-upload-card-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="M7 15h0M11 15h0M15 15h0M7 11h0M11 11h0M15 11h0" />
+                  </svg>
+                </div>
+                <div class="doc-upload-card-content">
+                  <strong>Aadhaar Card</strong>
+                  <span>Identity proof (front &amp; back)</span>
+                  <div class="doc-upload-card-actions">
+                    <input
+                      class="doc-upload-input"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                      data-doc-upload-input="aadhaar"
+                      hidden
+                    />
+                    <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="aadhaar">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Upload
+                    </button>
+                    <span class="doc-upload-meta" data-doc-upload-meta="aadhaar">No file</span>
+                    <div class="doc-upload-preview" data-doc-upload-preview="aadhaar" hidden>
+                      <img class="doc-upload-preview-image" src="" alt="" data-doc-upload-image="aadhaar" hidden />
+                      <iframe class="doc-upload-preview-pdf" src="" title="PDF preview" data-doc-upload-pdf="aadhaar" hidden></iframe>
+                      <button class="doc-upload-remove" type="button" aria-label="Remove" data-doc-upload-remove="aadhaar">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M6 6 18 18" />
+                          <path d="M18 6 6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="member-form-actions">
+              <button class="dialog-btn dialog-btn-muted" type="button" data-doc-upload-back>← Back</button>
+              <button class="dialog-btn dialog-btn-danger" type="button" data-doc-upload-next>
+                <span>NEXT</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Page 4: Membership Planning -->
+          <div class="member-form-page" data-member-form-page="4">
+            <div class="member-form-top">
+              <div>
+                <p class="member-form-kicker">Plan Selection</p>
+                <h2 id="plan-selection-title">Membership Planning</h2>
+              </div>
+              <button class="document-close-btn" type="button" aria-label="Close membership planning" data-add-member-close>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 6 18 18" />
+                  <path d="M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <p class="member-form-copy">
+              Select a membership plan and payment schedule for the new member.
+            </p>
+
+            <!-- Membership Planning Content -->
+            <div class="planning-grid">
+               <!-- We can add plan selection here later, for now just a placeholder to match the layout -->
+               <div class="planning-placeholder">
+                  <p>Membership plans will be listed here.</p>
+               </div>
+            </div>
+
+            <div class="member-form-actions">
+              <button class="dialog-btn dialog-btn-muted" type="button" data-planning-back>← Back</button>
+              <button class="dialog-btn dialog-btn-danger" type="button" data-doc-upload-save-finish>Save &amp; Finish</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Member Verification Center Modal (Redesigned) -->
+      <div class="verification-backdrop"></div>
+      <section 
+        class="verification-modal" 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="verification-title" 
+      >
+        <header class="verification-header">
+          <div class="header-left">
+            <span id="verification-title" class="verification-label">MEMBER VERIFICATION CENTER</span>
+          </div>
+          <div class="header-right">
+            <button class="verification-close-btn" type="button" data-verification-close aria-label="Close Verification Center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="verification-layout">
+          <!-- LEFT SECTION: Identity Anchor -->
+          <aside class="verification-sidebar">
+            <div class="identity-anchor-container">
+              <!-- Cloned Luxury Profile Card -->
+              <div class="luxury-profile-card" id="verification-identity-card">
+                <div class="card-portrait-wrap">
+                   <img src="" alt="" class="card-portrait" data-verification-portrait />
+                </div>
+                
+                <div class="card-glass-overlay">
+                   <div class="card-content">
+                      <div class="card-identity">
+                         <div class="card-name-row">
+                            <h2 class="card-name" data-verification-member-name>Member Name</h2>
+                            <div class="card-verify-check">
+                               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            </div>
+                         </div>
+                         <p class="card-bio">Transforming strength into legacy. Elite member committed to peak performance.</p>
+                      </div>
+
+                      <div class="card-footer-refined">
+                        <div class="card-stats">
+                           <div class="stat-item">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                              <span class="stat-value" data-verification-joined>May 2026</span>
+                           </div>
+                           <div class="stat-item">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                              <span class="stat-value" data-verification-id>#0000</span>
+                           </div>
+                        </div>
+
+                        <div class="download-btn-container">
+                           <button class="btn-card-bottom-download" type="button" aria-label="Download Record">
+                              <div class="icon-wrap-main">
+                                 <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                              </div>
+                           </button>
+                        </div>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- RIGHT SECTION: Document Workspace -->
+          <main class="verification-workspace">
+            <!-- Document Info Bar -->
+            <div class="doc-info-bar">
+              <div class="doc-meta-main">
+                <h3 class="active-doc-name" data-active-doc-name>Document Name</h3>
+                <div class="status-pills">
+                  <span class="status-pill verified" data-active-doc-status>Verified</span>
+                  <span class="status-badge-compact">Compliance High</span>
+                </div>
+              </div>
+              <div class="doc-meta-secondary">
+                <span class="meta-item">Uploaded: <strong data-active-doc-date>June 2, 2026</strong></span>
+                <span class="meta-item">Size: <strong data-active-doc-size>1.2 MB</strong></span>
+              </div>
+            </div>
+
+            <!-- Preview Area -->
+            <div class="doc-preview-container">
+              <div class="doc-preview-window" data-doc-preview-window>
+                <!-- Image Preview (Default/Placeholder) -->
+                <img src="" alt="Document Preview" class="doc-preview-img" data-main-doc-preview />
+                
+                <!-- PDF Preview (Embedded Viewer) -->
+                <iframe src="" class="doc-preview-pdf" data-main-doc-pdf hidden></iframe>
+                
+                <div class="preview-controls">
+                  <button class="control-btn" aria-label="Zoom In"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+                  <button class="control-btn" aria-label="Rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+                  <button class="control-btn" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+                  <div class="divider"></div>
+                  <button class="control-btn primary" aria-label="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div class="verification-empty-state" hidden>
+                <div class="empty-visual">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                </div>
+                <h3>No Documents Uploaded</h3>
+                <p>This member has not uploaded any documents yet.</p>
+                <button class="upload-now-btn">Upload Document</button>
+              </div>
+            </div>
+
+            <!-- Document Filmstrip -->
+            <footer class="verification-filmstrip">
+              <div class="filmstrip-scroll" data-filmstrip-container>
+                <!-- Thumbnails injected via JS -->
+              </div>
+            </footer>
+          </main>
+        </div>
+      </section>
+
+      <main class="main-layout">
+        <div class="dashboard-stage is-active" data-stage="dashboard">
+          <section class="content dashboard-content">
+            <header class="topbar operations-topbar">
+              <button class="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+
+              <label class="searchbar operations-search">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="6.5" />
+                  <path d="m16 16 4.5 4.5" />
+                </svg>
+                <input type="text" value="" placeholder="Search members, dues, check-ins, trainers..." />
+              </label>
+
+              <div class="top-actions operations-actions">
+                <span class="ops-date-chip">Sat, 02 May</span>
+                <span class="sync-status syncing">
+                  <span></span>
+                  Syncing
+                </span>
+                <button class="icon-btn" aria-label="messages">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 7h14v10H5z" />
+                    <path d="m6.5 8.5 5.5 4 5.5-4" />
+                  </svg>
+                </button>
+                <button class="icon-btn" aria-label="notifications">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 4a4 4 0 0 1 4 4v3.8l1.3 2.6H6.7L8 11.8V8a4 4 0 0 1 4-4Z" />
+                    <path d="M10 18a2 2 0 0 0 4 0" />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            <section class="operations-hero">
+              <div class="command-copy">
+                <p class="dashboard-kicker">Live Command Center</p>
+                <h1>Today’s floor, collections, retention, and staff load in one operating view.</h1>
+                <p>
+                  Monitor member traffic, dues, renewals, PT sessions, and offline sync health without leaving the dashboard.
+                </p>
+                <div class="command-actions">
+                  <button class="table-action add-member-inline" type="button" data-add-member-open>
+                    <span>+</span>
+                    Add Member
+                  </button>
+                  <button class="table-action" type="button" data-view-target="pending-dues">Review Dues</button>
+                  <button class="table-action muted" type="button" data-view-target="daily-checkin">Check-ins</button>
+                </div>
+              </div>
+
+              <div class="hero-command-card" aria-label="Live floor summary">
+                <div>
+                  <span>Floor Load</span>
+                  <strong>43 active</strong>
+                  <p>Expected peak in 38 min</p>
+                </div>
+                <div class="capacity-strip" aria-hidden="true">
+                  <span style="height: 38%"></span>
+                  <span style="height: 52%"></span>
+                  <span style="height: 68%"></span>
+                  <span style="height: 82%"></span>
+                  <span style="height: 74%"></span>
+                  <span style="height: 56%"></span>
+                </div>
+              </div>
+            </section>
+
+            <section class="stats-grid" aria-label="Gym performance">
+              <article class="ops-stat-card">
+                <div class="stat-card-top">
+                  <div class="stat-icon members">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="9" cy="8" r="3" />
+                      <path d="M3.5 19c.7-3.4 2.6-5.2 5.5-5.2s4.8 1.8 5.5 5.2" />
+                      <path d="M16 11.5a3 3 0 0 1 3 3" />
+                      <path d="M16 6.5a3 3 0 0 1 3 3" />
+                    </svg>
+                  </div>
+                  <small class="positive">+18</small>
+                </div>
+                <div>
+                  <span>Active members</span>
+                  <strong>428</strong>
+                  <p>72 premium, 41 PT clients, 18 freeze requests.</p>
+                </div>
+              </article>
+
+              <article class="ops-stat-card">
+                <div class="stat-card-top">
+                  <div class="stat-icon revenue">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 5h10" />
+                      <path d="M7 9h10" />
+                      <path d="M8 5c6 0 6 10 0 10" />
+                      <path d="M8 15h2l7 4" />
+                    </svg>
+                  </div>
+                  <small class="positive">92%</small>
+                </div>
+                <div>
+                  <span>Collected this month</span>
+                  <strong>₹8.42L</strong>
+                  <p>₹74K left to reach the monthly target.</p>
+                </div>
+              </article>
+
+              <article class="ops-stat-card">
+                <div class="stat-card-top">
+                  <div class="stat-icon pending">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="4" y="5" width="16" height="14" rx="3" />
+                      <path d="M8 10h8" />
+                      <path d="M8 14h4" />
+                    </svg>
+                  </div>
+                  <small class="warning">31 due</small>
+                </div>
+                <div>
+                  <span>Pending dues</span>
+                  <strong>₹64.5K</strong>
+                  <p>12 invoices are more than 5 days overdue.</p>
+                </div>
+              </article>
+
+              <article class="ops-stat-card">
+                <div class="stat-card-top">
+                  <div class="stat-icon attendance">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 4h8l3 3v13H7z" />
+                      <path d="M14 4v4h4" />
+                      <path d="m9 13 2 2 4-4" />
+                    </svg>
+                  </div>
+                  <small class="neutral">74%</small>
+                </div>
+                <div>
+                  <span>Check-ins today</span>
+                  <strong>186</strong>
+                  <p>Evening occupancy is tracking above average.</p>
+                </div>
+              </article>
+            </section>
+
+            <section class="operations-grid operations-grid-primary">
+              <article class="analytics-panel revenue-panel">
+                <div class="panel-head">
+                  <div>
+                    <span>Revenue Pulse</span>
+                    <h2>Collections, renewals, and pending dues</h2>
+                  </div>
+                  <strong>May cycle</strong>
+                </div>
+                <div class="revenue-chart" aria-label="Monthly collections chart">
+                  <div class="chart-axis">
+                    <span>9L</span>
+                    <span>6L</span>
+                    <span>3L</span>
+                  </div>
+                  <div class="chart-columns">
+                    <div class="chart-month">
+                      <span class="col collected" style="height: 58%"></span>
+                      <span class="col pending" style="height: 24%"></span>
+                      <small>Nov</small>
+                    </div>
+                    <div class="chart-month">
+                      <span class="col collected" style="height: 68%"></span>
+                      <span class="col pending" style="height: 18%"></span>
+                      <small>Dec</small>
+                    </div>
+                    <div class="chart-month">
+                      <span class="col collected" style="height: 54%"></span>
+                      <span class="col pending" style="height: 30%"></span>
+                      <small>Jan</small>
+                    </div>
+                    <div class="chart-month">
+                      <span class="col collected" style="height: 72%"></span>
+                      <span class="col pending" style="height: 21%"></span>
+                      <small>Feb</small>
+                    </div>
+                    <div class="chart-month">
+                      <span class="col collected" style="height: 80%"></span>
+                      <span class="col pending" style="height: 16%"></span>
+                      <small>Mar</small>
+                    </div>
+                    <div class="chart-month">
+                      <span class="col collected" style="height: 76%"></span>
+                      <span class="col pending" style="height: 22%"></span>
+                      <small>Apr</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="chart-legend">
+                  <span><i class="collected-dot"></i> Collected</span>
+                  <span><i class="pending-dot"></i> Pending</span>
+                  <span><i class="renewal-dot"></i> Renewal lift</span>
+                </div>
+              </article>
+
+              <article class="alerts-panel renewal-panel">
+                <div class="panel-head">
+                  <div>
+                    <span>Retention Queue</span>
+                    <h2>Renewals requiring action</h2>
+                  </div>
+                  <strong>18 expiring</strong>
+                </div>
+                <div class="renewal-stack">
+                  <div class="renewal-row">
+                    <span>Premium Annual</span>
+                    <strong>8</strong>
+                    <i style="width: 72%"></i>
+                  </div>
+                  <div class="renewal-row">
+                    <span>Monthly Fitness</span>
+                    <strong>6</strong>
+                    <i style="width: 56%"></i>
+                  </div>
+                  <div class="renewal-row">
+                    <span>PT Packages</span>
+                    <strong>4</strong>
+                    <i style="width: 38%"></i>
+                  </div>
+                </div>
+                <div class="alert-list compact">
+                  <div class="alert-item urgent">
+                    <span></span>
+                    <div>
+                      <strong>3 premium members need owner calls</strong>
+                      <p>High value renewals due before Friday.</p>
+                    </div>
+                  </div>
+                  <div class="alert-item warning">
+                    <span></span>
+                    <div>
+                      <strong>₹64,500 pending dues</strong>
+                      <p>Automated reminders can cover 19 invoices.</p>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="operations-grid operations-grid-secondary">
+              <article class="analytics-panel floor-panel">
+                <div class="panel-head">
+                  <div>
+                    <span>Attendance Flow</span>
+                    <h2>Live capacity by time block</h2>
+                  </div>
+                  <strong>43 active now</strong>
+                </div>
+                <div class="traffic-lanes">
+                  <div>
+                    <span>6 AM</span>
+                    <i style="width: 48%"></i>
+                    <strong>31</strong>
+                  </div>
+                  <div>
+                    <span>10 AM</span>
+                    <i style="width: 34%"></i>
+                    <strong>18</strong>
+                  </div>
+                  <div>
+                    <span>2 PM</span>
+                    <i style="width: 42%"></i>
+                    <strong>24</strong>
+                  </div>
+                  <div>
+                    <span>6 PM</span>
+                    <i style="width: 88%"></i>
+                    <strong>87</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="alerts-panel trainer-panel">
+                <div class="panel-head">
+                  <div>
+                    <span>Staff Load</span>
+                    <h2>Trainer schedule and PT utilization</h2>
+                  </div>
+                  <strong>6 sessions left</strong>
+                </div>
+                <div class="trainer-list">
+                  <div>
+                    <span>AK</span>
+                    <div>
+                      <strong>Ankit Kumar</strong>
+                      <small>4 PT sessions, 1 trial</small>
+                    </div>
+                    <mark class="status active">On floor</mark>
+                  </div>
+                  <div>
+                    <span>SP</span>
+                    <div>
+                      <strong>Sneha Patel</strong>
+                      <small>2 sessions, nutrition consult</small>
+                    </div>
+                    <mark class="status pending">Next 7:30</mark>
+                  </div>
+                  <div>
+                    <span>MR</span>
+                    <div>
+                      <strong>Manav Rao</strong>
+                      <small>Equipment checks pending</small>
+                    </div>
+                    <mark class="status review">Review</mark>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="recent-members-panel">
+              <div class="panel-head">
+                <div>
+                  <span>Member Movement</span>
+                  <h2>Latest registrations, renewals, and billing status</h2>
+                </div>
+                <div class="recent-actions">
+                  <button class="table-action" type="button" data-view-target="members">View all</button>
+                  <button class="table-action add-member-inline" type="button" data-add-member-open>
+                    <span>+</span>
+                    Add Member
+                  </button>
+                </div>
+              </div>
+              <div class="recent-table-wrap">
+                <table class="recent-members-table">
+                  <thead>
+                    <tr>
+                      <th>Member</th>
+                      <th>Plan</th>
+                      <th>Status</th>
+                      <th>Due</th>
+                      <th>Owner</th>
+                      <th>Last Visit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <strong>Rohan Verma</strong>
+                        <span>Indiranagar</span>
+                      </td>
+                      <td>Premium Annual</td>
+                      <td><mark class="status active">Active</mark></td>
+                      <td>₹0</td>
+                      <td>Front desk</td>
+                      <td>Today, 7:42 AM</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <strong>Aisha Khan</strong>
+                        <span>Koramangala</span>
+                      </td>
+                      <td>Monthly Fitness</td>
+                      <td><mark class="status pending">Due Soon</mark></td>
+                      <td>₹2,499</td>
+                      <td>Billing</td>
+                      <td>Yesterday</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <strong>Karthik Rao</strong>
+                        <span>BTM Layout</span>
+                      </td>
+                      <td>PT Package</td>
+                      <td><mark class="status review">Follow-up</mark></td>
+                      <td>₹8,000</td>
+                      <td>Trainer</td>
+                      <td>26 Apr</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <strong>Meera Nair</strong>
+                        <span>HSR Layout</span>
+                      </td>
+                      <td>Quarterly</td>
+                      <td><mark class="status active">Active</mark></td>
+                      <td>₹0</td>
+                      <td>Front desk</td>
+                      <td>Today, 6:18 PM</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <aside class="rightbar operations-rightbar">
+            <section class="side-panel attendance-panel">
+              <div class="panel-head">
+                <div>
+                  <span>Live Occupancy</span>
+                  <h2>Capacity used</h2>
+                </div>
+                <strong>74%</strong>
+              </div>
+              <div class="attendance-ring">
+                <strong>43</strong>
+                <span>members inside</span>
+              </div>
+              <div class="time-blocks">
+                <div>
+                  <span>Morning</span>
+                  <strong>68</strong>
+                </div>
+                <div>
+                  <span>Afternoon</span>
+                  <strong>31</strong>
+                </div>
+                <div>
+                  <span>Evening</span>
+                  <strong>87</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="side-panel sync-panel">
+              <div class="panel-head">
+                <div>
+                  <span>Local System</span>
+                  <h2>Sync status</h2>
+                </div>
+                <span class="sync-status online">
+                  <span></span>
+                  Online
+                </span>
+              </div>
+              <div class="sync-meter">
+                <strong>97%</strong>
+                <span>Data synced</span>
+              </div>
+              <div class="sync-states" aria-label="Connection states">
+                <span class="online">Online</span>
+                <span class="syncing">Syncing</span>
+                <span class="offline">Offline ready</span>
+              </div>
+              <div class="sync-list">
+                <p><strong>42</strong> records queued locally</p>
+                <p><strong>2</strong> devices pending handshake</p>
+                <p><strong>11:28 PM</strong> last successful sync</p>
+              </div>
+            </section>
+
+            <section class="side-panel task-panel">
+              <div class="panel-head">
+                <div>
+                  <span>Manager Queue</span>
+                  <h2>Priority actions</h2>
+                </div>
+              </div>
+              <div class="task-list">
+                <label>
+                  <input type="checkbox" />
+                  <span>Call 8 annual members for renewals</span>
+                </label>
+                <label>
+                  <input type="checkbox" />
+                  <span>Verify 5 uploaded ID proofs</span>
+                </label>
+                <label>
+                  <input type="checkbox" />
+                  <span>Assign trainer for 3 PT trials</span>
+                </label>
+              </div>
+            </section>
+          </aside>
+        </div>
+        <section class="members-stage" data-stage="members" aria-hidden="true">
+          <div class="members-shell">
+            <header class="members-command">
+              <div class="members-title-block">
+                <p class="members-kicker">Member Directory</p>
+                <h1>All Members</h1>
+                <p>
+                  A fast desktop workspace for searching profiles, checking identity details,
+                  and reviewing onboarding records without fighting a wide spreadsheet.
+                </p>
+              </div>
+              <div class="members-command-actions">
+                <button class="members-icon-btn" type="button" aria-label="Refresh member list">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+                    <path d="M20 5v6h-6" />
+                  </svg>
+                </button>
+                <button class="add-member-btn" type="button" data-add-member-open>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                  Add Member
+                </button>
+              </div>
+            </header>
+
+            <section class="members-overview" aria-label="Member overview">
+              <article class="members-stat-card primary">
+                <span>Loaded Profiles</span>
+                <strong data-stat-loaded-profiles>0</strong>
+                <p>Live records in the current directory view.</p>
+              </article>
+              <article class="members-stat-card">
+                <span>Verified Docs</span>
+                <strong data-stat-verified-docs>0</strong>
+                <p>Identity and residence proofs attached.</p>
+              </article>
+              <article class="members-stat-card">
+                <span>Joined This Quarter</span>
+                <strong data-stat-joined-quarter>0</strong>
+                <p>Fresh registrations in the current quarter.</p>
+              </article>
+              <article class="members-stat-card accent">
+                <span>Follow-ups</span>
+                <strong data-stat-follow-ups>0</strong>
+                <p>No profile update tasks are pending.</p>
+              </article>
+            </section>
+
+            <section class="members-workspace" aria-label="All members workspace">
+              <div class="members-toolbar">
+                <label class="members-search">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6.5" />
+                    <path d="m16 16 4.5 4.5" />
+                  </svg>
+                  <input
+                    type="search"
+                    placeholder="Search name, phone, email, address, or document"
+                    aria-label="Search members"
+                    data-member-search
+                  />
+                </label>
+                <div class="members-filter-tabs" aria-label="Member filters">
+                  <button class="is-active" type="button" data-member-filter="all">All</button>
+                  <button type="button" data-member-filter="verified">Verified</button>
+                  <button type="button" data-member-filter="recent">Recent</button>
+                </div>
+                <div class="members-toolbar-copy">
+                  <span>Showing</span>
+                  <strong data-member-count>3 profiles</strong>
+                </div>
+              </div>
+
+              <div class="members-table-panel">
+                <div class="members-table-meta">
+                  <div>
+                    <span>Directory</span>
+                    <strong>Identity, contact, joining, and document records</strong>
+                  </div>
+                  <span class="members-table-status">Updated today</span>
+                </div>
+
+                <section class="members-table-wrap" data-members-grid>
+                  <table class="members-table">
+                    <thead>
+                      <tr>
+                        <th>Member</th>
+                        <th>Contact</th>
+                        <th>Personal</th>
+                        <th>Joined</th>
+                        <th>Address</th>
+                        <th>Govt Docs / Residence Proof</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                  </table>
+                </section>
+
+                <!-- NEW: PAGINATION UI -->
+                <div class="members-pagination" data-members-pagination>
+                  <button class="pagination-btn prev" type="button" data-pagination-prev disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                    Previous
+                  </button>
+                  <div class="pagination-numbers" data-pagination-numbers>
+                    <!-- Page numbers will be rendered here dynamically -->
+                  </div>
+                  <button class="pagination-btn next" type="button" data-pagination-next disabled>
+                    Next
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="members-empty" data-members-empty hidden>
+              <p>No members matched your search. Try a name, number, email, or document keyword.</p>
+            </section>
+          </div>
+        </section>
+
+    <section class="membership-plans-stage" data-stage="membership-plans" aria-hidden="true"></section>
+        <section class="expiring-memberships-stage" data-stage="expiring-memberships" aria-hidden="true"></section>
+        <section class="freeze-pause-stage" data-stage="freeze-pause" aria-hidden="true"></section>
+        <section class="renew-membership-stage" data-stage="renew-membership" aria-hidden="true"></section>
+        <section class="daily-checkin-stage" data-stage="daily-checkin" aria-hidden="true"></section>
+        <section class="manual-entry-stage" data-stage="manual-entry" aria-hidden="true"></section>
+        <section class="attendance-reports-stage" data-stage="attendance-reports" aria-hidden="true"></section>
+        <section class="payments-stage" data-stage="payments" aria-hidden="true"></section>
+        <section class="pending-dues-stage" data-stage="pending-dues" aria-hidden="true"></section>
+        <section class="payment-history-stage" data-stage="payment-history" aria-hidden="true"></section>
+        <section class="generate-receipt-stage" data-stage="generate-receipt" aria-hidden="true"></section>
+        <section class="all-trainers-stage" data-stage="trainers" aria-hidden="true"></section>
+        <div class="assign-trainer-stage" data-stage="assign-trainer" aria-hidden="true">
+          <div style="padding: 100px; text-align: center; color: #6366f1; font-family: sans-serif;">
+            <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 10px;">Loading Workspace...</h2>
+            <p style="font-weight: 600; opacity: 0.7;">If this message persists, a mounting error occurred.</p>
+          </div>
+        </div>
+        <div class="trainer-schedule-stage" data-stage="trainer-schedule" aria-hidden="true"></div>
+        <div class="staff-roles-stage" data-stage="staff-roles" aria-hidden="true"></div>
+        <section class="pt-clients-stage" data-stage="personal-training" aria-hidden="true"></section>
+        <section class="pt-packages-stage" data-stage="pt-packages" aria-hidden="true"></section>
+        <section class="session-tracking-stage" data-stage="session-tracking" aria-hidden="true"></section>
+        <section class="trainer-earnings-stage" data-stage="trainer-earnings" aria-hidden="true"></section>
+        <section class="notify-members-stage" data-stage="notify-members" aria-hidden="true">
+          <div style="padding: 40px; color: #1e293b; font-weight: 600;">Initializing Communication Center...</div>
+        </section>
+        <section class="revenue-reports-stage" data-stage="revenue-reports" aria-hidden="true"></section>
+        <section class="attendance-analytics-stage" data-stage="attendance-analytics" aria-hidden="true"></section>
+        <section class="member-growth-stage" data-stage="member-growth" aria-hidden="true"></section>
+        <section class="trainer-performance-stage" data-stage="trainer-performance" aria-hidden="true"></section>
+        <section class="gym-profile-stage" data-stage="gym-profile" aria-hidden="true"></section>
+        <section class="app-settings-stage" data-stage="app-settings" aria-hidden="true"></section>
+        <section class="backup-restore-stage" data-stage="backup-restore" aria-hidden="true"></section>
+        <section class="sync-status-stage" data-stage="sync-status" aria-hidden="true"></section>
+        <section class="profile-stage" data-stage="profile" aria-hidden="true"></section>
+        <section class="agreements-stage" data-stage="agreements" aria-hidden="true"></section>
+        <section class="id-proofs-stage" data-stage="id-proofs" aria-hidden="true"></section>
+        <section class="member-documents-stage" data-stage="member-documents" aria-hidden="true"></section>
+        <section class="past-members-stage" data-stage="past-members" aria-hidden="true"></section>
+        <section class="coming-soon-stage" data-stage="coming-soon" aria-live="polite" aria-hidden="true">
+          <div class="coming-soon-shell">
+            <div class="coming-soon-copy">
+              <p class="coming-soon-kicker"><span class="font-ethnocentric tracking-normal">GymDeck</span> Workspace</p>
+              <h1 class="coming-soon-title">Coming Soon</h1>
+              <p class="coming-soon-text">
+                <span class="coming-soon-feature">Members</span>
+                is being shaped into a focused workspace with live tools, polished flows, and richer gym management controls.
+              </p>
+              <div class="coming-soon-actions">
+                <button class="coming-soon-btn primary" type="button" data-view-target="dashboard">Back to Dashboard</button>
+                <button class="coming-soon-btn secondary" type="button" data-view-target="members">Open Next Preview</button>
+              </div>
+            </div>
+            <div class="coming-soon-visual" aria-hidden="true">
+              <div class="coming-orbit orbit-a"></div>
+              <div class="coming-orbit orbit-b"></div>
+              <div class="coming-card">
+                <span>Launch window</span>
+                <strong>Design system in progress</strong>
+                <p>Fresh flows for operations, attendance, billing, and coaching are on the way.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="moreOptionsBackdrop" aria-hidden="true"></div>
+    <div class="modal-window profile-dashboard-modal" id="moreOptionsModal" aria-hidden="true" role="dialog">
+      <!-- DASHBOARD BODY -->
+      <div class="modal-body dashboard-layout">
+        <!-- FIXED LEFT COLUMN: UNCHANGED LUXURY CARD -->
+        <aside class="dashboard-sidebar">
+          <div class="luxury-profile-card minimal-card">
+            <div class="card-portrait-wrap">
+               <img src="" alt="" class="card-portrait" id="modalProfileImg" />
+            </div>
+            
+            <div class="card-footer-minimal">
+               <div class="download-btn-container">
+                  <button class="btn-card-bottom-download" type="button" aria-label="Download Record">
+                     <div class="icon-wrap-main">
+                        <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                     </div>
+                  </button>
+                  <span class="download-tooltip">Download Image</span>
+               </div>
+            </div>
+          </div>
+
+          <button class="btn-sidebar-delete" type="button" aria-label="Delete Member Profile" data-member-delete-trigger>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+            <span>Delete Member Profile</span>
+          </button>
+        </aside>
+
+        <!-- RIGHT COLUMN: INTELLIGENCE CENTER -->
+        <main class="dashboard-main">
+          <!-- TOP HEADER SECTION -->
+          <header class="main-header">
+            <div class="header-top">
+              <div class="header-title-area">
+                <h1 id="dashMemberName" class="header-name">Unnamed Member</h1>
+                <div class="header-badges">
+                  <span id="dashMemberId" class="badge-id">#0000</span>
+                  <span class="status-badge active">
+                    <span class="dot"></span> Active
+                  </span>
+                </div>
+              </div>
+              <button class="header-close-btn" id="closeMoreOptions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div class="header-info-chips">
+              <div class="info-chip">
+                <span class="chip-label">Member Since</span>
+                <span id="dashJoinDate" class="chip-value">June 2, 2026</span>
+              </div>
+              <div class="info-chip">
+                <span class="chip-label">Current Plan</span>
+                <span id="dashPlanName" class="chip-value">Premium Elite</span>
+              </div>
+              <div class="info-chip">
+                <span class="chip-label">Expiry Date</span>
+                <span id="dashExpiryDate" class="chip-value">June 2, 2027</span>
+              </div>
+              <div class="info-chip">
+                <span class="chip-label">Assigned Trainer</span>
+                <span class="chip-value">Vikram Singh</span>
+              </div>
+            </div>
+          </header>
+
+          <!-- QUICK STATS ROW -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">Attendance</span>
+              <div class="stat-value-group">
+                <span class="stat-main-value">92%</span>
+                <span class="stat-trend positive">↑ 4%</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Last Check-In</span>
+              <span class="stat-main-value">2h ago</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Outstanding Dues</span>
+              <span class="stat-main-value text-rose-600">₹0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Documents</span>
+              <span id="dashDocsCount" class="stat-main-value">3 / 4</span>
+            </div>
+          </div>
+
+          <!-- SCROLLABLE CONTENT -->
+          <div class="dashboard-scroll-area">
+            <div class="content-sections">
+              <!-- PERSONAL INFO -->
+              <section class="info-panel">
+                <h2 class="panel-title">Personal Information</h2>
+                <div class="panel-grid cols-3">
+                  <div class="data-item">
+                    <span class="data-label">Full Name</span>
+                    <span id="dashFullName" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Date of Birth</span>
+                    <span id="dashDOB" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Age</span>
+                    <span id="dashAge" class="data-value">0 years</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Gender</span>
+                    <span class="data-value">Male</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Height</span>
+                    <span id="dashHeight" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Weight</span>
+                    <span id="dashWeight" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Blood Group</span>
+                    <span class="data-value">O+</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- CONTACT INFO -->
+              <section class="info-panel">
+                <h2 class="panel-title">Contact Information</h2>
+                <div class="panel-grid cols-2">
+                  <div class="data-item">
+                    <span class="data-label">Primary Phone</span>
+                    <span id="dashPrimaryPhone" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Alternate Phone</span>
+                    <span id="dashAltPhone" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Email Address</span>
+                    <span id="dashEmail" class="data-value">-</span>
+                  </div>
+                  <div class="data-item full-width">
+                    <span class="data-label">Home Address</span>
+                    <span id="dashAddress" class="data-value">-</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- MEMBERSHIP DETAILS -->
+              <section class="info-panel highlight-panel">
+                <h2 class="panel-title">Membership Details</h2>
+                <div class="panel-grid cols-3">
+                  <div class="data-item">
+                    <span class="data-label">Current Plan</span>
+                    <span class="data-value font-black">Annual Elite</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Plan Duration</span>
+                    <span class="data-value">12 Months</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Joining Date</span>
+                    <span id="dashJoinDatePanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Expiry Date</span>
+                    <span class="data-value">June 2, 2027</span>
+                  </div>
+                  <div class="data-item highlight-data">
+                    <span class="data-label">Remaining Days</span>
+                    <span class="data-value text-indigo-600 font-black">365 Days</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- DOCUMENTS -->
+              <section class="info-panel">
+                <h2 class="panel-title">Vault Documents</h2>
+                <div class="doc-cards-grid">
+                  <div class="doc-mini-card">
+                    <div class="doc-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                    <div class="doc-meta">
+                      <span class="doc-name">Aadhaar Card</span>
+                      <span class="doc-status verified">Verified</span>
+                    </div>
+                  </div>
+                  <div class="doc-mini-card">
+                    <div class="doc-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                    <div class="doc-meta">
+                      <span class="doc-name">PAN Card</span>
+                      <span class="doc-status verified">Verified</span>
+                    </div>
+                  </div>
+                  <div class="doc-mini-card">
+                    <div class="doc-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                    <div class="doc-meta">
+                      <span class="doc-name">Medical Certificate</span>
+                      <span class="doc-status pending">Pending</span>
+                    </div>
+                  </div>
+                  <div class="doc-mini-card">
+                    <div class="doc-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></div>
+                    <div class="doc-meta">
+                      <span class="doc-name">Member Agreement</span>
+                      <span class="doc-status verified">Signed</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <!-- FOOTER ACTIONS -->
+          <footer class="dashboard-footer">
+            <div class="tertiary-actions">
+              <button id="viewDocumentsFromModal" class="footer-btn tertiary">View Documents</button>
+            </div>
+            <div class="primary-actions">
+              <button class="footer-btn secondary">Freeze Membership</button>
+              <button class="footer-btn secondary">Renew Membership</button>
+              <button class="footer-btn primary">Edit Member</button>
+            </div>
+          </footer>
+        </main>
+      </div>
+    </div>
+
+    <!-- Member Offboarding Insight Modal -->
+    <div class="offboarding-backdrop" id="offboardingBackdrop" hidden aria-hidden="true"></div>
+    <section class="offboarding-modal" id="offboardingModal" hidden role="dialog" aria-modal="true" aria-labelledby="offboarding-title">
+      <div class="offboarding-header">
+        <div>
+          <p class="offboarding-kicker">Member Offboarding</p>
+          <h2 id="offboarding-title">Why is this member leaving?</h2>
+        </div>
+        <button class="offboarding-close" type="button" data-offboarding-cancel aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      
+      <p class="offboarding-desc">Help us improve by capturing the reason for this profile deletion. This data is used for churn analytics.</p>
+      
+      <form class="offboarding-form" id="offboardingForm">
+        <div class="offboarding-options">
+          <label class="offboarding-option">
+            <input type="radio" name="delete_reason" value="relocation" required />
+            <div class="option-box">
+              <span class="option-label">Relocation</span>
+              <p class="option-hint">Member is moving to a new area</p>
+            </div>
+          </label>
+          <label class="offboarding-option">
+            <input type="radio" name="delete_reason" value="financial" />
+            <div class="option-box">
+              <span class="option-label">Financial Reasons</span>
+              <p class="option-hint">Membership cost is too high</p>
+            </div>
+          </label>
+          <label class="offboarding-option">
+            <input type="radio" name="delete_reason" value="scheduling" />
+            <div class="option-box">
+              <span class="option-label">Scheduling</span>
+              <p class="option-hint">Not enough time for gym</p>
+            </div>
+          </label>
+          <label class="offboarding-option">
+            <input type="radio" name="delete_reason" value="competitor" />
+            <div class="option-box">
+              <span class="option-label">Competitor</span>
+              <p class="option-hint">Switching to another facility</p>
+            </div>
+          </label>
+          <label class="offboarding-option">
+            <input type="radio" name="delete_reason" value="health" />
+            <div class="option-box">
+              <span class="option-label">Health / Injury</span>
+              <p class="option-hint">Temporary or permanent medical issue</p>
+            </div>
+          </label>
+          <label class="offboarding-option">
+            <input type="radio" name="delete_reason" value="other" />
+            <div class="option-box">
+              <span class="option-label">Other Reason</span>
+              <p class="option-hint">Not covered in the categories above</p>
+            </div>
+          </label>
+        </div>
+        
+        <div class="offboarding-field">
+          <span>Additional Feedback (Optional)</span>
+          <textarea placeholder="Tell us more about why they're leaving..."></textarea>
+        </div>
+
+        <div class="offboarding-actions">
+          <button class="offboarding-btn-cancel" type="button" data-offboarding-cancel>Cancel</button>
+          <button class="offboarding-btn-next" type="submit">Continue to Delete</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="delete-confirm-backdrop" id="deleteConfirmBackdrop" hidden aria-hidden="true"></div>
+    <section class="delete-confirm-modal compact-modal" id="deleteConfirmModal" hidden role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-desc">
+      <div class="compact-modal-header">
+        <div class="compact-modal-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div class="compact-modal-title-block">
+          <h2 id="delete-confirm-title">Delete Profile?</h2>
+          <p id="delete-confirm-desc">This will permanently erase <strong id="deleteMemberNameConfirm">this member</strong>'s history and data.</p>
+        </div>
+      </div>
+      <div class="compact-modal-actions">
+        <button class="compact-btn-cancel" type="button" data-delete-cancel>Cancel</button>
+        <button class="compact-btn-delete" type="button" data-delete-confirm>Delete</button>
+      </div>
+    </section>
+
+    <!-- Global Toast Notification -->
+    <div id="toastNotification" class="toast-notification" hidden aria-live="polite">
+      <div class="toast-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+      <span id="toastMessage">Member deleted successfully</span>
+    </div>
+
+    <script type="module" src="./script.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('../sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,48 @@
+# cargo-deny enterprise security configuration
+# https://embarkstudios.github.io/cargo-deny/
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+notice = "warn"
+ignore = []
+
+[licenses]
+unlicensed = "deny"
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "CC0-1.0",
+]
+deny = [
+    "GPL-1.0",
+    "GPL-2.0",
+    "GPL-3.0",
+    "AGPL-3.0",
+]
+copyleft = "deny"
+allow-osi-fsf-free = "neither"
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+
+# Ban known vulnerable or obsolete cryptography crates
+[[bans.deny]]
+name = "rust-crypto"
+wrappers = ["The old rust-crypto crate is unmaintained. Use RustCrypto organization crates (e.g. sha2, aes)."]
+
+[[bans.deny]]
+name = "openssl"
+wrappers = ["Use native-tls or rustls instead of direct openssl bindings for cross-platform desktop compatibility."]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

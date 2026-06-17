@@ -1,0 +1,66 @@
+[package]
+name = "app"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.3", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-updater = "2"
+
+# --- Security & Auth Backend Dependencies ---
+# SQLite with SQLCipher for AES-256 encrypted database
+rusqlite = { version = "0.31.0", features = ["bundled-sqlcipher"] }
+# Password hashing
+argon2 = "0.5.3"
+# Secure random generation
+rand = "0.8.5"
+# Secure memory wiping for sensitive credentials
+zeroize = { version = "1.8.1", features = ["zeroize_derive"] }
+# OS Native secure credential storage (Keychain / Credential Manager)
+keyring = "3.0.4"
+# Identifiers and timestamps
+uuid = { version = "1.8.0", features = ["v4", "serde"] }
+chrono = { version = "0.4.38", features = ["serde"] }
+# Error handling and async
+thiserror = "1.0.60"
+tokio = { version = "1.37.0", features = ["full"] }
+# Structured logging
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+# Cryptography (SHA256 for integrity and fingerprinting)
+sha2 = "0.10.8"
+# Hardware identification
+machine-uid = "0.3.0"
+sysinfo = "0.33.1"
+# Connection pooling
+r2d2 = "0.8.10"
+r2d2_sqlite = "0.24.0"
+# Additional secrecy
+secrecy = "0.8.0"
+hex = "0.4.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+opt-level = "z"
+
