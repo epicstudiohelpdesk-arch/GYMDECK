@@ -1,14 +1,12 @@
 name: Test Workflow
 
 on:
-workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-test:
-runs-on: windows-latest
+  test:
+    runs-on: windows-latest
 
-```
-steps:
-  - name: Hello
-    run: echo Hello
-```
+    steps:
+      - name: Hello
+        run: echo Hello
