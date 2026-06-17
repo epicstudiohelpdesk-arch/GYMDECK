@@ -1,21 +1,16 @@
 name: Build GymDeck Windows MSI
-
 on:
 workflow_dispatch:
 push:
 branches:
 - main
-
 env:
 CARGO_TERM_COLOR: always
 RUST_BACKTRACE: full
-
 jobs:
 build-windows:
 name: Build Windows MSI
 runs-on: windows-latest
-
-```
 steps:
   - name: Checkout Repository
     uses: actions/checkout@v4
@@ -145,4 +140,3 @@ steps:
         src-tauri/target/release/*.exe
         src-tauri/target/release/bundle/**/*.exe
       if-no-files-found: ignore
-```
