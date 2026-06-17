@@ -1,142 +1,111 @@
 name: Build GymDeck Windows MSI
+
 on:
-workflow_dispatch:
-push:
-branches:
-- main
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
 env:
-CARGO_TERM_COLOR: always
-RUST_BACKTRACE: full
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
 jobs:
-build-windows:
-name: Build Windows MSI
-runs-on: windows-latest
-steps:
-  - name: Checkout Repository
-    uses: actions/checkout@v4
+  build-windows:
+    name: Build Windows MSI
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: "22"
-      cache: npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
 
-  - name: Setup Rust
-    uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-  - name: Setup MSVC
-    uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
 
-  - name: Install Strawberry Perl
-    uses: shogo82148/actions-setup-perl@v1
+      - name: Install Strawberry Perl
+        uses: shogo82148/actions-setup-perl@v1
 
-  - name: Install OpenSSL
-    shell: pwsh
-    run: |
-      choco install openssl -y
+      - name: Install OpenSSL
+        shell: pwsh
+        run: |
+          choco install openssl -y
 
-  - name: Configure OpenSSL Environment
-    shell: pwsh
-    run: |
-      $openssl = "C:\Program Files\OpenSSL-Win64"
+      - name: Configure OpenSSL Environment
+        shell: pwsh
+        run: |
+          $openssl = "C:\Program Files\OpenSSL-Win64"
 
-      if (!(Test-Path $openssl)) {
-        throw "OpenSSL installation not found at $openssl"
-      }
+          if (!(Test-Path $openssl)) {
+            throw "OpenSSL installation not found at $openssl"
+          }
 
-      $includeDir = Join-Path $openssl "include"
-      $libDir = Join-Path $openssl "lib"
+          $includeDir = Join-Path $openssl "include"
+          $libDir = Join-Path $openssl "lib"
 
-      if (!(Test-Path $libDir)) {
-        Write-Host "Searching for OpenSSL library directory..."
-        $candidate = Get-ChildItem $openssl -Recurse -Directory |
-          Where-Object { $_.Name -match "lib" } |
-          Select-Object -First 1
+          "OPENSSL_DIR=$openssl" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "OPENSSL_INCLUDE_DIR=$includeDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "OPENSSL_LIB_DIR=$libDir" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-        if ($candidate) {
-          $libDir = $candidate.FullName
-        }
-      }
+      - name: Cache Cargo Registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
 
-      if (!(Test-Path $libDir)) {
-        throw "OpenSSL lib directory not found."
-      }
+      - name: Install Frontend Dependencies
+        run: npm ci
 
-      "OPENSSL_DIR=$openssl" | Out-File -FilePath $env:GITHUB_ENV -Append
-      "OPENSSL_INCLUDE_DIR=$includeDir" | Out-File -FilePath $env:GITHUB_ENV -Append
-      "OPENSSL_LIB_DIR=$libDir" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Build Frontend
+        run: npm run build
 
-      Write-Host "OPENSSL_DIR=$openssl"
-      Write-Host "OPENSSL_INCLUDE_DIR=$includeDir"
-      Write-Host "OPENSSL_LIB_DIR=$libDir"
+      - name: Verify Dist Folder
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist")) {
+            throw "dist folder not found"
+          }
 
-  - name: Verify OpenSSL
-    shell: pwsh
-    run: |
-      Write-Host "OPENSSL_DIR=$env:OPENSSL_DIR"
-      Write-Host "OPENSSL_INCLUDE_DIR=$env:OPENSSL_INCLUDE_DIR"
-      Write-Host "OPENSSL_LIB_DIR=$env:OPENSSL_LIB_DIR"
+      - name: Build Tauri Application
+        env:
+          OPENSSL_DIR: C:\Program Files\OpenSSL-Win64
+          OPENSSL_INCLUDE_DIR: C:\Program Files\OpenSSL-Win64\include
+          OPENSSL_LIB_DIR: C:\Program Files\OpenSSL-Win64\lib
+        run: npm run tauri build
 
-  - name: Cache Cargo Registry
-    uses: actions/cache@v4
-    with:
-      path: |
-        ~/.cargo/registry
-        ~/.cargo/git
-        src-tauri/target
-      key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
-      restore-keys: |
-        cargo-${{ runner.os }}-
+      - name: Show Build Outputs
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "src-tauri/target/release/bundle") {
+            Get-ChildItem src-tauri/target/release/bundle -Recurse
+          }
 
-  - name: Install Frontend Dependencies
-    run: npm ci
+      - name: Upload MSI
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GymDeck-MSI
+          path: src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
 
-  - name: Build Frontend
-    run: npm run build
-
-  - name: Verify Dist Folder
-    shell: pwsh
-    run: |
-      if (!(Test-Path "dist")) {
-        throw "dist folder not found"
-      }
-
-      Get-ChildItem dist
-
-  - name: Verify Tauri Configuration
-    shell: pwsh
-    run: |
-      Get-Content src-tauri/tauri.conf.json
-
-  - name: Build Tauri Application
-    env:
-      OPENSSL_DIR: ${{ env.OPENSSL_DIR }}
-      OPENSSL_INCLUDE_DIR: ${{ env.OPENSSL_INCLUDE_DIR }}
-      OPENSSL_LIB_DIR: ${{ env.OPENSSL_LIB_DIR }}
-    run: npm run tauri build
-
-  - name: Show Build Outputs
-    if: always()
-    shell: pwsh
-    run: |
-      if (Test-Path "src-tauri/target/release/bundle") {
-        Get-ChildItem src-tauri/target/release/bundle -Recurse
-      }
-
-  - name: Upload MSI
-    if: success()
-    uses: actions/upload-artifact@v4
-    with:
-      name: GymDeck-MSI
-      path: src-tauri/target/release/bundle/msi/*.msi
-      if-no-files-found: error
-
-  - name: Upload EXE
-    if: success()
-    uses: actions/upload-artifact@v4
-    with:
-      name: GymDeck-EXE
-      path: |
-        src-tauri/target/release/*.exe
-        src-tauri/target/release/bundle/**/*.exe
-      if-no-files-found: ignore
+      - name: Upload EXE
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GymDeck-EXE
+          path: |
+            src-tauri/target/release/*.exe
+            src-tauri/target/release/bundle/**/*.exe
+          if-no-files-found: ignore
