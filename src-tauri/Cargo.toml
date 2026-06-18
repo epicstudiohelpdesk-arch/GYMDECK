@@ -28,7 +28,7 @@ openssl-sys = { version = "0.9", features = ["vendored"] }
 
 # --- Security & Auth Backend Dependencies ---
 # SQLite with SQLCipher for AES-256 encrypted database
-rusqlite = { version = "0.31.0", features = ["bundled-sqlcipher"] }
+rusqlite = { version = "0.31.0", features = ["bundled-sqlcipher-vendored-openssl"] }
 # Password hashing
 argon2 = "0.5.3"
 # Secure random generation
@@ -64,4 +64,3 @@ codegen-units = 1
 panic = "abort"
 strip = true
 opt-level = "z"
-
