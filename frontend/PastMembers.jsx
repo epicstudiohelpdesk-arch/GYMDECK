@@ -519,13 +519,13 @@ export default function PastMembers() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             
             {/* Search Input Box */}
-            <label className="relative flex items-center flex-1 min-w-[280px]" htmlFor="archived-search-main">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <label className="relative flex items-center flex-1 min-w-[280px] h-11 rounded-xl border border-slate-200 bg-slate-50 px-3.5 transition focus-within:bg-white focus-within:border-slate-400 focus-within:ring-4 focus-within:ring-slate-100" htmlFor="archived-search-main">
+              <Search className="pointer-events-none h-4 w-4 text-slate-400 shrink-0 mr-2.5" aria-hidden="true" />
               <input 
                 id="archived-search-main"
                 type="text" 
                 placeholder="Search archived members by name, ID, phone or email..." 
-                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-xs font-semibold text-slate-900 outline-none transition focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                className="h-full w-full bg-transparent text-xs font-semibold text-slate-900 outline-none"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
