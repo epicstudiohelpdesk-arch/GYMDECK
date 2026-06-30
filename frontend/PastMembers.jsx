@@ -525,13 +525,67 @@ export default function PastMembers() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
+            {isSelectionMode && (
+              <>
+                <button 
+                  onClick={() => {
+                    const paginatedIds = paginatedMembers.map(m => m.id);
+                    const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
+                    if (areAllOnPageSelected) {
+                      setSelectedMemberIds(prev => prev.filter(id => !paginatedIds.includes(id)));
+                    } else {
+                      setSelectedMemberIds(prev => {
+                        const next = [...prev];
+                        paginatedIds.forEach(id => {
+                          if (!next.includes(id)) next.push(id);
+                        });
+                        return next;
+                      });
+                    }
+                  }}
+                  className="h-11 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-950 hover:border-slate-350 text-xs font-black uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center"
+                >
+                  {(() => {
+                    const paginatedIds = paginatedMembers.map(m => m.id);
+                    const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
+                    return areAllOnPageSelected ? "Deselect All" : "Select All";
+                  })()}
+                </button>
+
+                <button 
+                  disabled={selectedMemberIds.length === 0}
+                  onClick={handleBulkDeleteTrigger}
+                  className="h-11 w-11 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Delete Selected"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            )}
+
+            <button 
+              onClick={() => {
+                setIsSelectionMode(!isSelectionMode);
+                setSelectedMemberIds([]);
+              }}
+              className={cn(
+                "h-11 px-4 rounded-xl border text-xs font-black uppercase tracking-wider transition-colors shadow-sm",
+                isSelectionMode 
+                  ? "bg-slate-950 border-slate-950 text-white hover:bg-slate-800" 
+                  : "bg-white border-slate-200 text-slate-700 hover:text-slate-950 hover:border-slate-350"
+              )}
+            >
+              {isSelectionMode ? "Cancel Select" : "Select"}
+            </button>
+
             <button 
               onClick={handleExportArchive}
               className="h-11 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-black uppercase tracking-wider text-slate-700 hover:text-slate-950 transition-colors flex items-center gap-2 shadow-sm"
             >
               <Download size={14} /> Export CSV
             </button>
+            
             <button 
               onClick={() => {
                 if (pastMembers.length > 0) {
@@ -634,73 +688,15 @@ export default function PastMembers() {
             </div>
 
             {/* View Mode & Count Status */}
-            <div className="flex flex-wrap items-center gap-4 shrink-0">
+            <div className="flex items-center gap-4 shrink-0">
               {isSelectionMode && selectedMemberIds.length > 0 && (
                 <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none font-mono animate-pulse">
                   SELECTED: {selectedMemberIds.length}
                 </span>
               )}
-              {!isSelectionMode && (
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
-                  ARCHIVED MEMBERS: {filteredMembers.length}
-                </span>
-              )}
-
-              {/* Selection Controls */}
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => {
-                    setIsSelectionMode(!isSelectionMode);
-                    setSelectedMemberIds([]);
-                  }}
-                  className={cn(
-                    "h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm border flex items-center justify-center gap-1",
-                    isSelectionMode 
-                      ? "bg-slate-950 border-slate-950 text-white hover:bg-slate-800" 
-                      : "bg-white border-slate-200 text-slate-600 hover:text-slate-950 hover:border-slate-350"
-                  )}
-                >
-                  {isSelectionMode ? "Exit Select" : "Select"}
-                </button>
-
-                {isSelectionMode && (
-                  <>
-                    <button 
-                      onClick={() => {
-                        const paginatedIds = paginatedMembers.map(m => m.id);
-                        const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
-                        if (areAllOnPageSelected) {
-                          setSelectedMemberIds(prev => prev.filter(id => !paginatedIds.includes(id)));
-                        } else {
-                          setSelectedMemberIds(prev => {
-                            const next = [...prev];
-                            paginatedIds.forEach(id => {
-                              if (!next.includes(id)) next.push(id);
-                            });
-                            return next;
-                          });
-                        }
-                      }}
-                      className="h-8 px-3 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-950 hover:border-slate-350 text-[9px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center"
-                    >
-                      {(() => {
-                        const paginatedIds = paginatedMembers.map(m => m.id);
-                        const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
-                        return areAllOnPageSelected ? "Deselect All" : "Select All";
-                      })()}
-                    </button>
-                    
-                    <button 
-                      disabled={selectedMemberIds.length === 0}
-                      onClick={handleBulkDeleteTrigger}
-                      className="h-8 w-8 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-150 flex items-center justify-center text-rose-600 transition-all shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Delete Selected"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </>
-                )}
-              </div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
+                ARCHIVED MEMBERS: {filteredMembers.length}
+              </span>
               
               <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                 <button 
