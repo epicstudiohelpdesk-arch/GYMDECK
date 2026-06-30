@@ -248,6 +248,9 @@ export default function PastMembers() {
   const [plans, setPlans] = useState(MOCK_PLANS);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [deleteConfirmMember, setDeleteConfirmMember] = useState(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+  const [deleteConfirmBulk, setDeleteConfirmBulk] = useState(false);
   
   const RECORDS_PER_PAGE = 6;
 
@@ -418,7 +421,53 @@ export default function PastMembers() {
       showToast(`Failed to permanently delete member: ${e}`);
     }
   };
+  const handleToggleSelectMember = (id) => {
+    setSelectedMemberIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
+  const handleBulkDeleteTrigger = () => {
+    if (selectedMemberIds.length > 0) {
+      setDeleteConfirmBulk(true);
+    }
+  };
+
+  const confirmBulkDeleteMembers = async () => {
+    try {
+      if (window.__TAURI__) {
+        // Bulk delete members from SQLCipher database
+        await window.__TAURI__.core.invoke("permanent_delete_members_command", { memberIds: selectedMemberIds });
+      }
+
+      // Also clean up local storage items if any remains
+      const stored = localStorage.getItem("gymdeck_past_members");
+      if (stored) {
+        const list = JSON.parse(stored);
+        const updated = list.filter(m => !selectedMemberIds.includes(m.id) && !selectedMemberIds.includes(m.member_code));
+        localStorage.setItem("gymdeck_past_members", JSON.stringify(updated));
+      }
+
+      // Dispatch event for each deleted member to sync other views
+      selectedMemberIds.forEach(id => {
+        const event = new CustomEvent("gymdeck-member-deleted", { detail: id });
+        window.dispatchEvent(event);
+      });
+
+      showToast(`Permanently deleted ${selectedMemberIds.length} members and their data.`);
+      setSelectedMemberIds([]);
+      setIsSelectionMode(false);
+      setDeleteConfirmBulk(false);
+      fetchPastMembers();
+      
+      if (selectedMember && selectedMemberIds.includes(selectedMember.id)) {
+        setSelectedMember(null);
+      }
+    } catch (e) {
+      console.error("Bulk deletion failed:", e);
+      showToast(`Failed to permanently delete members: ${e}`);
+    }
+  };
   // Export Archive Ledger
   const handleExportArchive = () => {
     const headers = ["ID", "Name", "Phone", "Email", "Status", "Inactive Days", "Recovery Potential", "Offboarding Note"];
@@ -585,10 +634,73 @@ export default function PastMembers() {
             </div>
 
             {/* View Mode & Count Status */}
-            <div className="flex items-center gap-4 shrink-0">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
-                ARCHIVED MEMBERS: {filteredMembers.length}
-              </span>
+            <div className="flex flex-wrap items-center gap-4 shrink-0">
+              {isSelectionMode && selectedMemberIds.length > 0 && (
+                <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none font-mono animate-pulse">
+                  SELECTED: {selectedMemberIds.length}
+                </span>
+              )}
+              {!isSelectionMode && (
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
+                  ARCHIVED MEMBERS: {filteredMembers.length}
+                </span>
+              )}
+
+              {/* Selection Controls */}
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    setIsSelectionMode(!isSelectionMode);
+                    setSelectedMemberIds([]);
+                  }}
+                  className={cn(
+                    "h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm border flex items-center justify-center gap-1",
+                    isSelectionMode 
+                      ? "bg-slate-950 border-slate-950 text-white hover:bg-slate-800" 
+                      : "bg-white border-slate-200 text-slate-600 hover:text-slate-950 hover:border-slate-350"
+                  )}
+                >
+                  {isSelectionMode ? "Exit Select" : "Select"}
+                </button>
+
+                {isSelectionMode && (
+                  <>
+                    <button 
+                      onClick={() => {
+                        const paginatedIds = paginatedMembers.map(m => m.id);
+                        const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
+                        if (areAllOnPageSelected) {
+                          setSelectedMemberIds(prev => prev.filter(id => !paginatedIds.includes(id)));
+                        } else {
+                          setSelectedMemberIds(prev => {
+                            const next = [...prev];
+                            paginatedIds.forEach(id => {
+                              if (!next.includes(id)) next.push(id);
+                            });
+                            return next;
+                          });
+                        }
+                      }}
+                      className="h-8 px-3 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-950 hover:border-slate-350 text-[9px] font-black uppercase tracking-wider transition-all shadow-sm flex items-center justify-center"
+                    >
+                      {(() => {
+                        const paginatedIds = paginatedMembers.map(m => m.id);
+                        const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
+                        return areAllOnPageSelected ? "Deselect All" : "Select All";
+                      })()}
+                    </button>
+                    
+                    <button 
+                      disabled={selectedMemberIds.length === 0}
+                      onClick={handleBulkDeleteTrigger}
+                      className="h-8 w-8 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-150 flex items-center justify-center text-rose-600 transition-all shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Delete Selected"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </>
+                )}
+              </div>
               
               <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                 <button 
@@ -694,6 +806,22 @@ export default function PastMembers() {
                         {/* Member card layout */}
                         <div className="flex justify-between items-start gap-3 mb-4">
                           <div className="flex items-center gap-3.5 min-w-0">
+                            {isSelectionMode && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleSelectMember(member.id);
+                                }}
+                                className={cn(
+                                  "w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all",
+                                  selectedMemberIds.includes(member.id)
+                                    ? "bg-slate-950 border-slate-950 text-white"
+                                    : "bg-slate-50 border-slate-300 hover:border-slate-400"
+                                )}
+                              >
+                                {selectedMemberIds.includes(member.id) && <Check size={12} className="stroke-[3]" />}
+                              </button>
+                            )}
                             <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
                             <div className="min-w-0">
                               <h3 className="text-sm font-black text-slate-900 leading-tight truncate">{member.name}</h3>
@@ -807,6 +935,11 @@ export default function PastMembers() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                          {isSelectionMode && (
+                            <th className="px-4 py-4.5 w-10 text-center">
+                              <span className="sr-only">Select</span>
+                            </th>
+                          )}
                           <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Member</th>
                           <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Contact Info</th>
                           <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Archived Status & Reason</th>
@@ -818,6 +951,24 @@ export default function PastMembers() {
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {paginatedMembers.map(member => (
                           <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
+                            {isSelectionMode && (
+                              <td className="px-4 py-4.5 text-center">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleSelectMember(member.id);
+                                  }}
+                                  className={cn(
+                                    "w-5 h-5 rounded border mx-auto flex items-center justify-center shrink-0 transition-all",
+                                    selectedMemberIds.includes(member.id)
+                                      ? "bg-slate-950 border-slate-950 text-white"
+                                      : "bg-slate-50 border-slate-300 hover:border-slate-400"
+                                  )}
+                                >
+                                  {selectedMemberIds.includes(member.id) && <Check size={12} className="stroke-[3]" />}
+                                </button>
+                              </td>
+                            )}
                             <td className="px-6 py-4.5">
                               <div className="flex items-center gap-3.5">
                                 <img src={member.image} className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
@@ -1295,6 +1446,64 @@ export default function PastMembers() {
                     </button>
                     <button 
                       onClick={() => confirmDeleteMember(deleteConfirmMember)}
+                      className="h-9 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-600/10"
+                    >
+                      Permanently Delete
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+          {/* 2. Bulk Deletion Modal */}
+          {deleteConfirmBulk && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+              {/* Backdrop */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setDeleteConfirmBulk(false)}
+                className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
+              />
+              
+              {/* Modal Box */}
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="relative w-full max-w-md overflow-hidden rounded-2xl border border-rose-100 bg-white shadow-2xl z-10"
+              >
+                <div className="p-6">
+                  <div className="flex items-center gap-4 text-rose-600 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center">
+                      <Trash2 size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 tracking-tight uppercase">Bulk Deletion Alert</h3>
+                      <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest font-mono mt-0.5">This action is irreversible</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3.5 mb-6 text-slate-600 leading-relaxed text-xs font-medium">
+                    <p>
+                      Deleting <strong className="text-slate-900 font-bold">{selectedMemberIds.length} selected members</strong> will result in the <strong className="text-rose-600 font-bold">permanent deletion</strong> of the members and all their records (including documents, attendance, and payment ledger) from the database permanently.
+                    </p>
+                    <p className="bg-rose-50 text-rose-700 p-3 rounded-xl border border-rose-100/50 text-[11px] font-semibold flex gap-2">
+                      <span className="shrink-0 font-bold uppercase tracking-wider">Warning:</span>
+                      <span>This data cannot be recovered under any circumstances.</span>
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <button 
+                      onClick={() => setDeleteConfirmBulk(false)}
+                      className="h-9 px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-900 text-[10px] font-black uppercase tracking-wider transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={confirmBulkDeleteMembers}
                       className="h-9 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-600/10"
                     >
                       Permanently Delete

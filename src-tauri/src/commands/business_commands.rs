@@ -185,6 +185,45 @@ pub async fn permanent_delete_member_command(
 }
 
 #[tauri::command]
+pub async fn permanent_delete_members_command(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    member_ids: Vec<Uuid>,
+) -> Result<(), AppError> {
+    let ctx = get_auth_context(&state).await?;
+    
+    // 1. Delete associated profile photos from the local filesystem
+    if let Ok(app_dir) = app.path().app_data_dir() {
+        let photos_dir = app_dir.join("photos");
+        if photos_dir.exists() {
+            if let Ok(entries) = std::fs::read_dir(&photos_dir) {
+                for entry in entries.flatten() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        for member_id in &member_ids {
+                            let id_prefix = format!("{}_", member_id);
+                            if name.starts_with(&id_prefix) {
+                                let _ = std::fs::remove_file(entry.path());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 2. Dispatch to the dedicated write-worker to avoid SQLITE_BUSY deadlocks for database deletion
+    state.async_db.dispatch_write(Box::new(move |conn| {
+        let tx = conn.transaction().map_err(|e| AppError::Database(e.to_string()))?;
+        
+        for member_id in &member_ids {
+            MemberRepository::permanent_delete_member(&tx, &ctx, member_id)?;
+        }
+        
+        tx.commit().map_err(|e| AppError::Database(e.to_string()))
+    })).await
+}
+
+#[tauri::command]
 pub async fn get_plans_command(
     state: State<'_, AppState>,
 ) -> Result<Vec<MembershipPlan>, AppError> {
