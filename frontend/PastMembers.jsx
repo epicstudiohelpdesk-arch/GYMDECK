@@ -525,67 +525,13 @@ export default function PastMembers() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            {isSelectionMode && (
-              <>
-                <button 
-                  onClick={() => {
-                    const paginatedIds = paginatedMembers.map(m => m.id);
-                    const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
-                    if (areAllOnPageSelected) {
-                      setSelectedMemberIds(prev => prev.filter(id => !paginatedIds.includes(id)));
-                    } else {
-                      setSelectedMemberIds(prev => {
-                        const next = [...prev];
-                        paginatedIds.forEach(id => {
-                          if (!next.includes(id)) next.push(id);
-                        });
-                        return next;
-                      });
-                    }
-                  }}
-                  className="h-11 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-950 hover:border-slate-350 text-xs font-black uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center"
-                >
-                  {(() => {
-                    const paginatedIds = paginatedMembers.map(m => m.id);
-                    const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
-                    return areAllOnPageSelected ? "Deselect All" : "Select All";
-                  })()}
-                </button>
-
-                <button 
-                  disabled={selectedMemberIds.length === 0}
-                  onClick={handleBulkDeleteTrigger}
-                  className="h-11 w-11 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Delete Selected"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </>
-            )}
-
-            <button 
-              onClick={() => {
-                setIsSelectionMode(!isSelectionMode);
-                setSelectedMemberIds([]);
-              }}
-              className={cn(
-                "h-11 px-4 rounded-xl border text-xs font-black uppercase tracking-wider transition-colors shadow-sm",
-                isSelectionMode 
-                  ? "bg-slate-950 border-slate-950 text-white hover:bg-slate-800" 
-                  : "bg-white border-slate-200 text-slate-700 hover:text-slate-950 hover:border-slate-350"
-              )}
-            >
-              {isSelectionMode ? "Cancel Select" : "Select"}
-            </button>
-
+          <div className="flex items-center gap-4 shrink-0">
             <button 
               onClick={handleExportArchive}
               className="h-11 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-black uppercase tracking-wider text-slate-700 hover:text-slate-950 transition-colors flex items-center gap-2 shadow-sm"
             >
               <Download size={14} /> Export CSV
             </button>
-            
             <button 
               onClick={() => {
                 if (pastMembers.length > 0) {
@@ -687,48 +633,109 @@ export default function PastMembers() {
               </div>
             </div>
 
-            {/* View Mode & Count Status */}
-            <div className="flex items-center gap-4 shrink-0">
-              {isSelectionMode && selectedMemberIds.length > 0 && (
-                <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none font-mono animate-pulse">
-                  SELECTED: {selectedMemberIds.length}
-                </span>
-              )}
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
-                ARCHIVED MEMBERS: {filteredMembers.length}
-              </span>
-              
-              <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
+            {/* View Mode & Count Status (with Selection Controls inline in the red marked space!) */}
+            <div className="flex flex-wrap items-center justify-between gap-4 w-full border-t border-slate-100 pt-3.5 mt-3.5">
+              {/* Left Side: View Mode & Count */}
+              <div className="flex items-center gap-4 shrink-0">
+                {isSelectionMode && selectedMemberIds.length > 0 && (
+                  <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest leading-none font-mono animate-pulse">
+                    SELECTED: {selectedMemberIds.length}
+                  </span>
+                )}
+                {!isSelectionMode && (
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
+                    ARCHIVED MEMBERS: {filteredMembers.length}
+                  </span>
+                )}
+                
+                <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
+                  <button 
+                    onClick={() => setViewMode("grid")}
+                    className={cn(
+                      "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
+                      viewMode === "grid" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
+                    )}
+                    title="Grid View"
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode("table")}
+                    className={cn(
+                      "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
+                      viewMode === "table" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
+                    )}
+                    title="List View"
+                  >
+                    <List size={16} />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode("analytics")}
+                    className={cn(
+                      "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
+                      viewMode === "analytics" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
+                    )}
+                    title="Retention Analytics"
+                  >
+                    <BarChart3 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Side: Selection Action Buttons (This is inside the red marked ellipse space!) */}
+              <div className="flex items-center gap-2">
                 <button 
-                  onClick={() => setViewMode("grid")}
+                  onClick={() => {
+                    setIsSelectionMode(!isSelectionMode);
+                    setSelectedMemberIds([]);
+                  }}
                   className={cn(
-                    "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
-                    viewMode === "grid" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
+                    "h-9 px-4 rounded-xl border text-xs font-black uppercase tracking-wider transition-colors shadow-sm",
+                    isSelectionMode 
+                      ? "bg-slate-950 border-slate-950 text-white hover:bg-slate-800" 
+                      : "bg-white border-slate-200 text-slate-700 hover:text-slate-950 hover:border-slate-350"
                   )}
-                  title="Grid View"
                 >
-                  <LayoutGrid size={16} />
+                  {isSelectionMode ? "Cancel Select" : "Select"}
                 </button>
-                <button 
-                  onClick={() => setViewMode("table")}
-                  className={cn(
-                    "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
-                    viewMode === "table" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
-                  )}
-                  title="List View"
-                >
-                  <List size={16} />
-                </button>
-                <button 
-                  onClick={() => setViewMode("analytics")}
-                  className={cn(
-                    "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
-                    viewMode === "analytics" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
-                  )}
-                  title="Retention Analytics"
-                >
-                  <BarChart3 size={16} />
-                </button>
+
+                {isSelectionMode && (
+                  <>
+                    <button 
+                      onClick={() => {
+                        const paginatedIds = paginatedMembers.map(m => m.id);
+                        const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
+                        if (areAllOnPageSelected) {
+                          setSelectedMemberIds(prev => prev.filter(id => !paginatedIds.includes(id)));
+                        } else {
+                          setSelectedMemberIds(prev => {
+                            const next = [...prev];
+                            paginatedIds.forEach(id => {
+                              if (!next.includes(id)) next.push(id);
+                            });
+                            return next;
+                          });
+                        }
+                      }}
+                      className="h-9 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-950 hover:border-slate-350 text-xs font-black uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center"
+                    >
+                      {(() => {
+                        const paginatedIds = paginatedMembers.map(m => m.id);
+                        const areAllOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedMemberIds.includes(id));
+                        return areAllOnPageSelected ? "Deselect All" : "Select All";
+                      })()}
+                    </button>
+                    
+                    <button 
+                      disabled={selectedMemberIds.length === 0}
+                      onClick={handleBulkDeleteTrigger}
+                      className="h-9 w-9 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Delete Selected"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
