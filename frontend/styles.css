@@ -3011,7 +3011,9 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 }
 
 .members-toolbar-copy {
-  width: 130px;
+  width: 130px !important;
+  min-width: 130px !important;
+  max-width: 130px !important;
   min-height: 50px;
   display: grid;
   align-content: center;
@@ -3032,12 +3034,14 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .members-toolbar-copy strong {
   display: block;
   margin-top: 3px;
   font-size: 0.96rem;
+  white-space: nowrap;
 }
 
 .members-table-panel {
