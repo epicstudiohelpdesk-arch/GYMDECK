@@ -150,6 +150,23 @@ pub async fn soft_delete_member_command(
 }
 
 #[tauri::command]
+pub async fn permanent_delete_member_command(
+    state: State<'_, AppState>,
+    member_id: Uuid,
+) -> Result<(), AppError> {
+    let ctx = get_auth_context(&state).await?;
+    
+    // Dispatch to the dedicated write-worker to avoid SQLITE_BUSY deadlocks
+    state.async_db.dispatch_write(Box::new(move |conn| {
+        let tx = conn.transaction().map_err(|e| AppError::Database(e.to_string()))?;
+        
+        MemberRepository::permanent_delete_member(&tx, &ctx, &member_id)?;
+        
+        tx.commit().map_err(|e| AppError::Database(e.to_string()))
+    })).await
+}
+
+#[tauri::command]
 pub async fn get_plans_command(
     state: State<'_, AppState>,
 ) -> Result<Vec<MembershipPlan>, AppError> {

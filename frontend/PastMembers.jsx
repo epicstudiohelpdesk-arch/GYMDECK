@@ -245,6 +245,7 @@ export default function PastMembers() {
   const [reactivateMember, setReactivateMember] = useState(null);
   const [plans, setPlans] = useState(MOCK_PLANS);
   const [selectedPlan, setSelectedPlan] = useState("");
+  const [deleteConfirmMember, setDeleteConfirmMember] = useState(null);
   
   const RECORDS_PER_PAGE = 6;
 
@@ -379,22 +380,36 @@ export default function PastMembers() {
 
   // Delete/Purge Past Member record
   const handleDeleteMember = (member) => {
-    if (confirm(`Are you sure you want to permanently delete the archived record of ${member.name}? This action is irreversible.`)) {
-      try {
-        const stored = localStorage.getItem("gymdeck_past_members");
-        const list = stored ? JSON.parse(stored) : [];
-        const updated = list.filter(m => m.id !== member.id && m.member_code !== member.id);
-        localStorage.setItem("gymdeck_past_members", JSON.stringify(updated));
-        
-        showToast(`Permanently deleted ${member.name} from archive ledger.`);
-        fetchPastMembers();
-        if (selectedMember && selectedMember.id === member.id) {
-          setSelectedMember(null);
-        }
-      } catch (e) {
-        console.error(e);
-        showToast("Failed to delete record.");
+    setDeleteConfirmMember(member);
+  };
+
+  const confirmDeleteMember = async (member) => {
+    try {
+      if (window.__TAURI__) {
+        // Purge member permanently from SQLCipher database
+        await window.__TAURI__.core.invoke("permanent_delete_member_command", { memberId: member.id });
       }
+
+      // Clear local storage past members (legacy/mock compatibility if any remains)
+      const stored = localStorage.getItem("gymdeck_past_members");
+      const list = stored ? JSON.parse(stored) : [];
+      const updated = list.filter(m => m.id !== member.id && m.member_code !== member.id);
+      localStorage.setItem("gymdeck_past_members", JSON.stringify(updated));
+
+      // Trigger standard deletion event to sync active directory views
+      const event = new CustomEvent("gymdeck-member-deleted", { detail: member.id });
+      window.dispatchEvent(event);
+
+      showToast(`Permanently deleted ${member.name} and all data from database.`);
+      setDeleteConfirmMember(null);
+      fetchPastMembers();
+      
+      if (selectedMember && selectedMember.id === member.id) {
+        setSelectedMember(null);
+      }
+    } catch (e) {
+      console.error("Permanent delete failed:", e);
+      showToast(`Failed to permanently delete member: ${e}`);
     }
   };
 
@@ -1218,6 +1233,67 @@ export default function PastMembers() {
                   Confirm Reactivation
                 </button>
               </footer>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── PERMANENT DELETION WARNING MODAL ─── */}
+      <AnimatePresence>
+        {deleteConfirmMember && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirmMember(null)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal Box */}
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md overflow-hidden rounded-2xl border border-rose-100 bg-white shadow-2xl z-10"
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-4 text-rose-600 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center">
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 tracking-tight uppercase">Permanent Deletion Alert</h3>
+                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest font-mono mt-0.5">This action is irreversible</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5 mb-6 text-slate-600 leading-relaxed text-xs font-medium">
+                  <p>
+                    Deleting <strong className="text-slate-900 font-bold">{deleteConfirmMember.name}</strong> will result in the <strong className="text-rose-600 font-bold">permanent deletion</strong> of the member and all his/her records (including documents, attendance, and payment ledger) from the database permanently.
+                  </p>
+                  <p className="bg-rose-50 text-rose-700 p-3 rounded-xl border border-rose-100/50 text-[11px] font-semibold flex gap-2">
+                    <span className="shrink-0 font-bold uppercase tracking-wider">Warning:</span>
+                    <span>This data cannot be recovered under any circumstances.</span>
+                  </p>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button 
+                    onClick={() => setDeleteConfirmMember(null)}
+                    className="h-9 px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-900 text-[10px] font-black uppercase tracking-wider transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => confirmDeleteMember(deleteConfirmMember)}
+                    className="h-9 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-600/10"
+                  >
+                    Permanently Delete
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

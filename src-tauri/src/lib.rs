@@ -25,7 +25,7 @@ use commands::auth_commands::{
     AppState
 };
 use commands::business_commands::{
-    get_members_command, create_member_command, get_plans_command, get_member_documents_command, soft_delete_member_command, get_past_members_command,
+    get_members_command, create_member_command, get_plans_command, get_member_documents_command, soft_delete_member_command, permanent_delete_member_command, get_past_members_command,
     download_document_command, save_member_documents_command, update_member_command, upload_photo_command, get_document_temp_path_command
 };
 use auth::rate_limit::default_auth_limiter;
@@ -142,6 +142,7 @@ pub fn run() {
         get_plans_command,
         get_member_documents_command,
         soft_delete_member_command,
+        permanent_delete_member_command,
         get_past_members_command,
         download_document_command,
         save_member_documents_command,

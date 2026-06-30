@@ -268,6 +268,28 @@ impl MemberRepository {
         Ok(())
     }
 
+    /// Permanently deletes a member from the database.
+    pub fn permanent_delete_member(
+        tx: &Transaction,
+        ctx: &AuthenticatedContext,
+        member_id: &Uuid
+    ) -> Result<(), AppError> {
+        let rows = tx.execute(
+            "DELETE FROM gym_members 
+             WHERE id = ?1 AND gym_id = ?2",
+            params![
+                member_id.to_string(),
+                ctx.gym_id.to_string(),
+            ],
+        ).map_err(|e| AppError::Database(e.to_string()))?;
+
+        if rows == 0 {
+            return Err(AppError::Database("Member not found or unauthorized".into()));
+        }
+
+        Ok(())
+    }
+
     /// Fetches a single member by ID for the authenticated gym.
     pub fn get_member_by_id(
         conn: &Connection,
