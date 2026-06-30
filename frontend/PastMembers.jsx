@@ -520,7 +520,7 @@ export default function PastMembers() {
             
             {/* Search Input Box */}
             <label className="relative block h-11 flex-1 min-w-[280px]" htmlFor="archived-search-main">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+              <Search className="pointer-events-none absolute left-3.5 top-[14px] h-4 w-4 text-slate-400" aria-hidden="true" />
               <input 
                 id="archived-search-main"
                 type="text" 
