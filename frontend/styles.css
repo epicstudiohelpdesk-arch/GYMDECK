@@ -2113,6 +2113,12 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   pointer-events: auto;
 }
 
+/* Disable hover states and pointer events during scroll to maximize scroll FPS */
+.members-stage.is-scrolling *,
+.past-members-stage.is-scrolling * {
+  pointer-events: none !important;
+}
+
 .membership-plans-stage {
   position: absolute;
   inset: 0;

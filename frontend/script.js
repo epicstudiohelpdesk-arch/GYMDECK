@@ -2043,6 +2043,28 @@ if (document.readyState === "loading") {
   initScrollLocking();
 }
 
+const initMembersScrollPerformance = () => {
+  const scrollContainers = document.querySelectorAll(".members-stage, .past-members-stage");
+  scrollContainers.forEach(container => {
+    let scrollTimeout;
+    container.addEventListener("scroll", () => {
+      if (!container.classList.contains("is-scrolling")) {
+        container.classList.add("is-scrolling");
+      }
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        container.classList.remove("is-scrolling");
+      }, 150);
+    }, { passive: true });
+  });
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initMembersScrollPerformance);
+} else {
+  initMembersScrollPerformance();
+}
+
 document.getElementById("viewDocumentsFromModal")?.addEventListener("click", async () => {
   if (activeMoreOptionsRow) {
     verificationModal?.classList.add("verification-animate-slide");
