@@ -8,6 +8,8 @@ dist/
 
 coverage/
 *.log
+data/
+logs/
 
 src-tauri/target/
 

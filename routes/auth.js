@@ -1,24 +1,64 @@
 import express from "express";
+import crypto from "crypto";
+import { userStore as users, otpStore } from "../lib/store.js";
 
 const router = express.Router();
 
-// In-memory user storage (replace with MongoDB later)
-export const users = new Map();
+const SALT_LENGTH = 32;
+const KEY_LENGTH = 64;
+const SCRYPT_COST = 16384;
+const SCRYPT_BLOCK_SIZE = 8;
+const SCRYPT_PARALLELIZATION = 1;
+const OTP_RATE_LIMIT_WINDOW_MS = 60_000;
+const OTP_MAX_REQUESTS = 3;
 
-// Helper to generate OTP
+function hashPassword(password) {
+  const salt = crypto.randomBytes(SALT_LENGTH).toString("hex");
+  const hash = crypto.scryptSync(password, salt, KEY_LENGTH, {
+    N: SCRYPT_COST,
+    r: SCRYPT_BLOCK_SIZE,
+    p: SCRYPT_PARALLELIZATION,
+  }).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  const [salt, hash] = stored.split(":");
+  if (!salt || !hash) return false;
+  const derived = crypto.scryptSync(password, salt, KEY_LENGTH, {
+    N: SCRYPT_COST,
+    r: SCRYPT_BLOCK_SIZE,
+    p: SCRYPT_PARALLELIZATION,
+  }).toString("hex");
+  return crypto.timingSafeEqual(Buffer.from(derived), Buffer.from(hash));
+}
+
+const otpRateLimits = new Map();
+function checkOtpRateLimit(email) {
+  const now = Date.now();
+  const entry = otpRateLimits.get(email);
+  if (!entry || now - entry.windowStart > OTP_RATE_LIMIT_WINDOW_MS) {
+    otpRateLimits.set(email, { windowStart: now, count: 1 });
+    return { allowed: true };
+  }
+  if (entry.count >= OTP_MAX_REQUESTS) {
+    const retryAfter = Math.ceil((OTP_RATE_LIMIT_WINDOW_MS - (now - entry.windowStart)) / 1000);
+    return { allowed: false, retryAfter };
+  }
+  entry.count += 1;
+  return { allowed: true };
+}
+
 const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 999999).toString();
 };
 
-// Store OTPs temporarily (in production, use Redis with expiry)
-export const otpStore = new Map();
+export { users, otpStore };
 
-// GET /auth/signup - Show signup page
 router.get("/signup", (req, res) => {
   res.sendFile(process.cwd() + "/authentication/signup.html");
 });
 
-// POST /auth/signup - Register new user
 router.post("/signup", (req, res) => {
   const { email, password, name, phone } = req.body;
   const isJson = req.headers["content-type"]?.includes("application/json");
@@ -30,7 +70,13 @@ router.post("/signup", (req, res) => {
     });
   }
 
-  // Check if user already exists
+  if (password.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 8 characters long"
+    });
+  }
+
   const existingUser = Array.from(users.values()).find((u) => u.email === email);
   if (existingUser) {
     return res.status(400).json({
@@ -39,11 +85,10 @@ router.post("/signup", (req, res) => {
     });
   }
 
-  // Create new user (in production, hash the password!)
   const user = {
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
     email,
-    password, // TODO: Hash this password!
+    passwordHash: hashPassword(password),
     name,
     phone: phone || "",
     createdAt: new Date().toISOString(),
@@ -59,11 +104,9 @@ router.post("/signup", (req, res) => {
     });
   }
 
-  // HTML form submission
   res.redirect("/login?registered=true");
 });
 
-// GET /auth/login - Show login page
 router.get("/login", (req, res) => {
   if (req.session.user) {
     return res.redirect("/dashboard");
@@ -71,7 +114,6 @@ router.get("/login", (req, res) => {
   res.sendFile(process.cwd() + "/authentication/index.html");
 });
 
-// POST /auth/login - Authenticate user
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
   const isJson = req.headers["content-type"]?.includes("application/json");
@@ -83,19 +125,17 @@ router.post("/login", (req, res) => {
     });
   }
 
-  // Find user by email (in production, query the database)
   const user = Array.from(users.values()).find(
-    (u) => u.email === email && u.password === password
+    (u) => u.email === email
   );
 
-  if (!user) {
+  if (!user || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({
       success: false,
       message: "Invalid email or password"
     });
   }
 
-  // Store user in session
   req.session.user = {
     id: user.id,
     email: user.email,
@@ -110,16 +150,13 @@ router.post("/login", (req, res) => {
     });
   }
 
-  // HTML form submission fallback
   res.redirect("/dashboard");
 });
 
-// GET /auth/forgot-password - Show forgot password page
 router.get("/forgot-password", (req, res) => {
   res.sendFile(process.cwd() + "/authentication/forgot-password.html");
 });
 
-// POST /auth/forgot-password - Request password reset
 router.post("/forgot-password", (req, res) => {
   const { email } = req.body;
 
@@ -130,28 +167,31 @@ router.post("/forgot-password", (req, res) => {
     });
   }
 
+  const rateCheck = checkOtpRateLimit(email);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      message: `Too many OTP requests. Try again in ${rateCheck.retryAfter} seconds.`
+    });
+  }
+
   const user = Array.from(users.values()).find((u) => u.email === email);
 
-  // Always return success to prevent email enumeration
-  // In production, actually send the email
   if (user) {
     const otp = generateOTP();
     otpStore.set(email, {
       otp,
-      expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
+      expiresAt: Date.now() + 15 * 60 * 1000,
     });
-    console.log(`OTP for ${email}: ${otp}`); // Remove in production!
+    console.log(`OTP for ${email}: ${otp}`);
   }
 
   res.json({
     success: true,
     message: "If an account exists with this email, you will receive an OTP.",
-    // For demo: include OTP in response (remove in production!)
-    ...(user && { otp: otpStore.get(email)?.otp }),
   });
 });
 
-// GET /auth/otp - Show OTP page
 router.get("/otp", (req, res) => {
   const { email } = req.query;
 
@@ -169,7 +209,6 @@ router.get("/otp", (req, res) => {
   res.sendFile(process.cwd() + "/authentication/otp.html");
 });
 
-// POST /auth/otp - Verify OTP and reset password
 router.post("/otp", (req, res) => {
   const { email, otp, newPassword } = req.body;
 
@@ -177,6 +216,13 @@ router.post("/otp", (req, res) => {
     return res.status(400).json({
       success: false,
       message: "Email, OTP, and new password are required"
+    });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: "New password must be at least 8 characters long"
     });
   }
 
@@ -204,11 +250,9 @@ router.post("/otp", (req, res) => {
     });
   }
 
-  // Find and update user
   const user = Array.from(users.values()).find((u) => u.email === email);
-
   if (user) {
-    user.password = newPassword; // TODO: Hash this!
+    user.passwordHash = hashPassword(newPassword);
   }
 
   otpStore.delete(email);

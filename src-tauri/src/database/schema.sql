@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS gym_members (
     address TEXT,
     height TEXT,
     weight TEXT,
+    blood_group TEXT,
     membership_plan_id TEXT,
     membership_status TEXT NOT NULL DEFAULT 'INACTIVE', -- ACTIVE, EXPIRED, FROZEN, INACTIVE
     joined_at DATETIME NOT NULL,

@@ -59,12 +59,15 @@ const initIntro = () => {
     document.documentElement.style.backgroundColor = "";
     
     if (authPage) {
-      authPage.classList.remove("is-loading");
-      // Ensure the entry class is present for standard transition
+      // Add auth-enter FIRST so opacity: 0 is guaranteed before is-loading comes off
       document.documentElement.classList.add("auth-enter");
-      
+
       requestAnimationFrame(() => {
-        document.documentElement.classList.add("auth-enter-active");
+        authPage.classList.remove("is-loading");
+
+        requestAnimationFrame(() => {
+          document.documentElement.classList.add("auth-enter-active");
+        });
       });
     }
   }
@@ -273,19 +276,14 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
           console.warn("Tauri environment not detected. Native authentication requires the desktop app.");
           
           clearErrors();
-          if (submitButton) {
-            const btnWrap = submitButton.parentNode;
+          if (submitButton && passwordInput) {
+            const metaRow = submitButton.form.querySelector('.meta-row');
             const errorEl = document.createElement('div');
             errorEl.className = 'form-error-message';
-            errorEl.innerHTML = `
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" x2="12" y1="8" y2="12"></line>
-                <line x1="12" x2="12.01" y1="16" y2="16"></line>
-              </svg>
-              <span>Security Error: Native backend disconnected.</span>
-            `;
-            btnWrap.insertBefore(errorEl, submitButton);
+            errorEl.textContent = 'Native backend disconnected.';
+            if (metaRow) {
+              metaRow.prepend(errorEl);
+            }
           }
           return;
       }
@@ -368,21 +366,31 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
           // Backend returns a generic safe error string
           console.error("Native Auth Error:", error);
           
-          // Display backend error above the submit button
           clearErrors();
-          const btnWrap = submitButton.parentNode;
+          
+          // Highlight + shake email and password fields on auth failure
+          if (!isSignup) {
+            [emailInput, passwordInput].forEach(input => {
+              if (input) {
+                const fieldWrap = input.closest('.field');
+                if (fieldWrap) {
+                  fieldWrap.classList.add('has-error');
+                  fieldWrap.classList.remove('input-shake');
+                  void fieldWrap.offsetWidth;
+                  fieldWrap.classList.add('input-shake');
+                }
+              }
+            });
+          }
+          
+          // Display error alongside the forgot password link
+          const metaRow = submitButton.form.querySelector('.meta-row');
           const errorEl = document.createElement('div');
           errorEl.className = 'form-error-message';
-          errorEl.innerHTML = `
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <span>${error}</span>
-          `;
-          btnWrap.insertBefore(errorEl, submitButton);
-
+          errorEl.textContent = typeof error === 'string' ? error.replace(/^Authentication Error:\s*/i, '') : 'Sign in failed.';
+          if (metaRow) {
+            metaRow.prepend(errorEl);
+          }
           
           if (submitButton) {
             submitButton.removeAttribute("disabled");

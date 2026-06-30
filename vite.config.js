@@ -105,7 +105,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: '/',
+    open: false,
     strictPort: true,
   },
   // Pre-bundle heavy dependencies for faster dev startup

@@ -443,6 +443,14 @@
       >
         <div class="drawer-handle"></div>
         
+        <!-- Fixed Close Button at top-right of Modal -->
+        <button class="member-modal-close-btn" type="button" aria-label="Close modal form" data-add-member-close>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        
         <!-- Sliding Page Container -->
         <div class="member-form-modal-container">
           <!-- Page 1: Registration Form -->
@@ -452,12 +460,6 @@
                 <p class="member-form-kicker">New Registration</p>
                 <h2 id="member-form-title">Add New Member</h2>
               </div>
-              <button class="document-close-btn" type="button" aria-label="Close add member form" data-add-member-close>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 6 18 18" />
-                  <path d="M18 6 6 18" />
-                </svg>
-              </button>
             </div>
             <p id="member-form-copy" class="member-form-copy">
               Start a clean new profile with all the key member information captured in one focused flow.
@@ -475,8 +477,8 @@
                 <small class="member-field-error" hidden>Please enter the primary contact number.</small>
               </label>
               <label class="member-field" data-field-label="Alternate Contact">
-                <span>Alternate Contact <em>*</em></span>
-                <input type="tel" placeholder="Enter alternate contact" required />
+                <span>Alternate Contact</span>
+                <input type="tel" placeholder="Enter alternate contact" />
                 <small class="member-field-error" hidden>Please enter the alternate contact number.</small>
               </label>
               <label class="member-field" data-field-label="Email Address">
@@ -546,31 +548,112 @@
                 </div>
                 <small class="member-field-error" hidden>Please select the member's date of birth.</small>
               </label>
-              <label class="member-field" data-field-label="Height">
+              <div class="member-field" data-field-label="Height">
                 <span>Height</span>
-                <input type="text" placeholder="e.g. 175 cm" />
+                <input type="hidden" class="height-final-value" />
+                <div class="height-input-container">
+                  <div class="height-inputs-area">
+                    <input type="number" class="height-val-input cm-input" placeholder="e.g. 175" min="50" max="250" />
+                    <div class="ft-in-inputs" hidden>
+                      <div class="ft-input-group">
+                        <input type="number" class="height-val-input ft-input" placeholder="Ft" min="1" max="8" />
+                        <span class="height-input-suffix">ft</span>
+                      </div>
+                      <div class="ft-in-divider"></div>
+                      <div class="in-input-group">
+                        <input type="number" class="height-val-input in-input" placeholder="In" min="0" max="11" />
+                        <span class="height-input-suffix">in</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="height-unit-selector">
+                    <button class="unit-btn active" type="button" data-unit="cm">cm</button>
+                    <button class="unit-btn" type="button" data-unit="ft">ft/in</button>
+                  </div>
+                </div>
                 <small class="member-field-error" hidden></small>
-              </label>
-              <label class="member-field" data-field-label="Weight">
+              </div>
+              <div class="member-field" data-field-label="Weight">
                 <span>Weight</span>
-                <input type="text" placeholder="e.g. 70 kg" />
+                <input type="hidden" class="weight-final-value" />
+                <div class="weight-input-container">
+                  <div class="weight-inputs-area">
+                    <input type="number" class="weight-val-input kg-input" placeholder="e.g. 70" min="10" max="300" />
+                    <input type="number" class="weight-val-input lbs-input" placeholder="e.g. 154" min="20" max="660" hidden />
+                  </div>
+                  <div class="weight-unit-selector">
+                    <button class="unit-btn active" type="button" data-unit="kg">kg</button>
+                    <button class="unit-btn" type="button" data-unit="lbs">lbs</button>
+                  </div>
+                </div>
                 <small class="member-field-error" hidden></small>
-              </label>
+              </div>
+              <div class="member-field" data-field-label="Gender">
+                <span>Gender <em>*</em></span>
+                <div class="custom-select-wrapper">
+                  <select required data-member-gender-input style="display: none !important;">
+                    <option value="" disabled selected>Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <div class="custom-dropdown-trigger" data-dropdown-trigger="gender">
+                    <span class="custom-dropdown-value">Select gender</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                  </div>
+                  <div class="custom-dropdown-menu grid-3" data-dropdown-menu="gender">
+                    <div class="custom-dropdown-item" data-value="Male">Male</div>
+                    <div class="custom-dropdown-item" data-value="Female">Female</div>
+                    <div class="custom-dropdown-item" data-value="Other">Other</div>
+                  </div>
+                </div>
+                <small class="member-field-error" hidden>Please select the member's gender.</small>
+              </div>
+              <div class="member-field" data-field-label="Blood Group">
+                <span>Blood Group</span>
+                <div class="custom-select-wrapper">
+                  <select data-member-bloodgroup-input style="display: none !important;">
+                    <option value="" selected>Select Blood Group (Optional)</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                  <div class="custom-dropdown-trigger" data-dropdown-trigger="bloodgroup">
+                    <span class="custom-dropdown-value">Select Blood Group (Optional)</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                  </div>
+                  <div class="custom-dropdown-menu grid-2" data-dropdown-menu="bloodgroup">
+                    <div class="custom-dropdown-item placeholder" data-value="">Select Blood Group (Optional)</div>
+                    <div class="custom-dropdown-item" data-value="A+">A+</div>
+                    <div class="custom-dropdown-item" data-value="A-">A-</div>
+                    <div class="custom-dropdown-item" data-value="B+">B+</div>
+                    <div class="custom-dropdown-item" data-value="B-">B-</div>
+                    <div class="custom-dropdown-item" data-value="O+">O+</div>
+                    <div class="custom-dropdown-item" data-value="O-">O-</div>
+                    <div class="custom-dropdown-item" data-value="AB+">AB+</div>
+                    <div class="custom-dropdown-item" data-value="AB-">AB-</div>
+                  </div>
+                </div>
+                <small class="member-field-error" hidden></small>
+              </div>
               <label class="member-field member-field-span-2" data-field-label="Address">
                 <span>Address <em>*</em></span>
-                <textarea rows="1" placeholder="Enter complete residential address" required style="min-height: 56px;"></textarea>
+                <textarea rows="1" placeholder="Enter complete residential address" required style="min-height: 56px; resize: none;"></textarea>
                 <small class="member-field-error" hidden>Please enter the residential address.</small>
               </label>
+              <div class="member-form-disclaimer member-field-wide">
+                <span><em>*</em> Fields marked with a red star are mandatory.</span>
+              </div>
             </form>
-            <div class="member-form-actions">
-              <button class="dialog-btn dialog-btn-muted" type="button" data-add-member-close>Cancel</button>
-              <button class="dialog-btn dialog-btn-danger" type="button" data-member-save>
-                <span>NEXT</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
           </div>
 
           <!-- Page 2: Profile Photo Upload -->
@@ -580,12 +663,6 @@
                 <p class="member-form-kicker">Identity Capture</p>
                 <h2 id="photo-upload-title">Capture Member Photo</h2>
               </div>
-              <button class="document-close-btn" type="button" aria-label="Close photo upload" data-add-member-close>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 6 18 18" />
-                  <path d="M18 6 6 18" />
-                </svg>
-              </button>
             </div>
             <p class="member-form-copy">
               Please upload a clear profile photo of the member for identification and membership card generation.
@@ -612,15 +689,6 @@
                 </div>
             </div>
 
-            <div class="member-form-actions">
-              <button class="dialog-btn dialog-btn-muted" type="button" data-photo-upload-back>← Back</button>
-              <button class="dialog-btn dialog-btn-danger" type="button" data-photo-upload-next>
-                <span>NEXT</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
           </div>
 
           <!-- Page 3: Document Upload -->
@@ -630,12 +698,6 @@
                 <p class="member-form-kicker">Document Upload</p>
                 <h2 id="doc-upload-title">Upload Member Documents</h2>
               </div>
-              <button class="document-close-btn" type="button" aria-label="Close document upload" data-add-member-close>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 6 18 18" />
-                  <path d="M18 6 6 18" />
-                </svg>
-              </button>
             </div>
             <p class="member-form-copy" data-doc-upload-copy>
               Member saved successfully. Add supporting documents to complete the profile.
@@ -643,6 +705,55 @@
             <p class="member-form-alert" data-doc-upload-alert hidden></p>
 
             <div class="doc-upload-grid">
+              <!-- Aadhaar Card -->
+              <div class="doc-upload-card" data-doc-type="aadhaar">
+                <div class="doc-upload-card-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="M7 15h0M11 15h0M15 15h0M7 11h0M11 11h0M15 11h0" />
+                  </svg>
+                </div>
+                <div class="doc-upload-card-content">
+                  <strong>Aadhaar Card <em>*</em></strong>
+                  <span>Identity proof (front &amp; back)</span>
+                  <div class="doc-upload-card-actions">
+                    <input
+                      class="doc-upload-input"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                      data-doc-upload-input="aadhaar"
+                      hidden
+                    />
+                    <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="aadhaar">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Upload
+                    </button>
+                    <span class="doc-upload-meta" data-doc-upload-meta="aadhaar">No file</span>
+                    <div class="doc-upload-preview" data-doc-upload-preview="aadhaar" hidden>
+                      <img class="doc-upload-preview-image" src="" alt="" data-doc-upload-image="aadhaar" hidden />
+                      <div class="doc-upload-preview-pdf" data-doc-upload-pdf="aadhaar" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="doc-pdf-icon-svg">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="doc-pdf-label-tag">PDF</span>
+                      </div>
+                      <div class="doc-upload-preview-overlay"></div>
+                      <button class="doc-upload-remove" type="button" aria-label="Remove" data-doc-upload-remove="aadhaar">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M6 6 18 18" />
+                          <path d="M18 6 6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Residential Proof -->
               <div class="doc-upload-card" data-doc-type="pan">
                 <div class="doc-upload-card-icon">
@@ -673,7 +784,14 @@
                     <span class="doc-upload-meta" data-doc-upload-meta="pan">No file</span>
                     <div class="doc-upload-preview" data-doc-upload-preview="pan" hidden>
                       <img class="doc-upload-preview-image" src="" alt="" data-doc-upload-image="pan" hidden />
-                      <iframe class="doc-upload-preview-pdf" src="" title="PDF preview" data-doc-upload-pdf="pan" hidden></iframe>
+                      <div class="doc-upload-preview-pdf" data-doc-upload-pdf="pan" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="doc-pdf-icon-svg">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="doc-pdf-label-tag">PDF</span>
+                      </div>
+                      <div class="doc-upload-preview-overlay"></div>
                       <button class="doc-upload-remove" type="button" aria-label="Remove" data-doc-upload-remove="pan">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path d="M6 6 18 18" />
@@ -685,26 +803,27 @@
                 </div>
               </div>
 
-              <!-- Aadhaar Card -->
-              <div class="doc-upload-card" data-doc-type="aadhaar">
+              <!-- Health Certificate -->
+              <div class="doc-upload-card" data-doc-type="health">
                 <div class="doc-upload-card-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <path d="M7 15h0M11 15h0M15 15h0M7 11h0M11 11h0M15 11h0" />
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
                   </svg>
                 </div>
                 <div class="doc-upload-card-content">
-                  <strong>Aadhaar Card</strong>
-                  <span>Identity proof (front &amp; back)</span>
+                  <strong>Health Certificate</strong>
+                  <span>Medical clearance or fitness certificate</span>
                   <div class="doc-upload-card-actions">
                     <input
                       class="doc-upload-input"
                       type="file"
                       accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                      data-doc-upload-input="aadhaar"
+                      data-doc-upload-input="health"
                       hidden
                     />
-                    <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="aadhaar">
+                    <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="health">
                       <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="17 8 12 3 7 8" />
@@ -712,11 +831,69 @@
                       </svg>
                       Upload
                     </button>
-                    <span class="doc-upload-meta" data-doc-upload-meta="aadhaar">No file</span>
-                    <div class="doc-upload-preview" data-doc-upload-preview="aadhaar" hidden>
-                      <img class="doc-upload-preview-image" src="" alt="" data-doc-upload-image="aadhaar" hidden />
-                      <iframe class="doc-upload-preview-pdf" src="" title="PDF preview" data-doc-upload-pdf="aadhaar" hidden></iframe>
-                      <button class="doc-upload-remove" type="button" aria-label="Remove" data-doc-upload-remove="aadhaar">
+                    <span class="doc-upload-meta" data-doc-upload-meta="health">No file</span>
+                    <div class="doc-upload-preview" data-doc-upload-preview="health" hidden>
+                      <img class="doc-upload-preview-image" src="" alt="" data-doc-upload-image="health" hidden />
+                      <div class="doc-upload-preview-pdf" data-doc-upload-pdf="health" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="doc-pdf-icon-svg">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="doc-pdf-label-tag">PDF</span>
+                      </div>
+                      <div class="doc-upload-preview-overlay"></div>
+                      <button class="doc-upload-remove" type="button" aria-label="Remove" data-doc-upload-remove="health">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M6 6 18 18" />
+                          <path d="M18 6 6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Others -->
+              <div class="doc-upload-card doc-upload-card-others" data-doc-type="others">
+                <div class="doc-upload-card-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                </div>
+                <div class="doc-upload-card-content">
+                  <strong>Others</strong>
+                  <span>Any other supporting documents</span>
+                  <div class="doc-upload-card-actions">
+                    <input
+                      class="doc-upload-input"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                      data-doc-upload-input="others"
+                      hidden
+                    />
+                    <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="others">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Upload
+                    </button>
+                    <span class="doc-upload-meta" data-doc-upload-meta="others">No file</span>
+                    <div class="doc-upload-preview" data-doc-upload-preview="others" hidden>
+                      <img class="doc-upload-preview-image" src="" alt="" data-doc-upload-image="others" hidden />
+                      <div class="doc-upload-preview-pdf" data-doc-upload-pdf="others" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="doc-pdf-icon-svg">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="doc-pdf-label-tag">PDF</span>
+                      </div>
+                      <div class="doc-upload-preview-overlay"></div>
+                      <button class="doc-upload-remove" type="button" aria-label="Remove" data-doc-upload-remove="others">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path d="M6 6 18 18" />
                           <path d="M18 6 6 18" />
@@ -728,15 +905,6 @@
               </div>
             </div>
 
-            <div class="member-form-actions">
-              <button class="dialog-btn dialog-btn-muted" type="button" data-doc-upload-back>← Back</button>
-              <button class="dialog-btn dialog-btn-danger" type="button" data-doc-upload-next>
-                <span>NEXT</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
           </div>
 
           <!-- Page 4: Membership Planning -->
@@ -746,12 +914,6 @@
                 <p class="member-form-kicker">Plan Selection</p>
                 <h2 id="plan-selection-title">Membership Planning</h2>
               </div>
-              <button class="document-close-btn" type="button" aria-label="Close membership planning" data-add-member-close>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 6 18 18" />
-                  <path d="M18 6 6 18" />
-                </svg>
-              </button>
             </div>
             <p class="member-form-copy">
               Select a membership plan and payment schedule for the new member.
@@ -765,15 +927,53 @@
                </div>
             </div>
 
-            <div class="member-form-actions">
-              <button class="dialog-btn dialog-btn-muted" type="button" data-planning-back>← Back</button>
-              <button class="dialog-btn dialog-btn-danger" type="button" data-doc-upload-save-finish>Save &amp; Finish</button>
-            </div>
+          </div>
+        </div>
+
+        <!-- Shared Action Footer Container (fixed at bottom of modal) -->
+        <div class="member-form-actions-footer">
+          <!-- Page 1 Actions -->
+          <div class="member-form-page-actions" data-for-page="1">
+            <button class="dialog-btn dialog-btn-muted" type="button" data-add-member-close>Cancel</button>
+            <button class="dialog-btn dialog-btn-danger" type="button" data-member-save>
+              <span>NEXT</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Page 2 Actions -->
+          <div class="member-form-page-actions" data-for-page="2">
+            <button class="dialog-btn dialog-btn-muted" type="button" data-photo-upload-back>← Back</button>
+            <button class="dialog-btn dialog-btn-danger" type="button" data-photo-upload-next>
+              <span>NEXT</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Page 3 Actions -->
+          <div class="member-form-page-actions" data-for-page="3">
+            <button class="dialog-btn dialog-btn-muted" type="button" data-doc-upload-back>← Back</button>
+            <button class="dialog-btn dialog-btn-danger" type="button" data-doc-upload-next>
+              <span>NEXT</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Page 4 Actions -->
+          <div class="member-form-page-actions" data-for-page="4">
+            <button class="dialog-btn dialog-btn-muted" type="button" data-planning-back>← Back</button>
+            <button class="dialog-btn dialog-btn-danger" type="button" data-doc-upload-save-finish>Save &amp; Finish</button>
           </div>
         </div>
       </section>
 
-      <!-- Member Verification Center Modal (Redesigned) -->
+      <!-- Member Documents Center Modal (Redesigned) -->
       <div class="verification-backdrop"></div>
       <section 
         class="verification-modal" 
@@ -783,10 +983,10 @@
       >
         <header class="verification-header">
           <div class="header-left">
-            <span id="verification-title" class="verification-label">MEMBER VERIFICATION CENTER</span>
+            <span id="verification-title" class="verification-label">MEMBER DOCUMENTS CENTER</span>
           </div>
           <div class="header-right">
-            <button class="verification-close-btn" type="button" data-verification-close aria-label="Close Verification Center">
+            <button class="verification-close-btn" type="button" data-verification-close aria-label="Close Documents Center">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </div>
@@ -825,13 +1025,16 @@
                               <span class="stat-value" data-verification-id>#0000</span>
                            </div>
                         </div>
-
                         <div class="download-btn-container">
                            <button class="btn-card-bottom-download" type="button" aria-label="Download Record">
                               <div class="icon-wrap-main">
                                  <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                               </div>
+                              <div class="icon-wrap-success" hidden>
+                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                              </div>
                            </button>
+                           <span class="download-tooltip">Download Image</span>
                         </div>
                       </div>
                    </div>
@@ -853,7 +1056,7 @@
               </div>
               <div class="doc-meta-secondary">
                 <span class="meta-item">Uploaded: <strong data-active-doc-date>June 2, 2026</strong></span>
-                <span class="meta-item">Size: <strong data-active-doc-size>1.2 MB</strong></span>
+                <span class="meta-item">Size (After Compression): <strong data-active-doc-size>1.2 MB</strong></span>
               </div>
             </div>
 
@@ -865,14 +1068,6 @@
                 
                 <!-- PDF Preview (Embedded Viewer) -->
                 <iframe src="" class="doc-preview-pdf" data-main-doc-pdf hidden></iframe>
-                
-                <div class="preview-controls">
-                  <button class="control-btn" aria-label="Zoom In"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
-                  <button class="control-btn" aria-label="Rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
-                  <button class="control-btn" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
-                  <div class="divider"></div>
-                  <button class="control-btn primary" aria-label="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-                </div>
               </div>
 
               <!-- Empty State -->
@@ -1389,6 +1584,14 @@
                     <path d="M20 5v6h-6" />
                   </svg>
                 </button>
+                <button class="export-btn" type="button" id="exportMembersCsv" aria-label="Export member directory to CSV">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Export CSV
+                </button>
                 <button class="add-member-btn" type="button" data-add-member-open>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 5v14" />
@@ -1449,9 +1652,10 @@
 
               <div class="members-table-panel">
                 <div class="members-table-meta">
-                  <div>
-                    <span>Directory</span>
-                    <strong>Identity, contact, joining, and document records</strong>
+                  <div class="meta-title-group">
+                    <h3 class="meta-title">Directory</h3>
+                    <span class="meta-separator">/</span>
+                    <p class="meta-subtitle">Identity, contact, joining, and document records</p>
                   </div>
                   <span class="members-table-status">Updated today</span>
                 </div>
@@ -1495,7 +1699,30 @@
             </section>
 
             <section class="members-empty" data-members-empty hidden>
-              <p>No members matched your search. Try a name, number, email, or document keyword.</p>
+              <div class="empty-state-container">
+                <div class="empty-state-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </div>
+                <h3 data-empty-title>No members found</h3>
+                <p data-empty-text>It looks like there are no members in your directory yet. Start by adding a new member to your gym.</p>
+                <div class="empty-state-actions">
+                  <button class="empty-btn primary" type="button" data-add-member-open>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Member
+                  </button>
+                  <button class="empty-btn secondary" type="button" data-clear-search hidden>
+                    Clear Search
+                  </button>
+                </div>
+              </div>
             </section>
           </div>
         </section>
@@ -1584,6 +1811,9 @@
                   <button class="btn-card-bottom-download" type="button" aria-label="Download Record">
                      <div class="icon-wrap-main">
                         <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                     </div>
+                     <div class="icon-wrap-success" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                      </div>
                   </button>
                   <span class="download-tooltip">Download Image</span>
@@ -1680,7 +1910,7 @@
                   </div>
                   <div class="data-item">
                     <span class="data-label">Gender</span>
-                    <span class="data-value">Male</span>
+                    <span id="dashGender" class="data-value">-</span>
                   </div>
                   <div class="data-item">
                     <span class="data-label">Height</span>
@@ -1692,7 +1922,7 @@
                   </div>
                   <div class="data-item">
                     <span class="data-label">Blood Group</span>
-                    <span class="data-value">O+</span>
+                    <span id="dashBloodGroup" class="data-value">-</span>
                   </div>
                 </div>
               </section>
@@ -1784,15 +2014,32 @@
             </div>
           </div>
 
+          <!-- FLOATING SCROLL INDICATOR -->
+          <div class="dashboard-scroll-indicator" id="dashboardScrollIndicator" aria-hidden="true">
+            <div class="scroll-mouse">
+              <span class="scroll-wheel"></span>
+            </div>
+            <div class="scroll-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
           <!-- FOOTER ACTIONS -->
           <footer class="dashboard-footer">
             <div class="tertiary-actions">
-              <button id="viewDocumentsFromModal" class="footer-btn tertiary">View Documents</button>
+              <button id="viewDocumentsFromModal" class="footer-btn tertiary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <span>View Documents</span>
+              </button>
             </div>
             <div class="primary-actions">
-              <button class="footer-btn secondary">Freeze Membership</button>
-              <button class="footer-btn secondary">Renew Membership</button>
-              <button class="footer-btn primary">Edit Member</button>
+              <button id="freezeMembershipFromModal" class="footer-btn secondary">Freeze Membership</button>
+              <button id="editMemberFromModal" class="footer-btn primary">Edit Member</button>
             </div>
           </footer>
         </main>
@@ -1817,7 +2064,7 @@
       <form class="offboarding-form" id="offboardingForm">
         <div class="offboarding-options">
           <label class="offboarding-option">
-            <input type="radio" name="delete_reason" value="relocation" required />
+            <input type="radio" name="delete_reason" value="relocation" />
             <div class="option-box">
               <span class="option-label">Relocation</span>
               <p class="option-hint">Member is moving to a new area</p>

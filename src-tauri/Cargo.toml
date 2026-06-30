@@ -25,6 +25,12 @@ tauri = { version = "2.10.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-updater = "2"
 openssl-sys = { version = "0.9", features = ["vendored"] }
+base64 = "0.22"
+rfd = "0.15"
+
+lopdf = "0.33.0"
+image = { version = "0.24.8", default-features = false, features = ["jpeg", "png"] }
+flate2 = "1.0"
 
 # --- Security & Auth Backend Dependencies ---
 # SQLite with SQLCipher for AES-256 encrypted database

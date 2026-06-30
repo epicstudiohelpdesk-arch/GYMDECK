@@ -9,10 +9,12 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: full
+
 jobs:
-  build-windows:
+  build_windows:
     name: Build Windows MSI
     runs-on: windows-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -22,6 +24,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -31,6 +34,9 @@ jobs:
 
       - name: Install Strawberry Perl
         uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: "5"
+          distribution: strawberry
 
       - name: Cache Cargo Registry
         uses: actions/cache@v4

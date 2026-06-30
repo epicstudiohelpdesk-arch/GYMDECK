@@ -16,6 +16,7 @@ pub struct Member {
     pub address: Option<String>,
     pub height: Option<String>,
     pub weight: Option<String>,
+    pub blood_group: Option<String>,
     pub membership_plan_id: Option<Uuid>,
     pub membership_status: String,
     pub joined_at: DateTime<Utc>,

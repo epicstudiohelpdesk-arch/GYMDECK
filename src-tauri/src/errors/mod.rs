@@ -6,6 +6,8 @@ pub enum AppError {
     Database(String),
     #[error("Database corruption detected")]
     DatabaseCorruption,
+    #[error("Database key mismatch: {0}")]
+    KeyMismatch(String),
     #[error("Cryptographic operation failed")]
     Crypto(String),
     #[error("Authentication failed")]
@@ -26,6 +28,7 @@ impl serde::Serialize for AppError {
         let safe_message = match self {
             AppError::Database(e) => format!("System Error: Database access failed. Details: {}", e),
             AppError::DatabaseCorruption => "System Error: Database integrity compromised.".to_string(),
+            AppError::KeyMismatch(_) => "System Error: Database encryption key is invalid. The database cannot be opened.".to_string(),
             AppError::Crypto(_) => "Security Error: Cryptographic operation failed.".to_string(),
             AppError::Authentication => "Authentication Error: Invalid email or password.".to_string(),
             AppError::Unauthorized => "Access Denied: Unauthorized action.".to_string(),

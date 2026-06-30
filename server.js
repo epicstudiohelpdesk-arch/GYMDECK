@@ -1,23 +1,78 @@
+import "dotenv/config";
 import express from "express";
 import session from "express-session";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import authRoutes from "./routes/auth.js";
 import { authMiddleware, clearAuthData } from "./middleware/auth.js";
 
+// NOTE: Dual Auth Path — This Express server handles legacy session-based auth
+// for serving static authentication pages. The Tauri native auth (Rust commands)
+// is the authoritative auth system for production desktop builds.
+// See README.md > Architecture Notes for the deprecation plan.
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+const startTime = Date.now();
+const serverStartTime = new Date().toISOString();
+
+// Production logging setup — rotating daily log files
+const LOG_DIR = process.env.GYMDECK_LOG_DIR || path.join(process.cwd(), "logs");
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+const getLogFile = () => {
+  const date = new Date().toISOString().slice(0, 10);
+  return path.join(LOG_DIR, `server-${date}.log`);
+};
+
+const log = (level, message, meta = {}) => {
+  const timestamp = new Date().toISOString();
+  const entry = JSON.stringify({ timestamp, level, message, ...meta });
+  console.log(entry);
+  try {
+    fs.appendFileSync(getLogFile(), entry + "\n");
+  } catch (err) {
+    console.error(`Failed to write to log file: ${err.message}`);
+  }
+};
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (req.path.startsWith("/api/")) {
+      log("info", `${req.method} ${req.path} ${res.statusCode} ${duration}ms`, {
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        duration,
+      });
+    }
+  });
+  next();
+});
+
 // Session configuration
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET || SESSION_SECRET === "your-secret-key-change-in-production") {
+  log("warn", "SESSION_SECRET is not set or is a default value. Generate a secure secret with: openssl rand -hex 64");
+}
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    secret: SESSION_SECRET || crypto.randomUUID(),
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.SESSION_SECURE === "true",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
@@ -95,6 +150,25 @@ app.post("/logout", (req, res) => {
   res.redirect("/login");
 });
 
+// API: Health check endpoint
+app.get("/api/health", (req, res) => {
+  const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
+  const hours = Math.floor(uptimeSeconds / 3600);
+  const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+  const seconds = uptimeSeconds % 60;
+  const uptime = `${hours}h ${minutes}m ${seconds}s`;
+
+  res.json({
+    status: "ok",
+    uptime,
+    startedAt: serverStartTime,
+    memory: process.memoryUsage(),
+    pid: process.pid,
+    nodeVersion: process.version,
+    platform: process.platform,
+  });
+});
+
 // API: Check authentication status
 app.get("/api/auth/status", (req, res) => {
   res.json({
@@ -111,8 +185,37 @@ app.use((req, res, next) => {
   next();
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`Login at http://localhost:${PORT}/login`);
+// Create and start server
+const server = app.listen(PORT, () => {
+  log("info", `Server started`, { port: PORT, url: `http://localhost:${PORT}/login` });
+  log("info", `Logging to ${LOG_DIR}`);
+});
+
+// Graceful shutdown — WAL checkpoint, close connections, exit cleanly
+const shutdown = (signal) => {
+  log("info", `Received ${signal}. Starting graceful shutdown...`);
+  server.close((err) => {
+    if (err) {
+      log("error", "Error closing server", { error: err.message });
+      process.exit(1);
+    }
+    log("info", "HTTP server closed. Goodbye.");
+    process.exit(0);
+  });
+
+  // Force shutdown after 10s if graceful close hangs
+  setTimeout(() => {
+    log("warn", "Forced shutdown after timeout");
+    process.exit(1);
+  }, 10000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("uncaughtException", (err) => {
+  log("error", "Uncaught exception", { error: err.message, stack: err.stack });
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  log("error", "Unhandled rejection", { error: String(reason) });
 });

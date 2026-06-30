@@ -14,26 +14,29 @@ pub struct DatabaseManager {
 }
 
 impl DatabaseManager {
-    /// Initializes the SQLite database wrapped in SQLCipher.
-    /// Executes required PRAGMAs for performance and security.
     pub fn new(db_path: PathBuf, mek_key: &str) -> Result<Self, crate::errors::AppError> {
         let encryption_key = mek_key.to_string();
 
-        // --- SELF-HEALING INITIALIZATION (Hard Purge Implementation) ---
-        // If the database cannot be opened (due to key mismatch or schema corruption),
-        // we delete it and start fresh, as per the enterprise mandate for this transition.
-        match Self::try_initialize(db_path.clone(), &encryption_key) {
-            Ok(manager) => Ok(manager),
-            Err(e) => {
-                warn!("Database initialization failed: {}. Attempting Hard Purge (Recreate)...", e);
-                if db_path.exists() {
-                    let _ = std::fs::remove_file(&db_path);
-                    // Also clear WAL files if they exist
-                    let _ = std::fs::remove_file(db_path.with_extension("sqlite-wal"));
-                    let _ = std::fs::remove_file(db_path.with_extension("sqlite-shm"));
+        if db_path.exists() {
+            match Self::try_initialize(db_path.clone(), &encryption_key) {
+                Ok(manager) => Ok(manager),
+                Err(e) => {
+                    error!(
+                        "CRITICAL: Database decryption failed for existing database at {:?}. \
+                         This indicates an encryption key mismatch. The database will NOT be deleted. \
+                         To recover, set the correct GYMDECK_DB_KEY or manually delete the database file: {}",
+                        db_path, e
+                    );
+                    Err(crate::errors::AppError::KeyMismatch(format!(
+                        "Database at {:?} cannot be decrypted with the provided key. \
+                         The database has NOT been modified. Set the correct GYMDECK_DB_KEY environment variable, \
+                         or manually delete the file to start fresh.",
+                        db_path
+                    )))
                 }
-                Self::try_initialize(db_path, &encryption_key)
             }
+        } else {
+            Self::try_initialize(db_path, &encryption_key)
         }
     }
 
@@ -43,7 +46,7 @@ impl DatabaseManager {
             .with_init(move |conn: &mut Connection| {
                 let pragma_query = format!("PRAGMA key = '{}';", key);
                 conn.execute_batch(&pragma_query)?;
-                
+
                 conn.execute_batch(
                     "
                     PRAGMA journal_mode = WAL;
@@ -65,19 +68,11 @@ impl DatabaseManager {
             .map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
 
         let conn = pool.get().map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
-        
-        Self::verify_integrity(&conn)?;
-        
-        // Enforce the new schema immediately
-        let schema = include_str!("schema.sql");
-        conn.execute_batch(schema).map_err(|e| {
-            error!("Failed to apply schema: {}", e);
-            crate::errors::AppError::Database(e.to_string())
-        })?;
 
-        // --- ROBUST ENTERPRISE MIGRATION (Ensure Schema Consistency) ---
-        // We ensure every column expected by the Repository exists in the database.
-        // This handles cases where users are migrating from older versions of the app.
+        Self::verify_integrity(&conn)?;
+
+        crate::database::migration::ensure_schema(&conn)?;
+
         let migrations = [
             ("member_code", "TEXT NOT NULL DEFAULT 'GD-TEMP'"),
             ("alternate_phone", "TEXT"),
@@ -87,6 +82,7 @@ impl DatabaseManager {
             ("address", "TEXT"),
             ("height", "TEXT"),
             ("weight", "TEXT"),
+            ("blood_group", "TEXT"),
             ("membership_plan_id", "TEXT"),
             ("membership_status", "TEXT NOT NULL DEFAULT 'INACTIVE'"),
             ("joined_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"),
@@ -112,8 +108,6 @@ impl DatabaseManager {
             }
         }
 
-        // --- FINAL VERIFICATION ---
-        // Explicitly check if joined_at exists before proceeding.
         let mut stmt = conn.prepare("PRAGMA table_info(gym_members)").map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
         let columns: Vec<String> = stmt.query_map([], |row| row.get::<_, String>(1))
             .map_err(|e| crate::errors::AppError::Database(e.to_string()))?
@@ -132,27 +126,21 @@ impl DatabaseManager {
         Ok(DatabaseManager { pool, db_path })
     }
 
-    /// Background Operational Health Manager
-    /// Handles WAL telemetry, incremental vacuuming, and health dashboard reporting.
-    fn spawn_operational_health_monitor(pool: DbPool, _db_path: PathBuf) {
+    fn spawn_operational_health_monitor(pool: DbPool, db_path: PathBuf) {
         tauri::async_runtime::spawn(async move {
             info!("Enterprise Operational Health Monitor started.");
             loop {
-                sleep(Duration::from_secs(300)).await; // Check every 5 minutes
+                sleep(Duration::from_secs(60)).await;
 
-                
                 if let Ok(conn) = pool.get() {
-                    // 1. Passive WAL Checkpoint to prevent starvation
                     match conn.execute_batch("PRAGMA wal_checkpoint(PASSIVE);") {
                         Ok(_) => tracing::debug!("Routine WAL checkpoint successful."),
                         Err(e) => warn!("WAL checkpoint skipped/failed: {}", e),
                     }
 
-                    // 2. Incremental Vacuum for DB size stabilization
                     let _ = conn.execute_batch("PRAGMA incremental_vacuum(50);");
-                    
-                    // Note: In full codebase, we map to DbMaintenanceEngine::monitor_wal_growth(&db_path, &conn);
-                    // and DbMaintenanceEngine::generate_health_report(&db_path, &conn);
+
+                    crate::database::maintenance::DbMaintenanceEngine::monitor_wal_growth(&db_path, &conn);
                 }
             }
         });
@@ -161,7 +149,7 @@ impl DatabaseManager {
     fn verify_integrity(conn: &Connection) -> Result<(), crate::errors::AppError> {
         let mut stmt = conn.prepare("PRAGMA quick_check;")
             .map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
-        
+
         let result: String = stmt.query_row([], |row| row.get(0))
             .map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
 
@@ -169,7 +157,24 @@ impl DatabaseManager {
             error!("Database integrity check failed: {}", result);
             return Err(crate::errors::AppError::DatabaseCorruption);
         }
-        
+
         Ok(())
+    }
+
+    pub fn checkpoint_wal(&self) {
+        if let Ok(conn) = self.pool.get() {
+            if let Err(e) = conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);") {
+                warn!("WAL checkpoint on shutdown failed: {}", e);
+            } else {
+                info!("WAL checkpoint completed successfully.");
+            }
+        }
+    }
+}
+
+impl Drop for DatabaseManager {
+    fn drop(&mut self) {
+        info!("DatabaseManager shutting down. Running WAL checkpoint...");
+        self.checkpoint_wal();
     }
 }

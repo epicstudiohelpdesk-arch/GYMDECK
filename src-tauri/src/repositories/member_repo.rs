@@ -39,6 +39,7 @@ impl MemberRepository {
                     address: row.get("address")?,
                     height: row.get("height")?,
                     weight: row.get("weight")?,
+                    blood_group: row.get("blood_group")?,
                     membership_plan_id: row.get::<_, Option<String>>("membership_plan_id")?
                         .and_then(|id| Uuid::parse_str(&id).ok()),
                     membership_status: row.get("membership_status")?,
@@ -100,6 +101,7 @@ impl MemberRepository {
                     address: row.get("address")?,
                     height: row.get("height")?,
                     weight: row.get("weight")?,
+                    blood_group: row.get("blood_group")?,
                     membership_plan_id: row.get::<_, Option<String>>("membership_plan_id")?
                         .and_then(|id| Uuid::parse_str(&id).ok()),
                     membership_status: row.get("membership_status")?,
@@ -142,10 +144,10 @@ impl MemberRepository {
         tx.execute(
             "INSERT INTO gym_members (
                 id, gym_id, member_code, full_name, phone, alternate_phone, email, gender, dob, address,
-                height, weight, membership_plan_id, membership_status, joined_at, expires_at,
+                height, weight, blood_group, membership_plan_id, membership_status, joined_at, expires_at,
                 profile_photo_path, notes, created_by_user_id, updated_by_user_id,
                 created_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23)",
             params![
                 member.id.to_string(),
                 ctx.gym_id.to_string(),
@@ -159,6 +161,7 @@ impl MemberRepository {
                 &member.address,
                 &member.height,
                 &member.weight,
+                &member.blood_group,
                 member.membership_plan_id.map(|id| id.to_string()),
                 &member.membership_status,
                 member.joined_at.to_rfc3339(),
@@ -264,4 +267,153 @@ impl MemberRepository {
 
         Ok(())
     }
+
+    /// Fetches a single member by ID for the authenticated gym.
+    pub fn get_member_by_id(
+        conn: &Connection,
+        ctx: &AuthenticatedContext,
+        member_id: &Uuid
+    ) -> Result<Option<Member>, AppError> {
+        let mut stmt = conn.prepare(
+            "SELECT * FROM gym_members 
+             WHERE id = ?1 AND gym_id = ?2 AND deleted_at IS NULL"
+        ).map_err(|e| AppError::Database(e.to_string()))?;
+
+        let mut member_iter = stmt.query_map(
+            params![member_id.to_string(), ctx.gym_id.to_string()],
+            |row| {
+                Ok(Member {
+                    id: Uuid::parse_str(&row.get::<_, String>("id")?).unwrap_or_default(),
+                    gym_id: Uuid::parse_str(&row.get::<_, String>("gym_id")?).unwrap_or_default(),
+                    member_code: row.get("member_code")?,
+                    full_name: row.get("full_name")?,
+                    phone: row.get("phone")?,
+                    alternate_phone: row.get("alternate_phone")?,
+                    email: row.get("email")?,
+                    gender: row.get("gender")?,
+                    dob: row.get("dob")?,
+                    address: row.get("address")?,
+                    height: row.get("height")?,
+                    weight: row.get("weight")?,
+                    blood_group: row.get("blood_group")?,
+                    membership_plan_id: row.get::<_, Option<String>>("membership_plan_id")?
+                        .and_then(|id| Uuid::parse_str(&id).ok()),
+                    membership_status: row.get("membership_status")?,
+                    joined_at: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>("joined_at")?)
+                        .unwrap_or_default().with_timezone(&Utc),
+                    expires_at: row.get::<_, Option<String>>("expires_at")?
+                        .and_then(|dt| chrono::DateTime::parse_from_rfc3339(&dt).ok().map(|d| d.with_timezone(&Utc))),
+                    profile_photo_path: row.get("profile_photo_path")?,
+                    notes: row.get("notes")?,
+                    created_by_user_id: Uuid::parse_str(&row.get::<_, String>("created_by_user_id")?).unwrap_or_default(),
+                    updated_by_user_id: Uuid::parse_str(&row.get::<_, String>("updated_by_user_id")?).unwrap_or_default(),
+                    created_at: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>("created_at")?)
+                        .unwrap_or_default().with_timezone(&Utc),
+                    updated_at: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>("updated_at")?)
+                        .unwrap_or_default().with_timezone(&Utc),
+                    deleted_at: row.get::<_, Option<String>>("deleted_at")?
+                        .and_then(|dt| chrono::DateTime::parse_from_rfc3339(&dt).ok().map(|d| d.with_timezone(&Utc))),
+                    deleted_by_user_id: row.get::<_, Option<String>>("deleted_by_user_id")?
+                        .and_then(|id| Uuid::parse_str(&id).ok()),
+                })
+            },
+        ).map_err(|e| AppError::Database(e.to_string()))?;
+
+        if let Some(res) = member_iter.next() {
+            res.map(Some).map_err(|e| AppError::Database(e.to_string()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Updates an existing member record within a transaction.
+    /// Only updates fields that have actually changed, including the profile photo.
+    pub fn update_member(
+        tx: &Transaction,
+        ctx: &AuthenticatedContext,
+        member: &Member
+    ) -> Result<(), AppError> {
+        tracing::info!("Attempting dynamic update for member: {} in gym: {}", member.full_name, ctx.gym_id);
+
+        let existing = match Self::get_member_by_id(tx, ctx, &member.id)? {
+            Some(m) => m,
+            None => return Err(AppError::Database("Member not found or unauthorized".into())),
+        };
+
+        let mut params = Vec::new();
+        let mut updates = Vec::new();
+        let mut param_index = 1;
+
+        let add_param = |col_name: &str, new_val: &Option<String>, old_val: &Option<String>, updates: &mut Vec<String>, params: &mut Vec<rusqlite::types::Value>, param_index: &mut usize| {
+            if new_val != old_val {
+                updates.push(format!("{} = ?{}", col_name, *param_index));
+                if let Some(v) = new_val {
+                    params.push(rusqlite::types::Value::Text(v.clone()));
+                } else {
+                    params.push(rusqlite::types::Value::Null);
+                }
+                *param_index += 1;
+            }
+        };
+
+        let add_param_string = |col_name: &str, new_val: &String, old_val: &String, updates: &mut Vec<String>, params: &mut Vec<rusqlite::types::Value>, param_index: &mut usize| {
+            if new_val != old_val {
+                updates.push(format!("{} = ?{}", col_name, *param_index));
+                params.push(rusqlite::types::Value::Text(new_val.clone()));
+                *param_index += 1;
+            }
+        };
+
+        add_param_string("full_name", &member.full_name, &existing.full_name, &mut updates, &mut params, &mut param_index);
+        add_param_string("phone", &member.phone, &existing.phone, &mut updates, &mut params, &mut param_index);
+        add_param("alternate_phone", &member.alternate_phone, &existing.alternate_phone, &mut updates, &mut params, &mut param_index);
+        add_param("email", &member.email, &existing.email, &mut updates, &mut params, &mut param_index);
+        add_param("dob", &member.dob, &existing.dob, &mut updates, &mut params, &mut param_index);
+        add_param("address", &member.address, &existing.address, &mut updates, &mut params, &mut param_index);
+        add_param("gender", &member.gender, &existing.gender, &mut updates, &mut params, &mut param_index);
+        add_param("height", &member.height, &existing.height, &mut updates, &mut params, &mut param_index);
+        add_param("weight", &member.weight, &existing.weight, &mut updates, &mut params, &mut param_index);
+        add_param("blood_group", &member.blood_group, &existing.blood_group, &mut updates, &mut params, &mut param_index);
+        add_param("profile_photo_path", &member.profile_photo_path, &existing.profile_photo_path, &mut updates, &mut params, &mut param_index);
+
+        // If no fields have changed, we don't perform any database write
+        if updates.is_empty() {
+            tracing::info!("No fields changed for member: {}. Skipping DB update.", member.full_name);
+            return Ok(());
+        }
+
+        // Add metadata updates if changes occurred
+        updates.push(format!("updated_by_user_id = ?{}", param_index));
+        params.push(rusqlite::types::Value::Text(ctx.user_id.to_string()));
+        param_index += 1;
+
+        updates.push(format!("updated_at = ?{}", param_index));
+        params.push(rusqlite::types::Value::Text(Utc::now().to_rfc3339()));
+        param_index += 1;
+
+        // Construct dynamic query
+        let query = format!(
+            "UPDATE gym_members SET {} WHERE id = ?{} AND gym_id = ?{}",
+            updates.join(", "),
+            param_index,
+            param_index + 1
+        );
+
+        params.push(rusqlite::types::Value::Text(member.id.to_string()));
+        params.push(rusqlite::types::Value::Text(ctx.gym_id.to_string()));
+
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+
+        let rows = tx.execute(&query, &param_refs[..]).map_err(|e| {
+            tracing::error!("Database dynamic UPDATE failed for member {}: {}", member.full_name, e);
+            AppError::Database(e.to_string())
+        })?;
+
+        if rows == 0 {
+            return Err(AppError::Database("Member not found or unauthorized".into()));
+        }
+
+        Ok(())
+    }
 }
+
