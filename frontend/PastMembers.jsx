@@ -569,7 +569,7 @@ export default function PastMembers() {
                 ARCHIVED MEMBERS: {filteredMembers.length}
               </span>
               
-              <div className="flex rounded-lg bg-slate-100 p-1">
+              <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
                 <button 
                   onClick={() => setViewMode("grid")}
                   className={cn(
