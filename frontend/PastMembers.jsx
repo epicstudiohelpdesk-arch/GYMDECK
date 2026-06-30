@@ -200,14 +200,14 @@ function StatTile({ label, value, subtext, tone = "slate", icon: Icon }) {
   }[tone];
 
   return (
-    <div className={cn("min-w-0 rounded-xl border p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-all hover:border-slate-300", toneClass)}>
+    <div className={cn("min-w-0 rounded-xl border p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all hover:border-slate-300", toneClass)}>
       <div className="min-w-0">
         <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</span>
-        <strong className="mt-2.5 block truncate text-3xl font-black leading-none tracking-tight text-slate-900">{value}</strong>
-        {subtext && <span className="block mt-1.5 text-[11px] font-bold text-slate-400 truncate">{subtext}</span>}
+        <strong className="mt-1.5 block truncate text-2xl font-black leading-none tracking-tight text-slate-900">{value}</strong>
+        {subtext && <span className="block mt-1 text-[11px] font-bold text-slate-400 truncate">{subtext}</span>}
       </div>
-      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", iconTone)}>
-        <Icon size={22} />
+      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", iconTone)}>
+        <Icon size={18} />
       </div>
     </div>
   );
@@ -442,15 +442,15 @@ export default function PastMembers() {
     <div className="flex flex-col min-h-full bg-slate-50 w-full font-sans select-none relative overflow-x-hidden text-slate-700">
       
       {/* ─── CLASSY LIGHT COMMAND CENTER HEADER ─── */}
-      <header className="bg-white border-b border-slate-200 px-8 py-8 shadow-sm relative">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between mb-8 relative z-10">
+      <header className="bg-white border-b border-slate-200 px-8 py-5 shadow-sm relative">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-5 relative z-10">
           <div>
-            <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex items-center gap-2 mb-1.5">
               <ShieldCheck size={16} className="text-indigo-600 animate-pulse" />
               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.25em] leading-none">RETENTION COMMAND & PAST MEMBERS DIRECTORY</span>
             </div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none">Archived Members Directory</h1>
-            <p className="mt-3 text-sm font-semibold text-slate-500 max-w-2xl leading-relaxed">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Archived Members Directory</h1>
+            <p className="mt-2.5 text-xs font-semibold text-slate-500 max-w-2xl leading-relaxed">
               Manage deactivated memberships, view offboarding timeline details, run recovery analytics, and initiate reactivation workflows.
             </p>
           </div>
