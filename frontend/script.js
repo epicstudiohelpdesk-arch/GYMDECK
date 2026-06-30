@@ -1834,6 +1834,28 @@ const adjustScrollPadding = () => {
   }
 };
 
+const resetDashboardScroll = () => {
+  const scrollArea = document.querySelector(".dashboard-scroll-area");
+  if (scrollArea) {
+    const originalScrollBehavior = scrollArea.style.scrollBehavior;
+    const originalScrollSnapType = scrollArea.style.scrollSnapType;
+    
+    // Disable smooth scroll and snap behaviors to force instant reset
+    scrollArea.style.scrollBehavior = "auto";
+    scrollArea.style.scrollSnapType = "none";
+    
+    // Reset scroll position
+    scrollArea.scrollTop = 0;
+    
+    // Force reflow
+    void scrollArea.offsetHeight;
+    
+    // Restore original styles
+    scrollArea.style.scrollBehavior = originalScrollBehavior;
+    scrollArea.style.scrollSnapType = originalScrollSnapType;
+  }
+};
+
 const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
   const modal = document.getElementById("moreOptionsModal");
   const backdrop = document.getElementById("moreOptionsBackdrop");
@@ -1918,9 +1940,10 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
     modal?.classList.add("is-active");
     document.body.style.overflow = "hidden";
     
+    resetDashboardScroll();
+    
     const scrollArea = document.querySelector(".dashboard-scroll-area");
     if (scrollArea) {
-      scrollArea.scrollTop = 0;
       const indicator = document.getElementById("dashboardScrollIndicator");
       if (indicator) {
         indicator.style.opacity = "1";
@@ -1937,6 +1960,7 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
     backdrop?.classList.remove("is-active");
     modal?.classList.remove("is-active");
     document.body.style.overflow = "";
+    resetDashboardScroll();
   }
 };
 
