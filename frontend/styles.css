@@ -3011,14 +3011,18 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 }
 
 .members-toolbar-copy {
+  width: 130px;
   min-height: 50px;
   display: grid;
   align-content: center;
-  padding: 0 16px;
+  justify-content: center;
+  text-align: center;
+  padding: 0 8px;
   border-radius: 8px;
   background: #eefbf4;
   color: #14532d;
   border: 1px solid #c8ead8;
+  box-sizing: border-box;
 }
 
 .members-toolbar-copy span,
