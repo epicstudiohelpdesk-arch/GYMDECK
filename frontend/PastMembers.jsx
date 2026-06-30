@@ -673,7 +673,7 @@ export default function PastMembers() {
                         {/* Member card layout */}
                         <div className="flex justify-between items-start gap-3 mb-4">
                           <div className="flex items-center gap-3.5 min-w-0">
-                            <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 shrink-0" alt="" />
+                            <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
                             <div className="min-w-0">
                               <h3 className="text-sm font-black text-slate-900 leading-tight truncate">{member.name}</h3>
                               <p className="text-[9px] font-black text-slate-400 mt-1 tracking-wider uppercase font-mono">ID: {member.id}</p>
@@ -799,7 +799,7 @@ export default function PastMembers() {
                           <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
                             <td className="px-6 py-4.5">
                               <div className="flex items-center gap-3.5">
-                                <img src={member.image} className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 shrink-0" alt="" />
+                                <img src={member.image} className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
                                 <div className="min-w-0">
                                   <p className="text-sm font-black text-slate-900 truncate leading-tight">{member.name}</p>
                                   <p className="text-[9px] font-black text-slate-400 mt-1.5 uppercase tracking-widest font-mono">ID: {member.id}</p>
@@ -1022,7 +1022,7 @@ export default function PastMembers() {
             >
               <header className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-950 text-white">
                 <div className="flex items-center gap-4">
-                  <img src={selectedMember.image} className="w-12 h-12 rounded-full border-2 border-slate-800" alt="" />
+                  <img src={selectedMember.image} className="w-12 h-12 rounded-full border-2 border-slate-800 object-cover" alt="" />
                   <div>
                     <h2 className="text-base font-black tracking-tight">{selectedMember.name}</h2>
                     <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase font-mono mt-0.5">{selectedMember.id}</p>
@@ -1163,7 +1163,7 @@ export default function PastMembers() {
 
               <main className="p-6 space-y-5">
                 <div className="flex items-center gap-3.5 p-3.5 bg-indigo-50 border border-indigo-100/50 rounded-2xl shadow-inner">
-                  <img src={reactivateMember.image} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shrink-0" alt="" />
+                  <img src={reactivateMember.image} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shrink-0 object-cover" alt="" />
                   <div>
                     <h4 className="text-sm font-black text-slate-900">{reactivateMember.name}</h4>
                     <p className="text-[9px] font-black text-indigo-700 tracking-wider uppercase font-mono mt-0.5">{reactivateMember.id} · {reactivateMember.phone}</p>
