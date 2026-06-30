@@ -2705,9 +2705,12 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   pointer-events: none;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Kinetic/momentum scrolling for WebKit */
+  scroll-behavior: smooth;
   scrollbar-gutter: stable;
   transition: opacity 240ms ease, transform 240ms ease;
   background-color: transparent;
+  will-change: scroll-position; /* Offload scroll paints to GPU */
 }
 
 .past-members-stage.is-active {
