@@ -144,7 +144,8 @@ const normalizeMember = (m) => {
   }
 
   return {
-    id: m.member_code || m.id || `MBR-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: m.id || m.member_code || `MBR-${Math.floor(1000 + Math.random() * 9000)}`,
+    member_code: m.member_code || m.id || "N/A",
     name: m.full_name || m.name || "Unnamed Member",
     phone: m.phone || "+91 99999 88888",
     email: m.email || "N/A",
@@ -337,7 +338,11 @@ export default function PastMembers() {
           const updated = list.filter(m => m.id !== reactivateMember.id && m.member_code !== reactivateMember.id);
           localStorage.setItem("gymdeck_past_members", JSON.stringify(updated));
         }
+
+        // 1. Purge old archived member record permanently from database
+        await window.__TAURI__.core.invoke("permanent_delete_member_command", { memberId: reactivateMember.id });
         
+        // 2. Create the new active member record
         await window.__TAURI__.core.invoke("create_member_command", {
           fullName: reactivateMember.name,
           phone: reactivateMember.phone,
@@ -692,7 +697,7 @@ export default function PastMembers() {
                             <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
                             <div className="min-w-0">
                               <h3 className="text-sm font-black text-slate-900 leading-tight truncate">{member.name}</h3>
-                              <p className="text-[9px] font-black text-slate-400 mt-1 tracking-wider uppercase font-mono">ID: {member.id}</p>
+                              <p className="text-[9px] font-black text-slate-400 mt-1 tracking-wider uppercase font-mono">ID: {member.member_code || member.id}</p>
                             </div>
                           </div>
                           <span className={cn("px-2.5 py-1 rounded-md border text-[9px] font-black uppercase tracking-wider leading-none shrink-0 font-mono shadow-sm", statusBadgeStyles[member.status])}>
@@ -818,7 +823,7 @@ export default function PastMembers() {
                                 <img src={member.image} className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
                                 <div className="min-w-0">
                                   <p className="text-sm font-black text-slate-900 truncate leading-tight">{member.name}</p>
-                                  <p className="text-[9px] font-black text-slate-400 mt-1.5 uppercase tracking-widest font-mono">ID: {member.id}</p>
+                                  <p className="text-[9px] font-black text-slate-400 mt-1.5 uppercase tracking-widest font-mono">ID: {member.member_code || member.id}</p>
                                 </div>
                               </div>
                             </td>
@@ -1041,7 +1046,7 @@ export default function PastMembers() {
                   <img src={selectedMember.image} className="w-12 h-12 rounded-full border-2 border-slate-800 object-cover" alt="" />
                   <div>
                     <h2 className="text-base font-black tracking-tight">{selectedMember.name}</h2>
-                    <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase font-mono mt-0.5">{selectedMember.id}</p>
+                    <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase font-mono mt-0.5">{selectedMember.member_code || selectedMember.id}</p>
                   </div>
                 </div>
                 <button 
@@ -1182,7 +1187,7 @@ export default function PastMembers() {
                   <img src={reactivateMember.image} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shrink-0 object-cover" alt="" />
                   <div>
                     <h4 className="text-sm font-black text-slate-900">{reactivateMember.name}</h4>
-                    <p className="text-[9px] font-black text-indigo-700 tracking-wider uppercase font-mono mt-0.5">{reactivateMember.id} · {reactivateMember.phone}</p>
+                    <p className="text-[9px] font-black text-indigo-700 tracking-wider uppercase font-mono mt-0.5">{reactivateMember.member_code || reactivateMember.id} · {reactivateMember.phone}</p>
                   </div>
                 </div>
 
