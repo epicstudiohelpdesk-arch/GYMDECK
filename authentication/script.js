@@ -31,11 +31,33 @@ const spellcheckObserver = new MutationObserver((mutations) => {
 spellcheckObserver.observe(document.body, { childList: true, subtree: true });
 
 // Initializing the app with the Intro sequence on launch or logout
-const initIntro = () => {
+const initIntro = async () => {
   const authPage = document.querySelector(".auth-page");
   const introShown = sessionStorage.getItem("gymdeck-intro-shown");
   const enterMode = sessionStorage.getItem("gymdeck-enter");
   
+  // Attempt to restore native Tauri session if we did not just logout
+  const isLoginPage = window.location.pathname.endsWith("/index.html") || 
+                      window.location.pathname.endsWith("/") || 
+                      window.location.pathname === "";
+
+  if (enterMode !== "logout" && isLoginPage && window.__TAURI__) {
+    try {
+      const response = await window.__TAURI__.core.invoke("restore_session_command");
+      if (response && response.success) {
+        console.log("Active OS keychain session restored successfully. Redirecting to dashboard...");
+        sessionStorage.setItem("gymdeck-authenticated", "true");
+        const redirectPath = window.location.pathname.includes("/authentication/") 
+          ? "../frontend/index.html" 
+          : "./frontend/index.html";
+        window.location.replace(redirectPath);
+        return;
+      }
+    } catch (error) {
+      console.log("No active OS keychain session to restore:", error);
+    }
+  }
+
   // Only show intro if:
   // 1. First time in this session (introShown is null)
   const shouldShowIntro = !introShown;
@@ -401,8 +423,11 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
       }
     }
 
-    // Only allow fallback navigation if it's NOT an auth form (e.g. forgot password link)
-    if (!form.classList.contains("auth-form") && form.closest(".auth-page-signup") === null) {
+    const hasPassword = !!form.querySelector('input[type="password"]') || 
+                        !!form.querySelector('input[placeholder*="password"]');
+
+    // Only allow fallback navigation if it's NOT an auth form, or it has no password (e.g. forgot password)
+    if ((!form.classList.contains("auth-form") || !hasPassword) && form.closest(".auth-page-signup") === null) {
       navigateWithTransition(destination, enterState, submitButton);
     }
   });

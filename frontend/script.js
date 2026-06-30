@@ -2590,7 +2590,14 @@ const setDocumentModalContent = ({ memberName, title, imageSrc = "", imageAlt = 
   setupCardDownloadButton(documentModalDownloadBtn, memberName, finalPortraitSrc);
 };
 
-const performLogout = () => {
+const performLogout = async () => {
+  if (window.__TAURI__) {
+    try {
+      await window.__TAURI__.core.invoke("logout_command");
+    } catch (e) {
+      console.error("Failed to revoke native session:", e);
+    }
+  }
   sessionStorage.removeItem(authStorageKey);
   localStorage.removeItem(authStorageKey);
   sessionStorage.setItem("gymdeck-enter", "logout");

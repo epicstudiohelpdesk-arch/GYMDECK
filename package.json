@@ -3,9 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "vite",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -13,8 +12,6 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-session": "^1.19.0",
     "framer-motion": "^12.38.0",
     "jspdf": "^4.2.1",
     "lottie-react": "^2.4.1",
