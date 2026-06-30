@@ -2100,8 +2100,11 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   transform: translateY(18px) scale(0.99);
   pointer-events: none;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Kinetic/momentum scrolling for WebKit */
+  scroll-behavior: smooth;
   scrollbar-gutter: stable;
   transition: opacity 240ms ease, transform 240ms ease;
+  will-change: scroll-position; /* Offload scroll paints to GPU */
 }
 
 .members-stage.is-active {
@@ -8760,6 +8763,8 @@ body.document-modal-open .document-modal-backdrop {
   padding: 0 40px 40px;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
 }
 
 .content-sections {
