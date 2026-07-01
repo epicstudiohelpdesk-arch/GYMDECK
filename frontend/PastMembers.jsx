@@ -904,7 +904,7 @@ export default function PastMembers() {
                             <button 
                               type="button"
                               onClick={(e) => handleViewPhoto(e, member)}
-                              className="hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none"
+                              className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
                               title={`View ${member.name}'s photo`}
                             >
                               <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 object-cover" alt="" />
@@ -1060,7 +1060,7 @@ export default function PastMembers() {
                                 <button 
                                   type="button"
                                   onClick={(e) => handleViewPhoto(e, member)}
-                                  className="hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none"
+                                  className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
                                   title={`View ${member.name}'s photo`}
                                 >
                                   <img src={member.image} className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 object-cover" alt="" />
