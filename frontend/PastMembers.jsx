@@ -1560,7 +1560,7 @@ export default function PastMembers() {
                   </div>
                   <button 
                     onClick={() => setDeleteConfirmMember(null)}
-                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 transition-all hover:scale-105 active:scale-95 group shrink-0"
+                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-600 text-slate-400 hover:text-white flex items-center justify-center border border-slate-200 hover:border-rose-700 transition-all duration-300 hover:scale-110 active:scale-90 group shrink-0 shadow-sm"
                     aria-label="Close modal"
                   >
                     <X 
@@ -1669,7 +1669,7 @@ export default function PastMembers() {
                   </div>
                   <button 
                     onClick={() => setDeleteConfirmBulk(false)}
-                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 transition-all hover:scale-105 active:scale-95 group shrink-0"
+                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-600 text-slate-400 hover:text-white flex items-center justify-center border border-slate-200 hover:border-rose-700 transition-all duration-300 hover:scale-110 active:scale-90 group shrink-0 shadow-sm"
                     aria-label="Close modal"
                   >
                     <X 
