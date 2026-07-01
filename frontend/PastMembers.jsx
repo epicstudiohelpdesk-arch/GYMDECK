@@ -1248,16 +1248,19 @@ export default function PastMembers() {
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }} 
+                transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => setSelectedMember(null)} 
-                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-[3px]" 
+                style={{ willChange: "opacity" }}
               />
               {/* Drawer layout */}
               <motion.div 
                 initial={{ x: "100%" }} 
                 animate={{ x: 0 }} 
                 exit={{ x: "100%" }} 
-                transition={{ type: "spring", damping: 25, stiffness: 200 }} 
+                transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.32 }} 
                 className="relative w-full max-w-lg bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col z-10"
+                style={{ willChange: "transform" }}
               >
                  <header className="p-6 border-b border-slate-200 flex items-center gap-4 bg-slate-950 text-white">
                   <button 
@@ -1384,15 +1387,19 @@ export default function PastMembers() {
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }} 
+                transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => { setReactivateMember(null); setSelectedPlan(""); }} 
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
+                className="absolute inset-0 bg-slate-900/50 backdrop-blur-[3px]" 
+                style={{ willChange: "opacity" }}
               />
               {/* Modal Body */}
               <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }} 
+                initial={{ scale: 0.96, opacity: 0 }} 
                 animate={{ scale: 1, opacity: 1 }} 
-                exit={{ scale: 0.95, opacity: 0 }}
+                exit={{ scale: 0.96, opacity: 0 }}
+                transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }} 
                 className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl z-10 border border-slate-200 flex flex-col"
+                style={{ willChange: "transform, opacity" }}
               >
                 <header className="p-6 border-b border-slate-100 bg-slate-50 flex items-center gap-4">
                   <button 
@@ -1485,16 +1492,20 @@ export default function PastMembers() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => setDeleteConfirmMember(null)}
-                className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
+                className="absolute inset-0 bg-slate-950/60 backdrop-blur-[3px]"
+                style={{ willChange: "opacity" }}
               />
               
               {/* Modal Box */}
               <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.96, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
+                exit={{ scale: 0.96, opacity: 0 }}
+                transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
                 className="relative w-full max-w-md overflow-hidden rounded-2xl border border-rose-100 bg-white shadow-2xl z-10"
+                style={{ willChange: "transform, opacity" }}
               >
                 <div className="p-6">
                   <div className="flex items-center gap-4 text-rose-600 mb-4">
@@ -1543,16 +1554,20 @@ export default function PastMembers() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => setDeleteConfirmBulk(false)}
-                className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
+                className="absolute inset-0 bg-slate-955/60 backdrop-blur-[3px]"
+                style={{ willChange: "opacity" }}
               />
               
               {/* Modal Box */}
               <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.96, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
+                exit={{ scale: 0.96, opacity: 0 }}
+                transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
                 className="relative w-full max-w-md overflow-hidden rounded-2xl border border-rose-100 bg-white shadow-2xl z-10"
+                style={{ willChange: "transform, opacity" }}
               >
                 <div className="p-6">
                   <div className="flex items-center gap-4 text-rose-600 mb-4">
