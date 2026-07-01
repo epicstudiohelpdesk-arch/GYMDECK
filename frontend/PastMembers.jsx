@@ -1176,227 +1176,233 @@ export default function PastMembers() {
       </main>
 
       {/* ─── SIDEBAR DETAILED PROFILE DETAILS DRAWER ─── */}
-      <AnimatePresence>
-        {selectedMember && (
-          <div className="fixed inset-0 z-[10001] flex justify-end">
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              onClick={() => setSelectedMember(null)} 
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
-            />
-            {/* Drawer layout */}
-            <motion.div 
-              initial={{ x: "100%" }} 
-              animate={{ x: 0 }} 
-              exit={{ x: "100%" }} 
-              transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-              className="relative w-full max-w-lg bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col z-10"
-            >
-              <header className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-950 text-white">
-                <div className="flex items-center gap-4">
-                  <img src={selectedMember.image} className="w-12 h-12 rounded-full border-2 border-slate-800 object-cover" alt="" />
-                  <div>
-                    <h2 className="text-base font-black tracking-tight">{selectedMember.name}</h2>
-                    <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase font-mono mt-0.5">{selectedMember.member_code || selectedMember.id}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setSelectedMember(null)} 
-                  className="w-10 h-10 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </header>
-
-              <main className="flex-1 overflow-y-auto p-6 space-y-6">
-                
-                {/* Exit details */}
-                <section className="space-y-4">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Archived Context</h3>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                      <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-2 font-mono">Archived Category</span>
-                      <span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border leading-none font-mono w-fit", statusBadgeStyles[selectedMember.status])}>
-                        {selectedMember.status}
-                      </span>
-                    </div>
-                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200/50 flex flex-col justify-between">
-                      <span className="block text-[9px] font-black text-emerald-700 uppercase tracking-wider mb-2 font-mono">Recovery Value Potential</span>
-                      <strong className="text-lg font-black text-emerald-800 font-mono leading-none">{currencyFormatter.format(selectedMember.recoveryValue)}</strong>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider font-mono">Archived Reason/Description</span>
-                    <p className="text-xs font-semibold text-slate-700 italic leading-relaxed">
-                      "{selectedMember.reason}"
-                    </p>
-                  </div>
-                </section>
-
-                {/* Contact information */}
-                <section className="space-y-3">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Contact Information</h3>
-                  
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-200 bg-slate-50/50">
-                      <Phone size={15} className="text-slate-400 shrink-0" />
-                      <div>
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase font-mono">Primary Contact</span>
-                        <a href={`tel:${selectedMember.phone}`} className="text-xs font-black text-slate-800 hover:text-indigo-600 font-mono">{selectedMember.phone}</a>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-200 bg-slate-50/50">
-                      <Mail size={15} className="text-slate-400 shrink-0" />
-                      <div>
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase font-mono">E-Mail Address</span>
-                        <a href={`mailto:${selectedMember.email}`} className="text-xs font-black text-slate-800 hover:text-indigo-600 font-mono truncate max-w-xs">{selectedMember.email}</a>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Recommendations */}
-                <section className="space-y-3">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Reactivation Diagnostics</h3>
-                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
-                    <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={16} />
+      {createPortal(
+        <AnimatePresence>
+          {selectedMember && (
+            <div className="fixed inset-0 z-[10001] flex justify-end">
+              {/* Backdrop */}
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                onClick={() => setSelectedMember(null)} 
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
+              />
+              {/* Drawer layout */}
+              <motion.div 
+                initial={{ x: "100%" }} 
+                animate={{ x: 0 }} 
+                exit={{ x: "100%" }} 
+                transition={{ type: "spring", damping: 25, stiffness: 200 }} 
+                className="relative w-full max-w-lg bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col z-10"
+              >
+                <header className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-950 text-white">
+                  <div className="flex items-center gap-4">
+                    <img src={selectedMember.image} className="w-12 h-12 rounded-full border-2 border-slate-800 object-cover" alt="" />
                     <div>
-                      <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider font-mono">Inactive Period: {selectedMember.inactiveDays} Days</h4>
-                      <p className="text-xs font-bold text-slate-600 mt-1 leading-relaxed">
-                        This member record has been inactive for {selectedMember.inactiveDays} days. 
-                        {selectedMember.inactiveDays <= 30 
-                          ? " High recovery potential remains. Trigger standard reactivation sequence." 
-                          : " Recovery likelihood has declined. Monitor during standard review windows."}
+                      <h2 className="text-base font-black tracking-tight">{selectedMember.name}</h2>
+                      <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase font-mono mt-0.5">{selectedMember.member_code || selectedMember.id}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedMember(null)} 
+                    className="w-10 h-10 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </header>
+
+                <main className="flex-1 overflow-y-auto p-6 space-y-6">
+                  
+                  {/* Exit details */}
+                  <section className="space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Archived Context</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                        <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-2 font-mono">Archived Category</span>
+                        <span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border leading-none font-mono w-fit", statusBadgeStyles[selectedMember.status])}>
+                          {selectedMember.status}
+                        </span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200/50 flex flex-col justify-between">
+                        <span className="block text-[9px] font-black text-emerald-700 uppercase tracking-wider mb-2 font-mono">Recovery Value Potential</span>
+                        <strong className="text-lg font-black text-emerald-800 font-mono leading-none">{currencyFormatter.format(selectedMember.recoveryValue)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                      <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider font-mono">Archived Reason/Description</span>
+                      <p className="text-xs font-semibold text-slate-700 italic leading-relaxed">
+                        "{selectedMember.reason}"
                       </p>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
-              </main>
-
-              <footer className="p-6 border-t border-slate-200 bg-slate-50 flex gap-3">
-                <button 
-                  onClick={() => {
-                    setSelectedMember(null);
-                    setReactivateMember(selectedMember);
-                    setSelectedPlan(plans[0].id);
-                  }}
-                  className="flex-1 h-11 rounded-xl bg-slate-950 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-850 transition-colors shadow-md"
-                >
-                  Initiate Reactivate
-                </button>
-                <button 
-                  onClick={() => handleDeleteMember(selectedMember)}
-                  className="h-11 px-4 rounded-xl border border-slate-200 hover:border-rose-200 hover:bg-rose-50 bg-white text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors shadow-sm"
-                  title="Purge record"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </footer>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ─── REACTIVATION WORKFLOW DIALOG MODAL ─── */}
-      <AnimatePresence>
-        {reactivateMember && (
-          <div className="fixed inset-0 z-[10001] flex items-center justify-center px-4">
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              onClick={() => { setReactivateMember(null); setSelectedPlan(""); }} 
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
-            />
-            {/* Modal Body */}
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl z-10 border border-slate-200 flex flex-col"
-            >
-              <header className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <div>
-                  <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Reactivate Workflow</h3>
-                  <p className="text-xs font-semibold text-slate-500 mt-1">Select renewal plan for {reactivateMember.name}</p>
-                </div>
-                <button 
-                  onClick={() => { setReactivateMember(null); setSelectedPlan(""); }}
-                  className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 transition-all shadow-sm"
-                >
-                  <X size={14} />
-                </button>
-              </header>
-
-              <main className="p-6 space-y-5">
-                <div className="flex items-center gap-3.5 p-3.5 bg-indigo-50 border border-indigo-100/50 rounded-2xl shadow-inner">
-                  <img src={reactivateMember.image} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shrink-0 object-cover" alt="" />
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900">{reactivateMember.name}</h4>
-                    <p className="text-[9px] font-black text-indigo-700 tracking-wider uppercase font-mono mt-0.5">{reactivateMember.member_code || reactivateMember.id} · {reactivateMember.phone}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] font-mono block">SELECT ACTIVATION PLAN</label>
-                  <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
-                    {plans.map(plan => (
-                      <div 
-                        key={plan.id}
-                        onClick={() => setSelectedPlan(plan.id)}
-                        className={cn(
-                          "p-4 rounded-xl border-2 cursor-pointer flex items-center justify-between transition-all bg-white",
-                          selectedPlan === plan.id 
-                            ? "border-indigo-600 bg-indigo-50/20" 
-                            : "border-slate-200 hover:border-slate-400"
-                        )}
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-slate-900 truncate">{plan.name}</p>
-                          <p className="text-xs font-bold text-slate-400 mt-1 font-mono">{plan.duration}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <strong className="text-sm font-black text-slate-900 font-mono">{currencyFormatter.format(plan.price)}</strong>
-                          <div className={cn(
-                            "w-4 h-4 rounded-full border flex items-center justify-center mt-1.5 ml-auto",
-                            selectedPlan === plan.id ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-350"
-                          )}>
-                            {selectedPlan === plan.id && <Check size={8} className="stroke-[3]" />}
-                          </div>
+                  {/* Contact information */}
+                  <section className="space-y-3">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Contact Information</h3>
+                    
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-200 bg-slate-50/50">
+                        <Phone size={15} className="text-slate-400 shrink-0" />
+                        <div>
+                          <span className="block text-[9px] font-bold text-slate-400 uppercase font-mono">Primary Contact</span>
+                          <a href={`tel:${selectedMember.phone}`} className="text-xs font-black text-slate-800 hover:text-indigo-600 font-mono">{selectedMember.phone}</a>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </main>
+                      
+                      <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-200 bg-slate-50/50">
+                        <Mail size={15} className="text-slate-400 shrink-0" />
+                        <div>
+                          <span className="block text-[9px] font-bold text-slate-400 uppercase font-mono">E-Mail Address</span>
+                          <a href={`mailto:${selectedMember.email}`} className="text-xs font-black text-slate-800 hover:text-indigo-600 font-mono truncate max-w-xs">{selectedMember.email}</a>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
 
-              <footer className="p-6 border-t border-slate-200 bg-slate-50 flex gap-3">
-                <button 
-                  onClick={() => { setReactivateMember(null); setSelectedPlan(""); }}
-                  className="flex-1 h-11 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
-                >
-                  Cancel
-                </button>
-                <button 
-                  disabled={!selectedPlan}
-                  onClick={handleReactivateSubmit}
-                  className="flex-1 h-11 bg-slate-950 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors shadow-md disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  Confirm Reactivation
-                </button>
-              </footer>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                  {/* Recommendations */}
+                  <section className="space-y-3">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Reactivation Diagnostics</h3>
+                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                      <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={16} />
+                      <div>
+                        <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider font-mono">Inactive Period: {selectedMember.inactiveDays} Days</h4>
+                        <p className="text-xs font-bold text-slate-600 mt-1 leading-relaxed">
+                          This member record has been inactive for {selectedMember.inactiveDays} days. 
+                          {selectedMember.inactiveDays <= 30 
+                            ? " High recovery potential remains. Trigger standard reactivation sequence." 
+                            : " Recovery likelihood has declined. Monitor during standard review windows."}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                </main>
+
+                <footer className="p-6 border-t border-slate-200 bg-slate-50 flex gap-3">
+                  <button 
+                    onClick={() => {
+                      setSelectedMember(null);
+                      setReactivateMember(selectedMember);
+                      setSelectedPlan(plans[0].id);
+                    }}
+                    className="flex-1 h-11 rounded-xl bg-slate-950 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-850 transition-colors shadow-md"
+                  >
+                    Initiate Reactivate
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteMember(selectedMember)}
+                    className="h-11 px-4 rounded-xl border border-slate-200 hover:border-rose-200 hover:bg-rose-50 bg-white text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors shadow-sm"
+                    title="Purge record"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </footer>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* ─── REACTIVATION WORKFLOW DIALOG MODAL ─── */}
+      {createPortal(
+        <AnimatePresence>
+          {reactivateMember && (
+            <div className="fixed inset-0 z-[10001] flex items-center justify-center px-4">
+              {/* Backdrop */}
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                onClick={() => { setReactivateMember(null); setSelectedPlan(""); }} 
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
+              />
+              {/* Modal Body */}
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }} 
+                animate={{ scale: 1, opacity: 1 }} 
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl z-10 border border-slate-200 flex flex-col"
+              >
+                <header className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Reactivate Workflow</h3>
+                    <p className="text-xs font-semibold text-slate-500 mt-1">Select renewal plan for {reactivateMember.name}</p>
+                  </div>
+                  <button 
+                    onClick={() => { setReactivateMember(null); setSelectedPlan(""); }}
+                    className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 transition-all shadow-sm"
+                  >
+                    <X size={14} />
+                  </button>
+                </header>
+
+                <main className="p-6 space-y-5">
+                  <div className="flex items-center gap-3.5 p-3.5 bg-indigo-50 border border-indigo-100/50 rounded-2xl shadow-inner">
+                    <img src={reactivateMember.image} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shrink-0 object-cover" alt="" />
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">{reactivateMember.name}</h4>
+                      <p className="text-[9px] font-black text-indigo-700 tracking-wider uppercase font-mono mt-0.5">{reactivateMember.member_code || reactivateMember.id} · {reactivateMember.phone}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] font-mono block">SELECT ACTIVATION PLAN</label>
+                    <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+                      {plans.map(plan => (
+                        <div 
+                          key={plan.id}
+                          onClick={() => setSelectedPlan(plan.id)}
+                          className={cn(
+                            "p-4 rounded-xl border-2 cursor-pointer flex items-center justify-between transition-all bg-white",
+                            selectedPlan === plan.id 
+                              ? "border-indigo-600 bg-indigo-50/20" 
+                              : "border-slate-200 hover:border-slate-400"
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-black text-slate-900 truncate">{plan.name}</p>
+                            <p className="text-xs font-bold text-slate-400 mt-1 font-mono">{plan.duration}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <strong className="text-sm font-black text-slate-900 font-mono">{currencyFormatter.format(plan.price)}</strong>
+                            <div className={cn(
+                              "w-4 h-4 rounded-full border flex items-center justify-center mt-1.5 ml-auto",
+                              selectedPlan === plan.id ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-350"
+                            )}>
+                              {selectedPlan === plan.id && <Check size={8} className="stroke-[3]" />}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </main>
+
+                <footer className="p-6 border-t border-slate-200 bg-slate-50 flex gap-3">
+                  <button 
+                    onClick={() => { setReactivateMember(null); setSelectedPlan(""); }}
+                    className="flex-1 h-11 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    disabled={!selectedPlan}
+                    onClick={handleReactivateSubmit}
+                    className="flex-1 h-11 bg-slate-950 hover:bg-slate-850 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors shadow-md disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    Confirm Reactivation
+                  </button>
+                </footer>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* ─── PERMANENT DELETION WARNING MODAL ─── */}
       {createPortal(
