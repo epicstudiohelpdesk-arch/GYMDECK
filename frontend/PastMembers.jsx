@@ -1523,7 +1523,7 @@ export default function PastMembers() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => setDeleteConfirmMember(null)}
-                className="absolute inset-0 bg-slate-950/60 backdrop-blur-[3px]"
+                className="absolute inset-0 bg-slate-955/60 backdrop-blur-[3px]"
                 style={{ willChange: "opacity" }}
               />
               
@@ -1540,10 +1540,14 @@ export default function PastMembers() {
                 <div className="h-1.5 w-full bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 shrink-0" />
 
                 {/* Modal Header */}
-                <header className="p-6 pb-4 flex items-center gap-3.5 border-b border-slate-100">
+                <header className="p-6 pb-4 flex justify-between items-start border-b border-slate-100">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black text-slate-900 tracking-tight uppercase">Permanent Deletion Alert</h3>
+                    <p className="text-[9px] font-black text-rose-500 tracking-widest uppercase font-mono mt-0.5">Destructive action · irreversible</p>
+                  </div>
                   <button 
                     onClick={() => setDeleteConfirmMember(null)}
-                    className="w-8.5 h-8.5 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 transition-all shadow-sm hover:scale-105 active:scale-95 group shrink-0"
+                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 transition-all hover:scale-105 active:scale-95 group shrink-0"
                     aria-label="Close modal"
                   >
                     <X 
@@ -1551,17 +1555,13 @@ export default function PastMembers() {
                       className="transition-transform duration-500 ease-out group-hover:rotate-180" 
                     />
                   </button>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">Permanent Deletion Alert</h3>
-                    <p className="text-[9px] font-black text-rose-500 tracking-widest uppercase font-mono mt-0.5">Destructive action · irreversible</p>
-                  </div>
                 </header>
 
                 {/* Modal Body */}
                 <main className="p-6 pb-5 space-y-4">
                   {/* Warning Info */}
-                  <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-100/60 flex gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0 mt-0.5">
+                  <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-100/60 flex items-start gap-3.5">
+                    <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
                       <AlertTriangle size={18} />
                     </div>
                     <div className="text-xs text-slate-650 leading-relaxed font-semibold">
@@ -1574,18 +1574,32 @@ export default function PastMembers() {
                     <img src={deleteConfirmMember.image} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shrink-0 object-cover" alt="" />
                     <div className="min-w-0">
                       <h4 className="text-sm font-black text-slate-900 truncate leading-tight">{deleteConfirmMember.name}</h4>
-                      <p className="text-[9px] font-black text-slate-405 tracking-wider uppercase font-mono mt-1 truncate">{deleteConfirmMember.member_code || deleteConfirmMember.id} · {deleteConfirmMember.phone}</p>
+                      <p className="text-[9px] font-black text-slate-405 tracking-wider uppercase font-mono mt-1.5 truncate">
+                        ID: {deleteConfirmMember.member_code || deleteConfirmMember.id} · Phone: {deleteConfirmMember.phone}
+                      </p>
                     </div>
                   </div>
 
                   {/* Loss breakdown warning banner */}
-                  <div className="border-l-3 border-rose-500 bg-rose-50/20 p-3.5 rounded-r-2xl text-[11px] text-rose-800 leading-normal font-semibold space-y-1">
-                    <div className="font-black uppercase tracking-wider text-[10px] text-rose-605">The following records will be permanently destroyed:</div>
-                    <ul className="list-disc pl-4 space-y-0.5 text-slate-600 font-medium">
-                      <li>Personal identity data and profile photo</li>
-                      <li>All uploaded residency/gov proof documents</li>
-                      <li>Complete membership plan logs and attendance history</li>
-                      <li>Fees history ledger and past receipts</li>
+                  <div className="p-4 bg-slate-50/40 border border-slate-100 rounded-2xl text-[11px] font-semibold space-y-2">
+                    <div className="font-black uppercase tracking-wider text-[9px] text-rose-600 font-mono">The following records will be permanently destroyed:</div>
+                    <ul className="space-y-1.5 text-slate-600 font-medium pl-1">
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>Personal identity data and profile photo</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>All uploaded residency/gov proof documents</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>Complete membership plan logs and attendance history</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>Fees history ledger and past receipts</span>
+                      </li>
                     </ul>
                   </div>
                 </main>
@@ -1594,15 +1608,15 @@ export default function PastMembers() {
                 <footer className="p-6 pt-4 border-t border-slate-100 bg-slate-50/50 flex gap-3 justify-end shrink-0">
                   <button 
                     onClick={() => setDeleteConfirmMember(null)}
-                    className="h-10 px-4 rounded-xl border border-slate-250 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-[10px] font-black uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="h-10 px-4.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-[10px] font-black uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
                   >
-                    Cancel, Keep Record
+                    Cancel
                   </button>
                   <button 
                     onClick={() => confirmDeleteMember(deleteConfirmMember)}
-                    className="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-600/10 hover:scale-[1.02] active:scale-[0.98]"
+                    className="h-10 px-5.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-600/10 hover:scale-[1.02] active:scale-[0.98] shrink-0"
                   >
-                    Permanently Delete Entire Data
+                    Permanently Delete
                   </button>
                 </footer>
               </motion.div>
@@ -1635,10 +1649,14 @@ export default function PastMembers() {
                 <div className="h-1.5 w-full bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 shrink-0" />
 
                 {/* Modal Header */}
-                <header className="p-6 pb-4 flex items-center gap-3.5 border-b border-slate-100">
+                <header className="p-6 pb-4 flex justify-between items-start border-b border-slate-100">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">Bulk Deletion Alert</h3>
+                    <p className="text-[9px] font-black text-rose-500 tracking-widest uppercase font-mono mt-0.5">Destructive action · irreversible</p>
+                  </div>
                   <button 
                     onClick={() => setDeleteConfirmBulk(false)}
-                    className="w-8.5 h-8.5 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 transition-all shadow-sm hover:scale-105 active:scale-95 group shrink-0"
+                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 transition-all hover:scale-105 active:scale-95 group shrink-0"
                     aria-label="Close modal"
                   >
                     <X 
@@ -1646,17 +1664,13 @@ export default function PastMembers() {
                       className="transition-transform duration-500 ease-out group-hover:rotate-180" 
                     />
                   </button>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">Bulk Deletion Alert</h3>
-                    <p className="text-[9px] font-black text-rose-500 tracking-widest uppercase font-mono mt-0.5">Destructive action · irreversible</p>
-                  </div>
                 </header>
 
                 {/* Modal Body */}
                 <main className="p-6 pb-5 space-y-4">
                   {/* Warning Info */}
-                  <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-100/60 flex gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0 mt-0.5">
+                  <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-100/60 flex items-start gap-3.5">
+                    <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
                       <AlertTriangle size={18} />
                     </div>
                     <div className="text-xs text-slate-650 leading-relaxed font-semibold">
@@ -1665,13 +1679,25 @@ export default function PastMembers() {
                   </div>
 
                   {/* Loss breakdown warning banner */}
-                  <div className="border-l-3 border-rose-500 bg-rose-50/20 p-3.5 rounded-r-2xl text-[11px] text-rose-800 leading-normal font-semibold space-y-1">
-                    <div className="font-black uppercase tracking-wider text-[10px] text-rose-605">The following records will be permanently destroyed:</div>
-                    <ul className="list-disc pl-4 space-y-0.5 text-slate-600 font-medium">
-                      <li>Personal identity data and profile photo</li>
-                      <li>All uploaded residency/gov proof documents</li>
-                      <li>Complete membership plan logs and attendance history</li>
-                      <li>Fees history ledger and past receipts</li>
+                  <div className="p-4 bg-slate-50/40 border border-slate-100 rounded-2xl text-[11px] font-semibold space-y-2">
+                    <div className="font-black uppercase tracking-wider text-[9px] text-rose-600 font-mono">The following records will be permanently destroyed:</div>
+                    <ul className="space-y-1.5 text-slate-600 font-medium pl-1">
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>Personal identity data and profile photo</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>All uploaded residency/gov proof documents</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>Complete membership plan logs and attendance history</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                        <span>Fees history ledger and past receipts</span>
+                      </li>
                     </ul>
                   </div>
                 </main>
@@ -1680,13 +1706,13 @@ export default function PastMembers() {
                 <footer className="p-6 pt-4 border-t border-slate-100 bg-slate-50/50 flex gap-3 justify-end shrink-0">
                   <button 
                     onClick={() => setDeleteConfirmBulk(false)}
-                    className="h-10 px-4 rounded-xl border border-slate-250 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-[10px] font-black uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="h-10 px-4.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-[10px] font-black uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
                   >
-                    Cancel, Keep Records
+                    Cancel
                   </button>
                   <button 
                     onClick={confirmBulkDeleteMembers}
-                    className="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-600/10 hover:scale-[1.02] active:scale-[0.98]"
+                    className="h-10 px-5.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-rose-600/10 hover:scale-[1.02] active:scale-[0.98] shrink-0"
                   >
                     Permanently Delete {selectedMemberIds.length} Members
                   </button>
