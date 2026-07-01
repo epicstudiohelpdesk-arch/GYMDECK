@@ -955,34 +955,34 @@ export default function PastMembers() {
                   className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden"
                 >
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse table-fixed">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
                           {isSelectionMode && (
-                            <th className="px-4 py-4.5 w-10 text-center">
+                            <th className="px-4 py-4 w-[6%] text-center">
                               <span className="sr-only">Select</span>
                             </th>
                           )}
-                          <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Member</th>
-                          <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Contact Info</th>
-                          <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Archived Status & Reason</th>
-                          <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Inactive Period</th>
-                          <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono">Recovery Value</th>
-                          <th className="px-6 py-4.5 text-[10px] font-black uppercase tracking-[0.18em] font-mono text-right">Actions</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] font-mono text-slate-500 w-[24%]">Member</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] font-mono text-slate-500 w-[18%]">Contact Info</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] font-mono text-slate-500 w-[28%]">Archived Status & Reason</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] font-mono text-slate-500 w-[14%]">Inactive Period</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] font-mono text-slate-500 w-[10%]">Recovery</th>
+                          <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] font-mono text-slate-500 w-[10%] text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {paginatedMembers.map(member => (
-                          <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
+                          <tr key={member.id} className="hover:bg-slate-50/30 transition-colors group">
                             {isSelectionMode && (
-                              <td className="px-4 py-4.5 text-center">
+                              <td className="px-4 py-4 text-center align-middle">
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleToggleSelectMember(member.id);
                                   }}
                                   className={cn(
-                                    "w-5 h-5 rounded border mx-auto flex items-center justify-center shrink-0 transition-all",
+                                    "w-5 h-5 rounded border mx-auto flex items-center justify-center shrink-0 transition-all shadow-sm",
                                     selectedMemberIds.includes(member.id)
                                       ? "bg-slate-950 border-slate-950 text-white"
                                       : "bg-slate-50 border-slate-300 hover:border-slate-400"
@@ -992,74 +992,76 @@ export default function PastMembers() {
                                 </button>
                               </td>
                             )}
-                            <td className="px-6 py-4.5">
+                            <td className="px-6 py-4.5 align-middle">
                               <div className="flex items-center gap-3.5">
-                                <img src={member.image} className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
+                                <img src={member.image} className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
                                 <div className="min-w-0">
                                   <p className="text-sm font-black text-slate-900 truncate leading-tight">{member.name}</p>
-                                  <p className="text-[9px] font-black text-slate-400 mt-1.5 uppercase tracking-widest font-mono">ID: {member.member_code || member.id}</p>
+                                  <p className="text-[9px] font-semibold text-slate-500 mt-1 bg-slate-100 px-1.5 py-0.5 rounded w-fit leading-none font-mono">ID: {member.member_code || member.id}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4.5">
-                              <div className="space-y-1 font-mono text-xs">
-                                <div className="flex items-center gap-1.5 text-slate-600 font-bold">
-                                  <Phone size={12} className="text-slate-400" /> {member.phone}
+                            <td className="px-6 py-4.5 align-middle">
+                              <div className="space-y-1.5 text-xs">
+                                <div className="flex items-center gap-2 text-slate-750 font-bold font-mono">
+                                  <Phone size={13} className="text-slate-450 shrink-0" />
+                                  <span>{member.phone}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5 text-slate-400 font-medium">
-                                  <Mail size={12} className="text-slate-400" /> {member.email}
+                                <div className="flex items-center gap-2 text-slate-400 font-medium truncate max-w-[170px] font-mono">
+                                  <Mail size={13} className="text-slate-405 shrink-0" />
+                                  <span className="truncate">{member.email}</span>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4.5">
+                            <td className="px-6 py-4.5 align-middle">
                               <div className="flex flex-col gap-2">
-                                <span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider w-fit border leading-none font-mono", statusBadgeStyles[member.status])}>
+                                <span className={cn("px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider w-fit border leading-none font-mono", statusBadgeStyles[member.status])}>
                                   {member.status}
                                 </span>
-                                <p className="text-xs font-semibold text-slate-500 truncate max-w-[200px] italic">"{member.reason}"</p>
+                                <p className="text-xs font-semibold text-slate-500 truncate max-w-[220px] italic">"{member.reason}"</p>
                               </div>
                             </td>
-                            <td className="px-6 py-4.5">
-                              <div className="flex items-center gap-2.5">
-                                <span className="text-sm font-black text-slate-700 font-mono">{member.inactiveDays}d</span>
-                                <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <td className="px-6 py-4.5 align-middle">
+                              <div className="flex flex-col gap-1.5 justify-center">
+                                <span className="text-xs font-bold text-slate-800 font-mono">{member.inactiveDays} Days</span>
+                                <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                   <div 
                                     className={cn(
-                                      "h-full rounded-full",
+                                      "h-full rounded-full transition-all",
                                       member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500"
                                     )} 
-                                    style={{ width: `${Math.min(member.inactiveDays, 100)}%` }} 
+                                    style={{ width: `${Math.min((member.inactiveDays / 90) * 100, 100)}%` }} 
                                   />
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4.5">
-                              <span className="text-sm font-black text-slate-700 font-mono">
+                            <td className="px-6 py-4.5 align-middle">
+                              <span className="text-sm font-extrabold text-slate-900 font-mono">
                                 {currencyFormatter.format(member.recoveryValue)}
                               </span>
                             </td>
-                            <td className="px-6 py-4.5 text-right">
-                              <div className="flex items-center justify-end gap-2">
+                            <td className="px-6 py-4.5 align-middle text-right">
+                              <div className="flex items-center justify-end gap-1.5">
                                 <button 
                                   onClick={() => setSelectedMember(member)}
                                   title="View Member Details" 
-                                  className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                                  className="w-8.5 h-8.5 rounded-lg text-slate-450 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-all shrink-0"
                                 >
-                                  <Eye size={15} />
+                                  <Eye size={14} />
                                 </button>
                                 <button 
                                   onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
                                   title="Reactivate Member" 
-                                  className="p-2 text-slate-500 hover:text-indigo-650 hover:bg-indigo-50 rounded-lg transition-all"
+                                  className="w-8.5 h-8.5 rounded-lg text-slate-450 hover:text-indigo-650 hover:bg-indigo-50 flex items-center justify-center transition-all shrink-0"
                                 >
-                                  <RefreshCw size={15} />
+                                  <RefreshCw size={14} />
                                 </button>
                                 <button 
                                   onClick={() => handleDeleteMember(member)}
                                   title="Delete Archive Record" 
-                                  className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all"
+                                  className="w-8.5 h-8.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center transition-all shrink-0"
                                 >
-                                  <Trash2 size={15} />
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             </td>
