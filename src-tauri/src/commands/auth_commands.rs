@@ -130,7 +130,12 @@ pub async fn login_command(
 pub async fn restore_session_command(
     state: State<'_, AppState>,
 ) -> Result<LoginResponse, AppError> {
-    // Validates trust fingerprint and issues memory-only active token
+    // 1. Check in-memory session cache first to avoid redundant keychain/fingerprint checks on redirect
+    if state.session_manager.get_active_session().await.is_some() {
+        return Ok(LoginResponse { success: true, redirect: "/dashboard".to_string() });
+    }
+
+    // 2. Validates trust fingerprint and issues memory-only active token
     match state.session_manager.restore_session().await {
         Ok(_) => Ok(LoginResponse { success: true, redirect: "/dashboard".to_string() }),
         Err(e) => Err(e),
