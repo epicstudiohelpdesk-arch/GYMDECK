@@ -331,6 +331,21 @@ export default function PastMembers() {
     return () => window.removeEventListener('gymdeck:member-transferred', handleMemberTransfer);
   }, []);
 
+  const handleViewPhoto = (e, member) => {
+    e.stopPropagation();
+    if (window.setDocumentModalContent && window.setDocumentModalState) {
+      window.setDocumentModalContent({
+        memberName: member.name,
+        title: "Member's Photo",
+        imageSrc: member.image,
+        imageAlt: member.name
+      });
+      window.setDocumentModalState(true, e.currentTarget);
+    } else {
+      console.warn("GymDeck: Global document modal controller not found.");
+    }
+  };
+
   const filteredMembers = useMemo(() => {
     return pastMembers.filter(m => {
       const matchesSearch = 
@@ -886,7 +901,14 @@ export default function PastMembers() {
                                 {selectedMemberIds.includes(member.id) && <Check size={12} className="stroke-[3]" />}
                               </button>
                             )}
-                            <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
+                            <button 
+                              type="button"
+                              onClick={(e) => handleViewPhoto(e, member)}
+                              className="hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none"
+                              title={`View ${member.name}'s photo`}
+                            >
+                              <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 object-cover" alt="" />
+                            </button>
                             <div className="min-w-0">
                               <h3 className="text-sm font-black text-slate-900 leading-tight truncate">{member.name}</h3>
                               <p className="text-[9px] font-black text-slate-400 mt-1 tracking-wider uppercase font-mono">ID: {member.member_code || member.id}</p>
@@ -1035,7 +1057,14 @@ export default function PastMembers() {
                             )}
                             <td className="px-6 py-4.5 align-middle">
                               <div className="flex items-center gap-3.5">
-                                <img src={member.image} className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 shrink-0 object-cover" alt="" />
+                                <button 
+                                  type="button"
+                                  onClick={(e) => handleViewPhoto(e, member)}
+                                  className="hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none"
+                                  title={`View ${member.name}'s photo`}
+                                >
+                                  <img src={member.image} className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 object-cover" alt="" />
+                                </button>
                                 <div className="min-w-0">
                                   <p className="text-sm font-black text-slate-900 truncate leading-tight">{member.name}</p>
                                   <p className="text-[9px] font-semibold text-slate-500 mt-1 bg-slate-100 px-1.5 py-0.5 rounded w-fit leading-none font-mono">ID: {member.member_code || member.id}</p>

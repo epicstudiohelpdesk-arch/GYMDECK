@@ -4712,3 +4712,7 @@ window.addEventListener("resize", () => {
     applyDocTransform();
   }
 });
+
+// Expose modal state controllers globally for React cross-component access
+window.setDocumentModalState = setDocumentModalState;
+window.setDocumentModalContent = setDocumentModalContent;
