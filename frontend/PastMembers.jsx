@@ -1019,25 +1019,25 @@ export default function PastMembers() {
                               </span>
                             </td>
                             <td className="px-6 py-4.5 text-right">
-                              <div className="flex items-center justify-end gap-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center justify-end gap-2">
                                 <button 
                                   onClick={() => setSelectedMember(member)}
                                   title="View Member Details" 
-                                  className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg border border-slate-200 transition-all bg-white"
+                                  className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
                                 >
                                   <Eye size={15} />
                                 </button>
                                 <button 
                                   onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
                                   title="Reactivate Member" 
-                                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200 transition-all bg-white"
+                                  className="p-2 text-slate-500 hover:text-indigo-650 hover:bg-indigo-50 rounded-lg transition-all"
                                 >
                                   <RefreshCw size={15} />
                                 </button>
                                 <button 
                                   onClick={() => handleDeleteMember(member)}
                                   title="Delete Archive Record" 
-                                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 transition-all bg-white"
+                                  className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all"
                                 >
                                   <Trash2 size={15} />
                                 </button>
