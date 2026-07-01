@@ -345,19 +345,39 @@ export default function PastMembers() {
         // 1. Purge old archived member record permanently from database
         await window.__TAURI__.core.invoke("permanent_delete_member_command", { memberId: reactivateMember.id });
         
-        // 2. Create the new active member record
-        await window.__TAURI__.core.invoke("create_member_command", {
-          fullName: reactivateMember.name,
-          phone: reactivateMember.phone,
-          alternatePhone: "",
+        // Construct standard Rust-compatible member schema representation
+        const rustMember = {
+          id: crypto.randomUUID(),
+          gym_id: "00000000-0000-0000-0000-000000000000", // Overwritten by backend
+          member_code: reactivateMember.member_code || `GD-${Math.floor(1000 + Math.random() * 9000)}`,
+          full_name: reactivateMember.name || "Unnamed Member",
+          phone: reactivateMember.phone || "0000000000",
+          alternate_phone: "",
           email: reactivateMember.email === "N/A" ? "" : reactivateMember.email,
-          dob: "1995-01-01", 
+          gender: "OTHER",
+          blood_group: null,
+          dob: "1995-01-01",
+          address: "Reactivated",
           height: "175",
           weight: "70",
-          address: "Reactivated",
+          membership_plan_id: plan.id,
+          membership_status: "ACTIVE",
+          joined_at: new Date().toISOString(),
+          expires_at: null,
+          profile_photo_path: reactivateMember.image || null,
           notes: `Reactivated with plan: ${plan.name}`,
-          membershipPlanId: plan.id,
-          profilePhotoPath: reactivateMember.image
+          created_by_user_id: "00000000-0000-0000-0000-000000000000", // Overwritten by backend
+          updated_by_user_id: "00000000-0000-0000-0000-000000000000", // Overwritten by backend
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          deleted_at: null,
+          deleted_by_user_id: null
+        };
+
+        // 2. Create the new active member record using correct nested parameters
+        await window.__TAURI__.core.invoke("create_member_command", {
+          member: rustMember,
+          documents: []
         });
 
         showToast(`${reactivateMember.name} successfully reactivated on ${plan.name}!`);

@@ -3065,6 +3065,11 @@ const loadMembersFromBackend = async (resetPage = true) => {
     }
   } catch (err) {
     console.error("GymDeck: Error loading members from database:", err);
+    if (err && (String(err).includes("Session Error") || String(err).includes("Session expired"))) {
+      sessionStorage.removeItem("gymdeck-authenticated");
+      localStorage.removeItem("gymdeck-authenticated");
+      window.location.replace("../index.html");
+    }
   }
 };
 

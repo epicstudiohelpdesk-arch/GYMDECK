@@ -14,6 +14,26 @@
         if (!isAuthenticated) {
           sessionStorage.setItem("gymdeck-enter", "auth");
           window.location.replace("../index.html");
+          return;
+        }
+
+        // Cross-verify with Tauri native keychain session if available
+        if (window.__TAURI__) {
+          window.__TAURI__.core.invoke("restore_session_command")
+            .then((res) => {
+              if (!res || !res.success) {
+                console.warn("GymDeck: Native session check failed. Redirecting to login.");
+                sessionStorage.removeItem(authKey);
+                localStorage.removeItem(authKey);
+                window.location.replace("../index.html");
+              }
+            })
+            .catch((err) => {
+              console.error("GymDeck: Native session validation error. Redirecting to login.", err);
+              sessionStorage.removeItem(authKey);
+              localStorage.removeItem(authKey);
+              window.location.replace("../index.html");
+            });
         }
       })();
     </script>
