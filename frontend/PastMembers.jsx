@@ -1443,21 +1443,21 @@ export default function PastMembers() {
                 className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl z-10 border border-slate-200 flex flex-col"
                 style={{ willChange: "transform, opacity" }}
               >
-                <header className="p-6 border-b border-slate-100 bg-slate-50 flex items-center gap-4">
-                  <button 
-                    onClick={() => { setReactivateMember(null); setSelectedPlan(""); }}
-                    className="w-8.5 h-8.5 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 transition-all shadow-sm hover:scale-105 active:scale-95 group shrink-0"
-                    aria-label="Close modal"
-                  >
-                    <X 
-                      size={14} 
-                      className="transition-transform duration-500 ease-out group-hover:rotate-180" 
-                    />
-                  </button>
+                <header className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start">
                   <div className="min-w-0">
                     <h3 className="text-base font-black text-slate-900 uppercase tracking-tight truncate">Reactivate Workflow</h3>
                     <p className="text-xs font-semibold text-slate-500 mt-1 truncate">Select renewal plan for {reactivateMember.name}</p>
                   </div>
+                  <button 
+                    onClick={() => { setReactivateMember(null); setSelectedPlan(""); }}
+                    className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-slate-450 hover:text-slate-900 flex items-center justify-center border border-slate-200 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-110 active:scale-95 group shrink-0 shadow-sm"
+                    aria-label="Close modal"
+                  >
+                    <X 
+                      size={16} 
+                      className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-90" 
+                    />
+                  </button>
                 </header>
 
                 <main className="p-6 space-y-5">
