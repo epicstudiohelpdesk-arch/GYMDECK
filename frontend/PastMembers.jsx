@@ -1292,7 +1292,7 @@ export default function PastMembers() {
                 exit={{ opacity: 0 }} 
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => setSelectedMember(null)} 
-                className="absolute inset-0 bg-slate-900/40 backdrop-blur-[3px]" 
+                className="absolute inset-0 bg-slate-950/75 backdrop-blur-[6px]" 
                 style={{ willChange: "opacity" }}
               />
               {/* Drawer layout */}
@@ -1431,7 +1431,7 @@ export default function PastMembers() {
                 exit={{ opacity: 0 }} 
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => { setReactivateMember(null); setSelectedPlan(""); }} 
-                className="absolute inset-0 bg-slate-900/50 backdrop-blur-[3px]" 
+                className="absolute inset-0 bg-slate-950/75 backdrop-blur-[6px]" 
                 style={{ willChange: "opacity" }}
               />
               {/* Modal Body */}
