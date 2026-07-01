@@ -331,6 +331,19 @@ export default function PastMembers() {
     return () => window.removeEventListener('gymdeck:member-transferred', handleMemberTransfer);
   }, []);
 
+  // Disable body scroll when any modal or drawer is active
+  useEffect(() => {
+    const isOverlayActive = !!(selectedMember || reactivateMember || deleteConfirmMember || deleteConfirmBulk);
+    if (isOverlayActive) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedMember, reactivateMember, deleteConfirmMember, deleteConfirmBulk]);
+
   const handleViewPhoto = (e, member) => {
     e.stopPropagation();
     if (window.setDocumentModalContent && window.setDocumentModalState) {
@@ -1523,7 +1536,7 @@ export default function PastMembers() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => setDeleteConfirmMember(null)}
-                className="absolute inset-0 bg-slate-955/60 backdrop-blur-[3px]"
+                className="absolute inset-0 bg-slate-950/75 backdrop-blur-[6px]"
                 style={{ willChange: "opacity" }}
               />
               
@@ -1632,7 +1645,7 @@ export default function PastMembers() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 onClick={() => setDeleteConfirmBulk(false)}
-                className="absolute inset-0 bg-slate-950/60 backdrop-blur-[3px]"
+                className="absolute inset-0 bg-slate-950/75 backdrop-blur-[6px]"
                 style={{ willChange: "opacity" }}
               />
               
