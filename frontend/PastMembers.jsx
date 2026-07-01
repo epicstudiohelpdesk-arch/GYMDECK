@@ -1259,20 +1259,24 @@ export default function PastMembers() {
                 transition={{ type: "spring", damping: 25, stiffness: 200 }} 
                 className="relative w-full max-w-lg bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col z-10"
               >
-                <header className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-950 text-white">
-                  <div className="flex items-center gap-4">
-                    <img src={selectedMember.image} className="w-12 h-12 rounded-full border-2 border-slate-800 object-cover" alt="" />
-                    <div>
-                      <h2 className="text-base font-black tracking-tight">{selectedMember.name}</h2>
-                      <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase font-mono mt-0.5">{selectedMember.member_code || selectedMember.id}</p>
-                    </div>
-                  </div>
+                 <header className="p-6 border-b border-slate-200 flex items-center gap-4 bg-slate-950 text-white">
                   <button 
                     onClick={() => setSelectedMember(null)} 
-                    className="w-10 h-10 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:border-slate-700 active:scale-95 group shadow-inner shrink-0"
+                    aria-label="Close drawer"
                   >
-                    <X size={20} />
+                    <X 
+                      size={18} 
+                      className="transition-transform duration-500 ease-out group-hover:rotate-180" 
+                    />
                   </button>
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <img src={selectedMember.image} className="w-12 h-12 rounded-full border-2 border-slate-800 object-cover shrink-0" alt="" />
+                    <div className="min-w-0">
+                      <h2 className="text-base font-black tracking-tight truncate">{selectedMember.name}</h2>
+                      <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase font-mono mt-0.5 truncate">{selectedMember.member_code || selectedMember.id}</p>
+                    </div>
+                  </div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -1390,17 +1394,21 @@ export default function PastMembers() {
                 exit={{ scale: 0.95, opacity: 0 }}
                 className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl z-10 border border-slate-200 flex flex-col"
               >
-                <header className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                  <div>
-                    <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Reactivate Workflow</h3>
-                    <p className="text-xs font-semibold text-slate-500 mt-1">Select renewal plan for {reactivateMember.name}</p>
-                  </div>
+                <header className="p-6 border-b border-slate-100 bg-slate-50 flex items-center gap-4">
                   <button 
                     onClick={() => { setReactivateMember(null); setSelectedPlan(""); }}
-                    className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 transition-all shadow-sm"
+                    className="w-8.5 h-8.5 rounded-full bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center border border-slate-200 transition-all shadow-sm hover:scale-105 active:scale-95 group shrink-0"
+                    aria-label="Close modal"
                   >
-                    <X size={14} />
+                    <X 
+                      size={14} 
+                      className="transition-transform duration-500 ease-out group-hover:rotate-180" 
+                    />
                   </button>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black text-slate-900 uppercase tracking-tight truncate">Reactivate Workflow</h3>
+                    <p className="text-xs font-semibold text-slate-500 mt-1 truncate">Select renewal plan for {reactivateMember.name}</p>
+                  </div>
                 </header>
 
                 <main className="p-6 space-y-5">
