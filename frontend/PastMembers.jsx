@@ -120,6 +120,38 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0
 });
 
+const getInitialsAvatar = (name) => {
+  const cleanName = name ? name.trim() : "Member";
+  const initials = cleanName
+    .split(/\s+/)
+    .map(w => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  
+  // Hash the name to generate a stable, beautiful gradient background
+  let hash = 0;
+  for (let i = 0; i < cleanName.length; i++) {
+    hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue1 = Math.abs(hash % 360);
+  const hue2 = (hue1 + 40) % 360;
+  
+  // Return an SVG data URI
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+    <defs>
+      <linearGradient id="grad-${hash}" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:hsl(${hue1}, 70%, 60%)" />
+        <stop offset="100%" style="stop-color:hsl(${hue2}, 70%, 45%)" />
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grad-${hash})" />
+    <text x="50%" y="54%" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="38" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initials}</text>
+  </svg>`;
+  
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 const normalizeMember = (m) => {
   let inactiveDays = 45;
   if (m.inactiveDays !== undefined) inactiveDays = m.inactiveDays;
@@ -143,17 +175,23 @@ const normalizeMember = (m) => {
     reason = reason.replace("Reason: ", "");
   }
 
+  const name = m.full_name || m.name || "Unnamed Member";
+  const photo = m.profile_photo_path || m.image;
+  const image = (photo && !photo.includes("dicebear.com"))
+    ? photo
+    : getInitialsAvatar(name);
+
   return {
     id: m.id || m.member_code || `MBR-${Math.floor(1000 + Math.random() * 9000)}`,
     member_code: m.member_code || m.id || "N/A",
-    name: m.full_name || m.name || "Unnamed Member",
+    name: name,
     phone: m.phone || "+91 99999 88888",
     email: m.email || "N/A",
     status: status,
     inactiveDays: inactiveDays,
     recoveryValue: recoveryValue,
     reason: reason,
-    image: m.profile_photo_path || m.image || `https://api.dicebear.com/7.x/adventurer/svg?seed=${m.full_name || m.name || 'member'}`
+    image: image
   };
 };
 
@@ -258,11 +296,14 @@ export default function PastMembers() {
     setIsLoading(true);
     if (window.__TAURI__) {
       try {
-        const membersFromDb = await window.__TAURI__.core.invoke("get_past_members_command", { limit: 100, offset: 0 });
+        const [membersFromDb, dbPlans] = await Promise.all([
+          window.__TAURI__.core.invoke("get_past_members_command", { limit: 100, offset: 0 }),
+          window.__TAURI__.core.invoke("get_plans_command")
+        ]);
+
         const formattedMembers = membersFromDb.map(normalizeMember);
         setPastMembers(formattedMembers);
         
-        const dbPlans = await window.__TAURI__.core.invoke("get_plans_command");
         if (dbPlans && dbPlans.length > 0) {
           setPlans(dbPlans.map(p => ({
             id: p.id,

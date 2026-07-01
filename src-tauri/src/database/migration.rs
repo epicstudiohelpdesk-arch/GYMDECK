@@ -17,6 +17,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "Initial schema",
         include_str!("schema.sql"),
     ),
+    (
+        2,
+        "Add composite index on gym_members(gym_id, deleted_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_members_gym_deleted ON gym_members(gym_id, deleted_at DESC);",
+    ),
 ];
 
 pub fn ensure_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {

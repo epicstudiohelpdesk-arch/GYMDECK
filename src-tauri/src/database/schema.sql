@@ -88,6 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_members_gym ON gym_members(gym_id);
 CREATE INDEX IF NOT EXISTS idx_members_gym_code ON gym_members(gym_id, member_code);
 CREATE INDEX IF NOT EXISTS idx_members_gym_phone ON gym_members(gym_id, phone);
 CREATE INDEX IF NOT EXISTS idx_members_gym_name ON gym_members(gym_id, full_name);
+CREATE INDEX IF NOT EXISTS idx_members_gym_deleted ON gym_members(gym_id, deleted_at DESC);
 
 -- 4.1 MEMBER DOCUMENTS (Persistent Storage)
 CREATE TABLE IF NOT EXISTS member_documents (
