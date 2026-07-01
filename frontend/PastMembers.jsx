@@ -1560,12 +1560,12 @@ export default function PastMembers() {
                   </div>
                   <button 
                     onClick={() => setDeleteConfirmMember(null)}
-                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-600 text-slate-400 hover:text-white flex items-center justify-center border border-slate-200 hover:border-rose-700 transition-all duration-300 hover:scale-110 active:scale-90 group shrink-0 shadow-sm"
+                    className="w-10 h-10 rounded-full bg-slate-50 hover:bg-rose-50 text-slate-450 hover:text-rose-600 flex items-center justify-center border border-slate-200 hover:border-rose-200 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-110 active:scale-95 group shrink-0 shadow-sm"
                     aria-label="Close modal"
                   >
                     <X 
-                      size={14} 
-                      className="transition-transform duration-500 ease-out group-hover:rotate-180" 
+                      size={16} 
+                      className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-90" 
                     />
                   </button>
                 </header>
@@ -1669,12 +1669,12 @@ export default function PastMembers() {
                   </div>
                   <button 
                     onClick={() => setDeleteConfirmBulk(false)}
-                    className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-rose-600 text-slate-400 hover:text-white flex items-center justify-center border border-slate-200 hover:border-rose-700 transition-all duration-300 hover:scale-110 active:scale-90 group shrink-0 shadow-sm"
+                    className="w-10 h-10 rounded-full bg-slate-50 hover:bg-rose-50 text-slate-450 hover:text-rose-600 flex items-center justify-center border border-slate-200 hover:border-rose-200 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-110 active:scale-95 group shrink-0 shadow-sm"
                     aria-label="Close modal"
                   >
                     <X 
-                      size={14} 
-                      className="transition-transform duration-500 ease-out group-hover:rotate-180" 
+                      size={16} 
+                      className="transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-90" 
                     />
                   </button>
                 </header>
