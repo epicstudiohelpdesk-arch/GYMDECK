@@ -940,10 +940,16 @@ export default function PastMembers() {
                             <button 
                               type="button"
                               onClick={(e) => handleViewPhoto(e, member)}
+                              style={{ width: "80px", height: "80px" }}
                               className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
                               title={`View ${member.name}'s photo`}
                             >
-                              <img src={member.image} className="w-18 h-18 rounded-full bg-slate-50 border border-slate-100 object-cover shadow-sm" alt="" />
+                              <img 
+                                src={member.image} 
+                                style={{ width: "80px", height: "80px" }}
+                                className="rounded-full bg-slate-50 border border-slate-100 object-cover shadow-sm" 
+                                alt="" 
+                              />
                             </button>
 
                             {/* Quick Message/Call Actions */}
@@ -952,14 +958,16 @@ export default function PastMembers() {
                                 href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!%20Check%20out%20our%20reactivation%20offers.`}
                                 target="_blank" 
                                 rel="noreferrer"
-                                className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 flex items-center justify-center border border-slate-100/80 hover:border-emerald-100 transition-all shadow-sm"
+                                style={{ width: "36px", height: "36px" }}
+                                className="rounded-full bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 flex items-center justify-center border border-slate-100/80 hover:border-emerald-100 transition-all shadow-sm"
                                 title="Contact via WhatsApp"
                               >
                                 <MessageSquare size={13} />
                               </a>
                               <a 
                                 href={`tel:${member.phone}`}
-                                className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center border border-slate-100/80 hover:border-blue-100 transition-all shadow-sm"
+                                style={{ width: "36px", height: "36px" }}
+                                className="rounded-full bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center border border-slate-100/80 hover:border-blue-100 transition-all shadow-sm"
                                 title="Call Member"
                               >
                                 <Phone size={13} />
@@ -1005,19 +1013,22 @@ export default function PastMembers() {
                         <div className="flex gap-2 mt-5 pt-3.5 border-t border-slate-100/60 items-center w-full">
                           <button 
                             onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
-                            className="h-8.5 px-4 rounded-full bg-slate-950 hover:bg-slate-850 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm shadow-slate-950/10"
+                            style={{ height: "36px" }}
+                            className="h-9 px-4 rounded-full bg-slate-950 hover:bg-slate-850 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm shadow-slate-950/10"
                           >
                             Reactivate
                           </button>
                           <button 
                             onClick={() => setSelectedMember(member)}
-                            className="h-8.5 px-4 rounded-full border border-slate-200/80 bg-white hover:bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm"
+                            style={{ height: "36px" }}
+                            className="h-9 px-4 rounded-full border border-slate-200/80 bg-white hover:bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm"
                           >
                             Details
                           </button>
                           <button 
                             onClick={() => handleDeleteMember(member)}
-                            className="h-8.5 w-8.5 rounded-full border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 transition-all hover:scale-[1.05] active:scale-[0.95] shadow-sm ml-auto flex items-center justify-center"
+                            style={{ width: "36px", height: "36px" }}
+                            className="rounded-full border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 transition-all hover:scale-[1.05] active:scale-[0.95] shadow-sm ml-auto flex items-center justify-center"
                             title="Delete Archive Record"
                           >
                             <Trash2 size={13} />
