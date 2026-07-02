@@ -615,7 +615,7 @@ export default function PastMembers() {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50 w-full font-sans select-none relative overflow-x-hidden text-slate-700">
+    <div className="flex flex-col min-h-full bg-slate-50 w-full font-sans select-none relative text-slate-700">
       
       {/* ─── CLASSY LIGHT COMMAND CENTER HEADER ─── */}
       <header className="bg-white border-b border-slate-200 px-8 py-5 shadow-sm relative">
