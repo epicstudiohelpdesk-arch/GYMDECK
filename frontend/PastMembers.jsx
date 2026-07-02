@@ -912,14 +912,11 @@ export default function PastMembers() {
                       key={member.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      whileHover={{ y: -3, borderColor: "rgba(100, 116, 139, 0.4)", shadow: "0 20px 40px rgba(0,0,0,0.06)" }}
-                      className={cn(
-                        "rounded-2xl border bg-white border-slate-200 p-5 flex flex-col justify-between transition-all hover:shadow-lg",
-                        statusStyles[member.status]
-                      )}
+                      whileHover={{ y: -3 }}
+                      className="rounded-2xl border border-slate-200 bg-white p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-slate-300/80 relative"
                     >
                       <div>
-                        {/* Member card layout */}
+                        {/* Header Row */}
                         <div className="flex justify-between items-start gap-3 mb-4">
                           <div className="flex items-center gap-3.5 min-w-0">
                             {isSelectionMode && (
@@ -929,7 +926,7 @@ export default function PastMembers() {
                                   handleToggleSelectMember(member.id);
                                 }}
                                 className={cn(
-                                  "w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all",
+                                  "w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all",
                                   selectedMemberIds.includes(member.id)
                                     ? "bg-slate-950 border-slate-950 text-white"
                                     : "bg-slate-50 border-slate-300 hover:border-slate-400"
@@ -944,7 +941,7 @@ export default function PastMembers() {
                               className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
                               title={`View ${member.name}'s photo`}
                             >
-                              <img src={member.image} className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 object-cover" alt="" />
+                              <img src={member.image} className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 object-cover" alt="" />
                             </button>
                             <div className="min-w-0">
                               <h3 className="text-sm font-black text-slate-900 leading-tight truncate">{member.name}</h3>
@@ -956,31 +953,30 @@ export default function PastMembers() {
                           </span>
                         </div>
 
-                        {/* Offboarding feedback */}
-                        <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
+                        {/* Offboarding Feedback Note */}
+                        <div className="p-3 bg-slate-50 border border-slate-100/60 rounded-xl mb-4 border-l-2 border-slate-400/80">
                           <p className="text-xs font-semibold text-slate-500 leading-relaxed italic">
                             "{member.reason}"
                           </p>
                         </div>
 
-                        {/* Metrics Pills panel */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <MetricPill 
-                            label="Days Out"
-                            value={`${member.inactiveDays} Days`}
-                            danger={member.inactiveDays > 60}
-                            warning={member.inactiveDays > 30 && member.inactiveDays <= 60}
-                            success={member.inactiveDays <= 30}
-                          />
-                          <MetricPill 
-                            label="Pipeline Potential"
-                            value={currencyFormatter.format(member.recoveryValue)}
-                            success={member.recoveryValue >= 2999}
-                          />
+                        {/* Core Member Metrics */}
+                        <div className="space-y-2.5 py-3 border-y border-slate-100 my-4 text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-semibold">Inactive Duration</span>
+                            <span className="flex items-center gap-1.5 font-bold text-slate-800">
+                              <span className={cn("w-2 h-2 rounded-full", member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500")} />
+                              {member.inactiveDays} Days
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-semibold">Pipeline Potential</span>
+                            <span className="font-bold text-slate-800">{currencyFormatter.format(member.recoveryValue)}</span>
+                          </div>
                         </div>
 
-                        {/* Win-back Progress Bar */}
-                        <div className="mb-4 space-y-2">
+                        {/* Win-back Probability */}
+                        <div className="mb-4 space-y-1.5">
                           <div className="flex items-center justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono">
                             <span>Win-Back Probability</span>
                             <span className={cn(
@@ -990,10 +986,10 @@ export default function PastMembers() {
                               {member.inactiveDays <= 30 ? "High (~85%)" : member.inactiveDays <= 60 ? "Medium (~45%)" : "Low (~15%)"}
                             </span>
                           </div>
-                          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div 
                               className={cn(
-                                "h-full rounded-full transition-all",
+                                "h-full rounded-full transition-all duration-500",
                                 member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500"
                               )} 
                               style={{ width: `${Math.max(5, Math.min(100, 100 - (member.inactiveDays * 0.9)))}%` }} 
@@ -1002,11 +998,11 @@ export default function PastMembers() {
                         </div>
                       </div>
 
-                      {/* Card actions */}
-                      <div className="flex gap-3 pt-4 border-t border-slate-100">
+                      {/* Card Footer Actions */}
+                      <div className="flex gap-2.5 pt-4 border-t border-slate-100 items-center">
                         <button 
                           onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
-                          className="h-9 px-3 rounded-lg bg-slate-950 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
+                          className="h-9 px-4 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
                         >
                           Reactivate
                         </button>
@@ -1014,27 +1010,27 @@ export default function PastMembers() {
                           href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!%20Check%20out%20our%20reactivation%20offers.`}
                           target="_blank" 
                           rel="noreferrer"
-                          className="h-9 w-9 rounded-lg border border-slate-200 bg-white hover:border-emerald-500/50 flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition-all shadow-sm"
+                          className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:border-emerald-350 flex items-center justify-center text-slate-450 hover:text-emerald-600 hover:bg-emerald-50/50 transition-all shadow-sm"
                           title="Contact via WhatsApp"
                         >
                           <MessageSquare size={14} />
                         </a>
                         <a 
                           href={`tel:${member.phone}`}
-                          className="h-9 w-9 rounded-lg border border-slate-200 bg-white hover:border-blue-500/50 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+                          className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:border-blue-350 flex items-center justify-center text-slate-450 hover:text-blue-600 hover:bg-blue-50/50 transition-all shadow-sm"
                           title="Call Member"
                         >
                           <Phone size={14} />
                         </a>
                         <button 
                           onClick={() => setSelectedMember(member)}
-                          className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:border-slate-400 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 transition-all shadow-sm ml-auto"
+                          className="h-9 px-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-350 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all shadow-sm ml-auto"
                         >
                           Details
                         </button>
                         <button 
                           onClick={() => handleDeleteMember(member)}
-                          className="h-9 w-9 rounded-lg border border-slate-200 bg-white hover:border-rose-500/50 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-all shadow-sm"
+                          className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:border-rose-350 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 transition-all shadow-sm"
                           title="Delete Archive Record"
                         >
                           <Trash2 size={14} />
