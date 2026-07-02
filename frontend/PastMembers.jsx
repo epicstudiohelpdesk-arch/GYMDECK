@@ -913,7 +913,7 @@ export default function PastMembers() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       whileHover={{ y: -4 }}
-                      className="rounded-[28px] border border-slate-200 bg-slate-50/30 p-3 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_20px_48px_rgba(0,0,0,0.06)] hover:border-slate-350/65 relative overflow-hidden"
+                      className="h-full rounded-[28px] border border-slate-200 bg-slate-50/30 p-3 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_20px_48px_rgba(0,0,0,0.06)] hover:border-slate-350/65 relative overflow-hidden"
                     >
                       {isSelectionMode && (
                         <button 
@@ -979,7 +979,7 @@ export default function PastMembers() {
                           </div>
 
                           {/* Description (Reason for leaving) */}
-                          <p className="text-xs font-semibold text-slate-500 mt-3.5 leading-relaxed italic">
+                          <p className="text-xs font-semibold text-slate-500 mt-3.5 leading-relaxed italic line-clamp-2">
                             "{member.reason}"
                           </p>
 
