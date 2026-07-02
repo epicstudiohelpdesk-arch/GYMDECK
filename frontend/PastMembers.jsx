@@ -913,7 +913,7 @@ export default function PastMembers() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       whileHover={{ y: -4 }}
-                      className="rounded-[28px] border border-slate-200 bg-white p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_20px_48px_rgba(0,0,0,0.06)] hover:border-slate-350/65 relative overflow-hidden"
+                      className="rounded-[28px] border border-slate-200 bg-slate-50/30 p-3 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_20px_48px_rgba(0,0,0,0.06)] hover:border-slate-350/65 relative overflow-hidden"
                     >
                       {isSelectionMode && (
                         <button 
@@ -922,104 +922,107 @@ export default function PastMembers() {
                             handleToggleSelectMember(member.id);
                           }}
                           className={cn(
-                            "absolute top-5 left-5 w-6 h-6 rounded-full border flex items-center justify-center shrink-0 transition-all shadow-sm z-10",
+                            "absolute top-6 left-6 w-6 h-6 rounded-full border flex items-center justify-center shrink-0 transition-all shadow-sm z-10",
                             selectedMemberIds.includes(member.id)
                               ? "bg-slate-950 border-slate-950 text-white"
-                              : "bg-white border-slate-300 hover:border-slate-400"
+                              : "bg-white border-slate-300 hover:border-slate-405"
                           )}
                         >
                           {selectedMemberIds.includes(member.id) && <Check size={13} className="stroke-[3]" />}
                         </button>
                       )}
 
-                      <div>
-                        {/* Top Row: Avatar & Contact Docks */}
-                        <div className="flex justify-between items-start gap-4">
-                          <button 
-                            type="button"
-                            onClick={(e) => handleViewPhoto(e, member)}
-                            className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
-                            title={`View ${member.name}'s photo`}
-                          >
-                            <img src={member.image} className="w-20 h-20 rounded-full bg-slate-50 border border-slate-100 object-cover shadow-sm" alt="" />
-                          </button>
+                      {/* Inner Box with Thin Border and Side Padding */}
+                      <div className="border border-slate-200/80 rounded-[22px] bg-white p-5 flex flex-col justify-between h-full w-full">
+                        <div>
+                          {/* Top Row: Avatar & Contact Docks */}
+                          <div className="flex justify-between items-start gap-4">
+                            <button 
+                              type="button"
+                              onClick={(e) => handleViewPhoto(e, member)}
+                              className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
+                              title={`View ${member.name}'s photo`}
+                            >
+                              <img src={member.image} className="w-18 h-18 rounded-full bg-slate-50 border border-slate-100 object-cover shadow-sm" alt="" />
+                            </button>
 
-                          {/* Quick Message/Call Actions */}
-                          <div className="flex gap-2">
-                            <a 
-                              href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!%20Check%20out%20our%20reactivation%20offers.`}
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="w-9 h-9 rounded-full bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 flex items-center justify-center border border-slate-100/80 hover:border-emerald-100 transition-all shadow-sm"
-                              title="Contact via WhatsApp"
-                            >
-                              <MessageSquare size={14} />
-                            </a>
-                            <a 
-                              href={`tel:${member.phone}`}
-                              className="w-9 h-9 rounded-full bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center border border-slate-100/80 hover:border-blue-100 transition-all shadow-sm"
-                              title="Call Member"
-                            >
-                              <Phone size={14} />
-                            </a>
+                            {/* Quick Message/Call Actions */}
+                            <div className="flex gap-2">
+                              <a 
+                                href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!%20Check%20out%20our%20reactivation%20offers.`}
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 flex items-center justify-center border border-slate-100/80 hover:border-emerald-100 transition-all shadow-sm"
+                                title="Contact via WhatsApp"
+                              >
+                                <MessageSquare size={13} />
+                              </a>
+                              <a 
+                                href={`tel:${member.phone}`}
+                                className="w-8.5 h-8.5 rounded-full bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center border border-slate-100/80 hover:border-blue-100 transition-all shadow-sm"
+                                title="Call Member"
+                              >
+                                <Phone size={13} />
+                              </a>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Middle Row: Name, Handle ID, & Status Pill */}
-                        <div className="mt-5">
-                          <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none">{member.name}</h3>
-                          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase font-mono">ID: {member.member_code || member.id}</span>
-                            <span className={cn("px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider font-mono shadow-sm", statusBadgeStyles[member.status])}>
-                              {member.status}
+                          {/* Middle Row: Name, Handle ID, & Status Pill */}
+                          <div className="mt-4">
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight leading-none">{member.name}</h3>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase font-mono">ID: {member.member_code || member.id}</span>
+                              <span className={cn("px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider font-mono shadow-sm", statusBadgeStyles[member.status])}>
+                                {member.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Description (Reason for leaving) */}
+                          <p className="text-xs font-semibold text-slate-500 mt-3.5 leading-relaxed italic">
+                            "{member.reason}"
+                          </p>
+
+                          {/* Horizontal Metadata Row */}
+                          <div className="flex items-center gap-2.5 text-[9px] font-bold text-slate-400 font-mono tracking-tight mt-4 pt-3.5 border-t border-slate-100/60 flex-wrap">
+                            <span className="flex items-center gap-1.5">
+                              <span className={cn("w-1.5 h-1.5 rounded-full", member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500")} />
+                              {member.inactiveDays}D OUT
+                            </span>
+                            <span>·</span>
+                            <span className="text-slate-600">{currencyFormatter.format(member.recoveryValue)} VAL</span>
+                            <span>·</span>
+                            <span className={cn(
+                              "font-black uppercase tracking-wider",
+                              member.inactiveDays <= 30 ? "text-emerald-600" : member.inactiveDays <= 60 ? "text-amber-600" : "text-rose-600"
+                            )}>
+                              {member.inactiveDays <= 30 ? "High Chance" : member.inactiveDays <= 60 ? "Medium Chance" : "Low Chance"}
                             </span>
                           </div>
                         </div>
 
-                        {/* Feedback Comment (Description block) */}
-                        <p className="text-xs font-semibold text-slate-500 mt-4 leading-relaxed italic">
-                          "{member.reason}"
-                        </p>
-
-                        {/* Horizontal Metadata Row */}
-                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 font-mono tracking-tight mt-5 pt-4 border-t border-slate-100/60 flex-wrap">
-                          <span className="flex items-center gap-1.5">
-                            <span className={cn("w-1.5 h-1.5 rounded-full", member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500")} />
-                            {member.inactiveDays}D OUT
-                          </span>
-                          <span>·</span>
-                          <span className="text-slate-600">{currencyFormatter.format(member.recoveryValue)} VAL</span>
-                          <span>·</span>
-                          <span className={cn(
-                            "font-black uppercase tracking-wider",
-                            member.inactiveDays <= 30 ? "text-emerald-600" : member.inactiveDays <= 60 ? "text-amber-600" : "text-rose-600"
-                          )}>
-                            {member.inactiveDays <= 30 ? "High Chance" : member.inactiveDays <= 60 ? "Medium Chance" : "Low Chance"}
-                          </span>
+                        {/* Primary Actions Dock */}
+                        <div className="flex gap-2 mt-5 pt-3.5 border-t border-slate-100/60 items-center w-full">
+                          <button 
+                            onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
+                            className="h-8.5 px-4 rounded-full bg-slate-950 hover:bg-slate-850 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm shadow-slate-950/10"
+                          >
+                            Reactivate
+                          </button>
+                          <button 
+                            onClick={() => setSelectedMember(member)}
+                            className="h-8.5 px-4 rounded-full border border-slate-200/80 bg-white hover:bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm"
+                          >
+                            Details
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteMember(member)}
+                            className="h-8.5 w-8.5 rounded-full border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 transition-all hover:scale-[1.05] active:scale-[0.95] shadow-sm ml-auto flex items-center justify-center"
+                            title="Delete Archive Record"
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
-                      </div>
-
-                      {/* Primary Actions Dock */}
-                      <div className="flex gap-2.5 mt-6 pt-4 border-t border-slate-100/60 items-center w-full">
-                        <button 
-                          onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
-                          className="h-9 px-4.5 rounded-full bg-slate-950 hover:bg-slate-850 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm shadow-slate-950/10"
-                        >
-                          Reactivate
-                        </button>
-                        <button 
-                          onClick={() => setSelectedMember(member)}
-                          className="h-9 px-4.5 rounded-full border border-slate-200/80 bg-white hover:bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm"
-                        >
-                          Details
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteMember(member)}
-                          className="h-9 w-9 rounded-full border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 transition-all hover:scale-[1.05] active:scale-[0.95] shadow-sm ml-auto flex items-center justify-center"
-                          title="Delete Archive Record"
-                        >
-                          <Trash2 size={13} />
-                        </button>
                       </div>
                     </motion.article>
                   ))}
