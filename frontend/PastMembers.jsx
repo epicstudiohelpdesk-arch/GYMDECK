@@ -344,6 +344,23 @@ export default function PastMembers() {
     };
   }, [selectedMember, reactivateMember, deleteConfirmMember, deleteConfirmBulk]);
 
+  const [isHeaderSticky, setIsHeaderSticky] = useState(false);
+
+  useEffect(() => {
+    const container = document.querySelector('.past-members-stage');
+    if (!container) return;
+
+    const handleScroll = () => {
+      // 220px is approximately when the header and stats panel scroll out of view
+      setIsHeaderSticky(container.scrollTop > 220);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    handleScroll();
+
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleViewPhoto = (e, member) => {
     e.stopPropagation();
     if (window.setDocumentModalContent && window.setDocumentModalState) {
@@ -674,7 +691,14 @@ export default function PastMembers() {
       <main className="flex-1 p-8">
         
         {/* FILTERS & COMMAND BAR CARD */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm mb-8 animate-fadeIn">
+        <section 
+          className={cn(
+            "sticky top-0 z-20 transition-all duration-300 ease-in-out mb-8 animate-fadeIn",
+            isHeaderSticky 
+              ? "bg-white/95 backdrop-blur-md -mx-8 px-8 py-4 border-b border-slate-200/85 shadow-md"
+              : "rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm"
+          )}
+        >
           <div className="flex flex-wrap items-center justify-between gap-4">
             
             {/* Search Input Box */}
