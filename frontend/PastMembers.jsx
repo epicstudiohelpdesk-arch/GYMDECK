@@ -693,10 +693,10 @@ export default function PastMembers() {
         {/* FILTERS & COMMAND BAR CARD */}
         <section 
           className={cn(
-            "sticky top-0 z-20 transition-all duration-300 ease-in-out mb-8 animate-fadeIn",
+            "sticky top-0 z-20 transition-all duration-300 ease-in-out mb-8 -mx-8 px-8 py-4 border-b border-slate-200/80 animate-fadeIn",
             isHeaderSticky 
-              ? "bg-white/95 backdrop-blur-md -mx-8 px-8 py-4 border-b border-slate-200/85 shadow-md"
-              : "rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm"
+              ? "bg-white/95 backdrop-blur-md shadow-md"
+              : "bg-white shadow-none"
           )}
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
