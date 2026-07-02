@@ -912,128 +912,113 @@ export default function PastMembers() {
                       key={member.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      whileHover={{ y: -3 }}
-                      className="rounded-2xl border border-slate-200 bg-white p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-slate-300/80 relative"
+                      whileHover={{ y: -4 }}
+                      className="rounded-[28px] border border-slate-200 bg-white p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_20px_48px_rgba(0,0,0,0.06)] hover:border-slate-350/65 relative overflow-hidden"
                     >
+                      {isSelectionMode && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSelectMember(member.id);
+                          }}
+                          className={cn(
+                            "absolute top-5 left-5 w-6 h-6 rounded-full border flex items-center justify-center shrink-0 transition-all shadow-sm z-10",
+                            selectedMemberIds.includes(member.id)
+                              ? "bg-slate-950 border-slate-950 text-white"
+                              : "bg-white border-slate-300 hover:border-slate-400"
+                          )}
+                        >
+                          {selectedMemberIds.includes(member.id) && <Check size={13} className="stroke-[3]" />}
+                        </button>
+                      )}
+
                       <div>
-                        {/* Header Row */}
-                        <div className="flex justify-between items-start gap-3 mb-4">
-                          <div className="flex items-center gap-3.5 min-w-0">
-                            {isSelectionMode && (
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleSelectMember(member.id);
-                                }}
-                                className={cn(
-                                  "w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all",
-                                  selectedMemberIds.includes(member.id)
-                                    ? "bg-slate-950 border-slate-950 text-white"
-                                    : "bg-slate-50 border-slate-300 hover:border-slate-400"
-                                )}
-                              >
-                                {selectedMemberIds.includes(member.id) && <Check size={12} className="stroke-[3]" />}
-                              </button>
-                            )}
-                            <button 
-                              type="button"
-                              onClick={(e) => handleViewPhoto(e, member)}
-                              className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
-                              title={`View ${member.name}'s photo`}
+                        {/* Top Row: Avatar & Contact Docks */}
+                        <div className="flex justify-between items-start gap-4">
+                          <button 
+                            type="button"
+                            onClick={(e) => handleViewPhoto(e, member)}
+                            className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
+                            title={`View ${member.name}'s photo`}
+                          >
+                            <img src={member.image} className="w-20 h-20 rounded-full bg-slate-50 border border-slate-100 object-cover shadow-sm" alt="" />
+                          </button>
+
+                          {/* Quick Message/Call Actions */}
+                          <div className="flex gap-2">
+                            <a 
+                              href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!%20Check%20out%20our%20reactivation%20offers.`}
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="w-9 h-9 rounded-full bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 flex items-center justify-center border border-slate-100/80 hover:border-emerald-100 transition-all shadow-sm"
+                              title="Contact via WhatsApp"
                             >
-                              <img src={member.image} className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 object-cover" alt="" />
-                            </button>
-                            <div className="min-w-0">
-                              <h3 className="text-sm font-black text-slate-900 leading-tight truncate">{member.name}</h3>
-                              <p className="text-[9px] font-black text-slate-400 mt-1 tracking-wider uppercase font-mono">ID: {member.member_code || member.id}</p>
-                            </div>
+                              <MessageSquare size={14} />
+                            </a>
+                            <a 
+                              href={`tel:${member.phone}`}
+                              className="w-9 h-9 rounded-full bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center border border-slate-100/80 hover:border-blue-100 transition-all shadow-sm"
+                              title="Call Member"
+                            >
+                              <Phone size={14} />
+                            </a>
                           </div>
-                          <span className={cn("px-2.5 py-1 rounded-md border text-[9px] font-black uppercase tracking-wider leading-none shrink-0 font-mono shadow-sm", statusBadgeStyles[member.status])}>
-                            {member.status}
+                        </div>
+
+                        {/* Middle Row: Name, Handle ID, & Status Pill */}
+                        <div className="mt-5">
+                          <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none">{member.name}</h3>
+                          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase font-mono">ID: {member.member_code || member.id}</span>
+                            <span className={cn("px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider font-mono shadow-sm", statusBadgeStyles[member.status])}>
+                              {member.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Feedback Comment (Description block) */}
+                        <p className="text-xs font-semibold text-slate-500 mt-4 leading-relaxed italic">
+                          "{member.reason}"
+                        </p>
+
+                        {/* Horizontal Metadata Row */}
+                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 font-mono tracking-tight mt-5 pt-4 border-t border-slate-100/60 flex-wrap">
+                          <span className="flex items-center gap-1.5">
+                            <span className={cn("w-1.5 h-1.5 rounded-full", member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500")} />
+                            {member.inactiveDays}D OUT
                           </span>
-                        </div>
-
-                        {/* Offboarding Feedback Note */}
-                        <div className="p-3 bg-slate-50 border border-slate-100/60 rounded-xl mb-4 border-l-2 border-slate-400/80">
-                          <p className="text-xs font-semibold text-slate-500 leading-relaxed italic">
-                            "{member.reason}"
-                          </p>
-                        </div>
-
-                        {/* Core Member Metrics */}
-                        <div className="space-y-2.5 py-3 border-y border-slate-100 my-4 text-xs">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-400 font-semibold">Inactive Duration</span>
-                            <span className="flex items-center gap-1.5 font-bold text-slate-800">
-                              <span className={cn("w-2 h-2 rounded-full", member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500")} />
-                              {member.inactiveDays} Days
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-400 font-semibold">Pipeline Potential</span>
-                            <span className="font-bold text-slate-800">{currencyFormatter.format(member.recoveryValue)}</span>
-                          </div>
-                        </div>
-
-                        {/* Win-back Probability */}
-                        <div className="mb-4 space-y-1.5">
-                          <div className="flex items-center justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono">
-                            <span>Win-Back Probability</span>
-                            <span className={cn(
-                              "font-black",
-                              member.inactiveDays <= 30 ? "text-emerald-600" : member.inactiveDays <= 60 ? "text-amber-600" : "text-rose-600"
-                            )}>
-                              {member.inactiveDays <= 30 ? "High (~85%)" : member.inactiveDays <= 60 ? "Medium (~45%)" : "Low (~15%)"}
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className={cn(
-                                "h-full rounded-full transition-all duration-500",
-                                member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500"
-                              )} 
-                              style={{ width: `${Math.max(5, Math.min(100, 100 - (member.inactiveDays * 0.9)))}%` }} 
-                            />
-                          </div>
+                          <span>·</span>
+                          <span className="text-slate-600">{currencyFormatter.format(member.recoveryValue)} VAL</span>
+                          <span>·</span>
+                          <span className={cn(
+                            "font-black uppercase tracking-wider",
+                            member.inactiveDays <= 30 ? "text-emerald-600" : member.inactiveDays <= 60 ? "text-amber-600" : "text-rose-600"
+                          )}>
+                            {member.inactiveDays <= 30 ? "High Chance" : member.inactiveDays <= 60 ? "Medium Chance" : "Low Chance"}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Card Footer Actions */}
-                      <div className="flex gap-2.5 pt-4 border-t border-slate-100 items-center">
+                      {/* Primary Actions Dock */}
+                      <div className="flex gap-2.5 mt-6 pt-4 border-t border-slate-100/60 items-center w-full">
                         <button 
                           onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
-                          className="h-9 px-4 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
+                          className="h-9 px-4.5 rounded-full bg-slate-950 hover:bg-slate-850 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm shadow-slate-950/10"
                         >
                           Reactivate
                         </button>
-                        <a 
-                          href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!%20Check%20out%20our%20reactivation%20offers.`}
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:border-emerald-350 flex items-center justify-center text-slate-450 hover:text-emerald-600 hover:bg-emerald-50/50 transition-all shadow-sm"
-                          title="Contact via WhatsApp"
-                        >
-                          <MessageSquare size={14} />
-                        </a>
-                        <a 
-                          href={`tel:${member.phone}`}
-                          className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:border-blue-350 flex items-center justify-center text-slate-450 hover:text-blue-600 hover:bg-blue-50/50 transition-all shadow-sm"
-                          title="Call Member"
-                        >
-                          <Phone size={14} />
-                        </a>
                         <button 
                           onClick={() => setSelectedMember(member)}
-                          className="h-9 px-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-350 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all shadow-sm ml-auto"
+                          className="h-9 px-4.5 rounded-full border border-slate-200/80 bg-white hover:bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-sm"
                         >
                           Details
                         </button>
                         <button 
                           onClick={() => handleDeleteMember(member)}
-                          className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:border-rose-350 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 transition-all shadow-sm"
+                          className="h-9 w-9 rounded-full border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 transition-all hover:scale-[1.05] active:scale-[0.95] shadow-sm ml-auto flex items-center justify-center"
                           title="Delete Archive Record"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </motion.article>
