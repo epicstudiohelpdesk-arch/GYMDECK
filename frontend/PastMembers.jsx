@@ -933,7 +933,7 @@ export default function PastMembers() {
                       )}
 
                       {/* Inner Box with Thin Border and Side Padding */}
-                      <div className="border border-slate-200/80 rounded-[22px] bg-white p-5 flex flex-col justify-between h-full w-full">
+                      <div className="border border-slate-300 rounded-[22px] bg-white p-5 flex flex-col justify-between h-full w-full">
                         <div>
                           {/* Top Row: Avatar & Contact Docks */}
                           <div className="flex justify-between items-start gap-4">
