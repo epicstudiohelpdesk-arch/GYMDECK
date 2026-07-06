@@ -339,7 +339,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[1000] flex items-end justify-center"
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
         >
           {/* Backdrop */}
           <motion.div
@@ -349,20 +349,20 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             onClick={onClose}
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
+            className="absolute inset-0 bg-slate-950/85 backdrop-blur-xl"
           />
 
           {/* Panel */}
           <motion.div
             key="details-panel"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 260, mass: 1 }}
-            className="relative w-full max-w-4xl bg-[#f4f6fa] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[600px] z-50 text-left"
+            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 280 }}
+            className="relative w-full max-w-4xl bg-[#f4f6fa] rounded-[32px] border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:max-h-[600px] z-50 text-left"
           >
-            {/* Top Handle Bar */}
-            <div className="w-12 h-1 rounded-full bg-slate-200 mx-auto mt-4 shrink-0" />
+            {/* Top Padding Offset */}
+            <div className="pt-5 shrink-0" />
 
             {/* Absolute Close Button */}
             <motion.button
