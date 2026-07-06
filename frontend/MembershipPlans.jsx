@@ -1085,7 +1085,7 @@ export default function MembershipPortfolioDashboard() {
     <div className="h-full bg-[#FAFBFD] p-4 text-slate-900 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 16px)' }}>
       <div className="members-shell">
         {/* HEADER */}
-        <header className="pb-3 border-b border-slate-200/60 mb-2 text-left">
+        <header className="pb-1.5 border-b border-slate-200/60 mb-1 text-left">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-sm">
@@ -1154,7 +1154,7 @@ export default function MembershipPortfolioDashboard() {
 
         {/* OVERVIEW STAT CARDS */}
         {view === "portfolio" && (
-          <section className="grid grid-cols-4 gap-4 mt-2">
+          <section className="grid grid-cols-4 gap-4 mt-0.5">
             <KPICard
               label="Active Membership Plans"
               value={`${PORTFOLIO_STATS.activePlans} Plans`}
