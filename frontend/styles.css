@@ -10558,40 +10558,6 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
-
-/* Staggered animation elements */
-.brand-signature-footer .anim-fade-up {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
-              transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Triggered by JS Intersection Observer */
-.brand-signature-footer.animate-revealed .anim-fade-up:nth-child(1) {
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: 0ms;
-}
-
-.brand-signature-footer.animate-revealed .anim-fade-up:nth-child(2) {
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: 150ms;
-}
-
-.brand-signature-footer.animate-revealed .anim-fade-up:nth-child(3) {
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: 300ms;
-}
-
-.brand-signature-footer.animate-revealed .anim-fade-up:nth-child(4) {
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: 450ms;
-}
-
 .brand-signature-footer .signature-flag-label {
   display: flex;
   align-items: center;
