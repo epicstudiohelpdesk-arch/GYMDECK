@@ -359,17 +359,14 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 280 }}
-            className="relative w-full max-w-4xl bg-[#f4f6fa] rounded-[32px] border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:max-h-[600px] z-50 text-left"
+            className="relative w-full max-w-4xl bg-white rounded-[32px] border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col p-8 md:p-10 m-auto text-left max-h-[90vh] md:max-h-[600px] z-50"
           >
-            {/* Top Padding Offset */}
-            <div className="pt-5 shrink-0" />
-
             {/* Absolute Close Button */}
             <motion.button
               whileHover="hovered"
               whileTap={{ scale: 0.95 }}
               onClick={onClose}
-              className="absolute top-6 right-8 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:text-white hover:bg-slate-950 hover:border-slate-950 shadow-sm transition-all duration-200 z-50"
+              className="absolute top-8 right-8 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:text-white hover:bg-slate-950 hover:border-slate-950 shadow-sm transition-all duration-200 z-50"
               variants={{
                 initial: { scale: 1 },
                 hovered: { scale: 1.05 }
@@ -388,7 +385,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             </motion.button>
 
             {/* Header section with category and plan ID */}
-            <header className="px-10 pt-6 pb-2 shrink-0">
+            <header className="flex justify-between items-start gap-5 mb-6 shrink-0">
               <div className="flex items-center gap-4">
                 <div className={cn(
                   "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white font-black text-sm shadow-md shrink-0",
@@ -411,17 +408,17 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             </header>
 
             {/* Content Layout */}
-            <div className="flex-1 px-10 py-4 overflow-y-auto pr-8 space-y-5">
+            <div className="space-y-6 flex-1 overflow-y-auto pr-1">
               
               {/* Financial Strategy Grid */}
               <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px]">
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pricing</span>
                   <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.price)}</strong>
                   <span className="text-[10px] text-slate-400 font-semibold mt-1">Base Fee</span>
                 </article>
 
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px]">
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Enrollment</span>
                   <div className="flex items-baseline gap-1 mt-1">
                     <strong className="text-base md:text-lg font-black text-slate-900">{plan.activeMembers}</strong>
@@ -435,13 +432,13 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                   <span className="text-[10px] text-slate-400 font-semibold mt-1">Total Members</span>
                 </article>
 
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px]">
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Monthly Contribution</span>
                   <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.monthlyContribution)}</strong>
                   <span className="text-[10px] text-slate-400 font-semibold mt-1">MRR contribution</span>
                 </article>
 
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px]">
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">LTD Revenue</span>
                   <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.revenue)}</strong>
                   <span className="text-[10px] text-slate-400 font-semibold mt-1">Total Generated</span>
@@ -452,7 +449,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                 
                 {/* Status and Health Analytics */}
-                <section className="md:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 p-4.5 rounded-2xl bg-white border border-slate-200/60 shadow-sm items-center">
+                <section className="md:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 p-4.5 rounded-2xl bg-slate-50/70 border border-slate-100 items-center">
                   
                   {/* Concentric Gauge SVG Column (span 5) */}
                   <div className="sm:col-span-5 flex justify-center items-center relative h-[130px] w-[130px] mx-auto shrink-0">
@@ -561,7 +558,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                 </section>
 
                 {/* Access Strategy & Privileges */}
-                <section className="md:col-span-5 bg-white border border-slate-200/60 shadow-sm rounded-2xl p-4.5 space-y-3 flex flex-col justify-between">
+                <section className="md:col-span-5 space-y-3">
                   <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Access Privileges</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {[
@@ -589,7 +586,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             </div>
 
             {/* Bottom Actions Row */}
-            <footer className="px-10 py-5 bg-white border-t border-slate-200/60 flex flex-wrap gap-2.5 justify-end shrink-0">
+            <footer className="mt-10 pt-5 border-t border-slate-100 flex flex-wrap gap-2.5 justify-end shrink-0">
               <button 
                 onClick={() => { onEdit(plan); onClose(); }}
                 className="px-4.5 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
@@ -623,6 +620,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               </button>
 
               <div className="h-11 w-[1px] bg-slate-200 mx-1.5" />
+
 
               <button 
                 onClick={onClose}
