@@ -10536,11 +10536,18 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
 }
 /* Brand Signature Footer at the bottom of Member Directory */
 .brand-signature-footer {
+  display: none;
   background-color: transparent;
   padding: 48px 16px 24px;
   text-align: left;
   margin-top: 16px;
   box-sizing: border-box;
+}
+
+.brand-signature-footer.is-revealed {
+  display: block;
+  opacity: 0;
+  animation: fadeInSignature 0.5s ease-out forwards;
 }
 
 @keyframes fadeInSignature {
