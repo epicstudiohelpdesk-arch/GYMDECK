@@ -10633,7 +10633,7 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   margin: 0 6px 0 8px; /* optical spacing */
   font-size: 34px;
   line-height: 1;
-  transform: translateY(1px);
+  transform: translateY(3px);
 }
 
 .brand-signature-footer .signature-secondary {
