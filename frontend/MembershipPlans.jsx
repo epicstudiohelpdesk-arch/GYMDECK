@@ -1123,7 +1123,7 @@ export default function MembershipPortfolioDashboard() {
   }
 
   return (
-    <div className="h-full bg-[#FAFBFD] p-4 text-slate-900 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 16px)' }}>
+    <div className="min-h-full bg-[#FAFBFD] p-4 text-slate-900">
       <div className="members-shell">
         {/* HEADER */}
         <header className="pb-1.5 border-b border-slate-200/60 mb-1 text-left">
