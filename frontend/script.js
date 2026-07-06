@@ -4517,17 +4517,18 @@ window.setDocumentModalState = setDocumentModalState;
 window.setDocumentModalContent = setDocumentModalContent;
 
 // --- Member Directory Brand Signature Reveal Intersection Observer ---
-document.addEventListener("DOMContentLoaded", () => {
-  const signatureFooter = document.querySelector(".brand-signature-footer");
-  if (signatureFooter && window.IntersectionObserver) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          signatureFooter.classList.add("animate-revealed");
-          observer.unobserve(entry.target); // Trigger once and clean up
-        }
-      });
-    }, { threshold: 0.05 });
-    observer.observe(signatureFooter);
-  }
-});
+const signatureFooter = document.querySelector(".brand-signature-footer");
+if (signatureFooter && membersStage && window.IntersectionObserver) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        signatureFooter.classList.add("animate-revealed");
+        observer.unobserve(entry.target); // Trigger once and clean up
+      }
+    });
+  }, { 
+    root: membersStage, // Observe intersection relative to scrolling stage container
+    threshold: 0.05 
+  });
+  observer.observe(signatureFooter);
+}
