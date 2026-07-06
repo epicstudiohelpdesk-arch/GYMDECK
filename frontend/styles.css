@@ -10576,27 +10576,41 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
 .brand-signature-footer.animate-revealed .anim-fade-up:nth-child(2) {
   opacity: 1;
   transform: translateY(0);
-  transition-delay: 150ms;
+  transition-delay: 100ms;
 }
 
 .brand-signature-footer.animate-revealed .anim-fade-up:nth-child(3) {
   opacity: 1;
   transform: translateY(0);
-  transition-delay: 300ms;
+  transition-delay: 200ms;
 }
 
 .brand-signature-footer.animate-revealed .anim-fade-up:nth-child(4) {
   opacity: 1;
   transform: translateY(0);
-  transition-delay: 450ms;
+  transition-delay: 300ms;
 }
 
-/* Layout item spacings */
+.brand-signature-footer.animate-revealed .anim-fade-up:nth-child(5) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 400ms;
+}
+
+/* Layout item spacings & elements */
+.brand-signature-footer .signature-divider {
+  height: 1px;
+  background-color: #EAECF0;
+  width: 120px;
+  opacity: 0.7;
+  margin-bottom: 48px;
+}
+
 .brand-signature-footer .signature-flag-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 36px; /* increased gap to let label breathe */
 }
 
 .brand-signature-footer .signature-flag {
@@ -10610,7 +10624,7 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   font-size: 12px;
   font-weight: 600;
   color: #667085;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.22em; /* wide letter spacing treatment */
   text-transform: uppercase;
   margin: 0;
   line-height: 1;
@@ -10619,8 +10633,8 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
 .brand-signature-footer .signature-primary {
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 58px;
-  font-weight: 900;
-  color: #667085; /* Premium unified grey */
+  font-weight: 800; /* slightly lighter weight for luxury feel */
+  color: #475467; /* deeper charcoal gray */
   letter-spacing: -0.03em;
   line-height: 1.0;
   margin: 0 0 28px 0;
@@ -10641,10 +10655,12 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 26px;
   font-weight: 500;
-  color: #667085; /* Premium unified grey */
+  color: #475467; /* deeper charcoal gray */
   letter-spacing: -0.02em;
   line-height: 1.4;
-  margin: 0 0 48px 0;
+  max-width: 560px; /* wraps naturally */
+  width: 100%;
+  margin: 0 0 80px 0; /* increased whitespace to make logo feel like a signature */
 }
 
 .brand-signature-footer .signature-brand-group {
@@ -10657,7 +10673,7 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   font-family: 'Ethnocentric', sans-serif !important;
   font-size: 26px;
   font-weight: normal;
-  color: #667085; /* Premium unified grey */
+  color: #FF7A3C; /* Meticulously restored Brand Orange */
   letter-spacing: 0.02em;
   line-height: 1;
   text-transform: none;
@@ -10668,7 +10684,7 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #667085; /* Premium unified grey */
+  color: #98A2B3; /* Restrained brand gray */
   letter-spacing: 0.18em;
   text-transform: uppercase;
   line-height: 1;
