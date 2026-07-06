@@ -3753,6 +3753,16 @@ memberSearchInput?.addEventListener("input", debounce(() => {
   updateMemberResults();
 }, 150));
 
+// --- Member Directory Brand Signature Reveal On Bottom Scroll ---
+membersStage?.addEventListener("scroll", () => {
+  const threshold = 12; // 12px threshold for bottom scroll detection
+  const isAtBottom = (membersStage.scrollHeight - membersStage.scrollTop - membersStage.clientHeight) <= threshold;
+  const signatureFooter = document.querySelector(".brand-signature-footer");
+  if (signatureFooter) {
+    signatureFooter.classList.toggle("is-visible", isAtBottom);
+  }
+});
+
 memberFilterButtons.forEach((button) => {
   const isInitiallyActive = button.dataset.memberFilter === activeMemberFilter;
   button.setAttribute("aria-pressed", String(isInitiallyActive));
