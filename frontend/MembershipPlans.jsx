@@ -1241,7 +1241,11 @@ export default function MembershipPortfolioDashboard() {
                       <span className="text-slate-350 text-xs">/</span>
                       <p className="text-xs text-slate-400 font-semibold leading-none">Configured subscription packages, rates, and enrollment status</p>
                     </div>
-                    <span className="inline-flex items-center px-2.5 py-1 bg-slate-50 border border-slate-200/85 rounded-md text-[8px] font-black text-slate-500 uppercase tracking-widest font-mono shadow-sm select-none shrink-0">
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-950 rounded-lg text-[9px] font-extrabold text-white uppercase tracking-widest font-mono shadow-md select-none shrink-0 transition-all duration-300 hover:bg-black">
+                      <span className="relative flex h-1.5 w-1.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                      </span>
                       Updated today
                     </span>
                   </div>
