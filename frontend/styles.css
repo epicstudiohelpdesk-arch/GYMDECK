@@ -10536,25 +10536,11 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
 }
 /* Brand Signature Footer at the bottom of Member Directory */
 .brand-signature-footer {
-  background-color: #FFFFFF;
-  padding: 0 40px;
+  background-color: transparent;
+  padding: 48px 16px 24px;
   text-align: left;
-  max-height: 0px;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 500ms cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 500ms cubic-bezier(0.16, 1, 0.3, 1),
-              padding 500ms cubic-bezier(0.16, 1, 0.3, 1),
-              margin-top 500ms cubic-bezier(0.16, 1, 0.3, 1);
-  margin-top: 0;
+  margin-top: 16px;
   box-sizing: border-box;
-}
-
-.brand-signature-footer.is-visible {
-  max-height: 280px;
-  opacity: 1;
-  padding: 48px 40px;
-  margin-top: 24px;
 }
 
 @keyframes fadeInSignature {
