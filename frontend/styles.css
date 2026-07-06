@@ -10576,34 +10576,19 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
 .brand-signature-footer.animate-revealed .anim-fade-up:nth-child(2) {
   opacity: 1;
   transform: translateY(0);
-  transition-delay: 100ms;
+  transition-delay: 150ms;
 }
 
 .brand-signature-footer.animate-revealed .anim-fade-up:nth-child(3) {
   opacity: 1;
   transform: translateY(0);
-  transition-delay: 200ms;
+  transition-delay: 300ms;
 }
 
 .brand-signature-footer.animate-revealed .anim-fade-up:nth-child(4) {
   opacity: 1;
   transform: translateY(0);
-  transition-delay: 300ms;
-}
-
-.brand-signature-footer.animate-revealed .anim-fade-up:nth-child(5) {
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: 400ms;
-}
-
-/* Layout item spacings & elements */
-.brand-signature-footer .signature-divider {
-  height: 1px;
-  background-color: #EAECF0;
-  width: 120px;
-  opacity: 0.7;
-  margin-bottom: 48px;
+  transition-delay: 450ms;
 }
 
 .brand-signature-footer .signature-flag-label {
