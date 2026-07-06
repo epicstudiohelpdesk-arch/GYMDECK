@@ -2977,6 +2977,15 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   border-bottom: 1px solid #edf2f7;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
+  transition: border-radius 200ms ease, border-color 200ms ease;
+}
+
+.members-workspace-sticky-header.is-stuck {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-top-color: transparent;
 }
 
 .members-toolbar {

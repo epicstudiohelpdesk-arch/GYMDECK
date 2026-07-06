@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import {
@@ -1057,11 +1057,36 @@ export default function MembershipPortfolioDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detailsPlan, setDetailsPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHeaderStuck, setIsHeaderStuck] = useState(false);
+  const sentinelRef = useRef(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsHeaderStuck(!entry.isIntersecting);
+      },
+      {
+        root: null,
+        threshold: [0],
+        rootMargin: "-20px 0px 0px 0px" // Slight offset matching sticky top
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => {
+      if (sentinel) {
+        observer.unobserve(sentinel);
+      }
+    };
+  }, [isLoading]);
 
   const filteredPlans = useMemo(() => {
     return MEMBERSHIP_PORTFOLIO.filter(plan => {
@@ -1205,9 +1230,15 @@ export default function MembershipPortfolioDashboard() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
+                {/* Sentinel to detect sticky state */}
+                <div ref={sentinelRef} style={{ height: '1px', marginBottom: '-1px', pointerEvents: 'none' }} />
+
                 {/* UNIFIED STICKY CONTROL PANEL */}
                 <div 
-                  className="bg-white border border-slate-200/80 rounded-xl shadow-sm flex flex-col"
+                  className={cn(
+                    "bg-white border border-slate-200/80 shadow-sm flex flex-col transition-all duration-200",
+                    isHeaderStuck ? "rounded-none border-x-0 border-t-0" : "rounded-xl"
+                  )}
                   style={{ position: 'sticky', top: '-16px', zIndex: 20 }}
                 >
                   {/* SEARCH & FILTERS ROW (TOOLBAR) */}

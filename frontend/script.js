@@ -4529,4 +4529,22 @@ window.addEventListener("resize", () => {
 window.setDocumentModalState = setDocumentModalState;
 window.setDocumentModalContent = setDocumentModalContent;
 
+// --- Member Directory Sticky Header Corner Straightening ---
+const initStickyHeaderObserver = () => {
+  const sentinel = document.getElementById("members-sticky-sentinel");
+  const header = document.querySelector(".members-workspace-sticky-header");
+  if (sentinel && header && window.IntersectionObserver) {
+    const observer = new IntersectionObserver(([entry]) => {
+      header.classList.toggle("is-stuck", !entry.isIntersecting);
+    }, {
+      root: null,
+      threshold: [0],
+      rootMargin: "-25px 0px 0px 0px"
+    });
+    observer.observe(sentinel);
+  }
+};
+
+initStickyHeaderObserver();
+
 

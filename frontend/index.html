@@ -1646,6 +1646,8 @@
             </section>
 
             <section class="members-workspace" aria-label="All members workspace">
+              <!-- Sentinel to detect sticky state -->
+              <div id="members-sticky-sentinel" style="height: 1px; margin-bottom: -1px; pointer-events: none;"></div>
               <!-- UNIFIED STICKY CONTROL PANEL -->
               <div class="members-workspace-sticky-header">
                 <div class="members-toolbar" style="margin-bottom: 6px;">
