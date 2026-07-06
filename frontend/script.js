@@ -2528,9 +2528,15 @@ const setStageVisibility = (activeStage) => {
 
   dashboardStage?.classList.toggle("is-hidden", !isDashboard);
   dashboardStage?.setAttribute("aria-hidden", String(!isDashboard));
+  if (isDashboard && dashboardStage) {
+    dashboardStage.scrollTop = 0;
+  }
 
   membersStage?.classList.toggle("is-active", isMembers);
   membersStage?.setAttribute("aria-hidden", String(!isMembers));
+  if (isMembers && membersStage) {
+    membersStage.scrollTop = 0;
+  }
 
   for (const { key, el } of stageVisibilityConfig) {
     const element = el();
@@ -2538,6 +2544,9 @@ const setStageVisibility = (activeStage) => {
     const match = key === activeStage;
     element.classList.toggle("is-active", match);
     element.setAttribute("aria-hidden", String(!match));
+    if (match) {
+      element.scrollTop = 0;
+    }
   }
 };
 

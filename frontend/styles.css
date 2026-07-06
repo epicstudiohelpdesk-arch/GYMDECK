@@ -2780,6 +2780,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  scroll-snap-align: start; /* Enable snapping to the top of the workspace */
 }
 
 .members-kicker {
