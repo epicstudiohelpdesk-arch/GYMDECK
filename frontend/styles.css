@@ -2105,6 +2105,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   scrollbar-gutter: stable;
   transition: opacity 240ms ease, transform 240ms ease;
   will-change: scroll-position; /* Offload scroll paints to GPU */
+  scroll-snap-type: y proximity; /* Native smooth scroll snap proximity */
 }
 
 .members-stage.is-active {
@@ -2771,6 +2772,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   background: #f6f8fb;
   border: 1px solid rgba(220, 226, 235, 0.96);
   box-shadow: 0 24px 54px rgba(38, 47, 68, 0.12);
+  scroll-snap-align: end; /* Snap scroll at the bottom of the card */
 }
 
 .members-command {
@@ -10536,18 +10538,12 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
 }
 /* Brand Signature Footer at the bottom of Member Directory */
 .brand-signature-footer {
-  display: none;
   background-color: transparent;
   padding: 48px 16px 24px;
   text-align: left;
   margin-top: 16px;
   box-sizing: border-box;
-}
-
-.brand-signature-footer.is-revealed {
-  display: block;
-  opacity: 0;
-  animation: fadeInSignature 0.5s ease-out forwards;
+  scroll-snap-align: end; /* Snap scroll at the bottom of the signature */
 }
 
 @keyframes fadeInSignature {

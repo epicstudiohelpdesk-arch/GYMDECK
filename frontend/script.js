@@ -3754,71 +3754,7 @@ memberSearchInput?.addEventListener("input", debounce(() => {
 }, 150));
 
 
-// --- Member Directory Scroll Lock & Signature Reveal System ---
-if (membersStage) {
-  let isSignatureUnlocked = false;
 
-  membersStage.addEventListener("scroll", () => {
-    const scrollTop = membersStage.scrollTop;
-    const scrollHeight = membersStage.scrollHeight;
-    const clientHeight = membersStage.clientHeight;
-
-    // Lock it again if they scroll back up significantly
-    if (isSignatureUnlocked && scrollTop < scrollHeight - clientHeight - 120) {
-      const signatureFooter = document.querySelector(".brand-signature-footer");
-      if (signatureFooter) {
-        signatureFooter.classList.remove("is-revealed");
-        isSignatureUnlocked = false;
-      }
-    }
-  });
-
-  membersStage.addEventListener("wheel", (e) => {
-    if (e.deltaY <= 0) return;
-
-    const scrollTop = membersStage.scrollTop;
-    const scrollHeight = membersStage.scrollHeight;
-    const clientHeight = membersStage.clientHeight;
-    const isAtBottom = (scrollHeight - scrollTop - clientHeight) <= 6;
-
-    if (isAtBottom && !isSignatureUnlocked) {
-      const signatureFooter = document.querySelector(".brand-signature-footer");
-      if (signatureFooter) {
-        signatureFooter.classList.add("is-revealed");
-        isSignatureUnlocked = true;
-      }
-    }
-  }, { passive: true });
-
-  let touchStartY = 0;
-  membersStage.addEventListener("touchstart", (e) => {
-    if (e.touches.length === 1) {
-      touchStartY = e.touches[0].clientY;
-    }
-  }, { passive: true });
-
-  membersStage.addEventListener("touchmove", (e) => {
-    if (e.touches.length === 1) {
-      const touchEndY = e.touches[0].clientY;
-      const deltaY = touchStartY - touchEndY;
-
-      if (deltaY > 8) {
-        const scrollTop = membersStage.scrollTop;
-        const scrollHeight = membersStage.scrollHeight;
-        const clientHeight = membersStage.clientHeight;
-        const isAtBottom = (scrollHeight - scrollTop - clientHeight) <= 6;
-
-        if (isAtBottom && !isSignatureUnlocked) {
-          const signatureFooter = document.querySelector(".brand-signature-footer");
-          if (signatureFooter) {
-            signatureFooter.classList.add("is-revealed");
-            isSignatureUnlocked = true;
-          }
-        }
-      }
-    }
-  }, { passive: true });
-}
 
 memberFilterButtons.forEach((button) => {
   const isInitiallyActive = button.dataset.memberFilter === activeMemberFilter;
