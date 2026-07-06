@@ -1085,70 +1085,72 @@ export default function MembershipPortfolioDashboard() {
     <div className="h-full bg-[#FAFBFD] p-4 text-slate-900 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 16px)' }}>
       <div className="members-shell">
         {/* HEADER */}
-        <header className="flex items-center justify-between pb-4 border-b border-slate-200/60 mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-sm">
-              <Shield size={18} />
+        <header className="pb-3 border-b border-slate-200/60 mb-2 text-left">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-sm">
+                <Shield size={18} />
+              </div>
+              <div>
+                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Membership Portfolio</h1>
+                <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Plan Configurations
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Membership Portfolio</h1>
-              <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live Plan Configurations
-              </p>
+
+            <div className="flex items-center gap-3.5">
+              {/* Segmented Control */}
+              <div className="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/20">
+                <button
+                  onClick={() => setView("portfolio")}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
+                    view === "portfolio"
+                      ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
+                      : "text-slate-500 hover:text-slate-800"
+                  )}
+                >
+                  Portfolio
+                </button>
+                <button
+                  onClick={() => setView("analytics")}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
+                    view === "analytics"
+                      ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
+                      : "text-slate-500 hover:text-slate-800"
+                  )}
+                >
+                  Analytics
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="h-10 px-5 rounded-xl bg-slate-950 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 hover:-translate-y-[1px] active:translate-y-0 shadow-md shadow-slate-950/10 transition-all duration-200 flex items-center gap-1.5"
+              >
+                <Plus size={15} />
+                Create Plan
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5">
-            {/* Segmented Control */}
-            <div className="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/20">
-              <button
-                onClick={() => setView("portfolio")}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
-                  view === "portfolio"
-                    ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
-                    : "text-slate-500 hover:text-slate-800"
-                )}
-              >
-                Portfolio
-              </button>
-              <button
-                onClick={() => setView("analytics")}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
-                  view === "analytics"
-                    ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
-                    : "text-slate-500 hover:text-slate-800"
-                )}
-              >
-                Analytics
-              </button>
-            </div>
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="h-10 px-5 rounded-xl bg-slate-950 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 hover:-translate-y-[1px] active:translate-y-0 shadow-md shadow-slate-950/10 transition-all duration-200 flex items-center gap-1.5"
+          {/* SLOGAN BANNER */}
+          {view === "portfolio" && (
+            <motion.div
+              initial={{ opacity: 0, y: -2 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="mt-3.5 select-none"
             >
-              <Plus size={15} />
-              Create Plan
-            </button>
-          </div>
+              <h2 className="text-2xl md:text-[28px] font-black text-slate-300 uppercase tracking-widest leading-none font-sans">
+                Designed for Performance. Built for Scale.
+              </h2>
+            </motion.div>
+          )}
         </header>
-
-        {/* SLOGAN BANNER */}
-        {view === "portfolio" && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="py-5 select-none text-left"
-          >
-            <h2 className="text-3xl md:text-[34px] font-black text-slate-300 uppercase tracking-widest leading-none font-sans">
-              Designed for Performance. Built for Scale.
-            </h2>
-          </motion.div>
-        )}
 
         {/* OVERVIEW STAT CARDS */}
         {view === "portfolio" && (
