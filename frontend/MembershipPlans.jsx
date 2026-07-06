@@ -1098,10 +1098,10 @@ export default function MembershipPortfolioDashboard() {
   }
 
   return (
-    <div className="h-full bg-[#FAFBFD] p-4 text-slate-900 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 16px)' }}>
+    <div className="h-full bg-[#FAFBFD] p-4 text-slate-900 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 16px)', scrollSnapType: 'y proximity' }}>
       <div className="members-shell">
         {/* HEADER */}
-        <header className="pb-1.5 border-b border-slate-200/60 mb-1 text-left">
+        <header className="pb-1.5 border-b border-slate-200/60 mb-1 text-left" style={{ scrollSnapAlign: 'start' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-sm">
@@ -1603,6 +1603,33 @@ export default function MembershipPortfolioDashboard() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* ELEGANT BRAND SIGNATURE FOOTER */}
+      <footer className="brand-signature-footer">
+        <div className="signature-content">
+          {/* Item 1: Flag & Kicker */}
+          <div className="signature-flag-label">
+            <span className="signature-flag">🇮🇳</span>
+            <span className="signature-kicker">ENGINEERED IN INDIA</span>
+          </div>
+          
+          {/* Item 2: Headline */}
+          <h2 className="signature-primary">
+            Made with <span className="signature-heart">❤️</span> in India
+          </h2>
+          
+          {/* Item 3: Brand Philosophy */}
+          <p className="signature-secondary">
+            Built for the People Who Build Stronger People.
+          </p>
+          
+          {/* Item 4: Brand Group */}
+          <div className="signature-brand-group">
+            <h1 className="signature-brand-name font-ethnocentric">GymDeck</h1>
+            <p className="signature-brand-descriptor">FITNESS MANAGEMENT PLATFORM</p>
+          </div>
+        </div>
+      </footer>
 
       {/* CREATE PLAN MODAL */}
       <CreatePlanModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />

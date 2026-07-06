@@ -2546,6 +2546,10 @@ const setStageVisibility = (activeStage) => {
     element.setAttribute("aria-hidden", String(!match));
     if (match) {
       element.scrollTop = 0;
+      const subScrollable = element.querySelector(".overflow-y-auto");
+      if (subScrollable) {
+        subScrollable.scrollTop = 0;
+      }
     }
   }
 };
