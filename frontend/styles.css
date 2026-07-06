@@ -10654,11 +10654,11 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   gap: 12px; /* breathing room above subtitle */
 }
 
-.brand-signature-footer .signature-brand-name {
+.brand-signature-footer .signature-brand-name.font-ethnocentric {
   font-family: 'Ethnocentric', sans-serif !important;
   font-size: 26px;
   font-weight: normal;
-  color: #98A2B3; /* Lighter shade of grey */
+  color: #98A2B3 !important; /* Override the !important color in fonts.css */
   letter-spacing: 0.02em;
   line-height: 1;
   text-transform: none;
