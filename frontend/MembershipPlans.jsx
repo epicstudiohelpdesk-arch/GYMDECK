@@ -1136,6 +1136,56 @@ export default function MembershipPortfolioDashboard() {
           </div>
         </header>
 
+        {/* OPERATIONAL STATUS BAR */}
+        {view === "portfolio" && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-3 bg-white border border-slate-200/60 rounded-2xl mb-4 text-left select-none shadow-sm"
+          >
+            <div className="flex items-center gap-3 md:border-r border-slate-200/60 pr-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                <CheckCircle2 size={16} className="stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest font-mono leading-none">Security & Compliance</p>
+                <p className="text-[10px] font-extrabold text-slate-700 truncate mt-1">PCI-DSS Compliant</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 md:border-r border-slate-200/60 pr-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                <TrendingUp size={16} className="stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest font-mono leading-none">Global Retention Target</p>
+                <p className="text-[10px] font-extrabold text-slate-700 truncate mt-1">92.4% Achieved (Q3)</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 md:border-r border-slate-200/60 pr-2">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                <Zap size={16} className="stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest font-mono leading-none">Billing Velocity</p>
+                <p className="text-[10px] font-extrabold text-slate-700 truncate mt-1">Direct Auto-Debit Active</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                <Activity size={16} className="stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest font-mono leading-none">Active System Nodes</p>
+                <p className="text-[10px] font-extrabold text-slate-700 truncate mt-1">3 Edge Sync Terminals</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* OVERVIEW STAT CARDS */}
         {view === "portfolio" && (
           <section className="grid grid-cols-4 gap-4 mt-2">
