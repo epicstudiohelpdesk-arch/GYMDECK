@@ -10632,7 +10632,7 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   color: #9E7E82; /* Muted non-vibrant dusty rose */
   display: inline-block;
   margin: 0 6px 0 8px; /* optical spacing */
-  font-size: 50px;
+  font-size: 40px;
   line-height: 1;
 }
 
