@@ -1136,20 +1136,6 @@ export default function MembershipPortfolioDashboard() {
               </button>
             </div>
           </div>
-
-          {/* SLOGAN BANNER */}
-          {view === "portfolio" && (
-            <motion.div
-              initial={{ opacity: 0, y: -2 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="mt-3.5 select-none"
-            >
-              <h2 className="text-2xl md:text-[28px] font-black text-slate-300 uppercase tracking-widest leading-none font-sans">
-                Designed for Performance. Built for Scale.
-              </h2>
-            </motion.div>
-          )}
         </header>
 
         {/* OVERVIEW STAT CARDS */}
