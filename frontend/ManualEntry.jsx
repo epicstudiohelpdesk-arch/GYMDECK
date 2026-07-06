@@ -290,7 +290,7 @@ const ManualEntryPage = () => {
   return (
     <div className="min-h-full font-sans text-slate-950 bg-slate-50/30 flex flex-col">
       {/* Utility Header - Professional Fallback Design */}
-      <header className="sticky top-0 z-40 h-[64px] bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between shadow-sm">
+      <header className="sticky top-0 z-40 h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
             Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950">Manual Entry Console</span>

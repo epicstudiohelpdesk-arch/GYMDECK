@@ -915,7 +915,7 @@ const ExpiringMembershipsPage = () => {
 
   return (
     <div className="min-h-full font-sans text-slate-950 bg-slate-50/30">
-      <header className="sticky top-0 z-50 h-[72px] bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between">
+      <header className="sticky top-0 z-50 h-[72px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <button className="h-10 px-4 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-3 hover:bg-white transition-all">
             <Globe size={14} className="text-slate-400" />

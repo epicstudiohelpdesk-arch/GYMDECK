@@ -106,8 +106,6 @@ const CollectFeesPage = () => {
     setSearchQuery("");
   }, []);
 
-  const handleSearchChange = useCallback((e) => setSearchQuery(e.target.value), []);
-  const handlePaymentMethodChange = useCallback((method) => setPaymentMethod(method), []);
 
   return (
     <div className="min-h-full bg-slate-50 text-slate-900 font-sans flex flex-col selection:bg-indigo-100">

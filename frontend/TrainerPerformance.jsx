@@ -71,7 +71,7 @@ const TrainerPerformance = ({ onBack }) => {
     <div className="trainer-performance-workspace bg-[#F8FAF8] min-h-full font-['Plus_Jakarta_Sans'] text-[#111827]">
       
       {/* 5. TOP UTILITY HEADER */}
-      <header className="sticky top-0 z-[100] h-16 bg-white/80 backdrop-blur-md border-b border-[#E5E7EB] px-8 flex items-center justify-between">
+      <header className="sticky top-0 z-[100] h-16 bg-white backdrop-blur-md border-b border-[#E5E7EB] px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <nav className="flex items-center text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
             <span>Reports & Analytics</span>
@@ -152,7 +152,7 @@ const TrainerPerformance = ({ onBack }) => {
         </section>
 
         {/* 8. DATE FILTER & ANALYTICS CONTROL BAR */}
-        <div className="sticky top-16 z-[90] bg-[#F8FAF8]/80 backdrop-blur-md py-4 mb-8">
+        <div className="sticky top-16 z-[90] bg-[#F8FAF8] backdrop-blur-md py-4 mb-8">
           <div className="bg-white border border-[#E5E7EB] rounded-xl p-2 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-1">
               {["Today", "Last 7 Days", "Last 30 Days", "Monthly", "Quarterly", "Annual"].map(opt => (
@@ -598,7 +598,7 @@ const TrainerPerformance = ({ onBack }) => {
               className="fixed top-0 right-0 z-[1001] w-[560px] h-full bg-white shadow-2xl overflow-y-auto"
             >
               {/* Drawer Header */}
-              <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[#E5E7EB] px-8 py-6 flex items-center justify-between">
+              <div className="sticky top-0 z-10 bg-white backdrop-blur-md border-b border-[#E5E7EB] px-8 py-6 flex items-center justify-between">
                 <button 
                   onClick={() => setSelectedTrainer(null)}
                   className="flex items-center gap-2 text-[#6B7280] hover:text-[#111827] transition-colors"

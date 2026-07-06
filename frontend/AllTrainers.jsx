@@ -435,7 +435,7 @@ export default function AllTrainers() {
       {/* ─────────────────────────────────────────
           TOP UTILITY HEADER
           ───────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white backdrop-blur-md border-b border-slate-200 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <nav className="flex items-center text-sm font-medium">
             <span className="text-slate-400">Trainers & Staff</span>

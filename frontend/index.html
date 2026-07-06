@@ -1646,32 +1646,36 @@
             </section>
 
             <section class="members-workspace" aria-label="All members workspace">
-              <div class="members-toolbar">
-                <label class="members-search">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="11" cy="11" r="6.5" />
-                    <path d="m16 16 4.5 4.5" />
-                  </svg>
-                  <input
-                    type="search"
-                    placeholder="Search name, phone, email, address, or document"
-                    aria-label="Search members"
-                    data-member-search
-                  />
-                </label>
-                <div class="members-filter-tabs" aria-label="Member filters">
-                  <button class="is-active" type="button" data-member-filter="all">All</button>
-                  <button type="button" data-member-filter="verified">Verified</button>
-                  <button type="button" data-member-filter="recent">Recent</button>
+              <!-- UNIFIED STICKY CONTROL PANEL -->
+              <div style="position: sticky; top: -16px; z-index: 100; background: #ffffff; display: flex; flex-direction: column; margin-top: -14px; margin-inline: -14px; padding-top: 14px; padding-inline: 14px; border-bottom: 1px solid #edf2f7;">
+                <div class="members-toolbar" style="margin-bottom: 6px;">
+                  <label class="members-search">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="11" cy="11" r="6.5" />
+                      <path d="m16 16 4.5 4.5" />
+                    </svg>
+                    <input
+                      type="search"
+                      placeholder="Search name, phone, email, address, or document"
+                      aria-label="Search members"
+                      data-member-search
+                    />
+                  </label>
+                  <div class="members-filter-tabs" aria-label="Member filters">
+                    <button class="is-active" type="button" data-member-filter="all">All</button>
+                    <button type="button" data-member-filter="verified">Verified</button>
+                    <button type="button" data-member-filter="recent">Recent</button>
+                  </div>
+                  <div class="members-toolbar-copy">
+                    <span>Showing</span>
+                    <strong data-member-count>3 profiles</strong>
+                  </div>
                 </div>
-                <div class="members-toolbar-copy">
-                  <span>Showing</span>
-                  <strong data-member-count>3 profiles</strong>
-                </div>
-              </div>
 
-              <div class="members-table-panel">
-                <div class="members-table-meta">
+                <!-- DIVIDER -->
+                <div style="border-top: 1px solid #edf2f7; margin-bottom: 6px; margin-inline: -14px;"></div>
+
+                <div class="members-table-meta" style="position: static; padding: 4px 14px 12px; border-bottom: none; background: #ffffff;">
                   <div class="meta-title-group">
                     <h3 class="meta-title">Directory</h3>
                     <span class="meta-separator">/</span>
@@ -1679,6 +1683,9 @@
                   </div>
                   <span class="members-table-status">Updated today</span>
                 </div>
+              </div>
+
+              <div class="members-table-panel">
 
                 <section class="members-table-wrap" data-members-grid>
                   <table class="members-table">

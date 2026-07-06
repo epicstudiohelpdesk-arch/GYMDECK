@@ -109,7 +109,7 @@ const RenewMembershipPage = () => {
   return (
     <div className="min-h-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 pb-24">
       {/* Top Utility Header */}
-      <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+      <header className="h-16 bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span className="opacity-60">Payments & Billing</span>
           <span className="text-slate-300">/</span>

@@ -307,7 +307,7 @@ const TrainerEarnings = () => {
   return (
     <div className="min-h-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-indigo-100 pb-20">
       {/* 5. TOP UTILITY HEADER (Production Grade) */}
-      <header className="h-[64px] bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-[100]">
+      <header className="h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-[100]">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="flex items-center gap-2">
             <Users size={16} className="text-slate-400" />

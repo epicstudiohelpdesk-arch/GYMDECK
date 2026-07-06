@@ -414,7 +414,7 @@ const IDProofs = () => {
       {/* ─────────────────────────────────────────
           TOP UTILITY HEADER
       ───────────────────────────────────────── */}
-      <header className="h-auto sm:h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-0 flex flex-col sm:flex-row items-center justify-between sticky top-0 z-40 gap-4">
+      <header className="h-auto sm:h-20 bg-white backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-0 flex flex-col sm:flex-row items-center justify-between sticky top-0 z-40 gap-4">
         <div className="flex items-center gap-4 sm:gap-6 flex-1 w-full max-w-2xl">
           <div className="flex flex-col shrink-0">
              <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">

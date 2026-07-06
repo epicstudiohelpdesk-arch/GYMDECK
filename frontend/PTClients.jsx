@@ -71,12 +71,6 @@ const PT_CLIENT_GROUPS = [
 
 const FITNESS_GOALS = ["Weight Loss", "Muscle Gain", "Rehabilitation", "Athletes", "Senior Fitness", "Cardio Transformation"];
 
-const TRAINERS = [
-  { id: "TR-101", name: "Ankit Kumar", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ankit" },
-  { id: "TR-102", name: "Sneha Patel", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sneha" },
-  { id: "TR-103", name: "Manav Rao", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Manav" },
-  { id: "TR-104", name: "Priya Sharma", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Priya" }
-];
 
 const MOCK_PT_CLIENTS = [
   {

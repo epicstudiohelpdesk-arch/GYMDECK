@@ -2965,6 +2965,11 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   grid-template-columns: minmax(280px, 1fr) auto max-content;
   align-items: center;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #ffffff;
+  padding-bottom: 12px;
 }
 
 .members-search {
@@ -3068,7 +3073,12 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 2px 2px 0;
+  padding: 8px 0;
+  position: sticky;
+  top: 48px;
+  z-index: 19;
+  background: #ffffff;
+  border-bottom: 1px solid #edf2f7;
 }
 
 .members-table-meta > span {

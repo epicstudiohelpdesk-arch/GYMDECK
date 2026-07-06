@@ -214,7 +214,7 @@ const AgreementDrawer = ({ agreement, isOpen, onClose }) => {
             className="fixed top-0 right-0 h-full w-full sm:max-w-[560px] bg-white shadow-2xl z-[101] overflow-y-auto flex flex-col"
           >
             {/* Drawer Header */}
-            <div className="p-6 sm:p-8 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-10">
+            <div className="p-6 sm:p-8 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white backdrop-blur-md z-10">
               <div className="flex items-center gap-4 min-w-0">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100 shrink-0">
                   <FileSignature size={24} />
@@ -413,7 +413,7 @@ const Agreements = () => {
       {/* ─────────────────────────────────────────
           TOP UTILITY HEADER
       ───────────────────────────────────────── */}
-      <header className="h-auto sm:h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-0 flex flex-col sm:flex-row items-center justify-between sticky top-0 z-40 gap-4">
+      <header className="h-auto sm:h-20 bg-white backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-0 flex flex-col sm:flex-row items-center justify-between sticky top-0 z-40 gap-4">
         <div className="flex items-center gap-4 sm:gap-6 flex-1 w-full max-w-2xl">
           <div className="flex flex-col shrink-0">
              <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">

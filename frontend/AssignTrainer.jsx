@@ -176,11 +176,6 @@ const MOCK_TRAINERS = [
   }
 ];
 
-const TIMELINE_DATA = [
-  { id: 1, type: "assignment", member: "Rohan Verma", trainer: "Ankit Kumar", time: "2 hours ago", status: "completed" },
-  { id: 2, type: "renewal", member: "Aisha Khan", trainer: "Sneha Patel", time: "4 hours ago", status: "pending" },
-  { id: 3, type: "change", member: "Karthik Rao", trainer: "Manav Rao", time: "Yesterday", status: "completed" }
-];
 
 // ─────────────────────────────────────────
 // COMPONENTS
@@ -223,7 +218,7 @@ const AssignTrainer = () => {
   return (
     <div className="min-h-full bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100">
       {/* 5. TOP UTILITY HEADER */}
-      <header className="sticky top-0 z-50 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between">
+      <header className="sticky top-0 z-50 h-16 bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span className="hover:text-slate-900 cursor-pointer">Trainers & Staff</span>
           <ChevronRight size={14} className="opacity-40" />

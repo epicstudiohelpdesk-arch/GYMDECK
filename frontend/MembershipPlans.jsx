@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import {
   TrendingUp,
   TrendingDown,
@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Zap,
   ChevronRight,
+  ChevronDown,
   MoreVertical,
   Plus,
   ArrowRight,
@@ -23,39 +24,31 @@ import {
   Shield,
   ArrowUpRight,
   HelpCircle,
-  Filter,
   Search,
-  Download,
   LayoutGrid,
-  List,
   Eye,
   Archive,
-  Edit2,
+  Edit3,
   Copy,
   Clock,
-  Briefcase,
-  Activity,
   Award,
-  CreditCard,
-  ZapOff,
-  Bell,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Settings
+  PieChart,
+  ArrowUp,
+  ArrowDown,
+  Activity,
+  Percent,
+  CreditCard,
+  Repeat,
+  Bell,
+  FileText,
+  DownloadCloud,
+  Trash2,
+  Hash,
+  Circle
 } from "lucide-react";
-
-// Import Error Boundary at the top
 import { ErrorBoundary } from "./ErrorHandlers.jsx";
 
-/**
- * GYMDECK • MEMBERSHIP REVENUE & RETENTION CONTROL CENTER
- * Principal Product Design - Strategic Business Workflow
- */
-
-// ─────────────────────────────────────────
-// UTILS & FORMATTERS
-// ─────────────────────────────────────────
 const formatCompact = (val) => {
   if (val === null || val === undefined || isNaN(val)) return "0";
   return new Intl.NumberFormat('en-IN', {
@@ -64,834 +57,1553 @@ const formatCompact = (val) => {
   }).format(val);
 };
 
-const cn = (...classes) => classes.filter(Boolean).join(" ");
-
-// ─────────────────────────────────────────
-// STRATEGIC DATA SEED
-// ─────────────────────────────────────────
-const PORTFOLIO_STATS = {
-  activeMembers: 1240,
-  monthlyRevenue: 1450000,
-  bestPlan: "Annual Elite Performance",
-  highRetentionPlan: "Quarterly Transformation",
-  attentionPlans: 2,
-  expiring30Days: 48,
-  forecastedRenewal: 680000
+const formatCurrency = (val) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(val);
 };
 
-const RECOMMENDATIONS = [
-  {
-    id: 1,
-    title: "Monthly Starter Churn Alert",
-    description: "Renewals decreased by 14% this month. Churn risk detected for 12 members.",
-    severity: "High",
-    impact: "Potential ₹45k Revenue Loss",
-    outcome: "Regain stability in entry-level segment",
-    action: "Review Churn Data"
-  },
-  {
-    id: 2,
-    title: "Annual Upgrade Opportunity",
-    description: "31 members on Quarterly plans are eligible for Annual Elite conversion.",
-    severity: "Medium",
-    impact: "₹3.2L Revenue Boost",
-    outcome: "Increased Member LTV & Cashflow",
-    action: "Launch Campaign"
-  },
-  {
-    id: 3,
-    title: "Pricing Strategy Optimization",
-    description: "Premium Elite plan retention is at 96%. Current pricing is under market value.",
-    severity: "Low",
-    impact: "8% Margin Increase",
-    outcome: "Higher yield per premium member",
-    action: "Analyze Market"
-  }
-];
+const cn = (...classes) => classes.filter(Boolean).join(" ");
+
+const PORTFOLIO_STATS = {
+  activePlans: 8,
+  monthlyRevenue: 1450000,
+  renewalRate: 68,
+  expiring30Days: 48,
+  forecastedRenewal: 680000,
+  prevMonthRevenue: 1320000,
+  prevRenewalRate: 64,
+  potentialRevenue: 820000
+};
 
 const MEMBERSHIP_PORTFOLIO = [
   {
-    id: "PLN-A1",
+    id: "A1",
     name: "Annual Elite Performance",
     category: "Transformation",
+    price: 18999,
+    duration: "365 Days",
     activeMembers: 342,
     revenue: 8550000,
     monthlyContribution: 712500,
     renewalRate: 88,
     retention: 92,
-    avgDuration: "14.2 Months",
     trend: "+12%",
+    trendUp: true,
     status: "Healthy",
-    risk: "Low"
+    membersEnrolled: 342,
+    growth: 12,
+    risk: "Low",
+    color: "from-slate-800 to-indigo-900"
   },
   {
-    id: "PLN-Q1",
+    id: "Q1",
     name: "Quarterly Transformation",
     category: "Bodybuilding",
+    price: 7999,
+    duration: "90 Days",
     activeMembers: 156,
     revenue: 1092000,
     monthlyContribution: 364000,
     renewalRate: 74,
     retention: 78,
-    avgDuration: "5.8 Months",
     trend: "+4%",
+    trendUp: true,
     status: "Healthy",
-    risk: "Low"
+    membersEnrolled: 156,
+    growth: 4,
+    risk: "Low",
+    color: "from-slate-800 to-indigo-900"
   },
   {
-    id: "PLN-M1",
+    id: "M1",
     name: "Monthly Entry Starter",
     category: "General",
+    price: 1999,
+    duration: "30 Days",
     activeMembers: 412,
     revenue: 1236000,
     monthlyContribution: 103000,
     renewalRate: 42,
     retention: 54,
-    avgDuration: "3.1 Months",
     trend: "-14%",
+    trendUp: false,
     status: "At Risk",
-    risk: "High"
+    membersEnrolled: 412,
+    growth: -14,
+    risk: "High",
+    color: "from-slate-800 to-rose-900"
   },
   {
-    id: "PLN-S1",
+    id: "S1",
     name: "Student Basic Flex",
     category: "Student",
+    price: 1299,
+    duration: "30 Days",
     activeMembers: 218,
     revenue: 436000,
     monthlyContribution: 36333,
     renewalRate: 68,
     retention: 72,
-    avgDuration: "4.5 Months",
     trend: "+2%",
-    status: "Monitor",
-    risk: "Medium"
+    trendUp: true,
+    status: "Growing",
+    membersEnrolled: 218,
+    growth: 2,
+    risk: "Medium",
+    color: "from-slate-800 to-amber-900"
   }
 ];
 
-// ─────────────────────────────────────────
-// COMMAND CENTER SECTION
-// ─────────────────────────────────────────
-const CommandCenter = () => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-    <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all">
-      <div className="flex items-center justify-between mb-3">
-        <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-          <Users size={18} />
-        </div>
-        <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">+4.2%</span>
-      </div>
-      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Memberships</p>
-      <h3 className="text-xl font-black text-slate-950 mt-0.5">{PORTFOLIO_STATS.activeMembers}</h3>
-      <p className="text-[9px] text-slate-400 mt-1.5">Across 8 active plans</p>
-    </div>
-
-    <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all">
-      <div className="flex items-center justify-between mb-3">
-        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-          <DollarSign size={18} />
-        </div>
-        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">₹1.2L New</span>
-      </div>
-      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Monthly Revenue</p>
-      <h3 className="text-xl font-black text-slate-950 mt-0.5">{formatCompact(PORTFOLIO_STATS.monthlyRevenue)}</h3>
-      <p className="text-[9px] text-slate-400 mt-1.5">Contribution: 92% Renewal</p>
-    </div>
-
-    <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all">
-      <div className="flex items-center justify-between mb-3">
-        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-          <Zap size={18} />
-        </div>
-        <div className="flex -space-x-1.5">
-           {[1,2,3].map(i => <div key={i} className="w-5 h-5 rounded-full border-2 border-white bg-slate-200" />)}
-        </div>
-      </div>
-      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Retention Leader</p>
-      <h3 className="text-base font-black text-slate-950 mt-0.5 truncate">{PORTFOLIO_STATS.highRetentionPlan}</h3>
-      <p className="text-[9px] text-amber-600 font-bold mt-1.5">94% Success Score</p>
-    </div>
-
-    <div className="bg-slate-950 text-white p-4 rounded-2xl shadow-xl shadow-slate-200 relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-3 opacity-20">
-        <TrendingUp size={48} />
-      </div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Expiry Impact (30D)</p>
-      <h3 className="text-xl font-black text-white mt-0.5">{PORTFOLIO_STATS.expiring30Days} Plans</h3>
-      <div className="mt-3 flex items-center gap-2">
-        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full bg-indigo-500 w-[65%]" />
-        </div>
-        <span className="text-[9px] font-black">{formatCompact(PORTFOLIO_STATS.forecastedRenewal)} Forecast</span>
-      </div>
-    </div>
-  </div>
-);
-
-// ─────────────────────────────────────────
-// INTELLIGENCE CENTER SECTION
-// ─────────────────────────────────────────
-const IntelligenceCenter = () => (
-  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-    <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-      <div className="flex items-center gap-2">
-        <Sparkles size={16} className="text-indigo-600" />
-        <h2 className="text-[11px] font-black text-slate-950 uppercase tracking-tight">Membership Intelligence</h2>
-      </div>
-      <button className="text-[9px] font-black text-indigo-600 uppercase hover:underline">View All Insights</button>
-    </div>
-    <div className="p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-      {RECOMMENDATIONS.map(rec => (
-        <div key={rec.id} className="p-4 rounded-xl border border-slate-100 bg-white hover:border-indigo-100 transition-all flex flex-col group">
-          <div className="flex items-start justify-between mb-2.5">
-            <span className={cn(
-              "px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider",
-              rec.severity === "High" ? "bg-rose-50 text-rose-600" : 
-              rec.severity === "Medium" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
-            )}>
-              {rec.severity} Priority
-            </span>
-            <AlertCircle size={13} className="text-slate-300 group-hover:text-indigo-400" />
-          </div>
-          <h4 className="text-[11px] font-black text-slate-950 mb-1 leading-tight">{rec.title}</h4>
-          <p className="text-[10px] text-slate-500 leading-relaxed flex-1">{rec.description}</p>
-          
-          <div className="mt-3.5 pt-3 border-t border-slate-50 space-y-1.5">
-            <div className="flex justify-between text-[9px]">
-              <span className="font-bold text-slate-400">Impact</span>
-              <span className="font-black text-slate-900">{rec.impact}</span>
-            </div>
-            <div className="flex justify-between text-[9px]">
-              <span className="font-bold text-slate-400">Outcome</span>
-              <span className="font-black text-slate-900">{rec.outcome}</span>
-            </div>
-          </div>
-          
-          <button className="mt-4 w-full h-8 rounded-lg bg-slate-50 text-slate-950 text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-1.5">
-            {rec.action}
-            <ChevronRight size={10} />
-          </button>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-// ─────────────────────────────────────────
-// PORTFOLIO TABLE SECTION
-// ─────────────────────────────────────────
-const PortfolioTable = () => (
-  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-    <div className="overflow-x-auto scrollbar-hide">
-      <table className="w-full text-left border-collapse min-w-[700px]">
-        <thead>
-          <tr className="bg-slate-50/80 border-b border-slate-200">
-            <th className="p-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Plan & Category</th>
-            <th className="p-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Members</th>
-            <th className="p-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Revenue Impact</th>
-            <th className="p-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Retention Score</th>
-            <th className="p-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Health Status</th>
-            <th className="p-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {MEMBERSHIP_PORTFOLIO.map(plan => (
-            <tr key={plan.id} className="hover:bg-slate-50/50 transition-colors group">
-              <td className="p-3.5">
-                <div className="flex items-center gap-2.5">
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-[9px]",
-                    plan.status === "Healthy" ? "bg-emerald-500" : 
-                    plan.status === "At Risk" ? "bg-rose-500" : "bg-amber-500"
-                  )}>
-                    {plan.id && plan.id.includes('-') ? plan.id.split('-')[1] : 'PL'}
-                  </div>
-                  <div className="min-w-0">
-                    <span className="block text-[11px] font-black text-slate-950 truncate">{plan.name}</span>
-                    <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider">{plan.category}</span>
-                  </div>
-                </div>
-              </td>
-              <td className="p-3.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-black text-slate-900">{plan.activeMembers}</span>
-                  <span className={cn(
-                    "text-[8px] font-black px-1 py-0.5 rounded",
-                    plan.trend && plan.trend.startsWith('+') ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                  )}>{plan.trend}</span>
-                </div>
-              </td>
-              <td className="p-3.5">
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-black text-slate-900">{formatCompact(plan.revenue)}</span>
-                  <span className="text-[8px] font-bold text-slate-400 whitespace-nowrap">Contrib: {formatCompact(plan.monthlyContribution)}/mo</span>
-                </div>
-              </td>
-              <td className="p-3.5">
-                <div className="flex items-center gap-2.5">
-                   <div className="flex-1 min-w-[50px] h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={cn(
-                        "h-full rounded-full",
-                        plan.retention > 80 ? "bg-emerald-500" : plan.retention > 60 ? "bg-amber-500" : "bg-rose-500"
-                      )} style={{ width: `${plan.retention || 0}%` }} />
-                   </div>
-                   <span className="text-[9px] font-black text-slate-700">{plan.retention || 0}%</span>
-                </div>
-              </td>
-              <td className="p-3.5">
-                 <div className="flex items-center gap-1.5">
-                    <div className={cn(
-                      "w-1.5 h-1.5 rounded-full",
-                      plan.status === "Healthy" ? "bg-emerald-500" : 
-                      plan.status === "At Risk" ? "bg-rose-500" : "bg-amber-500"
-                    )} />
-                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-700">{plan.status}</span>
-                 </div>
-              </td>
-              <td className="p-3.5 text-right">
-                <button className="p-1.5 rounded-lg text-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all">
-                  <MoreVertical size={14} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
-// ─────────────────────────────────────────
-// RECOMMENDED ACTIONS SECTION
-// ─────────────────────────────────────────
-const STRATEGIC_TASKS = [
-  { title: "Follow Up 28 Expiring Members", impact: "₹2.4L Renewal Revenue", priority: "High", icon: Clock },
-  { title: "Convert 17 Monthly to Annual", impact: "₹3.8L Cashflow Boost", priority: "Medium", icon: TrendingUp },
-  { title: "Increase Premium Plan Pricing", impact: "+8% Monthly Margin", priority: "Low", icon: ArrowUpRight },
+const RECOMMENDATIONS = [
+  {
+    id: 1,
+    title: "Monthly Starter Churn Alert",
+    description: "Renewals decreased by 14% this month. Churn risk detected for 12 members across the Monthly Entry Starter plan.",
+    severity: "High",
+    impact: "Potential ₹45k Revenue Loss",
+    action: "Review Churn Data",
+    color: "rose"
+  },
+  {
+    id: 2,
+    title: "Annual Upgrade Opportunity",
+    description: "31 members on Quarterly plans are eligible for Annual Elite conversion. Estimated revenue uplift of ₹3.2L.",
+    severity: "Medium",
+    impact: "₹3.2L Revenue Boost",
+    action: "Launch Campaign",
+    color: "amber"
+  },
+  {
+    id: 3,
+    title: "Pricing Strategy Optimization",
+    description: "Premium Elite plan retention is at 96%. Current pricing is 18% under market value for comparable plans.",
+    severity: "Low",
+    impact: "8% Margin Increase",
+    action: "Analyze Market",
+    color: "indigo"
+  }
 ];
 
-const RecommendedActions = () => (
-  <div className="space-y-2.5">
-    <div className="flex items-center justify-between px-1">
-      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Strategic Tasks</h3>
-      <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">5 Tasks Pending</span>
-    </div>
-    
-    {STRATEGIC_TASKS.map((action, i) => {
-      const Icon = action.icon;
-      return (
-        <div key={i} className="bg-white border border-slate-200 p-3.5 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-all cursor-pointer group shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-all">
-              <Icon size={16} />
-            </div>
-            <div>
-              <h4 className="text-[11px] font-black text-slate-950">{action.title}</h4>
-              <p className="text-[9px] text-emerald-600 font-bold mt-0.5">Impact: {action.impact}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-             <span className={cn(
-               "px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider",
-               action.priority === "High" ? "bg-rose-50 text-rose-600" : "bg-slate-50 text-slate-500"
-             )}>{action.priority}</span>
-             <button className="w-7 h-7 rounded-full bg-slate-950 text-white flex items-center justify-center shadow-lg shadow-slate-200">
-               <ChevronRight size={12} />
-             </button>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-);
+
+const FILTER_OPTIONS = ["All", "Active", "At Risk", "Growing", "Highest Revenue", "Newest"];
+
+const PLAN_COLORS = {
+  "A1": "from-indigo-600 to-indigo-800",
+  "Q1": "from-emerald-600 to-emerald-800",
+  "M1": "from-amber-600 to-amber-800",
+  "S1": "from-sky-600 to-sky-800"
+};
 
 // ─────────────────────────────────────────
-// CREATE PLAN WORKFLOW COMPONENT
+// KPI CARD
 // ─────────────────────────────────────────
-const CreatePlanWorkflow = ({ isOpen, onClose }) => {
+function KPICard({ label, value, trend, trendUp, subtitle, icon: Icon, accent }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between min-h-[110px]">
+      <div className="flex items-center justify-between">
+        <div className={cn(
+          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+          accent === "indigo" ? "bg-indigo-50 text-indigo-600" :
+          accent === "emerald" ? "bg-emerald-50 text-emerald-600" :
+          accent === "amber" ? "bg-amber-50 text-amber-600" :
+          "bg-slate-950 text-white"
+        )}>
+          <Icon size={15} className="stroke-[2.2]" />
+        </div>
+        {trend && (
+          <div className={cn(
+            "flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold shrink-0",
+            trendUp ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+          )}>
+            {trendUp ? <ArrowUp size={9} /> : <ArrowDown size={9} />}
+            {trend}
+          </div>
+        )}
+      </div>
+      <div className="mt-2 text-left">
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{label}</p>
+        <p className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">{value}</p>
+        {subtitle && <p className="text-[10px] text-slate-450 font-semibold leading-none">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
+// PLAN CARD (DIRECTORY STYLE)
+// ─────────────────────────────────────────
+function PlanCard({ plan, index, onViewDetails }) {
+  const statusColor = plan.status === "Healthy" ? "emerald" : plan.status === "Growing" ? "indigo" : plan.status === "At Risk" ? "rose" : "amber";
+
+  return (
+    <motion.tr
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.25, delay: index * 0.03 }}
+      className="relative grid grid-cols-3 gap-4 p-3 bg-white border border-slate-200/90 rounded-lg shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 list-none"
+    >
+      {/* Col 1: Identity & Classification */}
+      <div className="flex items-center gap-3 min-w-0 text-left">
+        <div className={cn(
+          "w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0",
+          PLAN_COLORS[plan.id] || "from-slate-800 to-indigo-900"
+        )}>
+          {plan.id}
+        </div>
+        <div className="min-w-0 text-left">
+          <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">{plan.name}</h4>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="px-1.5 py-0.2 rounded text-[7px] font-bold bg-slate-100 text-slate-500 uppercase tracking-wider">
+              {plan.category}
+            </span>
+            <span className="text-[9px] text-slate-400 font-bold font-mono">
+              {plan.duration}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Col 2: Pricing & Key Metrics */}
+      <div className="flex items-center justify-around gap-2 text-left">
+        <div>
+          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Price</span>
+          <span className="text-xs font-bold text-slate-900 mt-0.5 block">{formatCurrency(plan.price)}</span>
+        </div>
+        <div>
+          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Enrolled</span>
+          <span className="text-xs font-bold text-slate-900 mt-0.5 block">{plan.activeMembers}</span>
+        </div>
+        <div>
+          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">MRR</span>
+          <span className="text-xs font-bold text-slate-900 mt-0.5 block">{formatCompact(plan.revenue)}</span>
+        </div>
+      </div>
+
+      {/* Col 3: Status & Action Menu */}
+      <div className="flex items-center justify-between gap-4 pr-10 text-left">
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-[8px] font-bold border uppercase tracking-wider",
+            statusColor === "emerald" ? "bg-emerald-50 border-emerald-200 text-emerald-700" :
+            statusColor === "indigo" ? "bg-indigo-50 border-indigo-200 text-indigo-700" :
+            statusColor === "rose" ? "bg-rose-50 border-rose-200 text-rose-700" :
+            "bg-amber-50 border-amber-200 text-amber-700"
+          )}>
+            {plan.status}
+          </span>
+          <span className="text-[9px] text-slate-400 font-bold font-mono">
+            {plan.retention}% ret.
+          </span>
+        </div>
+
+        {/* More options button */}
+        <div className="absolute right-2.5 top-2.5">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onViewDetails(plan)}
+            className="w-7 h-7 rounded-full flex items-center justify-center border border-transparent bg-transparent hover:bg-slate-50 hover:border-slate-200/60 hover:text-slate-700 text-slate-400 transition-all duration-200 focus:outline-none"
+          >
+            <motion.div
+              className="flex items-center justify-center"
+            >
+              <MoreVertical size={15} />
+            </motion.div>
+          </motion.button>
+        </div>
+      </div>
+    </motion.tr>
+  );
+}
+
+// ─────────────────────────────────────────
+// PLAN DETAILS MODAL
+// ─────────────────────────────────────────
+function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDelete }) {
+  if (!plan) return null;
+
+  const statusColor = plan.status === "Healthy" ? "emerald" : plan.status === "Growing" ? "indigo" : plan.status === "At Risk" ? "rose" : "amber";
+  const riskColor = plan.risk === "Low" ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-rose-600 bg-rose-50 border-rose-200";
+
+  return (
+    <AnimatePresence>
+      {plan && (
+        <motion.div
+          key="details-modal-container"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+        >
+          {/* Backdrop */}
+          <motion.div
+            key="details-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-slate-950/85 backdrop-blur-xl"
+          />
+
+          {/* Panel */}
+          <motion.div
+            key="details-panel"
+            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 280 }}
+            className="relative w-full max-w-3xl bg-white rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col z-50 p-6 md:p-8 m-auto text-left max-h-[90vh] md:max-h-[500px]"
+          >
+            {/* Header section with category and plan ID */}
+            <header className="flex justify-between items-start gap-4 mb-5 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-11 h-11 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white font-black text-xs shadow-md shrink-0",
+                  PLAN_COLORS[plan.id] || "from-slate-800 to-indigo-900"
+                )}>
+                  {plan.id}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
+                      {plan.category}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
+                      {plan.duration}
+                    </span>
+                  </div>
+                  <h2 className="text-base font-black text-slate-900 tracking-tight mt-1 leading-tight">{plan.name}</h2>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <button 
+                onClick={onClose}
+                className="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-650 flex items-center justify-center transition-all shadow-sm"
+              >
+                <X size={16} className="stroke-[2.5]" />
+              </button>
+            </header>
+
+            {/* Content Layout */}
+            <div className="space-y-4 flex-1 overflow-y-auto pr-1">
+              
+              {/* Financial Strategy Grid */}
+              <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pricing</span>
+                  <strong className="text-sm font-black text-slate-900 mt-0.5 block">{formatCurrency(plan.price)}</strong>
+                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Base Fee</span>
+                </article>
+
+                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Active Enrollment</span>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <strong className="text-sm font-black text-slate-900">{plan.activeMembers}</strong>
+                    <span className={cn(
+                      "text-[8px] font-bold",
+                      plan.trendUp ? "text-emerald-600" : "text-rose-600"
+                    )}>
+                      {plan.trend}
+                    </span>
+                  </div>
+                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Total Members</span>
+                </article>
+
+                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Monthly Contribution</span>
+                  <strong className="text-sm font-black text-slate-900 mt-0.5 block">{formatCurrency(plan.monthlyContribution)}</strong>
+                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">MRR contribution</span>
+                </article>
+
+                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">LTD Revenue</span>
+                  <strong className="text-sm font-black text-slate-900 mt-0.5 block">{formatCurrency(plan.revenue)}</strong>
+                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Total Generated</span>
+                </article>
+              </section>
+
+              {/* Grid side-by-side for Analytics and Privileges */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Status and Health Analytics */}
+                <section className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 items-center">
+                  
+                  {/* Concentric Gauge SVG Column (span 5) */}
+                  <div className="sm:col-span-5 flex justify-center items-center relative h-[108px] shrink-0">
+                    <svg className="w-[108px] h-[108px]" viewBox="0 0 120 120">
+                      {/* Outer Track (Retention) */}
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="44"
+                        className="stroke-slate-200/60 fill-none stroke-[6.5]"
+                      />
+                      {/* Outer Active Ring (Retention) */}
+                      <motion.circle
+                        cx="60"
+                        cy="60"
+                        r="44"
+                        className={cn(
+                          "fill-none stroke-[6.5]",
+                          statusColor === "rose" ? "stroke-rose-500" : "stroke-emerald-500"
+                        )}
+                        strokeLinecap="round"
+                        strokeDasharray="276.46"
+                        initial={{ strokeDashoffset: 276.46 }}
+                        animate={{ strokeDashoffset: 276.46 - (plan.retention / 100) * 276.46 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        transform="rotate(-90 60 60)"
+                      />
+
+                      {/* Inner Track (Renewal) */}
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="34"
+                        className="stroke-slate-200/60 fill-none stroke-[6.5]"
+                      />
+                      {/* Inner Active Ring (Renewal) */}
+                      <motion.circle
+                        cx="60"
+                        cy="60"
+                        r="34"
+                        className={cn(
+                          "fill-none stroke-[6.5]",
+                          plan.renewalRate < 60 ? "stroke-rose-500" : "stroke-indigo-500"
+                        )}
+                        strokeLinecap="round"
+                        strokeDasharray="213.63"
+                        initial={{ strokeDashoffset: 213.63 }}
+                        animate={{ strokeDashoffset: 213.63 - (plan.renewalRate / 100) * 213.63 }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                        transform="rotate(-90 60 60)"
+                      />
+                    </svg>
+
+                    {/* Centered text indicators inside Ring */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
+                      <span className={cn(
+                        "text-[9px] font-black uppercase tracking-wider leading-none",
+                        statusColor === "emerald" ? "text-emerald-600" :
+                        statusColor === "indigo" ? "text-indigo-600" :
+                        statusColor === "rose" ? "text-rose-600" :
+                        "text-amber-600"
+                      )}>
+                        {plan.status}
+                      </span>
+                      <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        {plan.risk} Risk
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Details and Legend Column (span 7) */}
+                  <div className="sm:col-span-7 space-y-2.5 text-left">
+                    <div>
+                      <h4 className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Plan Performance Index</h4>
+                      <p className="text-[10px] font-semibold text-slate-500 leading-normal mt-0.5">
+                        This tier exhibits a <span className="font-extrabold text-slate-900">{plan.trend}</span> growth velocity with optimized operational health parameters.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 border-t border-slate-200/50 pt-2">
+                      {/* Retention Legend */}
+                      <div className="flex items-center justify-between text-[9px] leading-none">
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn(
+                            "w-2 h-2 rounded-full shrink-0",
+                            statusColor === "rose" ? "bg-rose-500" : "bg-emerald-500"
+                          )} />
+                          <span className="font-semibold text-slate-650 uppercase tracking-wide">Retention Rate</span>
+                        </div>
+                        <span className="font-extrabold text-slate-900 font-mono">{plan.retention}%</span>
+                      </div>
+
+                      {/* Renewal Legend */}
+                      <div className="flex items-center justify-between text-[9px] leading-none">
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn(
+                            "w-2 h-2 rounded-full shrink-0",
+                            plan.renewalRate < 60 ? "bg-rose-500" : "bg-indigo-500"
+                          )} />
+                          <span className="font-semibold text-slate-650 uppercase tracking-wide">Renewal Velocity</span>
+                        </div>
+                        <span className="font-extrabold text-slate-900 font-mono">{plan.renewalRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Access Strategy & Privileges */}
+                <section className="space-y-2.5">
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Access Privileges</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Gym Floor", enabled: true },
+                      { label: "Cardio Zone", enabled: true },
+                      { label: "Steam/Sauna", enabled: plan.id !== "M1" && plan.id !== "S1" },
+                      { label: "Group Classes", enabled: plan.id !== "M1" && plan.id !== "S1" },
+                      { label: "PT Sessions", enabled: plan.id === "A1" },
+                      { label: "Roaming", enabled: plan.id === "A1" || plan.id === "Q1" },
+                    ].map((privilege, idx) => (
+                      <div 
+                        key={idx} 
+                        className={cn(
+                          "p-2.5 rounded-xl border text-[8px] font-bold uppercase tracking-wider flex items-center justify-between shadow-sm",
+                          privilege.enabled ? "bg-white border-slate-200 text-slate-700" : "bg-slate-50 border-slate-100 text-slate-350"
+                        )}
+                      >
+                        <span className="truncate mr-1">{privilege.label}</span>
+                        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", privilege.enabled ? "bg-emerald-400 animate-pulse" : "bg-slate-300")} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            {/* Bottom Actions Row */}
+            <footer className="mt-8 pt-4 border-t border-slate-100 flex flex-wrap gap-2.5 justify-end shrink-0">
+              <button 
+                onClick={() => { onEdit(plan); onClose(); }}
+                className="px-3.5 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+              >
+                <Edit3 size={12} />
+                Edit Plan
+              </button>
+              
+              <button 
+                onClick={() => { onDuplicate(plan); onClose(); }}
+                className="px-3.5 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+              >
+                <Copy size={12} />
+                Duplicate
+              </button>
+
+              <button 
+                onClick={() => { onArchive(plan); onClose(); }}
+                className="px-3.5 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+              >
+                <Archive size={12} />
+                Archive
+              </button>
+
+              <button 
+                onClick={() => { onDelete(plan); onClose(); }}
+                className="px-3.5 h-9 rounded-xl bg-rose-50 hover:bg-rose-100/70 text-rose-600 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+              >
+                <Trash2 size={12} />
+                Delete
+              </button>
+
+              <div className="h-9 w-[1px] bg-slate-200 mx-1.5" />
+
+              <button 
+                onClick={onClose}
+                className="px-5 h-9 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center"
+              >
+                Done
+              </button>
+            </footer>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─────────────────────────────────────────
+// CUSTOM SELECT COMPONENT
+// ─────────────────────────────────────────
+function CustomSelect({ label, value, onChange, options }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="space-y-1.5 relative">
+      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className={cn(
+            "w-full h-11 px-4 bg-white border rounded-xl text-xs font-semibold flex items-center justify-between outline-none transition-all duration-200 shadow-sm",
+            isOpen
+              ? "border-slate-400 bg-white ring-4 ring-slate-100"
+              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+          )}
+        >
+          <span className={value ? "text-slate-700" : "text-slate-400"}>
+            {value || `Select ${label}`}
+          </span>
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="text-slate-400 shrink-0 ml-2"
+          >
+            <ChevronDown size={14} className="stroke-[2.5]" />
+          </motion.div>
+        </button>
+
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: -4 }}
+              transition={{ duration: 0.12, ease: "easeOut" }}
+              className="absolute left-0 right-0 top-[48px] bg-white rounded-xl border border-slate-200 shadow-xl py-1 z-50 overflow-hidden"
+            >
+              {options.map((option) => {
+                const isSelected = value === option;
+                return (
+                  <motion.button
+                    key={option}
+                    type="button"
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => {
+                      onChange(option);
+                      setIsOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-left transition-colors duration-150 rounded-lg",
+                      isSelected
+                        ? "text-indigo-600 bg-indigo-50/60"
+                        : "text-slate-650 bg-transparent hover:text-slate-900 hover:bg-slate-50"
+                    )}
+                  >
+                    <span>{option}</span>
+                    {isSelected && (
+                      <CheckCircle2 size={13} className="text-indigo-600 stroke-[2.5] shrink-0" />
+                    )}
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
+// CREATE PLAN MODAL
+// ─────────────────────────────────────────
+// ─────────────────────────────────────────
+// TRAINERS LIST CONSTANT
+// ─────────────────────────────────────────
+function CreatePlanModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
     name: "",
     category: "Transformation",
-    target: "Professionals",
+    audience: "Professionals",
     goal: "Revenue Generation",
     description: "",
     price: "",
     joiningFee: "",
-    duration: "Monthly",
-    incentive: "10"
+    duration: "Monthly"
   });
-  const totalSteps = 6;
 
-  const renderStep = () => {
-    switch(step) {
-      case 1:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Identity</label>
-                <input 
-                  type="text" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="e.g. Annual Elite Performance" 
-                  className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:border-indigo-400 focus:bg-white transition-all" 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Category</label>
-                <select 
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:border-indigo-400 focus:bg-white transition-all appearance-none"
-                >
-                  <option>Transformation</option>
-                  <option>Weight Loss</option>
-                  <option>Bodybuilding</option>
-                  <option>General Fitness</option>
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Audience</label>
-                <select 
-                  value={formData.target}
-                  onChange={(e) => setFormData({...formData, target: e.target.value})}
-                  className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:border-indigo-400 focus:bg-white transition-all appearance-none"
-                >
-                  <option>Professionals</option>
-                  <option>Students</option>
-                  <option>Senior Citizens</option>
-                  <option>Athletes</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Strategic Goal</label>
-                <select 
-                  value={formData.goal}
-                  onChange={(e) => setFormData({...formData, goal: e.target.value})}
-                  className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold outline-none focus:border-indigo-400 focus:bg-white transition-all appearance-none"
-                >
-                  <option>Revenue Generation</option>
-                  <option>Member Acquisition</option>
-                  <option>Retention Focus</option>
-                  <option>High-Margin Upsell</option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</label>
-              <textarea 
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Value proposition..." 
-                className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none focus:border-indigo-400 focus:bg-white transition-all resize-none" 
-              />
-            </div>
-          </div>
-        );
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-indigo-600">Duration Strategy</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {["Monthly", "Quarterly", "Half-Yearly", "Annual"].map(d => (
-                      <button 
-                        key={d} 
-                        onClick={() => setFormData({...formData, duration: d})}
-                        className={cn(
-                          "h-12 rounded-xl border text-xs font-black uppercase tracking-wider transition-all",
-                          formData.duration === d ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-inner" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-                        )}
-                      >
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Price</label>
-                    <input 
-                      type="number" 
-                      value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: e.target.value})}
-                      placeholder="₹24,999" 
-                      className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joining Fee</label>
-                    <input 
-                      type="number" 
-                      value={formData.joiningFee}
-                      onChange={(e) => setFormData({...formData, joiningFee: e.target.value})}
-                      placeholder="₹1,500" 
-                      className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-bold" 
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-slate-950 rounded-2xl p-6 text-white relative overflow-hidden shadow-2xl">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl -mr-16 -mt-16" />
-                 <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                   <BarChart3 size={14} /> Revenue Projection
-                 </h4>
-                 <div className="space-y-4">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400 font-bold">Projected ARPU</span>
-                      <span className="font-black">₹{formData.price ? formatCompact(Number(formData.price) / (formData.duration === "Annual" ? 12 : formData.duration === "Half-Yearly" ? 6 : formData.duration === "Quarterly" ? 3 : 1)) : "0"} / mo</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400 font-bold">Annual Target (100)</span>
-                      <span className="font-black">₹{formData.price ? formatCompact(Number(formData.price) * 100 * (formData.duration === "Annual" ? 1 : formData.duration === "Half-Yearly" ? 2 : formData.duration === "Quarterly" ? 4 : 12)) : "0"}</span>
-                    </div>
-                    <div className="h-px bg-white/10 my-4" />
-                    <div className="flex justify-between items-end">
-                      <div className="space-y-1">
-                        <span className="block text-[9px] font-black text-indigo-400 uppercase tracking-widest">Business Value Score</span>
-                        <div className="flex gap-1">
-                          {[1,2,3,4,5].map(i => <div key={i} className="w-4 h-1 rounded-full bg-indigo-500" />)}
-                        </div>
-                      </div>
-                      <span className="text-2xl font-black tracking-tighter text-white">88/100</span>
-                    </div>
-                 </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
-                 <h4 className="text-[10px] font-black text-slate-950 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Lock size={14} /> Facility Access Rules
-                 </h4>
-                 <div className="space-y-3">
-                   {["Single Branch Access", "All-Network Roaming", "Priority Time Slots", "Guest Pass Eligibility", "Freeze Support"].map(rule => (
-                     <label key={rule} className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-400 transition-all">
-                       <input type="checkbox" className="w-4 h-4 rounded text-indigo-600 border-slate-300" />
-                       <span className="text-xs font-bold text-slate-700">{rule}</span>
-                     </label>
-                   ))}
-                 </div>
-              </div>
-              <div className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
-                 <h4 className="text-[10px] font-black text-slate-950 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Briefcase size={14} /> Area Permissions
-                 </h4>
-                 <div className="grid grid-cols-2 gap-2">
-                   {["Gym Floor", "Cardio Zone", "Steam/Sauna", "Group Classes", "Personal Training", "Locker Premium"].map(area => (
-                     <button key={area} className="p-3 rounded-xl border border-slate-200 bg-white text-[10px] font-black uppercase tracking-wider hover:bg-slate-950 hover:text-white transition-all">{area}</button>
-                   ))}
-                 </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Benefits Builder</h4>
-              <button className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">+ Custom</button>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { name: "Diet Chart", icon: Activity },
-                { name: "Consultation", icon: Users },
-                { name: "Assessment", icon: Target },
-                { name: "Priority Support", icon: Shield },
-                { name: "Premium Access", icon: Sparkles },
-                { name: "Complimentary PT", icon: Award }
-              ].map(benefit => (
-                <div key={benefit.name} className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 transition-all flex flex-col items-center text-center gap-3 cursor-pointer group shadow-sm">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-all">
-                    <benefit.icon size={20} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">{benefit.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case 5:
-        return (
-          <div className="space-y-8">
-            <div className="p-6 rounded-2xl bg-indigo-50 border border-indigo-100">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-600">
-                  <RefreshCcw size={24} />
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-slate-950 uppercase tracking-tight">Retention Engine</h4>
-                  <p className="text-[11px] text-slate-500 font-bold mt-1">Configure automated triggers to maximize retention.</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Timeline</label>
-                <div className="space-y-2">
-                  {["30 Days Before", "15 Days Before", "7 Days Before", "3 Days Before", "On Expiry"].map(t => (
-                    <div key={t} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-                      <span className="text-xs font-bold text-slate-700">{t}</span>
-                      <div className="w-10 h-5 bg-slate-200 rounded-full relative">
-                        <div className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="space-y-6">
-                 <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Incentives</label>
-                    <div className="grid grid-cols-2 gap-3">
-                       <button className="p-3 rounded-xl border-2 border-indigo-500 bg-indigo-50 text-[10px] font-black uppercase tracking-wider text-indigo-700">Early Renewal</button>
-                       <button className="p-3 rounded-xl border border-slate-200 bg-white text-[10px] font-black uppercase tracking-wider text-slate-600">Upgrade Bonus</button>
-                    </div>
-                    <div className="space-y-2 mt-4">
-                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Incentive Value (%)</label>
-                       <input 
-                         type="number" 
-                         value={formData.incentive}
-                         onChange={(e) => setFormData({...formData, incentive: e.target.value})}
-                         className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-black" 
-                       />
-                    </div>
-                 </div>
-                 
-                 <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                    <p className="text-[10px] font-black text-emerald-900 uppercase tracking-widest leading-relaxed">
-                      Retention Impact: +{(Number(formData.incentive) * 1.8).toFixed(1)}%
-                    </p>
-                 </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 6:
-        return (
-          <div className="space-y-8">
-            <div className="flex flex-col items-center text-center py-6">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-50">
-                <CheckCircle2 size={40} />
-              </div>
-              <h3 className="text-xl font-black text-slate-950 uppercase tracking-tight">Ready for Launch</h3>
-              <p className="text-sm font-bold text-slate-500 mt-2 max-w-sm">Review metrics before publishing the plan.</p>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Revenue potential</span>
-                <span className="text-xl font-black text-slate-950">₹{formData.price ? formatCompact(Number(formData.price) * 100 * (formData.duration === "Annual" ? 1 : formData.duration === "Half-Yearly" ? 2 : formData.duration === "Quarterly" ? 4 : 12)) : "0"} / yr</span>
-              </div>
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Retention Forecast</span>
-                <span className="text-xl font-black text-slate-950">{(70 + (Number(formData.incentive) * 1.2)).toFixed(0)}%</span>
-              </div>
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Market Position</span>
-                <span className="text-xl font-black text-slate-950">Strategic</span>
-              </div>
-            </div>
-          </div>
-        );
-      default: return null;
+  const [access, setAccess] = useState(["Single Branch Access"]);
+  const [areas, setAreas] = useState(["Gym Floor", "Cardio Zone"]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setAccess(["Single Branch Access"]);
+      setAreas(["Gym Floor", "Cardio Zone"]);
+    }
+  }, [isOpen]);
+
+  const totalSteps = 4;
+  const isLast = step === totalSteps;
+
+  const stepInfo = {
+    1: {
+      kicker: "PLAN CONFIGURATION",
+      title: "Create Membership Plan",
+      description: "Set up the primary value proposition, target audience, and classification for your new plan."
+    },
+    2: {
+      kicker: "PRICING & SCHEDULE",
+      title: "Configure Price & Duration",
+      description: "Define base subscription fees, joining charges, and estimate the monthly average revenue per user (ARPU)."
+    },
+    3: {
+      kicker: "ACCESS & PERMISSIONS",
+      title: "Set Access Permissions",
+      description: "Configure gym floor access rules, priority hours, and specific zone permissions for enrolled members."
+    },
+    4: {
+      kicker: "PLAN STRATEGY",
+      title: "Publish to Portfolio",
+      description: "Review the strategic performance forecasts and publish the plan live to your member portal."
     }
   };
 
-  if (!isOpen) return null;
+  const { kicker, title, description } = stepInfo[step];
+
+  const ACCESS_CARDS = [
+    { id: "branch", label: "Single Branch Access", description: "Limit plan usage to the home branch location.", icon: Shield, color: "bg-slate-100 text-slate-600" },
+    { id: "roaming", label: "All-Network Roaming", description: "Access any branch in the gym network.", icon: Activity, color: "bg-sky-50 text-sky-600" },
+    { id: "priority", label: "Priority Time Slots", description: "Reservations for peak hours and premium slots.", icon: Clock, color: "bg-amber-50 text-amber-600" },
+    { id: "guest", label: "Guest Pass Eligibility", description: "Allow members to bring a guest monthly.", icon: Users, color: "bg-violet-50 text-violet-600" },
+    { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
+  ];
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
-      />
-      <motion.div 
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="relative w-full max-w-5xl bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col h-[90vh]"
-      >
-        <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-3">
-             <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-indigo-100">
-               {step}
-             </span>
-             <h2 className="text-lg font-black text-slate-950 uppercase tracking-tight">Create Business Plan</h2>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-950 transition-colors">
-            <X size={24} />
-          </button>
-        </header>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="modal-container"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          className="fixed inset-0 z-[1000] flex items-end justify-center"
+        >
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
+          />
+          <motion.div
+            key="panel"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 32, stiffness: 260, mass: 1 }}
+            className="relative w-full max-w-4xl bg-[#f4f6fa] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[600px] z-50"
+          >
+            {/* Top Handle Bar */}
+            <div className="w-12 h-1 rounded-full bg-slate-200 mx-auto mt-4 shrink-0" />
 
-        <div className="flex-1 overflow-y-auto p-10">
-           {renderStep()}
-        </div>
+            {/* Absolute Close Button */}
+            <motion.button
+              whileHover="hovered"
+              whileTap={{ scale: 0.95 }}
+              onClick={onClose}
+              className="absolute top-6 right-8 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:text-white hover:bg-slate-950 hover:border-slate-950 shadow-sm transition-all duration-200 z-50"
+              variants={{
+                initial: { scale: 1 },
+                hovered: { scale: 1.05 }
+              }}
+            >
+              <motion.div
+                variants={{
+                  initial: { rotate: 0 },
+                  hovered: { rotate: 90 }
+                }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="flex items-center justify-center w-full h-full"
+              >
+                <X size={20} className="stroke-[2.5]" />
+              </motion.div>
+            </motion.button>
 
-        <footer className="px-10 py-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-           <div className="flex gap-2">
-             {[1,2,3,4,5,6].map(i => (
-               <div key={i} className={cn(
-                 "w-8 h-1 rounded-full transition-all",
-                 step === i ? "bg-indigo-600 w-12" : i < step ? "bg-emerald-500" : "bg-slate-200"
-               )} />
-             ))}
-           </div>
-           
-           <div className="flex gap-4">
-             {step > 1 && (
-               <button 
-                 onClick={() => setStep(s => s - 1)}
-                 className="px-6 h-12 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-white transition-all border border-transparent hover:border-slate-200"
-               >
-                 Previous
-               </button>
-             )}
-             <button 
-               onClick={() => step < totalSteps ? setStep(s => s + 1) : onClose()}
-               className="px-8 h-12 rounded-xl bg-slate-950 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center gap-2"
-             >
-               {step === totalSteps ? "Publish Plan" : "Continue"}
-               <ArrowRight size={16} />
-             </button>
-           </div>
-        </footer>
-      </motion.div>
-    </div>
+            {/* Header Kicker/Title/Desc */}
+            <header className="px-10 pt-6 pb-2 shrink-0">
+              <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{kicker}</p>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-1">{title}</h2>
+              <p className="text-xs font-semibold text-slate-500 max-w-2xl leading-relaxed mt-1.5">{description}</p>
+            </header>
+
+            {/* Content Body */}
+            <div className={cn("flex-1 px-10 py-6", (step === 1 || step === 4) ? "overflow-hidden" : "overflow-y-auto")}>
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Plan Name *</label>
+                        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Annual Elite Performance" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
+                      </div>
+                      <CustomSelect
+                        label="Category"
+                        value={form.category}
+                        onChange={(val) => setForm({ ...form, category: val })}
+                        options={["Transformation", "Weight Loss", "Bodybuilding", "General Fitness"]}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <CustomSelect
+                        label="Target Audience"
+                        value={form.audience}
+                        onChange={(val) => setForm({ ...form, audience: val })}
+                        options={["Professionals", "Students", "Senior Citizens", "Athletes"]}
+                      />
+                      <CustomSelect
+                        label="Strategic Goal"
+                        value={form.goal}
+                        onChange={(val) => setForm({ ...form, goal: val })}
+                        options={["Revenue Generation", "Member Acquisition", "Retention Focus", "High-Margin Upsell"]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Description</label>
+                      <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Value proposition and key features..." className="w-full h-24 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none resize-none" />
+                    </div>
+                  </motion.div>
+                )}
+                {step === 2 && (
+                  <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Duration</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {["Monthly", "Quarterly", "Half-Yearly", "Annual"].map(d => (
+                            <motion.button
+                              key={d}
+                              type="button"
+                              whileHover={{ scale: 1.02, y: -0.5 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => setForm({ ...form, duration: d })}
+                              className={cn(
+                                "h-11 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm",
+                                form.duration === d
+                                  ? "border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-350 hover:bg-slate-50/50"
+                              )}
+                            >{d}</motion.button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Base Price *</label>
+                            <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="₹24,999" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Joining Fee</label>
+                            <input type="number" value={form.joiningFee} onChange={(e) => setForm({ ...form, joiningFee: e.target.value })} placeholder="₹1,500" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center h-[90px]">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projected ARPU</p>
+                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) / (form.duration === "Annual" ? 12 : form.duration === "Half-Yearly" ? 6 : form.duration === "Quarterly" ? 3 : 1)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+                {step === 3 && (
+                  <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Facility Access</h4>
+                        <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+                          {ACCESS_CARDS.map(card => {
+                            const Icon = card.icon;
+                            const isChecked = access.includes(card.label);
+                            return (
+                              <div
+                                key={card.id}
+                                onClick={() => {
+                                  setAccess(prev =>
+                                    prev.includes(card.label)
+                                      ? prev.filter(r => r !== card.label)
+                                      : [...prev, card.label]
+                                  );
+                                }}
+                                className={cn(
+                                  "p-3 bg-white border rounded-2xl flex items-start gap-4 cursor-pointer hover:border-slate-350 shadow-sm transition-all duration-200",
+                                  isChecked ? "ring-2 ring-indigo-500/5 border-indigo-400" : "border-slate-200"
+                                )}
+                              >
+                                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", card.color)}>
+                                  <Icon size={16} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-bold text-slate-900 leading-none">{card.label}</h4>
+                                    <div className={cn(
+                                      "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                                      isChecked ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white"
+                                    )}>
+                                      {isChecked && <CheckCircle2 size={10} className="stroke-[3]" />}
+                                    </div>
+                                  </div>
+                                  <p className="text-[9px] text-slate-400 mt-1 leading-normal">{card.description}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Area Permissions</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {["Gym Floor", "Cardio Zone", "Steam/Sauna", "Group Classes", "Personal Training", "Locker Premium"].map(area => {
+                            const isActive = areas.includes(area);
+                            return (
+                              <motion.button
+                                key={area}
+                                type="button"
+                                whileHover={{ scale: 1.02, y: -0.5 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => {
+                                  setAreas(prev =>
+                                    prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
+                                  );
+                                }}
+                                className={cn(
+                                  "p-3 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all duration-200 shadow-sm flex items-center justify-between",
+                                  isActive
+                                    ? "border-slate-900 bg-slate-900 text-white"
+                                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-800"
+                                )}
+                              >
+                                <span>{area}</span>
+                                <div className={cn("w-1.5 h-1.5 rounded-full", isActive ? "bg-emerald-400" : "bg-slate-300")} />
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+                {step === 4 && (
+                  <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                    <div className="flex flex-col items-center text-center py-4">
+                      <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 shadow-inner"><CheckCircle2 size={28} className="stroke-[2.5]" /></div>
+                      <h3 className="text-lg font-bold text-slate-900">Ready to Publish</h3>
+                      <p className="text-xs font-semibold text-slate-500 mt-1 max-w-sm">Review the strategic plan details before publishing to your portfolio.</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Revenue Potential</p>
+                        <p className="text-base font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) * 100 * (form.duration === "Annual" ? 1 : form.duration === "Half-Yearly" ? 2 : form.duration === "Quarterly" ? 4 : 12)) : "0"}<span className="text-[10px] font-medium text-slate-400">/yr</span></p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Retention Forecast</p>
+                        <p className="text-base font-black text-emerald-600">76%</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Market Position</p>
+                        <p className="text-base font-black text-indigo-600">Strategic</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Footer buttons centered with a gap */}
+            <footer className="px-10 py-5 border-t border-slate-100 bg-white flex items-center justify-center gap-5 shrink-0">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={step === 1 ? onClose : () => setStep(s => s - 1)}
+                className="h-11 max-w-[360px] flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                {step === 1 ? "Cancel" : "← Back"}
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => isLast ? onClose() : setStep(s => s + 1)}
+                className="h-11 max-w-[360px] flex-1 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                {isLast ? "Publish Plan" : "Continue →"}
+              </motion.button>
+            </footer>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-};
+}
 
 // ─────────────────────────────────────────
-// MAIN DASHBOARD COMPONENT
+// MAIN COMPONENT
 // ─────────────────────────────────────────
-const MembershipPortfolioDashboard = () => {
-  const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
+export default function MembershipPortfolioDashboard() {
+  const [view, setView] = useState("portfolio");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [detailsPlan, setDetailsPlan] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const filteredPlans = useMemo(() => {
+    return MEMBERSHIP_PORTFOLIO.filter(plan => {
+      const matchesSearch = plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plan.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plan.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = activeFilter === "All" ||
+        (activeFilter === "Active" && plan.status === "Healthy") ||
+        (activeFilter === "At Risk" && plan.status === "At Risk") ||
+        (activeFilter === "Growing" && plan.status === "Growing") ||
+        (activeFilter === "Highest Revenue") ||
+        (activeFilter === "Newest");
+      return matchesSearch && matchesFilter;
+    });
+  }, [searchQuery, activeFilter]);
+
+  if (isLoading) {
+    return (
+      <div className="members-shell animate-pulse">
+        <div className="h-6 w-48 bg-slate-200 rounded-lg mb-6" />
+        <div className="members-overview gap-3 mb-6">
+          {[1, 2, 3, 4].map(j => (
+            <div key={j} className="h-24 bg-slate-200 rounded-lg" />
+          ))}
+        </div>
+        <div className="h-10 w-full bg-slate-200 rounded-lg mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-16 bg-white border border-slate-100 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-full bg-slate-50/30 text-slate-950 font-sans selection:bg-indigo-100 overflow-x-hidden">
-      <header className="sticky top-0 z-50 h-[64px] bg-white/80 backdrop-blur-xl border-b border-slate-200 px-6 flex items-center justify-between">
-         <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-slate-950 text-white flex items-center justify-center shadow-lg shadow-slate-200">
-               <Shield size={18} />
+    <div className="h-full bg-[#FAFBFD] p-4 text-slate-900 overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 16px)' }}>
+      <div className="members-shell">
+        {/* HEADER */}
+        <header className="flex items-center justify-between pb-4 border-b border-slate-200/60 mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-sm">
+              <Shield size={18} />
             </div>
             <div>
-               <h1 className="text-base font-black tracking-tight text-slate-950">Membership Portfolio</h1>
-               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-0 flex items-center gap-1">
-                  <Activity size={8} className="text-emerald-500" />
-                  Live Network Status
-               </p>
+              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Membership Portfolio</h1>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Plan Configurations
+              </p>
             </div>
-         </div>
+          </div>
 
-         <div className="flex items-center gap-3">
-            <div className="flex bg-slate-100 p-1 rounded-lg">
-               <button className="px-3 py-1.5 bg-white rounded-md shadow-sm text-[9px] font-black uppercase tracking-wider text-slate-950">Portfolio</button>
-               <button className="px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-700">Analytics</button>
+          <div className="flex items-center gap-3.5">
+            {/* Segmented Control */}
+            <div className="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/20">
+              <button
+                onClick={() => setView("portfolio")}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
+                  view === "portfolio"
+                    ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
+                    : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                Portfolio
+              </button>
+              <button
+                onClick={() => setView("analytics")}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
+                  view === "analytics"
+                    ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
+                    : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                Analytics
+              </button>
             </div>
-            <button 
-              onClick={() => setIsWorkflowOpen(true)}
-              className="h-10 px-5 rounded-xl bg-indigo-600 text-white flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="h-10 px-5 rounded-xl bg-slate-950 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 hover:-translate-y-[1px] active:translate-y-0 shadow-md shadow-slate-950/10 transition-all duration-200 flex items-center gap-1.5"
             >
-               <Plus size={16} />
-               New Plan
+              <Plus size={15} />
+              Create Plan
             </button>
-         </div>
-      </header>
+          </div>
+        </header>
 
-      <main className="p-5 max-w-[1400px] mx-auto space-y-6 pb-20 overflow-x-hidden">
-         <section>
-            <CommandCenter />
-         </section>
+        {/* OVERVIEW STAT CARDS */}
+        {view === "portfolio" && (
+          <section className="grid grid-cols-4 gap-4 mt-2">
+            <KPICard
+              label="Active Membership Plans"
+              value={`${PORTFOLIO_STATS.activePlans} Plans`}
+              trend="+2"
+              trendUp={true}
+              subtitle="Across active categories"
+              icon={LayoutGrid}
+              accent="indigo"
+            />
+            <KPICard
+              label="Monthly Revenue Generated"
+              value={formatCurrency(PORTFOLIO_STATS.monthlyRevenue)}
+              trend="+9.8%"
+              trendUp={true}
+              subtitle={`${formatCompact(PORTFOLIO_STATS.monthlyRevenue / PORTFOLIO_STATS.activePlans)} avg per plan`}
+              icon={DollarSign}
+              accent="emerald"
+            />
+            <KPICard
+              label="Average Plan Retention"
+              value="89%"
+              trend="+1.2%"
+              trendUp={true}
+              subtitle="Weighted index rating"
+              icon={TrendingUp}
+              accent="amber"
+            />
+            <KPICard
+              label="Members Expiring Next 30D"
+              value={PORTFOLIO_STATS.expiring30Days}
+              subtitle={`${formatCurrency(PORTFOLIO_STATS.forecastedRenewal)} renewal potential`}
+              icon={Calendar}
+              accent="slate"
+            />
+          </section>
+        )}
 
-         <section>
-            <IntelligenceCenter />
-         </section>
+        <div className="members-workspace mt-4">
+          <AnimatePresence mode="wait">
+            {/* ─── PORTFOLIO VIEW ─── */}
+            {view === "portfolio" && (
+              <motion.div
+                key="portfolio"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-6"
+              >
+                {/* UNIFIED STICKY CONTROL PANEL */}
+                <div 
+                  className="bg-white border border-slate-200/80 rounded-xl shadow-sm flex flex-col"
+                  style={{ position: 'sticky', top: '-16px', zIndex: 20 }}
+                >
+                  {/* SEARCH & FILTERS ROW (TOOLBAR) */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 pt-4 pb-2.5">
+                    <div className="relative flex-1 max-w-md">
+                      <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search plans by name, category or duration..."
+                        className="w-full h-10 pl-11 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-slate-300 focus:bg-white transition-all placeholder:text-slate-400"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
 
-         <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 items-start">
-            <section className="space-y-5">
-               <PortfolioTable />
-            </section>
-            <aside className="space-y-6">
-               <RecommendedActions />
-               <div className="p-5 rounded-[20px] bg-indigo-600 text-white relative overflow-hidden shadow-xl shadow-indigo-100">
-                  <div className="absolute top-0 right-0 p-3 opacity-10">
-                     <Award size={64} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      {FILTER_OPTIONS.map(filter => (
+                        <button
+                          key={filter}
+                          onClick={() => setActiveFilter(filter)}
+                          className={cn(
+                            "h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all duration-200 flex items-center justify-center shadow-sm",
+                            activeFilter === filter
+                              ? "bg-slate-950 border-slate-950 text-white shadow-sm"
+                              : "bg-white border-slate-200 text-slate-500 hover:border-slate-350 hover:bg-slate-50 hover:text-slate-900"
+                          )}
+                        >
+                          {filter}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <h4 className="text-[9px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-3">Ecosystem Health</h4>
-                  <p className="text-lg font-black leading-tight">Revenue growth is 14% higher than previous quarter.</p>
-                  <button className="mt-5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-100 hover:text-white transition-colors">
-                     Analyze
-                     <ArrowRight size={12} />
-                  </button>
-               </div>
-            </aside>
-         </div>
 
-         <section className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-               {MEMBERSHIP_PORTFOLIO.slice(0, 3).map((plan, i) => (
-                 <div key={i} className="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm hover:shadow-lg transition-all group relative overflow-hidden">
-                    <div className="flex items-center gap-3.5 mb-6">
-                       <div className="w-12 h-12 rounded-xl bg-slate-950 text-white flex items-center justify-center font-black text-base shadow-lg shadow-slate-200">
-                          {plan.id && plan.id.includes('-') ? plan.id.split('-')[1] : 'PL'}
-                       </div>
-                       <div>
-                          <h4 className="text-sm font-black text-slate-950 leading-tight">{plan.name}</h4>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{plan.category}</span>
-                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-6 mb-6">
-                       <div className="space-y-0.5">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Revenue</span>
-                          <span className="text-base font-black text-slate-950">{formatCompact(plan.revenue)}</span>
-                       </div>
-                       <div className="space-y-0.5">
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Members</span>
-                          <span className="text-base font-black text-slate-950">{plan.activeMembers}</span>
-                       </div>
-                    </div>
-                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100 mb-6">
-                       <div className="text-center">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Reten.</span>
-                          <span className="text-[11px] font-black text-emerald-600">{plan.retention}%</span>
-                       </div>
-                       <div className="text-center">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Growth</span>
-                          <span className="text-[11px] font-black text-indigo-600">{plan.trend}</span>
-                       </div>
-                       <div className="text-center">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Risk</span>
-                          <span className={cn("text-[11px] font-black", plan.risk === "Low" ? "text-emerald-600" : "text-rose-600")}>{plan.risk}</span>
-                       </div>
-                    </div>
-                    <button className="w-full h-10 rounded-lg bg-slate-950 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all">Deep Analysis</button>
-                 </div>
-               ))}
-            </div>
-         </section>
-      </main>
+                  {/* DIVIDER */}
+                  <div className="border-t border-slate-100/80 mx-4" />
 
-      <AnimatePresence>
-        {isWorkflowOpen && <CreatePlanWorkflow isOpen={isWorkflowOpen} onClose={() => setIsWorkflowOpen(false)} />}
-      </AnimatePresence>
+                  {/* TABLE META ROW */}
+                  <div className="flex items-center justify-between gap-12 px-4 pt-1 pb-3.5 bg-white rounded-b-xl">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-[10px] font-extrabold text-slate-800 uppercase tracking-widest leading-none">Membership Tiers</h3>
+                      <span className="text-slate-350 text-xs">/</span>
+                      <p className="text-xs text-slate-400 font-semibold leading-none">Configured subscription packages, rates, and enrollment status</p>
+                    </div>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">Updated today</span>
+                  </div>
+                </div>
+
+                {/* TABLE/GRID PANEL */}
+                <div className="members-table-panel mt-4">
+
+                  <section className="members-table-wrap">
+                    {filteredPlans.length === 0 ? (
+                      <div className="py-16 flex flex-col items-center text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-4">
+                          <Search size={20} className="text-slate-400" />
+                        </div>
+                        <h3 className="text-sm font-bold text-slate-900">No Membership Plans Found</h3>
+                        <p className="text-xs font-semibold text-slate-500 mt-1 max-w-sm">
+                          Try adjusting your search query or clear the active filters.
+                        </p>
+                        <button
+                          onClick={() => { setSearchQuery(""); setActiveFilter("All"); }}
+                          className="mt-4 px-4 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-slate-800 transition-colors"
+                        >
+                          Clear Filters
+                        </button>
+                      </div>
+                    ) : (
+                      <table className="members-table">
+                        <tbody className="grid gap-3">
+                          <LayoutGroup>
+                            <AnimatePresence mode="popLayout">
+                              {filteredPlans.map((plan, i) => (
+                                <PlanCard
+                                  key={plan.id}
+                                  plan={plan}
+                                  index={i}
+                                  onViewDetails={setDetailsPlan}
+                                />
+                              ))}
+                            </AnimatePresence>
+                          </LayoutGroup>
+                        </tbody>
+                      </table>
+                    )}
+                  </section>
+                </div>
+
+                {/* COMPACT REDESIGNED DARK OPERATIONS PANEL */}
+                {RECOMMENDATIONS.length > 0 && filteredPlans.length > 0 && (
+                  <section 
+                    className="text-white rounded-3xl p-6 md:p-8 border relative overflow-hidden mt-6"
+                    style={{
+                      background: '#090d16',
+                      borderColor: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '24px',
+                      color: '#ffffff'
+                    }}
+                  >
+                    {/* Ambient Glow Graphic Elements */}
+                    <div 
+                      className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none" 
+                      style={{ background: 'rgba(99, 102, 241, 0.08)' }}
+                    />
+                    <div 
+                      className="absolute bottom-0 left-0 w-60 h-60 rounded-full blur-[80px] -ml-20 -mb-20 pointer-events-none" 
+                      style={{ background: 'rgba(16, 185, 129, 0.04)' }}
+                    />
+
+                    <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                      {/* Left Column: Heading, Description, and Avatar Stack */}
+                      <div className="flex flex-col items-start gap-4 text-left">
+                        {/* Pill Tag */}
+                        <div 
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
+                          style={{
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            background: 'rgba(99, 102, 241, 0.1)',
+                            color: '#818cf8'
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                          Core Operations Radar
+                        </div>
+                        
+                        {/* Heading */}
+                        <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight max-w-md">
+                          Optimize your gym revenue models automatically.
+                        </h2>
+                        
+                        {/* Description */}
+                        <p className="text-slate-400 text-xs font-semibold leading-relaxed max-w-md mb-2">
+                          Identify churn risks, upgrade quarterly memberships to annual packages, and optimize pricing tiers using automated operations intelligence.
+                        </p>
+
+                        {/* Avatar Stack */}
+                        <div className="flex items-center gap-3 mt-2">
+                          <div className="flex -space-x-2">
+                            <div className="w-6 h-6 rounded-full border border-slate-900 bg-indigo-500 flex items-center justify-center text-[8px] font-black text-white">SD</div>
+                            <div className="w-6 h-6 rounded-full border border-slate-900 bg-emerald-500 flex items-center justify-center text-[8px] font-black text-white">GD</div>
+                            <div className="w-6 h-6 rounded-full border border-slate-900 bg-rose-500 flex items-center justify-center text-[8px] font-black text-white">AD</div>
+                            <div className="w-6 h-6 rounded-full border border-slate-900 bg-blue-600 flex items-center justify-center text-[8px] font-black text-white">+12</div>
+                          </div>
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                            Monitoring 1,128 Members Today
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Execute Actions & Stats Grid */}
+                      <div className="flex flex-col gap-4">
+                        {/* Primary Action Button (Solid Blue) */}
+                        <button 
+                          onClick={() => setIsModalOpen(true)}
+                          className="w-full py-3.5 px-5 text-white text-xs font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20"
+                          style={{ 
+                            background: '#1b64f2',
+                            color: '#ffffff',
+                            border: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Execute Churn Campaign
+                          <ArrowRight size={14} className="stroke-[3]" />
+                        </button>
+
+                        {/* Secondary Action Glass Card */}
+                        <div 
+                          className="p-4 rounded-xl border flex items-center gap-4 cursor-pointer transition-all hover:bg-white/[0.02] text-left"
+                          style={{ 
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            borderColor: 'rgba(255, 255, 255, 0.05)'
+                          }}
+                          onClick={() => setIsModalOpen(true)}
+                        >
+                          <div 
+                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.1)',
+                              borderColor: 'rgba(99, 102, 241, 0.2)',
+                              color: '#a5b4fc'
+                            }}
+                          >
+                            <Sparkles size={16} />
+                          </div>
+                          <div className="min-w-0 text-left">
+                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block">Featured Strategy</span>
+                            <span className="text-xs font-bold text-white block mt-0.5 leading-none">Annual Upgrade Campaign</span>
+                            <span className="text-[10px] text-slate-400 block mt-1">Target 31 quarterly members • ₹3.2L Target</span>
+                          </div>
+                        </div>
+
+                        {/* Stats Grid (3 columns) */}
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { value: "28", label: "Expiring", subtitle: "Follow Up" },
+                            { value: "17", label: "Conversions", subtitle: "Upgrade Target" },
+                            { value: "+8%", label: "Pricing Gap", subtitle: "Optimize Tiers" }
+                          ].map((item, idx) => (
+                            <div 
+                              key={idx} 
+                              className="p-4 rounded-xl border text-center transition-all hover:border-white/[0.08]"
+                              style={{ 
+                                background: 'rgba(255, 255, 255, 0.01)',
+                                borderColor: 'rgba(255, 255, 255, 0.03)'
+                              }}
+                            >
+                              <span className="text-lg font-black text-white block tracking-tight leading-none">{item.value}</span>
+                              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mt-2 leading-none">{item.label}</span>
+                              <span className="text-[7px] font-bold text-slate-400 block mt-1 leading-none">{item.subtitle}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Footer Disclaimer */}
+                        <div className="flex items-center justify-center gap-1.5 text-slate-500 text-[9px] font-bold uppercase tracking-wider mt-1">
+                          <Shield size={11} className="text-slate-500 shrink-0" />
+                          Secure payment audits. Encrypted database.
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+              </motion.div>
+            )}
+
+            {/* ─── ANALYTICS VIEW ─── */}
+            {view === "analytics" && (
+              <motion.div
+                key="analytics"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-6"
+              >
+                {/* Revenue + Retention trends */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Revenue Trends</h3>
+                      <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                        <ArrowUp size={12} /> +9.8% vs last month
+                      </span>
+                    </div>
+                    {/* Simple bar chart */}
+                    <div className="flex items-end gap-3 h-40">
+                      {[
+                        { label: "Jan", value: 65 },
+                        { label: "Feb", value: 72 },
+                        { label: "Mar", value: 68 },
+                        { label: "Apr", value: 78 },
+                        { label: "May", value: 85 },
+                        { label: "Jun", value: 82 },
+                        { label: "Jul", value: 92 },
+                      ].map((m, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{ height: `${m.value}%` }}
+                            transition={{ duration: 0.5, delay: i * 0.05 }}
+                            className={cn(
+                              "w-full rounded-lg",
+                              m.value > 85 ? "bg-emerald-500" : m.value > 75 ? "bg-indigo-500" : "bg-slate-200"
+                            )}
+                          />
+                          <span className="text-[8px] font-medium text-slate-400">{m.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Retention Trends</h3>
+                      <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                        <ArrowUp size={12} /> +4% improvement
+                      </span>
+                    </div>
+                    <div className="flex items-end gap-3 h-40">
+                      {[
+                        { label: "Jan", value: 58 },
+                        { label: "Feb", value: 62 },
+                        { label: "Mar", value: 60 },
+                        { label: "Apr", value: 64 },
+                        { label: "May", value: 68 },
+                        { label: "Jun", value: 72 },
+                        { label: "Jul", value: 76 },
+                      ].map((m, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{ height: `${m.value}%` }}
+                            transition={{ duration: 0.5, delay: i * 0.05 }}
+                            className={cn(
+                              "w-full rounded-lg",
+                              m.value > 70 ? "bg-emerald-500" : m.value > 62 ? "bg-indigo-500" : "bg-slate-200"
+                            )}
+                          />
+                          <span className="text-[8px] font-medium text-slate-400">{m.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plan Comparison + Growth */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                    <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-5">Plan Performance Comparison</h3>
+                    <div className="space-y-4">
+                      {MEMBERSHIP_PORTFOLIO.map(plan => (
+                        <div key={plan.id} className="flex items-center gap-4">
+                          <div className="w-7 h-7 rounded-lg bg-slate-950 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{plan.id}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-slate-900 truncate">{plan.name}</p>
+                            <p className="text-[9px] text-slate-400">{plan.activeMembers} members</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-slate-900">{formatCompact(plan.revenue)}</p>
+                            <p className={cn("text-[9px] font-semibold", plan.trendUp ? "text-emerald-600" : "text-rose-600")}>{plan.trend}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                    <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-5">Plan Popularity</h3>
+                    <div className="space-y-4">
+                      {[...MEMBERSHIP_PORTFOLIO].sort((a, b) => b.activeMembers - a.activeMembers).map(plan => {
+                        const max = Math.max(...MEMBERSHIP_PORTFOLIO.map(p => p.activeMembers));
+                        const pct = (plan.activeMembers / max) * 100;
+                        return (
+                          <div key={plan.id}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[11px] font-medium text-slate-700">{plan.name}</span>
+                              <span className="text-[11px] font-bold text-slate-900">{plan.activeMembers}</span>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.6, delay: 0.1 }}
+                                className={cn(
+                                  "h-full rounded-full",
+                                  plan.trendUp ? "bg-emerald-500" : "bg-rose-500"
+                                )}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Renewal Forecast */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Renewal Forecast</h3>
+                    <span className="text-[10px] font-bold text-slate-400">{PORTFOLIO_STATS.expiring30Days} members expiring</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-6">
+                    {[
+                      { label: "Expected Renewals", value: "34", pct: 71, color: "emerald" },
+                      { label: "At Risk of Churn", value: "10", pct: 21, color: "amber" },
+                      { label: "Likely to Expire", value: "4", pct: 8, color: "rose" },
+                      { label: "Forecast Revenue", value: formatCompact(PORTFOLIO_STATS.forecastedRenewal), pct: 100, color: "indigo" },
+                    ].map((item, i) => (
+                      <div key={i} className="text-center p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <p className="text-xl font-extrabold text-slate-900 mb-1">{item.value}</p>
+                        <p className="text-[10px] text-slate-500">{item.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* CREATE PLAN MODAL */}
+      <CreatePlanModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+      {/* PLAN DETAILS MODAL */}
+      <PlanDetailsModal
+        plan={detailsPlan}
+        onClose={() => setDetailsPlan(null)}
+        onEdit={(plan) => {
+          setDetailsPlan(null);
+          setIsModalOpen(true);
+        }}
+        onDuplicate={(plan) => {
+          setDetailsPlan(null);
+        }}
+        onArchive={(plan) => {
+          setDetailsPlan(null);
+        }}
+        onDelete={(plan) => {
+          setDetailsPlan(null);
+        }}
+      />
     </div>
   );
-};
+}
 
 // ─────────────────────────────────────────
 // MOUNT UTILITY
@@ -917,5 +1629,3 @@ export function mountMembershipPlans() {
     return null;
   }
 }
-
-export default MembershipPortfolioDashboard;

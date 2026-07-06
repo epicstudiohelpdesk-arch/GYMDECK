@@ -66,7 +66,6 @@ const REVENUE_SOURCES = [
   { id: "diet", label: "Diet Programs", icon: FileText, color: "text-purple-500", bg: "bg-purple-50" }
 ];
 
-const PAYMENT_METHODS = ["UPI", "Cash", "Card", "Bank Transfer", "Online Gateway"];
 
 const MOCK_TRANSACTIONS = [
   {
@@ -206,7 +205,7 @@ const RevenueReport = () => {
   return (
     <div className="min-h-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-indigo-100 pb-20">
       {/* 5. TOP UTILITY HEADER */}
-      <header className="h-[64px] bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-[100]">
+      <header className="h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-[100]">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="flex items-center gap-2">
             <PieChart size={16} className="text-slate-400" />
@@ -277,7 +276,7 @@ const RevenueReport = () => {
         </div>
 
         {/* 8. DATE FILTER & REPORT CONTROL BAR */}
-        <section className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between mb-8 sticky top-[80px] z-[90] shadow-sm backdrop-blur-sm bg-white/95">
+        <section className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between mb-8 sticky top-[80px] z-[90] shadow-sm backdrop-blur-sm bg-white">
            <div className="flex items-center gap-2">
               <div className="flex bg-slate-100 p-1 rounded-2xl">
                  {["Today", "Last 7 Days", "Last 30 Days", "Monthly", "Quarterly", "Annual"].map(range => (

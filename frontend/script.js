@@ -102,12 +102,6 @@ const mountStageLazy = async (stage) => {
   }
 };
 
-const cleanupDisposables = new Map();
-
-const registerDisposable = (stage, cleanupFn) => {
-  cleanupDisposables.set(stage, cleanupFn);
-};
-
 const unmountInactiveStages = (currentStage) => {
   const currentCanonicalKey = getCanonicalKey(currentStage);
 
@@ -122,16 +116,6 @@ const unmountInactiveStages = (currentStage) => {
     }
   }
 
-  for (const [stage, cleanup] of cleanupDisposables.entries()) {
-    if (stage !== currentCanonicalKey && stage !== "dashboard") {
-      try {
-        cleanup();
-        cleanupDisposables.delete(stage);
-      } catch (err) {
-        console.warn(`GymDeck: Failed to clean up ${stage}:`, err);
-      }
-    }
-  }
 };
 
 // Pre-load critical modules for instant transitions
@@ -562,8 +546,6 @@ const initVerificationCenter = async (row, triggerButton) => {
 };
 
 const documentMemberLabel = document.querySelector("[data-document-member]");
-const documentTypeLabel = document.querySelector("[data-document-type]");
-const documentFigure = document.querySelector("[data-document-figure]");
 const documentImage = document.querySelector("[data-document-image]");
 const addMemberModal = document.querySelector(".member-form-modal");
 const addMemberBackdrop = document.querySelector(".member-form-backdrop");
@@ -587,7 +569,6 @@ const addMemberDatePickerToday = document.querySelector("[data-date-picker-today
 const addMemberDatePickerClear = document.querySelector("[data-date-picker-clear]");
 const addMemberUploadInputs = Array.from(document.querySelectorAll("[data-member-upload-input], [data-doc-upload-input]"));
 const addMemberUploadTriggers = Array.from(document.querySelectorAll("[data-member-upload-trigger], [data-doc-upload-trigger]"));
-const addMemberUploadRemoveButtons = Array.from(document.querySelectorAll("[data-member-upload-remove], [data-doc-upload-remove]"));
 
 // Document upload modal (post-save)
 const docUploadAlert = document.querySelector("[data-doc-upload-alert]");
@@ -910,155 +891,7 @@ const compressImage = (file, quality = 0.75, maxWidth = 1200) => {
   });
 };
 
-/**
- * Loads the PDF.js library dynamically from CDN.
- */
-const loadPdfJs = () => {
-  return new Promise((resolve, reject) => {
-    if (window.pdfjsLib) {
-      resolve(window.pdfjsLib);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "/pdf.min.js";
-    script.onload = () => {
-      if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
-        resolve(window.pdfjsLib);
-      } else {
-        reject(new Error("pdfjsLib not defined after script load"));
-      }
-    };
-    script.onerror = () => reject(new Error("Failed to load PDF.js script"));
-    document.head.appendChild(script);
-  });
-};
 
-/**
- * Compresses PDF files under 200KB by converting the scanned page to a high-resolution WebP,
- * falling back to binary JPEG extraction if offline.
- */
-const compressPdfFile = async (file) => {
-  try {
-    const pdfjs = await loadPdfJs();
-    const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjs.getDocument({
-      data: arrayBuffer,
-      disableWorker: true
-    });
-    const pdf = await loadingTask.promise;
-    
-    // Render the first page (assumed main document page for verification cards)
-    const page = await pdf.getPage(1);
-    
-    // Calculate layout-constrained scale to keep dimensions within a crisp but lightweight 1600px width/height limit
-    let scale = 2.0; 
-    let viewport = page.getViewport({ scale });
-    const maxDimension = 1600;
-    if (viewport.width > maxDimension || viewport.height > maxDimension) {
-      const scaleX = maxDimension / viewport.width;
-      const scaleY = maxDimension / viewport.height;
-      scale = Math.min(scaleX, scaleY) * scale;
-      viewport = page.getViewport({ scale });
-    }
-    
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    
-    // Fill solid white background (PDFs default to transparent on canvas)
-    context.fillStyle = "#FFFFFF";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    
-    await page.render({ canvasContext: context, viewport: viewport }).promise;
-    
-    return new Promise((resolve) => {
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          resolve(file);
-          return;
-        }
-        
-        let quality = 0.75;
-        let currentScale = scale;
-        let compressedFile = new File([blob], file.name.replace(/\.pdf$/i, ".webp"), { type: "image/webp" });
-        
-        // Loop to reduce quality first, then drop dimensions if needed to guarantee it fits under 200KB
-        while (compressedFile.size > 200 * 1024) {
-          if (quality > 0.3) {
-            quality -= 0.1;
-          } else if (currentScale > 0.5) {
-            currentScale -= 0.25;
-            const newViewport = page.getViewport({ scale: currentScale });
-            
-            // Re-render PDF page at a lower dimension/resolution to shrink file size significantly
-            canvas.width = newViewport.width;
-            canvas.height = newViewport.height;
-            context.fillStyle = "#FFFFFF";
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            await page.render({ canvasContext: context, viewport: newViewport }).promise;
-            
-            // Reset quality slightly to try to maintain quality at the new resolution
-            quality = 0.5;
-          } else {
-            // Keep at lowest scale/quality fallback if it still can't compress further (safeguard)
-            break;
-          }
-          
-          const optBlob = await new Promise((resBlob) => {
-            canvas.toBlob(resBlob, "image/webp", quality);
-          });
-          if (!optBlob) break;
-          compressedFile = new File([optBlob], file.name.replace(/\.pdf$/i, ".webp"), { type: "image/webp" });
-        }
-        
-        console.log(`GymDeck: PDF compressed to WebP: ${(compressedFile.size / 1024).toFixed(1)}KB`);
-        resolve(compressedFile);
-      }, "image/webp", 0.75);
-    });
-  } catch (err) {
-    console.warn("GymDeck: PDF.js compilation or load failed, attempting binary JPEG stream extraction:", err);
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      
-      // Sniff out raw JPEG start/end magic bytes (0xFFD8FF and 0xFFD9)
-      let jpegStart = -1;
-      for (let i = 0; i < bytes.length - 2; i++) {
-        if (bytes[i] === 0xff && bytes[i+1] === 0xd8 && bytes[i+2] === 0xff) {
-          jpegStart = i;
-          break;
-        }
-      }
-      
-      if (jpegStart !== -1) {
-        let jpegEnd = -1;
-        for (let i = bytes.length - 2; i > jpegStart; i--) {
-          if (bytes[i] === 0xff && bytes[i+1] === 0xd9) {
-            jpegEnd = i + 2;
-            break;
-          }
-        }
-        
-        if (jpegEnd !== -1) {
-          const jpegBytes = bytes.subarray(jpegStart, jpegEnd);
-          const blob = new Blob([jpegBytes], { type: "image/jpeg" });
-          const imgFile = new File([blob], file.name.replace(/\.pdf$/i, ".jpg"), { type: "image/jpeg" });
-          
-          const compressed = await compressImage(imgFile, 0.70, 1600);
-          if (compressed.size < file.size) {
-            console.log(`GymDeck: Extracted and compressed embedded PDF JPEG: ${(compressed.size / 1024).toFixed(1)}KB`);
-            return compressed;
-          }
-        }
-      }
-    } catch (fallbackErr) {
-      console.error("GymDeck: Binary extraction fallback failed:", fallbackErr);
-    }
-    return file;
-  }
-};
 let sidebarScrollFrame = null;
 let sidebarScrollIdleTimeout = null;
 
@@ -1254,19 +1087,6 @@ const setDocUploadModalState = (isOpen, memberName = "") => {
   setAddMemberModalState(false);
 };
 
-const clearDocUploadPreview = (type) => {
-  const preview = getDocUploadPreview(type);
-  const image = getDocUploadImage(type);
-  const pdf = getDocUploadPdf(type);
-  const existing = docUploadUrls.get(type);
-  if (existing?.objectUrl) {
-    URL.revokeObjectURL(existing.objectUrl);
-    docUploadUrls.delete(type);
-  }
-  if (image) { image.src = ""; image.alt = ""; image.hidden = true; }
-  if (pdf) { pdf.src = ""; pdf.hidden = true; }
-  if (preview) preview.hidden = true;
-};
 
 const formatCalendarDate = (date) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -1509,7 +1329,6 @@ const escapeHtml = (value = "") =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
-const getMemberRows = () => Array.from(document.querySelectorAll("[data-member-card]"));
 
 const getMemberDobCells = () => Array.from(document.querySelectorAll("[data-member-dob]"));
 
@@ -2503,16 +2322,6 @@ const validateMemberForm = () => {
   return errors;
 };
 
-const focusInvalidField = (field) => {
-  const focusTarget =
-    field.querySelector("input:not([type='hidden']), textarea") ||
-    field.querySelector("button");
-
-  field.scrollIntoView({ behavior: "smooth", block: "center" });
-  window.setTimeout(() => {
-    focusTarget?.focus?.();
-  }, 180);
-};
 
 const setupCardDownloadButton = (btn, memberName, imageSrc = "") => {
   if (!btn) return;
@@ -2770,17 +2579,6 @@ const updateMemberAges = () => {
   });
 };
 
-const matchesMemberFilter = (card) => {
-  if (activeMemberFilter === "verified") {
-    return card.dataset.memberStatus === "verified";
-  }
-
-  if (activeMemberFilter === "recent") {
-    return card.dataset.memberRecent === "true";
-  }
-
-  return true;
-};
 
 const renderPaginationControls = (totalMatches) => {
   if (!paginationContainer || !paginationNumbers) return;
@@ -2881,8 +2679,6 @@ const setActiveView = (viewName) => {
   }
 
   const activeStage = stageAliases[safeView] || safeView;
-  const isComingSoon = !stageVisibilityKeys.has(activeStage);
-
   setStageVisibility(activeStage);
   if (safeView === "members") {
     loadMembersFromBackend().then(() => updateMemberResults());

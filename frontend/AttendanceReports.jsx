@@ -54,12 +54,6 @@ import { motion, AnimatePresence } from "framer-motion";
 // ─────────────────────────────────────────
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 0,
-});
-
 // ─────────────────────────────────────────
 // MOCK DATA
 // ─────────────────────────────────────────
@@ -364,7 +358,7 @@ const AttendanceReportsPage = () => {
 
   return (
     <div className="min-h-full font-sans text-slate-950 bg-slate-50/30 flex flex-col">
-      <header className="sticky top-0 z-40 h-[64px] bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between shadow-sm">
+      <header className="sticky top-0 z-40 h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
             Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950">Intelligence Reports</span>

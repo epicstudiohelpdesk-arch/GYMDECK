@@ -92,7 +92,7 @@ const DeviceSync = () => {
     <div className="device-sync-workspace bg-[#F8FAFC] min-h-full font-['Plus_Jakarta_Sans'] text-[#111827] pb-24">
       
       {/* 5. TOP UTILITY HEADER */}
-      <header className="sticky top-0 z-[100] h-16 bg-white/80 backdrop-blur-md border-b border-[#E5E7EB] px-8 flex items-center justify-between">
+      <header className="sticky top-0 z-[100] h-16 bg-white backdrop-blur-md border-b border-[#E5E7EB] px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <nav className="flex items-center text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
             <span>Settings</span>
