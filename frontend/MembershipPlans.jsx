@@ -359,86 +359,86 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 280 }}
-            className="relative w-full max-w-3xl bg-white rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col z-50 p-6 md:p-8 m-auto text-left max-h-[90vh] md:max-h-[500px]"
+            className="relative w-full max-w-4xl bg-white rounded-[32px] border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col z-50 p-8 md:p-10 m-auto text-left max-h-[90vh] md:max-h-[600px]"
           >
             {/* Header section with category and plan ID */}
-            <header className="flex justify-between items-start gap-4 mb-5 shrink-0">
-              <div className="flex items-center gap-3">
+            <header className="flex justify-between items-start gap-5 mb-6 shrink-0">
+              <div className="flex items-center gap-4">
                 <div className={cn(
-                  "w-11 h-11 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white font-black text-xs shadow-md shrink-0",
+                  "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white font-black text-sm shadow-md shrink-0",
                   PLAN_COLORS[plan.id] || "from-slate-800 to-indigo-900"
                 )}>
                   {plan.id}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
                       {plan.category}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
                       {plan.duration}
                     </span>
                   </div>
-                  <h2 className="text-base font-black text-slate-900 tracking-tight mt-1 leading-tight">{plan.name}</h2>
+                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1.5 leading-tight">{plan.name}</h2>
                 </div>
               </div>
 
               {/* Close Button */}
               <button 
                 onClick={onClose}
-                className="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-650 flex items-center justify-center transition-all shadow-sm"
+                className="w-10 h-10 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-650 flex items-center justify-center transition-all shadow-sm"
               >
-                <X size={16} className="stroke-[2.5]" />
+                <X size={20} className="stroke-[2.5]" />
               </button>
             </header>
 
             {/* Content Layout */}
-            <div className="space-y-4 flex-1 overflow-y-auto pr-1">
+            <div className="space-y-6 flex-1 overflow-y-auto pr-1">
               
               {/* Financial Strategy Grid */}
-              <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pricing</span>
-                  <strong className="text-sm font-black text-slate-900 mt-0.5 block">{formatCurrency(plan.price)}</strong>
-                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Base Fee</span>
+              <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pricing</span>
+                  <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.price)}</strong>
+                  <span className="text-[10px] text-slate-400 font-semibold mt-1">Base Fee</span>
                 </article>
 
-                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Active Enrollment</span>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <strong className="text-sm font-black text-slate-900">{plan.activeMembers}</strong>
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Enrollment</span>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <strong className="text-base md:text-lg font-black text-slate-900">{plan.activeMembers}</strong>
                     <span className={cn(
-                      "text-[8px] font-bold",
+                      "text-[10px] font-bold",
                       plan.trendUp ? "text-emerald-600" : "text-rose-600"
                     )}>
                       {plan.trend}
                     </span>
                   </div>
-                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Total Members</span>
+                  <span className="text-[10px] text-slate-400 font-semibold mt-1">Total Members</span>
                 </article>
 
-                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Monthly Contribution</span>
-                  <strong className="text-sm font-black text-slate-900 mt-0.5 block">{formatCurrency(plan.monthlyContribution)}</strong>
-                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">MRR contribution</span>
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Monthly Contribution</span>
+                  <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.monthlyContribution)}</strong>
+                  <span className="text-[10px] text-slate-400 font-semibold mt-1">MRR contribution</span>
                 </article>
 
-                <article className="p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[70px]">
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">LTD Revenue</span>
-                  <strong className="text-sm font-black text-slate-900 mt-0.5 block">{formatCurrency(plan.revenue)}</strong>
-                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Total Generated</span>
+                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">LTD Revenue</span>
+                  <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.revenue)}</strong>
+                  <span className="text-[10px] text-slate-400 font-semibold mt-1">Total Generated</span>
                 </article>
               </section>
 
               {/* Grid side-by-side for Analytics and Privileges */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                 
                 {/* Status and Health Analytics */}
-                <section className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 items-center">
+                <section className="md:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 p-4.5 rounded-2xl bg-slate-50/70 border border-slate-100 items-center">
                   
                   {/* Concentric Gauge SVG Column (span 5) */}
-                  <div className="sm:col-span-5 flex justify-center items-center relative h-[108px] shrink-0">
-                    <svg className="w-[108px] h-[108px]" viewBox="0 0 120 120">
+                  <div className="sm:col-span-5 flex justify-center items-center relative h-[130px] w-[130px] mx-auto shrink-0">
+                    <svg className="w-[130px] h-[130px]" viewBox="0 0 120 120">
                       {/* Outer Track (Retention) */}
                       <circle
                         cx="60"
@@ -491,7 +491,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                     {/* Centered text indicators inside Ring */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
                       <span className={cn(
-                        "text-[9px] font-black uppercase tracking-wider leading-none",
+                        "text-[11px] font-black uppercase tracking-wider leading-none",
                         statusColor === "emerald" ? "text-emerald-600" :
                         statusColor === "indigo" ? "text-indigo-600" :
                         statusColor === "rose" ? "text-rose-600" :
@@ -499,52 +499,52 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                       )}>
                         {plan.status}
                       </span>
-                      <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                         {plan.risk} Risk
                       </span>
                     </div>
                   </div>
 
                   {/* Details and Legend Column (span 7) */}
-                  <div className="sm:col-span-7 space-y-2.5 text-left">
+                  <div className="sm:col-span-7 space-y-3 text-left">
                     <div>
-                      <h4 className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Plan Performance Index</h4>
-                      <p className="text-[10px] font-semibold text-slate-500 leading-normal mt-0.5">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Plan Performance Index</h4>
+                      <p className="text-xs font-semibold text-slate-500 leading-relaxed mt-1">
                         This tier exhibits a <span className="font-extrabold text-slate-900">{plan.trend}</span> growth velocity with optimized operational health parameters.
                       </p>
                     </div>
 
-                    <div className="space-y-1.5 border-t border-slate-200/50 pt-2">
+                    <div className="space-y-2 border-t border-slate-200/50 pt-2.5">
                       {/* Retention Legend */}
-                      <div className="flex items-center justify-between text-[9px] leading-none">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-between text-xs leading-none">
+                        <div className="flex items-center gap-2">
                           <span className={cn(
-                            "w-2 h-2 rounded-full shrink-0",
+                            "w-2.5 h-2.5 rounded-full shrink-0",
                             statusColor === "rose" ? "bg-rose-500" : "bg-emerald-500"
                           )} />
-                          <span className="font-semibold text-slate-650 uppercase tracking-wide">Retention Rate</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wide">Retention Rate</span>
                         </div>
-                        <span className="font-extrabold text-slate-900 font-mono">{plan.retention}%</span>
+                        <span className="font-black text-slate-900 font-mono text-sm">{plan.retention}%</span>
                       </div>
 
                       {/* Renewal Legend */}
-                      <div className="flex items-center justify-between text-[9px] leading-none">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-between text-xs leading-none">
+                        <div className="flex items-center gap-2">
                           <span className={cn(
-                            "w-2 h-2 rounded-full shrink-0",
+                            "w-2.5 h-2.5 rounded-full shrink-0",
                             plan.renewalRate < 60 ? "bg-rose-500" : "bg-indigo-500"
                           )} />
-                          <span className="font-semibold text-slate-650 uppercase tracking-wide">Renewal Velocity</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wide">Renewal Velocity</span>
                         </div>
-                        <span className="font-extrabold text-slate-900 font-mono">{plan.renewalRate}%</span>
+                        <span className="font-black text-slate-900 font-mono text-sm">{plan.renewalRate}%</span>
                       </div>
                     </div>
                   </div>
                 </section>
 
                 {/* Access Strategy & Privileges */}
-                <section className="space-y-2.5">
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Access Privileges</h4>
+                <section className="md:col-span-5 space-y-3">
+                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Access Privileges</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: "Gym Floor", enabled: true },
@@ -557,12 +557,12 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                       <div 
                         key={idx} 
                         className={cn(
-                          "p-2.5 rounded-xl border text-[8px] font-bold uppercase tracking-wider flex items-center justify-between shadow-sm",
+                          "p-3 rounded-2xl border text-[10px] font-extrabold uppercase tracking-wider flex items-center justify-between shadow-sm",
                           privilege.enabled ? "bg-white border-slate-200 text-slate-700" : "bg-slate-50 border-slate-100 text-slate-350"
                         )}
                       >
                         <span className="truncate mr-1">{privilege.label}</span>
-                        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", privilege.enabled ? "bg-emerald-400 animate-pulse" : "bg-slate-300")} />
+                        <div className={cn("w-2 h-2 rounded-full shrink-0", privilege.enabled ? "bg-emerald-400 animate-pulse" : "bg-slate-300")} />
                       </div>
                     ))}
                   </div>
@@ -571,44 +571,44 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             </div>
 
             {/* Bottom Actions Row */}
-            <footer className="mt-8 pt-4 border-t border-slate-100 flex flex-wrap gap-2.5 justify-end shrink-0">
+            <footer className="mt-10 pt-5 border-t border-slate-100 flex flex-wrap gap-2.5 justify-end shrink-0">
               <button 
                 onClick={() => { onEdit(plan); onClose(); }}
-                className="px-3.5 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4.5 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Edit3 size={12} />
+                <Edit3 size={13} />
                 Edit Plan
               </button>
               
               <button 
                 onClick={() => { onDuplicate(plan); onClose(); }}
-                className="px-3.5 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4.5 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Copy size={12} />
+                <Copy size={13} />
                 Duplicate
               </button>
 
               <button 
                 onClick={() => { onArchive(plan); onClose(); }}
-                className="px-3.5 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4.5 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Archive size={12} />
+                <Archive size={13} />
                 Archive
               </button>
 
               <button 
                 onClick={() => { onDelete(plan); onClose(); }}
-                className="px-3.5 h-9 rounded-xl bg-rose-50 hover:bg-rose-100/70 text-rose-600 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4.5 h-11 rounded-2xl bg-rose-50 hover:bg-rose-100/70 text-rose-600 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Trash2 size={12} />
+                <Trash2 size={13} />
                 Delete
               </button>
 
-              <div className="h-9 w-[1px] bg-slate-200 mx-1.5" />
+              <div className="h-11 w-[1px] bg-slate-200 mx-1.5" />
 
               <button 
                 onClick={onClose}
-                className="px-5 h-9 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center"
+                className="px-7 h-11 rounded-2xl bg-slate-900 hover:bg-black text-white text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center"
               >
                 Done
               </button>
