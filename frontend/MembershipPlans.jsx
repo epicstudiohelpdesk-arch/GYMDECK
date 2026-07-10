@@ -1205,7 +1205,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setIsCustomAccessModalOpen(false)}
-                  className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
+                  className="absolute inset-0 bg-slate-950/75 backdrop-blur-xl"
                 />
                 
                 {/* Small central card */}
