@@ -1067,16 +1067,16 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                                   <Icon size={16} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                    <h4 className="text-xs font-bold text-slate-900 leading-none">{card.label}</h4>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h4 className="text-xs font-bold text-slate-900 leading-tight break-all break-words">{card.label}</h4>
                                     <div className={cn(
-                                      "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                                      "w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 mt-0.5",
                                       isChecked ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white"
                                     )}>
                                       {isChecked && <CheckCircle2 size={10} className="stroke-[3]" />}
                                     </div>
                                   </div>
-                                  <p className="text-[9px] text-slate-400 mt-1 leading-normal">{card.description}</p>
+                                  <p className="text-[9px] text-slate-400 mt-1 leading-normal break-all break-words">{card.description}</p>
                                 </div>
                               </div>
                             );
@@ -1224,11 +1224,15 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
 
                   <div className="space-y-3">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Access Name *</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Access Name *</label>
+                        <span className="text-[8px] font-mono text-slate-400">{customAccessName.length}/25</span>
+                      </div>
                       <input
                         type="text"
                         value={customAccessName}
                         onChange={(e) => setCustomAccessName(e.target.value)}
+                        maxLength={25}
                         placeholder="e.g. Steam/Sauna Access"
                         className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
                         autoFocus
@@ -1236,10 +1240,14 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                     </div>
                     
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Description (Optional)</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Description (Optional)</label>
+                        <span className="text-[8px] font-mono text-slate-400">{customAccessDesc.length}/60</span>
+                      </div>
                       <textarea
                         value={customAccessDesc}
                         onChange={(e) => setCustomAccessDesc(e.target.value)}
+                        maxLength={60}
                         placeholder="Describe the limits or benefits of this access..."
                         rows={3}
                         className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none resize-none"
