@@ -1527,7 +1527,7 @@ export default function MembershipPortfolioDashboard() {
                 className="space-y-6"
               >
                 {/* Sentinel to detect sticky state */}
-                <div ref={sentinelRef} style={{ height: '1px', marginBottom: '-1px', pointerEvents: 'none' }} />
+                <div ref={sentinelRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', pointerEvents: 'none' }} />
 
                 {/* UNIFIED STICKY CONTROL PANEL */}
                 <div 
@@ -1535,7 +1535,7 @@ export default function MembershipPortfolioDashboard() {
                     "bg-white border border-slate-200/80 shadow-sm flex flex-col transition-all duration-200",
                     isHeaderStuck ? "rounded-none border-x-0 border-t-0" : "rounded-xl"
                   )}
-                  style={{ position: 'sticky', top: '-16px', zIndex: 20 }}
+                  style={{ position: 'sticky', top: '-1px', zIndex: 20 }}
                 >
                   {/* SEARCH & FILTERS ROW (TOOLBAR) */}
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 pt-4 pb-2.5">
