@@ -846,6 +846,12 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
   const [isCustomAccessModalOpen, setIsCustomAccessModalOpen] = useState(false);
   const [customAccessName, setCustomAccessName] = useState("");
   const [customAccessDesc, setCustomAccessDesc] = useState("");
+  
+  const [areaOptions, setAreaOptions] = useState([
+    "Gym Floor", "Cardio Zone", "Steam/Sauna", "Group Classes", "Personal Training", "Locker Premium"
+  ]);
+  const [isCustomAreaModalOpen, setIsCustomAreaModalOpen] = useState(false);
+  const [customAreaName, setCustomAreaName] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -855,9 +861,14 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
       setAccessCards([
         { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
       ]);
+      setAreaOptions([
+        "Gym Floor", "Cardio Zone", "Steam/Sauna", "Group Classes", "Personal Training", "Locker Premium"
+      ]);
       setIsCustomAccessModalOpen(false);
       setCustomAccessName("");
       setCustomAccessDesc("");
+      setIsCustomAreaModalOpen(false);
+      setCustomAreaName("");
     }
   }, [isOpen]);
 
@@ -1104,7 +1115,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       <div className="space-y-3">
                         <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Area Permissions</h4>
                         <div className="grid grid-cols-2 gap-2">
-                          {["Gym Floor", "Cardio Zone", "Steam/Sauna", "Group Classes", "Personal Training", "Locker Premium"].map(area => {
+                          {areaOptions.map(area => {
                             const isActive = areas.includes(area);
                             return (
                               <motion.button
@@ -1129,6 +1140,19 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                               </motion.button>
                             );
                           })}
+
+                          {/* Dotted custom area creator button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomAreaName("");
+                              setIsCustomAreaModalOpen(true);
+                            }}
+                            className="p-3 rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-350 text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[38px]"
+                          >
+                            <Plus size={10} className="stroke-[3]" />
+                            <span>Create</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1282,6 +1306,86 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       className="flex-1 h-10 rounded-xl bg-slate-950 hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-black uppercase tracking-widest text-white transition-all shadow-md"
                     >
                       Save Access
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* NESTED CUSTOM AREA MODAL */}
+          <AnimatePresence>
+            {isCustomAreaModalOpen && (
+              <motion.div
+                key="custom-area-modal-container"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
+              >
+                {/* Dark blur backdrop */}
+                <motion.div
+                  key="custom-area-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsCustomAreaModalOpen(false)}
+                  className="absolute inset-0 bg-slate-950/75 backdrop-blur-xl"
+                />
+                
+                {/* Small central card */}
+                <motion.div
+                  key="custom-area-panel"
+                  initial={{ scale: 0.95, y: 10, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.95, y: 10, opacity: 0 }}
+                  transition={{ type: "spring", duration: 0.35, bounce: 0.15 }}
+                  className="relative w-full max-w-md bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 z-50 flex flex-col gap-4 text-left"
+                >
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Create Custom Area</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 font-mono uppercase tracking-wide">Define a new training zone or room</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Area Name *</label>
+                        <span className="text-[8px] font-mono text-slate-400">{customAreaName.length}/20</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={customAreaName}
+                        onChange={(e) => setCustomAreaName(e.target.value)}
+                        maxLength={20}
+                        placeholder="e.g. Crossfit Arena"
+                        className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomAreaModalOpen(false)}
+                      className="flex-1 h-10 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const trimmedName = customAreaName.trim();
+                        if (!trimmedName) return;
+                        setAreaOptions(prev => [...prev, trimmedName]);
+                        setAreas(prev => [...prev, trimmedName]);
+                        setIsCustomAreaModalOpen(false);
+                      }}
+                      disabled={!customAreaName.trim()}
+                      className="flex-1 h-10 rounded-xl bg-slate-950 hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-black uppercase tracking-widest text-white transition-all shadow-md"
+                    >
+                      Save Area
                     </button>
                   </div>
                 </motion.div>
