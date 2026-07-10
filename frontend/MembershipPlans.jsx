@@ -1524,7 +1524,7 @@ export default function MembershipPortfolioDashboard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-6"
+                className="flex flex-col"
               >
                 {/* Sentinel to detect sticky state */}
                 <div ref={sentinelRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', pointerEvents: 'none' }} />
