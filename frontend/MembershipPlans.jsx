@@ -1019,11 +1019,11 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Base Price *</label>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Monthly Fees *</label>
                             <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="₹24,999" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Joining Fee</label>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Joining Fee (One time)</label>
                             <input type="number" value={form.joiningFee} onChange={(e) => setForm({ ...form, joiningFee: e.target.value })} placeholder="₹1,500" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
                           </div>
                         </div>
