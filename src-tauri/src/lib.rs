@@ -25,7 +25,7 @@ use commands::auth_commands::{
     AppState
 };
 use commands::business_commands::{
-    get_members_command, create_member_command, get_plans_command, get_member_documents_command, soft_delete_member_command, permanent_delete_member_command, permanent_delete_members_command, get_past_members_command,
+    get_members_command, create_member_command, get_plans_command, create_plan_command, delete_plan_command, get_member_documents_command, soft_delete_member_command, permanent_delete_member_command, permanent_delete_members_command, get_past_members_command,
     download_document_command, save_member_documents_command, update_member_command, upload_photo_command, get_document_temp_path_command
 };
 use auth::rate_limit::default_auth_limiter;
@@ -128,6 +128,21 @@ pub fn run() {
       // Schedule automated daily backups
       schedule_daily_backup(db_path.clone());
 
+      // Spawn splash screen timer to close splashscreen and show main window after 8s
+      let app_handle = app.handle().clone();
+      tauri::async_runtime::spawn(async move {
+          tokio::time::sleep(tokio::time::Duration::from_secs(8)).await;
+
+          if let Some(splashscreen) = app_handle.get_webview_window("splashscreen") {
+              let _ = splashscreen.close();
+          }
+
+          if let Some(main_window) = app_handle.get_webview_window("main") {
+              let _ = main_window.show();
+              let _ = main_window.set_focus();
+          }
+      });
+
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
@@ -140,6 +155,8 @@ pub fn run() {
         get_members_command,
         create_member_command,
         get_plans_command,
+        create_plan_command,
+        delete_plan_command,
         get_member_documents_command,
         soft_delete_member_command,
         permanent_delete_member_command,

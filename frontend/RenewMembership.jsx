@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -107,9 +108,9 @@ const RenewMembershipPage = () => {
   const total = subtotal + gst;
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 pb-24">
+    <div className="renew-membership-shell font-sans text-slate-900 selection:bg-blue-100">
       {/* Top Utility Header */}
-      <header className="h-16 bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span className="opacity-60">Payments & Billing</span>
           <span className="text-slate-300">/</span>
@@ -139,52 +140,51 @@ const RenewMembershipPage = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto">
-        {/* Title Section */}
-        <section className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Renew Membership</h1>
-            <p className="text-slate-500 max-w-2xl font-medium">
-              Manage membership renewals, recurring billing, upgrades, and retention workflows across your fitness ecosystem.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {["AI Retention Insights", "Revenue Forecast", "Upgrade Engine", "Renewal Automation"].map((pill) => (
-              <button key={pill} className="px-4 py-2 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-blue-500 transition-all shadow-sm">
-                {pill}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* KPI Strip */}
-        <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-10">
-          {kpis.map((kpi, index) => (
-            <motion.div 
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className={`w-10 h-10 ${kpi.bg} ${kpi.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <kpi.icon className="w-5 h-5" />
-                </div>
-                <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg ${kpi.isUp ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
-                  {kpi.isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {kpi.trend}
-                </div>
-              </div>
-              <div>
-                <p className="text-slate-500 text-[11px] font-bold uppercase tracking-wider mb-1">{kpi.label}</p>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">{kpi.value}</h3>
-              </div>
-            </motion.div>
+      {/* Title Section */}
+      <section className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative z-10">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-2">Renew Membership</h1>
+          <p className="text-slate-500 text-xs font-semibold leading-relaxed max-w-2xl">
+            Manage membership renewals, recurring billing, upgrades, and retention workflows across your fitness ecosystem.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {["AI Retention Insights", "Revenue Forecast", "Upgrade Engine", "Renewal Automation"].map((pill) => (
+            <button key={pill} className="px-4 py-2 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-blue-500 transition-all shadow-sm">
+              {pill}
+            </button>
           ))}
-        </section>
+        </div>
+      </section>
 
-        {/* Main Workspace Layout */}
+      {/* KPI Strip */}
+      <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-2 relative z-10">
+        {kpis.map((kpi, index) => (
+          <motion.div 
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className={`w-10 h-10 ${kpi.bg} ${kpi.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                <kpi.icon className="w-5 h-5" />
+              </div>
+              <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg ${kpi.isUp ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+                {kpi.isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {kpi.trend}
+              </div>
+            </div>
+            <div>
+              <p className="text-slate-500 text-[11px] font-bold uppercase tracking-wider mb-1">{kpi.label}</p>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">{kpi.value}</h3>
+            </div>
+          </motion.div>
+        ))}
+      </section>
+
+      <div className="renew-membership-workspace">
         <div className="grid grid-cols-12 gap-8">
           
           {/* Left Panel - Member Profile */}
@@ -450,7 +450,7 @@ const RenewMembershipPage = () => {
             </div>
           </aside>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
@@ -472,7 +472,7 @@ export const mountRenewMembership = () => {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <RenewMembershipPage />
+        <><RenewMembershipPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     console.log("GymDeck: Renew Membership module mounted successfully.");

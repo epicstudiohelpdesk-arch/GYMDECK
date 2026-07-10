@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -216,16 +217,16 @@ const AssignTrainer = () => {
   };
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100">
+    <div className="assign-trainer-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* 5. TOP UTILITY HEADER */}
-      <header className="sticky top-0 z-50 h-16 bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span className="hover:text-slate-900 cursor-pointer">Trainers & Staff</span>
           <ChevronRight size={14} className="opacity-40" />
           <span className="text-slate-900 font-bold">Assign Trainer</span>
         </div>
 
-        <div className="flex-1 max-w-2xl px-12">
+        <div className="flex-1 max-w-2xl px-12 relative">
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
             <input 
@@ -233,7 +234,7 @@ const AssignTrainer = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search member, trainer, PT package, specialization..."
-              className="w-full h-11 pl-12 pr-4 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl text-sm font-medium transition-all"
+              className="w-full h-11 pl-12 pr-4 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
             />
           </div>
         </div>
@@ -250,28 +251,29 @@ const AssignTrainer = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto">
-        {/* 6. PAGE TITLE SECTION */}
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Assign Trainer</h1>
-            <p className="text-slate-500 font-medium mt-1 max-w-[680px]">
-              Assign trainers intelligently based on specialization, availability, workload, schedules, and member requirements.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {['PT Matching', 'Availability Engine', 'Smart Scheduling', 'Workload Insights'].map(pill => (
-              <span key={pill} className="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                {pill}
-              </span>
-            ))}
-          </div>
+      {/* 6. PAGE TITLE SECTION */}
+      <div className="flex justify-between items-end mb-2 relative z-10">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Assign Trainer</h1>
+          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-[680px]">
+            Assign trainers intelligently based on specialization, availability, workload, schedules, and member requirements.
+          </p>
         </div>
+        <div className="flex gap-2">
+          {['PT Matching', 'Availability Engine', 'Smart Scheduling', 'Workload Insights'].map(pill => (
+            <span key={pill} className="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              {pill}
+            </span>
+          ))}
+        </div>
+      </div>
 
-        {/* 7. KPI ANALYTICS STRIP */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
-          {KPIS.map(kpi => <StatCard key={kpi.id} kpi={kpi} />)}
-        </div>
+      {/* 7. KPI ANALYTICS STRIP */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-2 relative z-10">
+        {KPIS.map(kpi => <StatCard key={kpi.id} kpi={kpi} />)}
+      </div>
+
+      <div className="assign-trainer-workspace">
 
         <div className="grid grid-cols-12 gap-6">
           {/* MEMBER PROFILE */}
@@ -352,7 +354,7 @@ const AssignTrainer = () => {
             </div>
           </aside>
         </div>
-      </main>
+      </div>
 
       <AnimatePresence>
         {isDrawerOpen && (
@@ -397,7 +399,7 @@ export const mountAssignTrainer = () => {
   const container = document.querySelector('[data-stage="assign-trainer"]');
   if (!container) return null;
   const root = createRoot(container);
-  root.render(<AssignTrainer />);
+  root.render(<><AssignTrainer /><BrandFooter /></>);
   return root;
 };
 

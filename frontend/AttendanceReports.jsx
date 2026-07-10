@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -357,17 +358,17 @@ const AttendanceReportsPage = () => {
   const setTableViewMode = useCallback(() => setViewMode("table"), []);
 
   return (
-    <div className="min-h-full font-sans text-slate-950 bg-slate-50/30 flex flex-col">
-      <header className="sticky top-0 z-40 h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
+    <div className="attendance-reports-shell font-sans text-slate-950">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950">Intelligence Reports</span>
+            Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950 font-bold">Intelligence Reports</span>
           </div>
         </div>
-        <div className="flex-1 max-w-lg mx-8">
+        <div className="flex-1 max-w-lg px-8 relative">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
-            <input type="text" placeholder="Search reports, segments, trainer metrics..." className="w-full h-10 bg-slate-100 border border-transparent rounded-xl pl-10 pr-4 text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all shadow-inner" />
+            <input type="text" placeholder="Search reports, segments, trainer metrics..." className="w-full h-10 bg-slate-100 border border-slate-200 rounded-xl pl-10 pr-4 text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" />
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -381,21 +382,25 @@ const AttendanceReportsPage = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-8 max-w-[1600px] mx-auto w-full space-y-8">
-        <section className="flex justify-between items-end">
-           <div>
-              <h1 className="text-4xl font-black text-slate-950 tracking-tight uppercase">Attendance Reports</h1>
-              <p className="text-sm font-semibold text-slate-500 mt-2 max-w-2xl leading-relaxed uppercase tracking-tight opacity-70">Analyze patterns, occupancy trends, member engagement, and operational performance across the ecosystem.</p>
-           </div>
-           <div className="flex gap-2">
-              <button className="h-10 px-5 rounded-xl bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100">Revenue Analysis</button>
-              <button className="h-10 px-5 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-200">Schedule Automation</button>
-           </div>
-        </section>
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-           {KPI_STATS.map(stat => <StatTile key={stat.label} {...stat} />)}
-        </section>
-        <section className="bg-white border border-slate-200 rounded-[32px] p-3 shadow-sm space-y-3">
+      {/* Title block */}
+      <section className="flex justify-between items-end relative z-10 mb-2">
+         <div>
+            <h1 className="text-3xl font-black text-slate-950 tracking-tight leading-none">Attendance Reports</h1>
+            <p className="text-xs font-semibold text-slate-500 mt-2 max-w-2xl leading-relaxed">Analyze patterns, occupancy trends, member engagement, and operational performance across the ecosystem.</p>
+         </div>
+         <div className="flex gap-2">
+            <button className="h-10 px-5 rounded-xl bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100">Revenue Analysis</button>
+            <button className="h-10 px-5 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-200">Schedule Automation</button>
+         </div>
+      </section>
+
+      {/* KPI Stats block */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-6 relative z-10 mb-2">
+         {KPI_STATS.map(stat => <StatTile key={stat.label} {...stat} />)}
+      </section>
+
+      <div className="attendance-reports-workspace">
+        <section className="attendance-reports-workspace-sticky-header">
            <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex rounded-2xl bg-slate-100 p-1.5">
                  <button onClick={setDashboardView} className={cn("px-6 h-10 flex items-center justify-center rounded-xl transition-all text-[10px] font-black uppercase tracking-widest", viewMode === "dashboard" ? "bg-white shadow-xl text-slate-950" : "text-slate-500 hover:text-slate-700")}>Dashboard</button>
@@ -408,7 +413,7 @@ const AttendanceReportsPage = () => {
            </div>
         </section>
         <section className="pb-12">{viewMode === "dashboard" ? <DashboardView /> : <TableView />}</section>
-      </main>
+      </div>
       <AnimatePresence>{isGeneratorOpen && <PDFGeneratorModal isOpen={isGeneratorOpen} onClose={closeGenerator} />}</AnimatePresence>
     </div>
   );
@@ -427,7 +432,7 @@ export function mountAttendanceReports() {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <AttendanceReportsPage />
+        <><AttendanceReportsPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     return root;

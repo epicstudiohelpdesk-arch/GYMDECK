@@ -234,6 +234,38 @@ pub async fn get_plans_command(
 }
 
 #[tauri::command]
+pub async fn create_plan_command(
+    state: State<'_, AppState>,
+    plan: MembershipPlan,
+) -> Result<(), AppError> {
+    let ctx = get_auth_context(&state).await?;
+    
+    state.async_db.dispatch_write(Box::new(move |conn| {
+        let tx = conn.transaction().map_err(|e| AppError::Database(e.to_string()))?;
+        
+        PlanRepository::create_plan(&tx, &ctx, &plan)?;
+        
+        tx.commit().map_err(|e| AppError::Database(e.to_string()))
+    })).await
+}
+
+#[tauri::command]
+pub async fn delete_plan_command(
+    state: State<'_, AppState>,
+    plan_id: String,
+) -> Result<(), AppError> {
+    let ctx = get_auth_context(&state).await?;
+    
+    state.async_db.dispatch_write(Box::new(move |conn| {
+        let tx = conn.transaction().map_err(|e| AppError::Database(e.to_string()))?;
+        
+        PlanRepository::delete_plan(&tx, &ctx, &plan_id)?;
+        
+        tx.commit().map_err(|e| AppError::Database(e.to_string()))
+    })).await
+}
+
+#[tauri::command]
 pub async fn save_member_documents_command(
     state: State<'_, AppState>,
     member_id: Uuid,

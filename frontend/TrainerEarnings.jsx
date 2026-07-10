@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo } from "react";
 import {
   DollarSign,
@@ -305,16 +306,16 @@ const TrainerEarnings = () => {
   };
 
   return (
-    <div className="min-h-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-indigo-100 pb-20">
+    <div className="trainer-earnings-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* 5. TOP UTILITY HEADER (Production Grade) */}
-      <header className="h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-[100]">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="flex items-center gap-2">
             <Users size={16} className="text-slate-400" />
             <span>Trainers & Staff</span>
           </div>
           <ChevronRight size={14} className="opacity-40" />
-          <span className="text-slate-900 font-bold">Trainer Earnings</span>
+          <span className="text-slate-900 font-bold font-sans">Trainer Earnings</span>
         </div>
 
         <div className="flex-1 max-w-xl mx-12 relative group">
@@ -322,7 +323,7 @@ const TrainerEarnings = () => {
           <input
             type="text"
             placeholder="Search trainer, payroll ID, commission, branch..."
-            className="w-full h-11 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all group-hover:bg-slate-100"
+            className="w-full h-11 pl-12 pr-4 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all focus:bg-white"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -348,44 +349,45 @@ const TrainerEarnings = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto">
-        {/* 6. PAGE TITLE SECTION */}
-        <div className="flex justify-between items-end mb-10">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <h1 className="text-[32px] font-black text-slate-900 tracking-tight mb-2 leading-none">Trainer Earnings</h1>
-            <p className="text-slate-500 text-[15px] font-medium max-w-[720px] leading-relaxed">
-              Manage trainer salaries, PT commissions, incentives, payouts, and financial performance across your fitness ecosystem.
-            </p>
-          </motion.div>
-          <div className="flex gap-2">
-            {["Payroll Analytics", "PT Revenue", "Incentive Tracking", "Financial Reports"].map((pill, idx) => (
-              <motion.button 
-                key={pill} 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
-              >
-                {pill}
-              </motion.button>
-            ))}
-          </div>
+      {/* 6. PAGE TITLE SECTION */}
+      <div className="flex justify-between items-end mb-2 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Trainer Earnings</h1>
+          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-[720px]">
+            Manage trainer salaries, PT commissions, incentives, payouts, and financial performance across your fitness ecosystem.
+          </p>
+        </motion.div>
+        <div className="flex gap-2">
+          {["Payroll Analytics", "PT Revenue", "Incentive Tracking", "Financial Reports"].map((pill, idx) => (
+            <motion.button 
+              key={pill} 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
+            >
+              {pill}
+            </motion.button>
+          ))}
         </div>
+      </div>
 
-        {/* 7. KPI ANALYTICS STRIP (8 Cards) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-10">
-          <KPICard title="Total Payroll" value="₹18.4L" trend="+12.4%" isUp={true} icon={Banknote} color="bg-indigo-600" delay={0.05} />
-          <KPICard title="PT Commission" value="₹4.12L" trend="+8.1%" isUp={true} icon={Target} color="bg-emerald-500" delay={0.1} />
-          <KPICard title="Highest Earner" value="Rahul M." trend="Star" isUp={true} icon={Award} color="bg-amber-500" delay={0.15} />
-          <KPICard title="Pending Payouts" value="₹1.24L" trend="-4.2%" isUp={false} icon={Clock} color="bg-rose-500" delay={0.2} />
-          <KPICard title="Avg Trainer Revenue" value="₹1.18L" trend="+5.2%" isUp={true} icon={TrendingUp} color="bg-blue-500" delay={0.25} />
-          <KPICard title="Incentives" value="₹84K" trend="+14%" isUp={true} icon={Zap} color="bg-purple-500" delay={0.3} />
-          <KPICard title="PT Generated" value="₹14.2L" trend="+18%" isUp={true} icon={DollarSign} delay={0.35} color="bg-cyan-500" />
-          <KPICard title="Profitability" value="78%" trend="+2.1%" isUp={true} icon={PieChart} color="bg-orange-500" delay={0.4} />
-        </div>
+      {/* 7. KPI ANALYTICS STRIP (8 Cards) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-2 relative z-10">
+        <KPICard title="Total Payroll" value="₹18.4L" trend="+12.4%" isUp={true} icon={Banknote} color="bg-indigo-600" delay={0.05} />
+        <KPICard title="PT Commission" value="₹4.12L" trend="+8.1%" isUp={true} icon={Target} color="bg-emerald-500" delay={0.1} />
+        <KPICard title="Highest Earner" value="Rahul M." trend="Star" isUp={true} icon={Award} color="bg-amber-500" delay={0.15} />
+        <KPICard title="Pending Payouts" value="₹1.24L" trend="-4.2%" isUp={false} icon={Clock} color="bg-rose-500" delay={0.2} />
+        <KPICard title="Avg Trainer Revenue" value="₹1.18L" trend="+5.2%" isUp={true} icon={TrendingUp} color="bg-blue-500" delay={0.25} />
+        <KPICard title="Incentives" value="₹84K" trend="+14%" isUp={true} icon={Zap} color="bg-purple-500" delay={0.3} />
+        <KPICard title="PT Generated" value="₹14.2L" trend="+18%" isUp={true} icon={DollarSign} delay={0.35} color="bg-cyan-500" />
+        <KPICard title="Profitability" value="78%" trend="+2.1%" isUp={true} icon={PieChart} color="bg-orange-500" delay={0.4} />
+      </div>
+
+      <div className="trainer-earnings-workspace">
 
         {/* 8. MASTER PAGE STRUCTURE (12-column grid) */}
         <div className="grid grid-cols-12 gap-8 items-start">
@@ -952,7 +954,7 @@ const TrainerEarnings = () => {
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       {/* 12. PAYROLL DETAILS DRAWER (Enterprise Grade) */}
       <AnimatePresence mode="wait">
@@ -1232,7 +1234,7 @@ export const mountTrainerEarnings = () => {
   container.innerHTML = "";
   
   const root = createRoot(container);
-  root.render(<TrainerEarnings />);
+  root.render(<><TrainerEarnings /><BrandFooter /></>);
   return root;
 };
 

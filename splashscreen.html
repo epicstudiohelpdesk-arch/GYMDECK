@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GymDeck Splash</title>
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <style>
+    /* Reset and set true transparency */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Floating splash collage image container */
+    .splash-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent !important;
+      opacity: 0;
+    }
+
+    /* Inner content wrapper to keep layout relative and centered */
+    .splash-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 960px;
+      max-height: 600px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Vector white panel on the left side of the splash screen */
+    .white-box {
+      position: absolute;
+      left: 6%;
+      top: 28%;
+      width: 40%;
+      height: 44%;
+      background-color: #ffffff;
+      border-radius: 24px;
+      z-index: 1;
+      box-sizing: border-box;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .splash-image {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+      display: block;
+      object-fit: contain;
+      transform: scale(1.15);
+      transform-origin: right center;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+
+    /* Brand Section styling */
+    .brand-section {
+      width: 100%;
+    }
+
+    .brand-title {
+      font-family: 'Ethnocentric', sans-serif;
+      font-size: 30px;
+      font-weight: normal;
+      color: #0c0a09;
+      margin: 0;
+      letter-spacing: -1px;
+      text-transform: lowercase;
+      line-height: 1;
+    }
+
+    .by-section {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .by-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      color: #78716c;
+    }
+
+    .india-text {
+      font-family: Georgia, serif;
+      font-style: italic;
+      font-weight: 700;
+      font-size: 19px;
+      color: #0c0a09;
+      line-height: 1;
+    }
+
+    /* Status & Loading Section styling */
+    .status-section {
+      width: 100%;
+    }
+
+    .loading-section {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .version-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11px;
+      color: #78716c;
+      margin-bottom: 2px;
+    }
+
+    .loading-status {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: #0c0a09;
+    }
+
+    .progress-track {
+      width: 140px;
+      height: 3px;
+      background-color: #e7e5e4;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #0c0a09;
+      border-radius: 2px;
+    }
+
+    /* Synchronize animations on image load */
+    .ready .splash-container {
+      animation: splashContainerAnimation 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .ready .white-box {
+      animation: whiteBoxExit 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .ready .splash-image {
+      animation: splashImageExit 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .ready .progress-bar {
+      animation: progressLoad 6.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes progressLoad {
+      to { width: 100%; }
+    }
+
+    /* Disclaimer Section styling */
+    .disclaimer-section {
+      width: 90%;
+    }
+
+    .disclaimer-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 9px;
+      line-height: 1.45;
+      color: #78716c;
+      margin: 0;
+      text-align: left;
+    }
+
+    @keyframes splashContainerAnimation {
+      0%, 94% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    @keyframes whiteBoxExit {
+      0%, 94% {
+        transform: scale(1) translateX(0);
+      }
+      100% {
+        transform: scale(0.98) translateX(-10px);
+      }
+    }
+
+    @keyframes splashImageExit {
+      0%, 94% {
+        transform: scale(1.15);
+      }
+      100% {
+        transform: scale(1.12);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="splash-container">
+    <div class="splash-content">
+      <!-- White background panel on the left -->
+      <div class="white-box">
+        <!-- Brand Section -->
+        <div class="brand-section">
+          <h1 class="brand-title">gymdeck</h1>
+          <div class="by-section">
+            <span class="by-text">by</span>
+            <span class="india-text">India</span>
+          </div>
+        </div>
+
+        <!-- Status and Loading Section -->
+        <div class="status-section">
+          <div class="loading-section">
+            <div class="version-text">July 2026 (v2.0)</div>
+            <div class="loading-status">Initialising...</div>
+            <div class="progress-track">
+              <div class="progress-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Disclaimer Section -->
+        <div class="disclaimer-section">
+          <p class="disclaimer-text">
+            Securely encrypted via GymDeck AES-256 SQLCipher vault.<br>
+            © 2026 GymDeck Corporation LLC. All rights reserved.
+          </p>
+        </div>
+      </div>
+      <!-- Load our alpha-transparent collage image from the public directory -->
+      <img src="gymdeck-splash-collage.png" alt="GymDeck Splash Collage" class="splash-image" />
+    </div>
+  </div>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const img = document.querySelector('.splash-image');
+      const triggerReady = () => {
+        // Slight 50ms delay for paint buffer
+        setTimeout(() => {
+          document.body.classList.add('ready');
+        }, 50);
+      };
+
+      if (img.complete) {
+        triggerReady();
+      } else {
+        img.addEventListener('load', triggerReady);
+        img.addEventListener('error', triggerReady);
+        setTimeout(triggerReady, 1000); // 1s safety net
+      }
+    });
+  </script>
+</body>
+</html>

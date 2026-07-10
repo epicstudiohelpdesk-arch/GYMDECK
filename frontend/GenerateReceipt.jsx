@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -132,13 +133,13 @@ const GenerateReceiptPage = () => {
   };
 
   return (
-    <div className="min-h-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-100">
+    <div className="generate-receipt-shell font-sans text-slate-900 selection:bg-blue-100">
       {/* Top Utility Header (Blueprint Section 5) */}
-      <header className="h-16 bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span className="opacity-60">Payments & Billing</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-900 font-bold">Generate Receipt</span>
+          <span className="text-slate-900 font-bold font-sans">Generate Receipt</span>
         </div>
 
         {/* Center Search */}
@@ -179,41 +180,41 @@ const GenerateReceiptPage = () => {
         </div>
       </header>
 
-      {/* Receipt Generation Controls Strip (Blueprint Section 3) */}
-      <div className="h-14 bg-white border-b border-slate-100 px-8 flex items-center gap-8 shadow-sm">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest border-r border-slate-100 pr-8 h-6">
-          <History className="w-4 h-4" />
-          Quick History
+      {/* Title Section (Blueprint Section 6) */}
+      <section className="mb-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative z-10">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-2">Generate Receipt</h1>
+          <p className="text-slate-500 text-xs font-semibold max-w-2xl">
+            Create professional payment receipts, invoices, GST documents, and transaction confirmations for all billing activities.
+          </p>
         </div>
-        <div className="flex items-center gap-6">
-          {["Monthly Dues", "PT Sessions", "Merchandise", "Renewal"].map(cat => (
-            <button key={cat} className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 transition-colors">
-              {cat}
+        <div className="flex flex-wrap gap-2.5">
+          {["Receipt Templates", "GST Settings", "Branding", "AI Summary"].map((pill) => (
+            <button key={pill} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
+              {pill}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      <main className="p-8 max-w-[1600px] mx-auto pb-24">
-        {/* Title Section (Blueprint Section 6) */}
-        <section className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Generate Receipt</h1>
-            <p className="text-slate-500 max-w-2xl font-medium text-base">
-              Create professional payment receipts, invoices, GST documents, and transaction confirmations for all billing activities.
-            </p>
+      <div className="generate-receipt-workspace">
+        {/* Receipt Generation Controls Strip (Blueprint Section 3) */}
+        <section className="generate-receipt-workspace-sticky-header">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest border-r border-slate-100 pr-8 h-6">
+            <History className="w-4 h-4" />
+            Quick History
           </div>
-          <div className="flex flex-wrap gap-2.5">
-            {["Receipt Templates", "GST Settings", "Branding", "AI Summary"].map((pill) => (
-              <button key={pill} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
-                {pill}
+          <div className="flex items-center gap-6">
+            {["Monthly Dues", "PT Sessions", "Merchandise", "Renewal"].map(cat => (
+              <button key={cat} className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 transition-colors">
+                {cat}
               </button>
             ))}
           </div>
         </section>
 
         {/* Main Workspace Layout (Blueprint Section 7: 3-6-3 structure) */}
-        <div className="grid grid-cols-12 gap-8">
+        <div className="grid grid-cols-12 gap-8 w-full mt-4">
           
           {/* Left Panel - Billing & Member Info (Blueprint Section 8) */}
           <aside className="col-span-12 lg:col-span-3 space-y-6">
@@ -627,7 +628,7 @@ const GenerateReceiptPage = () => {
             )}
           </AnimatePresence>
         </section>
-      </main>
+      </div>
 
       {/* Floating Status (Blueprint Section 23 Success Experience) */}
       <AnimatePresence>
@@ -666,7 +667,7 @@ export const mountGenerateReceipt = () => {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <GenerateReceiptPage />
+        <><GenerateReceiptPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     console.log("GymDeck: Generate Receipt module mounted successfully.");

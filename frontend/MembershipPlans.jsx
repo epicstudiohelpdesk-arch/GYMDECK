@@ -45,7 +45,8 @@ import {
   DownloadCloud,
   Trash2,
   Hash,
-  Circle
+  Circle,
+  FolderPlus
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorHandlers.jsx";
 
@@ -67,6 +68,13 @@ const formatCurrency = (val) => {
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
+const getPlanInitials = (name) => {
+  if (!name) return "PL";
+  const words = name.trim().split(/\s+/);
+  const initials = words.map(w => w[0]).join("").toUpperCase();
+  return initials.substring(0, 3);
+};
+
 const PORTFOLIO_STATS = {
   activePlans: 8,
   monthlyRevenue: 1450000,
@@ -78,7 +86,7 @@ const PORTFOLIO_STATS = {
   potentialRevenue: 820000
 };
 
-const MEMBERSHIP_PORTFOLIO = [
+const INITIAL_MOCK_PLANS = [
   {
     id: "A1",
     name: "Annual Elite Performance",
@@ -251,9 +259,9 @@ function PlanCard({ plan, index, onViewDetails }) {
       <div className="flex items-center gap-3 min-w-0 text-left">
         <div className={cn(
           "w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0",
-          PLAN_COLORS[plan.id] || "from-slate-800 to-indigo-900"
+          plan.color || "from-slate-800 to-indigo-900"
         )}>
-          {plan.id}
+          {getPlanInitials(plan.name)}
         </div>
         <div className="min-w-0 text-left">
           <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">{plan.name}</h4>
@@ -324,7 +332,7 @@ function PlanCard({ plan, index, onViewDetails }) {
 // ─────────────────────────────────────────
 // PLAN DETAILS MODAL
 // ─────────────────────────────────────────
-function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDelete }) {
+function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDelete, isSubModalOpen }) {
   if (!plan) return null;
 
   const statusColor = plan.status === "Healthy" ? "emerald" : plan.status === "Growing" ? "indigo" : plan.status === "At Risk" ? "rose" : "amber";
@@ -348,8 +356,15 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-slate-950/85 backdrop-blur-xl"
+            onClick={isSubModalOpen ? undefined : onClose}
+            className={cn(
+              "absolute inset-0 bg-slate-950/85 backdrop-blur-xl",
+              isSubModalOpen && "bg-slate-950/95"
+            )}
+            style={{
+              transition: "background-color 0.3s ease, backdrop-filter 0.3s ease",
+              willChange: "opacity, background-color"
+            }}
           />
 
           {/* Panel */}
@@ -358,8 +373,14 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             initial={{ scale: 0.95, y: 15, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 280 }}
+            transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.45 }}
             className="relative w-full max-w-4xl bg-white rounded-[32px] border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col p-8 md:p-10 m-auto text-left max-h-[90vh] md:max-h-[600px] z-50"
+            style={{
+              filter: isSubModalOpen ? "blur(5px) brightness(0.65)" : "none",
+              pointerEvents: isSubModalOpen ? "none" : "auto",
+              willChange: "transform, opacity, filter",
+              transition: "filter 0.3s ease"
+            }}
           >
             {/* Absolute Close Button */}
             <motion.button
@@ -389,9 +410,9 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               <div className="flex items-center gap-4">
                 <div className={cn(
                   "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white font-black text-sm shadow-md shrink-0",
-                  PLAN_COLORS[plan.id] || "from-slate-800 to-indigo-900"
+                  plan.color || "from-slate-800 to-indigo-900"
                 )}>
-                  {plan.id}
+                  {getPlanInitials(plan.name)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -612,7 +633,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               </button>
 
               <button 
-                onClick={() => { onDelete(plan); onClose(); }}
+                onClick={() => { onDelete(plan); }}
                 className="px-4.5 h-11 rounded-2xl bg-rose-50 hover:bg-rose-100/70 text-rose-600 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
                 <Trash2 size={13} />
@@ -713,12 +734,98 @@ function CustomSelect({ label, value, onChange, options }) {
 }
 
 // ─────────────────────────────────────────
+// DELETE CONFIRMATION MODAL
+// ─────────────────────────────────────────
+function DeleteConfirmationModal({ isOpen, plan, onClose, onConfirm }) {
+  if (!plan) return null;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="delete-modal-container"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md"
+        >
+          <motion.div
+            key="delete-panel"
+            initial={{ scale: 0.95, y: 15, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, y: 15, opacity: 0 }}
+            transition={{ type: "spring", duration: 0.4 }}
+            className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl relative text-left"
+          >
+            {/* Header Warning Icon */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-650 shrink-0 shadow-sm animate-pulse">
+                <AlertCircle size={24} className="stroke-[2.2]" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 tracking-tight">Delete Membership Plan</h3>
+                <p className="text-xs text-slate-400 font-semibold mt-0.5">This action is permanent and irreversible.</p>
+              </div>
+            </div>
+
+            {/* Target Card Preview */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-white font-bold text-[10px] shadow-sm shrink-0",
+                  plan.color || "from-slate-800 to-indigo-900"
+                )}>
+                  {getPlanInitials(plan.name)}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">{plan.name}</h4>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{plan.category} • {plan.duration}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-900">{formatCurrency(plan.price)}</p>
+                <p className="text-[9px] text-slate-400 font-semibold">{plan.activeMembers || 0} active members</p>
+              </div>
+            </div>
+
+            {/* Warning Message details */}
+            <p className="text-xs font-semibold text-slate-500 leading-relaxed mb-6">
+              Deleting this plan will permanently remove it from the catalog. Members currently enrolled under this plan will remain active, but you won't be able to register new sign-ups or renewals under this configuration.
+            </p>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 h-11 rounded-xl bg-slate-105 hover:bg-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider transition-all duration-150"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-2 shadow-md shadow-rose-200"
+              >
+                <Trash2 size={13} className="stroke-[2.5]" />
+                Delete Plan
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─────────────────────────────────────────
 // CREATE PLAN MODAL
 // ─────────────────────────────────────────
 // ─────────────────────────────────────────
 // TRAINERS LIST CONSTANT
 // ─────────────────────────────────────────
-function CreatePlanModal({ isOpen, onClose }) {
+function CreatePlanModal({ isOpen, onClose, onPublish }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: "",
@@ -788,23 +895,29 @@ function CreatePlanModal({ isOpen, onClose }) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
           className="fixed inset-0 z-[1000] flex items-end justify-center"
+          style={{ willChange: "opacity" }}
         >
-          <motion.div
+           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
             onClick={onClose}
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
+            className="absolute inset-0 backdrop-blur-2xl"
+            style={{ 
+              backgroundColor: "rgba(9, 13, 22, 0.92)",
+              willChange: "opacity" 
+            }}
           />
           <motion.div
             key="panel"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 260, mass: 1 }}
+            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.6 }}
             className="relative w-full max-w-4xl bg-[#f4f6fa] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[600px] z-50"
+            style={{ willChange: "transform" }}
           >
             {/* Top Handle Bar */}
             <div className="w-12 h-1 rounded-full bg-slate-200 mx-auto mt-4 shrink-0" />
@@ -1034,7 +1147,14 @@ function CreatePlanModal({ isOpen, onClose }) {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => isLast ? onClose() : setStep(s => s + 1)}
+                onClick={() => {
+                  if (isLast) {
+                    onPublish(form);
+                    onClose();
+                  } else {
+                    setStep(s => s + 1);
+                  }
+                }}
                 className="h-11 max-w-[360px] flex-1 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
               >
                 {isLast ? "Publish Plan" : "Continue →"}
@@ -1056,13 +1176,184 @@ export default function MembershipPortfolioDashboard() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detailsPlan, setDetailsPlan] = useState(null);
+  const [deletePlanTarget, setDeletePlanTarget] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+  const toastTimerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isHeaderStuck, setIsHeaderStuck] = useState(false);
   const sentinelRef = useRef(null);
 
+  const [plans, setPlans] = useState([]);
+
+  const loadPlans = async () => {
+    try {
+      const dbPlans = await window.__TAURI__.core.invoke("get_plans_command");
+      if (dbPlans && dbPlans.length > 0) {
+        const mapped = dbPlans.map(p => {
+          let category = "General";
+          let desc = p.description || "";
+          if (desc.includes("||")) {
+            const parts = desc.split("||");
+            category = parts[0];
+            desc = parts[1];
+          }
+          const orig = INITIAL_MOCK_PLANS.find(m => m.id === p.id);
+          return {
+            id: p.id,
+            name: p.plan_name,
+            category: category,
+            price: p.price,
+            duration: `${p.duration_days} Days`,
+            activeMembers: orig ? orig.activeMembers : 0,
+            revenue: orig ? orig.revenue : 0,
+            monthlyContribution: orig ? orig.monthlyContribution : 0,
+            renewalRate: orig ? orig.renewalRate : 100,
+            retention: orig ? orig.retention : 100,
+            trend: orig ? orig.trend : "+0%",
+            trendUp: orig ? orig.trendUp : true,
+            status: p.is_active ? (orig ? orig.status : "Healthy") : "At Risk",
+            membersEnrolled: orig ? orig.membersEnrolled : 0,
+            growth: orig ? orig.growth : 0,
+            risk: orig ? orig.risk : "Low",
+            color: orig ? orig.color : (
+              category === "Transformation" ? "from-indigo-600 to-indigo-800" :
+              category === "Bodybuilding" ? "from-emerald-600 to-emerald-800" :
+              category === "Weight Loss" ? "from-amber-600 to-amber-800" :
+              "from-sky-600 to-sky-800"
+            ),
+            description: desc,
+            createdAt: p.created_at
+          };
+        });
+        setPlans(mapped);
+      } else {
+        // Seed the initial mock plans
+        for (const mock of INITIAL_MOCK_PLANS) {
+          const planData = {
+            id: mock.id,
+            gym_id: "00000000-0000-0000-0000-000000000000",
+            plan_name: mock.name,
+            duration_days: parseInt(mock.duration) || 30,
+            price: mock.price,
+            description: `${mock.category}||${mock.description || ""}`,
+            is_active: true,
+            created_by_user_id: "00000000-0000-0000-0000-000000000000",
+            updated_by_user_id: "00000000-0000-0000-0000-000000000000",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            deleted_at: null
+          };
+          try {
+            await window.__TAURI__.core.invoke("create_plan_command", { plan: planData });
+          } catch (e) {
+            console.error("Failed to seed plan:", e);
+          }
+        }
+        const seeded = await window.__TAURI__.core.invoke("get_plans_command");
+        const mapped = seeded.map(p => {
+          let category = "General";
+          let desc = p.description || "";
+          if (desc.includes("||")) {
+            const parts = desc.split("||");
+            category = parts[0];
+            desc = parts[1];
+          }
+          const orig = INITIAL_MOCK_PLANS.find(m => m.id === p.id);
+          return {
+            id: p.id,
+            name: p.plan_name,
+            category: category,
+            price: p.price,
+            duration: `${p.duration_days} Days`,
+            activeMembers: orig ? orig.activeMembers : 0,
+            revenue: orig ? orig.revenue : 0,
+            monthlyContribution: orig ? orig.monthlyContribution : 0,
+            renewalRate: orig ? orig.renewalRate : 100,
+            retention: orig ? orig.retention : 100,
+            trend: orig ? orig.trend : "+0%",
+            trendUp: orig ? orig.trendUp : true,
+            status: p.is_active ? (orig ? orig.status : "Healthy") : "At Risk",
+            membersEnrolled: orig ? orig.membersEnrolled : 0,
+            growth: orig ? orig.growth : 0,
+            risk: orig ? orig.risk : "Low",
+            color: orig ? orig.color : (
+              category === "Transformation" ? "from-indigo-600 to-indigo-800" :
+              category === "Bodybuilding" ? "from-emerald-600 to-emerald-800" :
+              category === "Weight Loss" ? "from-amber-600 to-amber-800" :
+              "from-sky-600 to-sky-800"
+            ),
+            description: desc,
+            createdAt: p.created_at
+          };
+        });
+        setPlans(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to load plans from DB:", err);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletePlanTarget) return;
+    const planName = deletePlanTarget.name;
+    try {
+      await window.__TAURI__.core.invoke("delete_plan_command", { planId: deletePlanTarget.id });
+      setDeletePlanTarget(null);
+      setDetailsPlan(null);
+      
+      // Trigger dynamic bottom toast notification
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      setToastMessage(`"${planName}" deleted permanently.`);
+      toastTimerRef.current = setTimeout(() => {
+        setToastMessage(null);
+        toastTimerRef.current = null;
+      }, 3500);
+
+      await loadPlans();
+    } catch (e) {
+      console.error("Failed to delete plan:", e);
+      alert("Error deleting plan from secure vault database: " + e);
+    }
+  };
+
+  const handlePublishPlan = async (formDetails) => {
+    let durationDays = 30;
+    if (formDetails.duration === "Quarterly") durationDays = 90;
+    else if (formDetails.duration === "Half-Yearly") durationDays = 180;
+    else if (formDetails.duration === "Annual") durationDays = 365;
+
+    const newPlan = {
+      id: crypto.randomUUID(),
+      gym_id: "00000000-0000-0000-0000-000000000000",
+      plan_name: formDetails.name,
+      duration_days: durationDays,
+      price: parseFloat(formDetails.price) || 0,
+      description: `${formDetails.category}||${formDetails.description || ""}`,
+      is_active: true,
+      created_by_user_id: "00000000-0000-0000-0000-000000000000",
+      updated_by_user_id: "00000000-0000-0000-0000-000000000000",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null
+    };
+
+    try {
+      await window.__TAURI__.core.invoke("create_plan_command", { plan: newPlan });
+      await loadPlans();
+    } catch (e) {
+      console.error("Failed to create plan:", e);
+      alert("Error saving plan to the secure vault database: " + e);
+    }
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
+    const init = async () => {
+      await loadPlans();
+      setIsLoading(false);
+    };
+    init();
   }, []);
 
   useEffect(() => {
@@ -1089,7 +1380,7 @@ export default function MembershipPortfolioDashboard() {
   }, [isLoading]);
 
   const filteredPlans = useMemo(() => {
-    return MEMBERSHIP_PORTFOLIO.filter(plan => {
+    const filtered = plans.filter(plan => {
       const matchesSearch = plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         plan.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         plan.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -1101,7 +1392,12 @@ export default function MembershipPortfolioDashboard() {
         (activeFilter === "Newest");
       return matchesSearch && matchesFilter;
     });
-  }, [searchQuery, activeFilter]);
+
+    if (activeFilter === "Highest Revenue") {
+      return [...filtered].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+    }
+    return [...filtered].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }, [plans, searchQuery, activeFilter]);
 
   if (isLoading) {
     return (
@@ -1305,20 +1601,47 @@ export default function MembershipPortfolioDashboard() {
 
                   <section className="members-table-wrap">
                     {filteredPlans.length === 0 ? (
-                      <div className="py-16 flex flex-col items-center text-center">
-                        <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-4">
-                          <Search size={20} className="text-slate-400" />
+                      <div 
+                        className="w-full mt-4 mb-8 pt-10 pb-11 px-8 bg-gradient-to-b from-slate-50/70 via-slate-50/45 to-white border-2 border-dotted border-slate-200 rounded-[28px] shadow-sm flex flex-col items-center text-center relative overflow-hidden"
+                      >
+                        {/* Elegant Double-Layered Circular Icon */}
+                        <div className="w-14 h-14 rounded-full bg-slate-100/70 border border-slate-200/40 flex items-center justify-center mb-4 relative shrink-0 shadow-inner">
+                          <div className="absolute inset-0 rounded-full bg-slate-500/5 blur-md" />
+                          <div className="w-10 h-10 rounded-full bg-slate-950 text-white flex items-center justify-center shadow-md shadow-slate-950/20 relative z-10">
+                            <FolderPlus size={16} className="stroke-[2.2]" />
+                          </div>
                         </div>
-                        <h3 className="text-sm font-bold text-slate-900">No Membership Plans Found</h3>
-                        <p className="text-xs font-semibold text-slate-500 mt-1 max-w-sm">
-                          Try adjusting your search query or clear the active filters.
+                        
+                        <h3 className="text-base font-black text-slate-900 tracking-tight leading-tight">
+                          {activeFilter === "All" ? "No Membership Plans Created" : "No Membership Plans Found"}
+                        </h3>
+                        
+                        <p className="text-xs font-bold text-slate-550 mt-2 max-w-sm leading-relaxed">
+                          {activeFilter === "All" 
+                            ? "Get started by creating your first subscription package configuration." 
+                            : "Try adjusting your search query or clear the active filters."}
                         </p>
-                        <button
-                          onClick={() => { setSearchQuery(""); setActiveFilter("All"); }}
-                          className="mt-4 px-4 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-slate-800 transition-colors"
-                        >
-                          Clear Filters
-                        </button>
+                        
+                        {activeFilter === "All" ? (
+                          <motion.button
+                            whileHover={{ scale: 1.02, y: -0.5 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setIsModalOpen(true)}
+                            className="mt-6 h-11 px-6 bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-2xl transition-all duration-200 flex items-center gap-2 shadow-md shadow-slate-950/20"
+                          >
+                            <Plus size={15} className="stroke-[2.5]" />
+                            Create Plan
+                          </motion.button>
+                        ) : (
+                          <motion.button
+                            whileHover={{ scale: 1.02, y: -0.5 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => { setSearchQuery(""); setActiveFilter("All"); }}
+                            className="mt-6 h-11 px-6 bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-2xl transition-all duration-200 flex items-center gap-2 shadow-md shadow-slate-950/20"
+                          >
+                            Clear Filters
+                          </motion.button>
+                        )}
                       </div>
                     ) : (
                       <table className="members-table">
@@ -1342,7 +1665,7 @@ export default function MembershipPortfolioDashboard() {
                 </div>
 
                 {/* COMPACT REDESIGNED DARK OPERATIONS PANEL */}
-                {RECOMMENDATIONS.length > 0 && filteredPlans.length > 0 && (
+                {RECOMMENDATIONS.length > 0 && (
                   <section 
                     className="text-white rounded-3xl p-6 md:p-8 border relative overflow-hidden mt-6"
                     style={{
@@ -1563,9 +1886,9 @@ export default function MembershipPortfolioDashboard() {
                   <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
                     <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-5">Plan Performance Comparison</h3>
                     <div className="space-y-4">
-                      {MEMBERSHIP_PORTFOLIO.map(plan => (
+                      {plans.map(plan => (
                         <div key={plan.id} className="flex items-center gap-4">
-                          <div className="w-7 h-7 rounded-lg bg-slate-950 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{plan.id}</div>
+                          <div className="w-7 h-7 rounded-lg bg-slate-950 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{plan.id.length > 4 ? plan.id.substring(0, 3).toUpperCase() : plan.id}</div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-slate-900 truncate">{plan.name}</p>
                             <p className="text-[9px] text-slate-400">{plan.activeMembers} members</p>
@@ -1582,8 +1905,8 @@ export default function MembershipPortfolioDashboard() {
                   <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
                     <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-5">Plan Popularity</h3>
                     <div className="space-y-4">
-                      {[...MEMBERSHIP_PORTFOLIO].sort((a, b) => b.activeMembers - a.activeMembers).map(plan => {
-                        const max = Math.max(...MEMBERSHIP_PORTFOLIO.map(p => p.activeMembers));
+                      {[...plans].sort((a, b) => b.activeMembers - a.activeMembers).map(plan => {
+                        const max = plans.length > 0 ? Math.max(...plans.map(p => p.activeMembers)) : 1;
                         const pct = (plan.activeMembers / max) * 100;
                         return (
                           <div key={plan.id}>
@@ -1663,7 +1986,7 @@ export default function MembershipPortfolioDashboard() {
       </footer>
 
       {/* CREATE PLAN MODAL */}
-      <CreatePlanModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <CreatePlanModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPublish={handlePublishPlan} />
 
       {/* PLAN DETAILS MODAL */}
       <PlanDetailsModal
@@ -1680,9 +2003,37 @@ export default function MembershipPortfolioDashboard() {
           setDetailsPlan(null);
         }}
         onDelete={(plan) => {
-          setDetailsPlan(null);
+          setDeletePlanTarget(plan);
         }}
+        isSubModalOpen={deletePlanTarget !== null}
       />
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <DeleteConfirmationModal
+        isOpen={deletePlanTarget !== null}
+        plan={deletePlanTarget}
+        onClose={() => setDeletePlanTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
+
+      {/* TOAST ALERT NOTIFICATION */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, x: "-50%", scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
+            exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.95 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="fixed bottom-6 z-[3000] flex items-center gap-2.5 px-4 py-3 bg-slate-950 border border-slate-800 text-white rounded-xl shadow-2xl text-[11px] font-bold pointer-events-none tracking-wide"
+            style={{ left: "50%" }}
+          >
+            <span className="w-6 h-6 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+              <Trash2 size={13} className="stroke-[2.5]" />
+            </span>
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

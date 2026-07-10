@@ -57,6 +57,7 @@ export default defineConfig({
         forgotPassword: resolve(__dirname, 'authentication/forgot-password.html'),
         otp: resolve(__dirname, 'authentication/otp.html'),
         dashboard: resolve(__dirname, 'frontend/index.html'),
+        splashscreen: resolve(__dirname, 'splashscreen.html'),
       },
       output: {
         assetFileNames: 'assets/[name]-[hash][extname]',

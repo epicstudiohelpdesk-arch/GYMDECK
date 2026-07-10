@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -190,22 +191,24 @@ const laneConfig = {
 // ─────────────────────────────────────────
 function DashboardHeader({ title, description, stats }) {
   return (
-    <header className="grid gap-3 rounded-lg border border-slate-200 bg-white/95 p-4 shadow-enterprise lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center mb-8">
-      <div className="min-w-0">
-        <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">Retention Command Center</p>
-        <h1 className="m-0 text-[clamp(28px,3vw,44px)] font-black leading-none tracking-normal text-slate-950">
-          {title}
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-500">{description}</p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between relative z-10">
+        <div className="min-w-0">
+          <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 font-sans">Retention Command Center</p>
+          <h1 className="m-0 text-3xl font-black text-slate-900 tracking-tight leading-none">
+            {title}
+          </h1>
+          <p className="mt-3 max-w-3xl text-xs font-semibold leading-relaxed text-slate-500">{description}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px]">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px] relative z-10">
         <StatTile label="Expiring Today" value={stats.expiringToday} tone="rose" />
         <StatTile label="Upcoming (Week)" value={stats.totalExpiring} tone="blue" />
         <StatTile label="Revenue At Risk" value={currencyFormatter.format(stats.revenueAtRisk / 1000) + "K"} tone="amber" />
         <StatTile label="Renewal Prob." value={`${stats.avgRenewalProb}%`} tone="emerald" />
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -914,8 +917,8 @@ const ExpiringMembershipsPage = () => {
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
   return (
-    <div className="min-h-full font-sans text-slate-950 bg-slate-50/30">
-      <header className="sticky top-0 z-50 h-[72px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between">
+    <div className="expiring-memberships-shell font-sans text-slate-950">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <button className="h-10 px-4 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-3 hover:bg-white transition-all">
             <Globe size={14} className="text-slate-400" />
@@ -935,14 +938,14 @@ const ExpiringMembershipsPage = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto space-y-4">
+      <div className="expiring-memberships-workspace">
         <DashboardHeader 
           title="Retention Command Center" 
           description="Monitor upcoming expiries, recover revenue, automate renewals, and reduce membership churn across your fitness ecosystem."
           stats={stats}
         />
 
-        <section className="grid gap-3 rounded-lg border border-slate-200 bg-white/95 p-3 shadow-enterprise">
+        <section className="expiring-memberships-workspace-sticky-header">
           <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_max-content]">
             <label className="relative block min-w-0" htmlFor="retention-search-main">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
@@ -998,7 +1001,7 @@ const ExpiringMembershipsPage = () => {
             </div>
           )}
         </section>
-      </main>
+      </div>
 
       <AnimatePresence>
         {isDrawerOpen && <MemberProfileDrawer isOpen={isDrawerOpen} onClose={closeDrawer} member={selectedMember} onAction={handleAction} />}
@@ -1021,7 +1024,7 @@ export function mountExpiringMemberships() {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <ExpiringMembershipsPage />
+        <><ExpiringMembershipsPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     return root;

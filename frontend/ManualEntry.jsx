@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -288,18 +289,18 @@ const ManualEntryPage = () => {
   const handleReset = useCallback(() => setSelectedMember(null), []);
 
   return (
-    <div className="min-h-full font-sans text-slate-950 bg-slate-50/30 flex flex-col">
+    <div className="manual-entry-shell font-sans text-slate-950">
       {/* Utility Header - Professional Fallback Design */}
-      <header className="sticky top-0 z-40 h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950">Manual Entry Console</span>
+            Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950 font-bold">Manual Entry Console</span>
           </div>
         </div>
-        <div className="flex-1 max-w-lg mx-8">
+        <div className="flex-1 max-w-lg px-8 relative">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
-            <input type="text" placeholder="Quick find member to entry..." className="w-full h-10 bg-slate-100 border border-transparent rounded-xl pl-10 pr-4 text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all shadow-inner" />
+            <input type="text" placeholder="Quick find member to entry..." className="w-full h-10 bg-slate-100 border border-slate-200 rounded-xl pl-10 pr-4 text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" />
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -308,16 +309,16 @@ const ManualEntryPage = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-8 max-w-[1600px] mx-auto w-full space-y-8">
-        
-        {/* Live Metrics Strip */}
-        <section className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-4">
-          <StatTile label="Manual Entries" value="28" tone="slate" icon={Smartphone} change="+4" />
-          <StatTile label="Walk-In Visitors" value="12" tone="blue" icon={UserPlus} />
-          <StatTile label="Access Overrides" value="3" tone="rose" icon={ShieldAlert} />
-          <StatTile label="Avg Processing" value="42s" tone="amber" icon={Timer} />
-          <StatTile label="Staff handling" value="2 Active" tone="indigo" icon={UserCheck} />
-        </section>
+      {/* Live Metrics Strip */}
+      <section className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-4 relative z-10 mb-2">
+        <StatTile label="Manual Entries" value="28" tone="slate" icon={Smartphone} change="+4" />
+        <StatTile label="Walk-In Visitors" value="12" tone="blue" icon={UserPlus} />
+        <StatTile label="Access Overrides" value="3" tone="rose" icon={ShieldAlert} />
+        <StatTile label="Avg Processing" value="42s" tone="amber" icon={Timer} />
+        <StatTile label="Staff handling" value="2 Active" tone="indigo" icon={UserCheck} />
+      </section>
+
+      <div className="manual-entry-workspace">
 
         {/* Operational Workspace */}
         <section className="grid lg:grid-cols-[1fr_1.1fr] gap-8 min-h-[500px]">
@@ -414,7 +415,7 @@ const ManualEntryPage = () => {
            </section>
         </div>
 
-      </main>
+      </div>
     </div>
   );
 };
@@ -437,7 +438,7 @@ export function mountManualEntry() {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <ManualEntryPage />
+        <><ManualEntryPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     return root;

@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo } from "react";
 import {
   Users,
@@ -121,16 +122,16 @@ const AttendanceTrends = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <div className="min-h-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-indigo-100 pb-20">
+    <div className="attendance-analytics-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* 5. TOP UTILITY HEADER */}
-      <header className="h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-[100]">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="flex items-center gap-2">
             <BarChart3 size={16} className="text-slate-400" />
             <span>Reports & Analysis</span>
           </div>
           <ChevronRight size={14} className="opacity-40" />
-          <span className="text-slate-900 font-bold">Attendance Trends</span>
+          <span className="text-slate-900 font-bold font-sans">Attendance Trends</span>
         </div>
 
         <div className="flex-1 max-w-xl mx-12 relative group">
@@ -138,7 +139,7 @@ const AttendanceTrends = () => {
           <input
             type="text"
             placeholder="Search members, peak hours, branch stats..."
-            className="w-full h-11 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+            className="w-full h-11 pl-12 pr-4 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all focus:bg-white"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -159,42 +160,42 @@ const AttendanceTrends = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto">
-        {/* 6. PAGE TITLE SECTION */}
-        <div className="flex justify-between items-end mb-10">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-            <h1 className="text-[32px] font-black text-slate-900 tracking-tight mb-2 leading-none">Attendance Trends</h1>
-            <p className="text-slate-500 text-[15px] font-medium max-w-[760px] leading-relaxed">
-              Analyze gym occupancy, peak hours, member engagement streaks, and facility utilization patterns across your ecosystem.
-            </p>
-          </motion.div>
-          <div className="flex gap-2">
-            {["Occupancy", "Peak Hours", "Retention AI", "Shift Analytics"].map((pill, idx) => (
-              <motion.button 
-                key={pill} 
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
-                className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
-              >
-                {pill}
-              </motion.button>
-            ))}
-          </div>
+      {/* 6. PAGE TITLE SECTION */}
+      <div className="flex justify-between items-end mb-2 relative z-10">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Attendance Trends</h1>
+          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-[760px]">
+            Analyze gym occupancy, peak hours, member engagement streaks, and facility utilization patterns across your ecosystem.
+          </p>
+        </motion.div>
+        <div className="flex gap-2">
+          {["Occupancy", "Peak Hours", "Retention AI", "Shift Analytics"].map((pill, idx) => (
+            <motion.button 
+              key={pill} 
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
+              className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
+            >
+              {pill}
+            </motion.button>
+          ))}
         </div>
+      </div>
 
-        {/* 7. KPI ANALYTICS STRIP */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-10">
-          <KPICard title="Check-ins Today" value="428" trend="+14.2%" isUp={true} icon={UserCheck} color="bg-indigo-600" delay={0.05} />
-          <KPICard title="Peak Occupancy" value="92%" trend="+8.1%" isUp={true} icon={Flame} color="bg-rose-500" delay={0.1} />
-          <KPICard title="Avg. Duration" value="72m" trend="+5.2%" isUp={true} icon={Timer} color="bg-blue-500" delay={0.15} />
-          <KPICard title="Retention Rate" value="84%" trend="+2.4%" isUp={true} icon={Award} color="bg-emerald-500" delay={0.2} />
-          <KPICard title="Morning Batch" value="184" trend="-4.2%" isUp={false} icon={CloudSun} color="bg-amber-500" delay={0.25} />
-          <KPICard title="Evening Batch" value="244" trend="+6.1%" isUp={true} icon={Moon} color="bg-purple-500" delay={0.3} />
-          <KPICard title="Weekly Growth" value="+12%" trend="Stable" isUp={true} icon={Activity} delay={0.35} color="bg-cyan-500" />
-          <KPICard title="Inactive (7D)" value="42" trend="-8%" isUp={true} icon={UserMinus} color="bg-slate-500" delay={0.4} />
-        </div>
+      {/* 7. KPI ANALYTICS STRIP */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-2 relative z-10">
+        <KPICard title="Check-ins Today" value="428" trend="+14.2%" isUp={true} icon={UserCheck} color="bg-indigo-600" delay={0.05} />
+        <KPICard title="Peak Occupancy" value="92%" trend="+8.1%" isUp={true} icon={Flame} color="bg-rose-500" delay={0.1} />
+        <KPICard title="Avg. Duration" value="72m" trend="+5.2%" isUp={true} icon={Timer} color="bg-blue-500" delay={0.15} />
+        <KPICard title="Retention Rate" value="84%" trend="+2.4%" isUp={true} icon={Award} color="bg-emerald-500" delay={0.2} />
+        <KPICard title="Morning Batch" value="184" trend="-4.2%" isUp={false} icon={CloudSun} color="bg-amber-500" delay={0.25} />
+        <KPICard title="Evening Batch" value="244" trend="+6.1%" isUp={true} icon={Moon} color="bg-purple-500" delay={0.3} />
+        <KPICard title="Weekly Growth" value="+12%" trend="Stable" isUp={true} icon={Activity} delay={0.35} color="bg-cyan-500" />
+        <KPICard title="Inactive (7D)" value="42" trend="-8%" isUp={true} icon={UserMinus} color="bg-slate-500" delay={0.4} />
+      </div>
 
+      <div className="attendance-analytics-workspace">
         {/* 8. DATE FILTER & CONTROL BAR */}
-        <section className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between mb-8 sticky top-[80px] z-[90] shadow-sm backdrop-blur-sm bg-white">
+        <section className="attendance-analytics-workspace-sticky-header">
            <div className="flex items-center gap-2">
               <div className="flex bg-slate-100 p-1 rounded-2xl">
                  {["Today", "Last 7 Days", "Last 30 Days", "Monthly", "Annual"].map(range => (
@@ -495,7 +496,7 @@ const AttendanceTrends = () => {
               ))}
            </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 };
@@ -511,7 +512,7 @@ export const mountAttendanceTrends = () => {
   container.innerHTML = "";
   
   const root = createRoot(container);
-  root.render(<AttendanceTrends />);
+  root.render(<><AttendanceTrends /><BrandFooter /></>);
   return root;
 };
 

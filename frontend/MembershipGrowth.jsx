@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo } from "react";
 import {
   TrendingUp,
@@ -119,16 +120,16 @@ const MembershipGrowth = () => {
   const [selectedBranch, setSelectedBranch] = useState("All Branches");
 
   return (
-    <div className="min-h-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-indigo-100 pb-20">
+    <div className="member-growth-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* 5. TOP UTILITY HEADER */}
-      <header className="h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-[100]">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="flex items-center gap-2">
             <TrendingUp size={16} className="text-slate-400" />
             <span>Reports & Analysis</span>
           </div>
           <ChevronRight size={14} className="opacity-40" />
-          <span className="text-slate-900 font-bold">Membership Growth</span>
+          <span className="text-slate-900 font-bold font-sans">Membership Growth</span>
         </div>
 
         <div className="flex-1 max-w-xl mx-12 relative group hidden md:block">
@@ -136,7 +137,7 @@ const MembershipGrowth = () => {
           <input
             type="text"
             placeholder="Search member, branch, campaign, growth trends..."
-            className="w-full h-11 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+            className="w-full h-11 pl-12 pr-4 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all focus:bg-white"
           />
         </div>
 
@@ -155,37 +156,37 @@ const MembershipGrowth = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto">
-        {/* 6. PAGE TITLE SECTION */}
-        <div className="flex justify-between items-end mb-10">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-            <h1 className="text-[32px] font-black text-slate-900 tracking-tight mb-2 leading-none uppercase">Membership Growth</h1>
-            <p className="text-slate-500 text-[15px] font-medium max-w-[760px] leading-relaxed">
-              Analyze membership acquisition, retention trends, churn behavior, branch performance, and business growth across your fitness ecosystem.
-            </p>
-          </motion.div>
-          <div className="flex gap-2">
-            {["Growth Analytics", "Retention Insights", "Churn Prediction", "Branch Performance"].map((pill, idx) => (
-              <motion.button 
-                key={pill} 
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
-                className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
-              >
-                {pill}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        {/* 7. KPI ANALYTICS STRIP */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-10">
-          {GROWTH_KPIS.map((kpi, idx) => (
-            <KPICard key={kpi.id} label={kpi.label} value={kpi.value} trend={kpi.trend} isUp={kpi.isUp} icon={kpi.icon} color={kpi.color} delay={idx * 0.05} />
+      {/* 6. PAGE TITLE SECTION */}
+      <div className="flex justify-between items-end mb-2 relative z-10">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Membership Growth</h1>
+          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-[760px]">
+            Analyze membership acquisition, retention trends, churn behavior, branch performance, and business growth across your fitness ecosystem.
+          </p>
+        </motion.div>
+        <div className="flex gap-2">
+          {["Growth Analytics", "Retention Insights", "Churn Prediction", "Branch Performance"].map((pill, idx) => (
+            <motion.button 
+              key={pill} 
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
+              className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-50/50 transition-all"
+            >
+              {pill}
+            </motion.button>
           ))}
         </div>
+      </div>
 
+      {/* 7. KPI ANALYTICS STRIP */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-2 relative z-10">
+        {GROWTH_KPIS.map((kpi, idx) => (
+          <KPICard key={kpi.id} label={kpi.label} value={kpi.value} trend={kpi.trend} isUp={kpi.isUp} icon={kpi.icon} color={kpi.color} delay={idx * 0.05} />
+        ))}
+      </div>
+
+      <div className="member-growth-workspace">
         {/* 8. DATE FILTER & GROWTH CONTROL BAR */}
-        <section className="bg-white border border-slate-200 rounded-3xl p-4 flex items-center justify-between mb-8 sticky top-[80px] z-[90] shadow-sm backdrop-blur-sm bg-white">
+        <section className="member-growth-workspace-sticky-header">
            <div className="flex items-center gap-2">
               <div className="flex bg-slate-100 p-1 rounded-2xl">
                  {["Today", "Last 7 Days", "Last 30 Days", "Monthly", "Quarterly", "Annual"].map(range => (
@@ -574,7 +575,7 @@ const MembershipGrowth = () => {
               ))}
            </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 };
@@ -590,7 +591,7 @@ export const mountMembershipGrowth = () => {
   container.innerHTML = "";
   
   const root = createRoot(container);
-  root.render(<MembershipGrowth />);
+  root.render(<><MembershipGrowth /><BrandFooter /></>);
   return root;
 };
 

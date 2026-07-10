@@ -43,11 +43,21 @@ impl AsyncDbManager {
         Self { tx }
     }
 
-    /// Dispatches a write closure to the dedicated SQLite thread.
-    /// Awaits completion (via oneshot channels if a return value is needed).
     pub async fn dispatch_write(&self, task: DbWriteTask) -> Result<(), AppError> {
-        self.tx.send(task).await.map_err(|_| {
+        let (tx, rx) = tokio::sync::oneshot::channel::<Result<(), AppError>>();
+        
+        let wrapped_task = Box::new(move |conn: &mut Connection| {
+            let res = task(conn);
+            let _ = tx.send(res);
+            Ok(())
+        });
+        
+        self.tx.send(wrapped_task).await.map_err(|_| {
             AppError::Database("Write queue is closed or saturated".to_string())
-        })
+        })?;
+        
+        rx.await.map_err(|_| {
+            AppError::Database("Database write task cancelled or worker thread shut down".to_string())
+        })?
     }
 }

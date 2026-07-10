@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -648,22 +649,22 @@ export default function PTPackages() {
   };
 
   return (
-    <div className="min-h-full bg-[#f8fafc] text-slate-900 font-sans selection:bg-indigo-100">
+    <div className="pt-packages-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* 5. TOP UTILITY HEADER */}
-      <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span className="opacity-60">Personal Training</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-900 font-bold">PT Packages</span>
+          <span className="text-slate-900 font-bold font-sans">PT Packages</span>
         </div>
 
-        <div className="flex-1 max-w-2xl px-12">
+        <div className="flex-1 max-w-2xl px-12 relative">
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
             <input 
               type="text"
               placeholder="Search package, duration, trainer, pricing..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-sm focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full bg-slate-100 border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -688,30 +689,31 @@ export default function PTPackages() {
         </div>
       </header>
 
-      <main className="p-8 pb-24">
-        {/* 6. PAGE TITLE SECTION */}
-        <section className="flex justify-between items-end mb-10">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">PT Packages</h1>
-            <p className="text-slate-500 font-medium max-w-2xl">
-              Create, manage, optimize, and monitor personal training packages, subscriptions, coaching plans, and PT revenue operations.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {["Revenue Analytics", "Package Optimization", "Session Intelligence"].map((tag) => (
-              <span key={tag} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* 7. KPI ANALYTICS STRIP */}
-        <section className="grid grid-cols-8 gap-4 mb-10">
-          {REVENUE_ANALYTICS.map((item) => (
-            <KPICard key={item.id} item={item} />
+      {/* 6. PAGE TITLE SECTION */}
+      <section className="flex justify-between items-end mb-2 relative z-10">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">PT Packages</h1>
+          <p className="text-slate-500 text-xs font-semibold max-w-2xl">
+            Create, manage, optimize, and monitor personal training packages, subscriptions, coaching plans, and PT revenue operations.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {["Revenue Analytics", "Package Optimization", "Session Intelligence"].map((tag) => (
+            <span key={tag} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+              {tag}
+            </span>
           ))}
-        </section>
+        </div>
+      </section>
+
+      {/* 7. KPI ANALYTICS STRIP */}
+      <section className="grid grid-cols-8 gap-4 mb-2 relative z-10">
+        {REVENUE_ANALYTICS.map((item) => (
+          <KPICard key={item.id} item={item} />
+        ))}
+      </section>
+
+      <div className="pt-packages-workspace">
 
         {/* 8. MAIN WORKSPACE STRUCTURE */}
         <div className="grid grid-cols-12 gap-8">
@@ -940,7 +942,7 @@ export default function PTPackages() {
             </div>
           </aside>
         </div>
-      </main>
+      </div>
 
       <PackageDrawer 
         pkg={selectedPackage} 
@@ -964,6 +966,6 @@ export const mountPTPackages = () => {
   if (!container) return null;
   
   const root = createRoot(container);
-  root.render(<PTPackages />);
+  root.render(<><PTPackages /><BrandFooter /></>);
   return root;
 };

@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -108,13 +109,13 @@ const CollectFeesPage = () => {
 
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900 font-sans flex flex-col selection:bg-indigo-100">
+    <div className="payments-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* Top Utility Header */}
-      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span>Payments & Billing</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-900">Collect Fees</span>
+          <span className="text-slate-900 font-bold">Collect Fees</span>
         </div>
 
         <div className="flex-1 max-w-xl px-8 relative">
@@ -143,45 +144,44 @@ const CollectFeesPage = () => {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-6 flex flex-col gap-6 max-w-[1600px] mx-auto w-full">
-        {/* Page Title & KPI Strip */}
-        <div className="flex flex-col gap-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Collect Fees</h1>
-              <p className="text-sm text-slate-500 mt-1 max-w-lg">Manage membership payments, renewals, dues recovery, invoices, and recurring billing across your fitness ecosystem.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="h-9 px-4 rounded-md text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2">
-                <History className="w-4 h-4" />
-                Pending Dues
-              </button>
-              <button className="h-9 px-4 rounded-md text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Revenue Reports
-              </button>
-            </div>
+      {/* Page Title & KPI Strip */}
+      <section className="flex flex-col gap-6 relative z-10 mb-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Collect Fees</h1>
+            <p className="text-xs font-semibold text-slate-500 mt-2 max-w-lg">Manage membership payments, renewals, dues recovery, invoices, and recurring billing across your fitness ecosystem.</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {kpiData.map((kpi, idx) => (
-              <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
-                <span className="text-sm font-medium text-slate-500">{kpi.label}</span>
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold text-slate-900">{typeof kpi.value === 'number' && kpi.value > 1000 ? currencyFormatter.format(kpi.value) : kpi.value}</span>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${kpi.isUp ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    {kpi.isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {kpi.trend}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-2">
+            <button className="h-9 px-4 rounded-md text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Pending Dues
+            </button>
+            <button className="h-9 px-4 rounded-md text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Revenue Reports
+            </button>
           </div>
         </div>
 
-        {/* 3-Column Billing Workspace */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpiData.map((kpi, idx) => (
+            <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 animate-fadeIn">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{kpi.label}</span>
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-bold text-slate-900">{typeof kpi.value === 'number' && kpi.value > 1000 ? currencyFormatter.format(kpi.value) : kpi.value}</span>
+                <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 ${kpi.isUp ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                  {kpi.isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {kpi.trend}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 3-Column Billing Workspace */}
+      <div className="payments-workspace">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
           
           {/* LEFT: Member Profile */}
           <div className="lg:col-span-3 flex flex-col gap-4">
@@ -377,7 +377,7 @@ const CollectFeesPage = () => {
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Success Modal Overlay */}
       <AnimatePresence>
@@ -443,7 +443,7 @@ export function mountCollectFees() {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <CollectFeesPage />
+        <><CollectFeesPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     return root;

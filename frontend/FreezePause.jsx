@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -198,22 +199,24 @@ const laneConfig = {
 // ─────────────────────────────────────────
 function DashboardHeader({ title, description, stats }) {
   return (
-    <header className="grid gap-3 rounded-lg border border-slate-200 bg-white/95 p-4 shadow-enterprise lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center mb-8">
-      <div className="min-w-0">
-        <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">Retention Safeguard</p>
-        <h1 className="m-0 text-[clamp(28px,3vw,44px)] font-black leading-none tracking-normal text-slate-950">
-          {title}
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-500">{description}</p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between relative z-10">
+        <div className="min-w-0">
+          <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 font-sans">Retention Safeguard</p>
+          <h1 className="m-0 text-3xl font-black text-slate-900 tracking-tight leading-none">
+            {title}
+          </h1>
+          <p className="mt-3 max-w-3xl text-xs font-semibold leading-relaxed text-slate-500">{description}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px]">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px] relative z-10">
         <StatTile label="Total Active" value={stats.activeFreezes} tone="indigo" />
         <StatTile label="Pending" value={stats.pendingRequests} tone="blue" />
         <StatTile label="Revenue Paused" value={currencyFormatter.format(stats.revenuePaused / 1000) + "K"} tone="rose" />
         <StatTile label="Due Back" value={stats.reactivations} tone="amber" />
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -873,8 +876,8 @@ const FreezePausePage = () => {
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
   return (
-    <div className="min-h-full font-sans text-slate-950 bg-slate-50/30">
-      <header className="sticky top-0 z-50 h-[72px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between">
+    <div className="freeze-pause-shell font-sans text-slate-950">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <button className="h-10 px-4 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-3 hover:bg-white transition-all">
             <Globe size={14} className="text-slate-400" />
@@ -894,13 +897,13 @@ const FreezePausePage = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto space-y-4">
+      <div className="freeze-pause-workspace">
         <DashboardHeader 
           title="Retention Safeguard" 
           description="Manage temporary membership suspensions, automate validity adjustments, and retain members without permanent cancellations."
           stats={stats}
         />
-        <section className="grid gap-3 rounded-lg border border-slate-200 bg-white/95 p-3 shadow-enterprise">
+        <section className="freeze-pause-workspace-sticky-header">
           <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_max-content]">
             <label className="relative block min-w-0" htmlFor="freeze-search-main"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" /><input id="freeze-search-main" value={query} onChange={(e) => setQuery(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100" placeholder="Quick search freeze records..." type="search" /></label>
             <div className="flex gap-2"><button className="h-11 px-4 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider hover:bg-emerald-100 transition-colors flex items-center gap-2 border border-emerald-100"><Zap size={14} /> AI Insights</button><button className="h-11 px-4 rounded-lg bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-colors border border-slate-200">Configure Policies</button></div>
@@ -919,7 +922,7 @@ const FreezePausePage = () => {
           )}
           {viewMode === "table" && (<TableView freezes={filteredFreezes} onAction={handleAction} />)}
         </section>
-      </main>
+      </div>
       <AnimatePresence>
         {isDrawerOpen && <FreezeProfileDrawer isOpen={isDrawerOpen} onClose={closeDrawer} freeze={selectedFreeze} />}
         {isModalOpen && <FreezeRequestModal isOpen={isModalOpen} onClose={closeModal} />}
@@ -941,7 +944,7 @@ export function mountFreezePause() {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <FreezePausePage />
+        <><FreezePausePage /><BrandFooter /></>
       </ErrorBoundary>
     );
     return root;

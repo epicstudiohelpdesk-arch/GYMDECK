@@ -15,7 +15,8 @@ impl PlanRepository {
     ) -> Result<Vec<MembershipPlan>, AppError> {
         let mut stmt = conn.prepare(
             "SELECT * FROM membership_plans 
-             WHERE gym_id = ?1 AND deleted_at IS NULL"
+             WHERE gym_id = ?1 AND deleted_at IS NULL
+             ORDER BY created_at DESC"
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
         let plan_iter = stmt.query_map(
@@ -73,6 +74,20 @@ impl PlanRepository {
                 Utc::now().to_rfc3339(),
                 Utc::now().to_rfc3339(),
             ),
+        ).map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Permanently deletes a membership plan.
+    pub fn delete_plan(
+        tx: &Transaction,
+        ctx: &AuthenticatedContext,
+        plan_id: &str,
+    ) -> Result<(), AppError> {
+        tx.execute(
+            "DELETE FROM membership_plans WHERE id = ?1 AND gym_id = ?2",
+            (plan_id, ctx.gym_id.to_string()),
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(())

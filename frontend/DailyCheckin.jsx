@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -257,18 +258,18 @@ const DailyCheckinPage = () => {
   }, []);
 
   return (
-    <div className="min-h-full font-sans text-slate-950 bg-slate-50/30 flex flex-col">
+    <div className="daily-checkin-shell font-sans text-slate-950">
       {/* Utility Header - No Logo */}
-      <header className="sticky top-0 z-40 h-[64px] bg-white backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950">Daily Check-In</span>
+            Attendance <ChevronRight size={12} className="text-slate-300" /> <span className="text-slate-950 font-bold">Daily Check-In</span>
           </div>
         </div>
-        <div className="flex-1 max-w-lg mx-8">
+        <div className="flex-1 max-w-lg px-8 relative">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
-            <input type="text" placeholder="Scan QR, RFID, or search ID, phone..." className="w-full h-10 bg-slate-100 border border-transparent rounded-xl pl-10 pr-4 text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all shadow-inner" />
+            <input type="text" placeholder="Scan QR, RFID, or search ID, phone..." className="w-full h-10 bg-slate-100 border border-slate-200 rounded-xl pl-10 pr-4 text-xs font-bold outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" />
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -278,18 +279,18 @@ const DailyCheckinPage = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-8 max-w-[1600px] mx-auto w-full space-y-8">
-        
-        {/* KPI Strip */}
-        <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <StatTile label="Today Total" value="142" tone="indigo" icon={Users} change="12%" />
-          <StatTile label="Inside Now" value="48" tone="emerald" icon={Activity} />
-          <StatTile label="Peak Traffic" value="78" tone="blue" icon={TrendingUp} />
-          <StatTile label="Invalid Denials" value="4" tone="rose" icon={ShieldAlert} />
-          <StatTile label="PT Active" value="12" tone="blue" icon={UserCheck} />
-          <StatTile label="Avg Duration" value="1h 20m" tone="amber" icon={Timer} />
-        </section>
+      {/* KPI Strip */}
+      <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 relative z-10 mb-2">
+        <StatTile label="Today Total" value="142" tone="indigo" icon={Users} change="12%" />
+        <StatTile label="Inside Now" value="48" tone="emerald" icon={Activity} />
+        <StatTile label="Peak Traffic" value="78" tone="blue" icon={TrendingUp} />
+        <StatTile label="Invalid Denials" value="4" tone="rose" icon={ShieldAlert} />
+        <StatTile label="PT Active" value="12" tone="blue" icon={UserCheck} />
+        <StatTile label="Avg Duration" value="1h 20m" tone="amber" icon={Timer} />
+      </section>
 
+      <div className="daily-checkin-workspace">
+        
         {/* Operational Workspace */}
         <section className="grid lg:grid-cols-[1.6fr_1fr] gap-8 min-h-[300px]">
           <InstantCheckIn onCheckIn={handleCheckIn} />
@@ -366,7 +367,7 @@ const DailyCheckinPage = () => {
           </div>
         </section>
 
-      </main>
+      </div>
     </div>
   );
 };
@@ -389,7 +390,7 @@ export function mountDailyCheckin() {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <DailyCheckinPage />
+        <><DailyCheckinPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     return root;

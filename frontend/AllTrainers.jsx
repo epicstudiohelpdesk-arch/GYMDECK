@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -431,14 +432,14 @@ export default function AllTrainers() {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50/50">
+    <div className="all-trainers-shell font-sans text-slate-950">
       {/* ─────────────────────────────────────────
           TOP UTILITY HEADER
           ───────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-white backdrop-blur-md border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <nav className="flex items-center text-sm font-medium">
-            <span className="text-slate-400">Trainers & Staff</span>
+          <nav className="flex items-center text-sm font-medium text-slate-500">
+            <span>Trainers & Staff</span>
             <ChevronRight size={16} className="text-slate-300 mx-2" />
             <span className="text-slate-900 font-bold">All Trainers</span>
           </nav>
@@ -450,7 +451,7 @@ export default function AllTrainers() {
             <input 
               type="text" 
               placeholder="Search trainer, specialization, PT clients..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -465,41 +466,41 @@ export default function AllTrainers() {
         </div>
       </header>
 
-      <main className="p-8">
-        {/* ─────────────────────────────────────────
-            PAGE TITLE SECTION
-            ───────────────────────────────────────── */}
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">All Trainers</h1>
-            <p className="text-slate-500 font-medium mt-2 max-w-2xl">
-              Manage trainers, PT staff, schedules, attendance, and operational performance across your fitness ecosystem.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-            {["PT Analytics", "Shift Management", "Payroll Insights", "Performance"].map((pill) => (
-              <button key={pill} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-all">
-                {pill}
-              </button>
-            ))}
-          </div>
+      {/* ─────────────────────────────────────────
+          PAGE TITLE SECTION
+          ───────────────────────────────────────── */}
+      <div className="flex items-end justify-between mb-2 relative z-10">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">All Trainers</h1>
+          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-2xl">
+            Manage trainers, PT staff, schedules, attendance, and operational performance across your fitness ecosystem.
+          </p>
         </div>
-
-        {/* ─────────────────────────────────────────
-            KPI ANALYTICS STRIP
-            ───────────────────────────────────────── */}
-        <div className="grid grid-cols-5 gap-5 mb-10">
-          <KPICard label="Total Trainers" value="18" icon={Users} tone="indigo" trend="+2 this month" />
-          <KPICard label="Active PT Sessions" value="42" icon={Zap} tone="emerald" trend="8 active now" />
-          <KPICard label="Trainers On Shift" value="7" icon={Clock} tone="blue" trend="Next shift: 14:00" />
-          <KPICard label="PT Revenue Today" value="₹12.4K" icon={BarChart3} tone="amber" trend="15% above avg" />
-          <KPICard label="Avg Rating" value="4.82" icon={Star} tone="rose" trend="Top 1% in sector" />
+        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+          {["PT Analytics", "Shift Management", "Payroll Insights", "Performance"].map((pill) => (
+            <button key={pill} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-all">
+              {pill}
+            </button>
+          ))}
         </div>
+      </div>
 
+      {/* ─────────────────────────────────────────
+          KPI ANALYTICS STRIP
+          ───────────────────────────────────────── */}
+      <div className="grid grid-cols-5 gap-5 mb-2 relative z-10">
+        <KPICard label="Total Trainers" value="18" icon={Users} tone="indigo" trend="+2 this month" />
+        <KPICard label="Active PT Sessions" value="42" icon={Zap} tone="emerald" trend="8 active now" />
+        <KPICard label="Trainers On Shift" value="7" icon={Clock} tone="blue" trend="Next shift: 14:00" />
+        <KPICard label="PT Revenue Today" value="₹12.4K" icon={BarChart3} tone="amber" trend="15% above avg" />
+        <KPICard label="Avg Rating" value="4.82" icon={Star} tone="rose" trend="Top 1% in sector" />
+      </div>
+
+      <div className="all-trainers-workspace">
         {/* ─────────────────────────────────────────
             SEARCH + FILTER TOOLBAR
             ───────────────────────────────────────── */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between mb-8 shadow-sm">
+        <div className="all-trainers-workspace-sticky-header">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-slate-400" />
@@ -807,7 +808,7 @@ export default function AllTrainers() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       <ProfileDrawer 
         trainer={selectedTrainer} 
@@ -826,6 +827,6 @@ export const mountAllTrainers = () => {
   if (!container) return null;
   
   const root = createRoot(container);
-  root.render(<AllTrainers />);
+  root.render(<><AllTrainers /><BrandFooter /></>);
   return root;
 };

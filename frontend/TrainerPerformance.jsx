@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,15 +69,15 @@ const TrainerPerformance = ({ onBack }) => {
   );
 
   return (
-    <div className="trainer-performance-workspace bg-[#F8FAF8] min-h-full font-['Plus_Jakarta_Sans'] text-[#111827]">
+    <div className="trainer-performance-shell font-sans text-[#111827]">
       
       {/* 5. TOP UTILITY HEADER */}
-      <header className="sticky top-0 z-[100] h-16 bg-white backdrop-blur-md border-b border-[#E5E7EB] px-8 flex items-center justify-between">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <nav className="flex items-center text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
-            <span>Reports & Analytics</span>
+            <span>Reports & Analysis</span>
             <ChevronRight size={14} className="mx-2" />
-            <span className="text-[#111827]">Trainer Performance</span>
+            <span className="text-[#111827] font-bold font-sans">Trainer Performance</span>
           </nav>
         </div>
 
@@ -86,7 +87,7 @@ const TrainerPerformance = ({ onBack }) => {
             <input 
               type="text" 
               placeholder="Search trainer, PT performance, branch..."
-              className="w-full h-10 pl-10 pr-4 bg-[#F3F4F6] border-none rounded-full text-sm focus:ring-2 focus:ring-[#111827] transition-all"
+              className="w-full h-10 pl-10 pr-4 bg-slate-100 border border-slate-200 rounded-full text-sm focus:ring-2 focus:ring-[#111827] transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -104,13 +105,13 @@ const TrainerPerformance = ({ onBack }) => {
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto p-8 pt-6">
+      <div className="max-w-[1600px] mx-auto">
         
         {/* 6. PAGE TITLE SECTION */}
-        <section className="mb-8 flex items-end justify-between">
+        <section className="mb-2 flex items-end justify-between relative z-10">
           <div className="max-w-[760px]">
-            <h1 className="text-[32px] font-extrabold tracking-tight mb-2">Trainer Performance</h1>
-            <p className="text-[#6B7280] leading-relaxed">
+            <h1 className="text-3xl font-black tracking-tight mb-2 uppercase">Trainer Performance</h1>
+            <p className="text-[#6B7280] text-xs font-semibold leading-relaxed">
               Analyze trainer productivity, PT effectiveness, attendance consistency, client engagement, and workforce performance across your fitness ecosystem.
             </p>
           </div>
@@ -151,10 +152,11 @@ const TrainerPerformance = ({ onBack }) => {
           ))}
         </section>
 
-        {/* 8. DATE FILTER & ANALYTICS CONTROL BAR */}
-        <div className="sticky top-16 z-[90] bg-[#F8FAF8] backdrop-blur-md py-4 mb-8">
-          <div className="bg-white border border-[#E5E7EB] rounded-xl p-2 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-1">
+        <div className="trainer-performance-workspace">
+          {/* 8. DATE FILTER & ANALYTICS CONTROL BAR */}
+          <div className="trainer-performance-workspace-sticky-header">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-1">
               {["Today", "Last 7 Days", "Last 30 Days", "Monthly", "Quarterly", "Annual"].map(opt => (
                 <button 
                   key={opt}
@@ -578,6 +580,7 @@ const TrainerPerformance = ({ onBack }) => {
           </aside>
         </div>
       </div>
+    </div>
 
       {/* 12. TRAINER PERFORMANCE PROFILE DRAWER */}
       <AnimatePresence>
@@ -766,7 +769,7 @@ export function mountTrainerPerformance(container) {
     // This is handled by script.js setActiveView
   };
 
-  root.render(<TrainerPerformance onBack={handleBack} />);
+  root.render(<><TrainerPerformance onBack={handleBack} /><BrandFooter /></>);
 }
 
 export default TrainerPerformance;

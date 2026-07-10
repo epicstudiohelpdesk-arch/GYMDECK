@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
@@ -134,15 +135,18 @@ const getInitialsAvatar = (name) => {
   for (let i = 0; i < cleanName.length; i++) {
     hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
   }
+  
+  // Dynamic rich dark gradients (low lightness HSL) matching target_cards_2.png
   const hue1 = Math.abs(hash % 360);
   const hue2 = (hue1 + 40) % 360;
-  
-  // Return an SVG data URI
+  const stopColor1 = `hsl(${hue1}, 45%, 22%)`;
+  const stopColor2 = `hsl(${hue2}, 50%, 12%)`;
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
     <defs>
       <linearGradient id="grad-${hash}" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:hsl(${hue1}, 70%, 60%)" />
-        <stop offset="100%" style="stop-color:hsl(${hue2}, 70%, 45%)" />
+        <stop offset="0%" style="stop-color:${stopColor1}" />
+        <stop offset="100%" style="stop-color:${stopColor2}" />
       </linearGradient>
     </defs>
     <rect width="100%" height="100%" fill="url(#grad-${hash})" />
@@ -150,6 +154,34 @@ const getInitialsAvatar = (name) => {
   </svg>`;
   
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const getRecoveryScore = (member) => {
+  let hash = 0;
+  const str = member.id || '';
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const score = 55 + (Math.abs(hash) % 40); // Consistent score between 55% and 95%
+  
+  let label = "Low";
+  let color = "text-rose-500";
+  let ringColor = "stroke-rose-500";
+  if (score >= 90) {
+    label = "Very High";
+    color = "text-emerald-500";
+    ringColor = "stroke-emerald-500";
+  } else if (score >= 70) {
+    label = "High";
+    color = "text-emerald-500";
+    ringColor = "stroke-emerald-500";
+  } else if (score >= 60) {
+    label = "Medium";
+    color = "text-amber-500";
+    ringColor = "stroke-amber-500";
+  }
+  
+  return { score, label, color, ringColor };
 };
 
 const normalizeMember = (m) => {
@@ -588,11 +620,11 @@ export default function PastMembers() {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-slate-50 w-full font-sans select-none relative text-slate-700">
+    <div className="past-members-shell font-sans select-none relative text-slate-700">
       
       {/* ─── CLASSY LIGHT COMMAND CENTER HEADER ─── */}
-      <header className="bg-white border-b border-slate-200 px-8 py-5 shadow-sm relative">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-5 relative z-10">
+      <header className="relative flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between relative z-10">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <ShieldCheck size={16} className="text-indigo-600 animate-pulse" />
@@ -661,15 +693,13 @@ export default function PastMembers() {
       </header>
 
       {/* ─── MAIN RETENTION HUB CONTAINER ─── */}
-      <main className="flex-1 p-8">
+      <div className="past-members-workspace">
         
         {/* FILTERS & COMMAND BAR CARD */}
         <section 
           className={cn(
-            "sticky top-0 z-20 mb-8 -mx-8 px-8 pt-4 pb-2.5 border-b border-slate-200/80 bg-white will-change-transform transition-shadow duration-300 ease-out animate-fadeIn",
-            isHeaderSticky 
-              ? "shadow-md"
-              : "shadow-none"
+            "past-members-workspace-sticky-header animate-fadeIn",
+            isHeaderSticky && "is-stuck shadow-md"
           )}
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -895,9 +925,9 @@ export default function PastMembers() {
                         handleToggleSelectMember(member.id);
                       }}
                       className={cn(
-                        "h-full rounded-2xl border bg-white flex flex-col transition-all duration-200 hover:shadow-md relative group cursor-default",
+                        "h-full rounded-[24px] border bg-white flex flex-col transition-all duration-200 hover:shadow-md relative group cursor-default p-5",
                         isSelectionMode
-                          ? "border-slate-300 hover:border-slate-400"
+                          ? "border-slate-350 hover:border-slate-450"
                           : "border-slate-200 hover:border-slate-300"
                       )}
                     >
@@ -921,130 +951,189 @@ export default function PastMembers() {
                         </div>
                       )}
 
-                      {/* Status bar */}
-                      <div className="h-1 shrink-0 bg-slate-950" />
+                      {/* Header: Avatar + Name + Status & Action */}
+                      <div className="flex items-start gap-4">
+                        <button 
+                          type="button"
+                          onClick={(e) => handleViewPhoto(e, member)}
+                          className="bg-transparent border-0 p-0 block shrink-0 cursor-pointer focus:outline-none outline-none hover:scale-105 transition-transform"
+                          title={`View ${member.name}'s photo`}
+                        >
+                          <img 
+                            src={member.image} 
+                            className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 object-cover shadow-sm" 
+                            alt="" 
+                          />
+                        </button>
 
-                      <div className="p-5 flex flex-col flex-1">
-                        {/* Header: Avatar + Name + Status */}
-                        <div className="flex items-start gap-4">
-                          <button 
-                            type="button"
-                            onClick={(e) => handleViewPhoto(e, member)}
-                            className="bg-transparent border-0 p-0 block shrink-0 cursor-pointer focus:outline-none outline-none"
-                            title={`View ${member.name}'s photo`}
-                          >
-                            <img 
-                              src={member.image} 
-                              className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 object-cover shadow-sm" 
-                              alt="" 
-                            />
-                          </button>
-
-                          <div className="min-w-0 flex-1 pt-0.5">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <h3 className="text-[15px] font-bold text-slate-900 leading-tight truncate">{member.name}</h3>
-                                <p className="text-[10px] font-semibold text-slate-400 font-mono mt-0.5">#{member.member_code || member.id}</p>
-                              </div>
-                              <span className={cn(
-                                "shrink-0 px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border leading-none",
-                                statusColor === "amber" ? "bg-amber-50 border-amber-200 text-amber-700" :
-                                statusColor === "indigo" ? "bg-indigo-50 border-indigo-200 text-indigo-700" :
-                                "bg-rose-50 border-rose-200 text-rose-700"
-                              )}>
-                                {member.status}
-                              </span>
-                            </div>
-                          </div>
+                        <div className="min-w-0 flex-1 pt-0.5 text-left">
+                          <h3 className="text-base font-bold text-slate-900 leading-tight truncate">{member.name}</h3>
+                          <p className="text-[10px] font-semibold text-slate-400 font-mono mt-0.5">#{member.member_code || member.id}</p>
                         </div>
 
-                        {/* Spacer */}
-                        <div className="flex-1" />
-
-                        {/* Reason with left accent */}
-                        <div className="relative pl-4 mt-4">
-                          <div className={cn(
-                            "absolute left-0 top-0 bottom-0 w-0.5 rounded-full",
-                            statusColor === "amber" ? "bg-amber-300" :
-                            statusColor === "indigo" ? "bg-indigo-300" : "bg-rose-300"
-                          )} />
-                          <p className="text-[12.5px] text-slate-500 leading-relaxed line-clamp-2">
-                            {member.reason}
-                          </p>
-                        </div>
-
-                        {/* Stats row */}
-                        <div className="flex items-center gap-6 mt-5 pt-4 border-t border-slate-100">
-                          <div className="flex-1">
-                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Inactive</span>
-                            <span className="block text-sm font-bold text-slate-800 mt-1 font-mono">{member.inactiveDays} days</span>
-                          </div>
-                          <div className="flex-1">
-                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Value</span>
-                            <span className="block text-sm font-bold text-slate-800 mt-1 font-mono">{currencyFormatter.format(member.recoveryValue)}</span>
-                          </div>
-                          <div className="flex-1">
-                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">Recovery</span>
-                            <span className={cn(
-                              "block text-sm font-bold mt-1 font-mono",
-                              member.inactiveDays <= 30 ? "text-emerald-600" :
-                              member.inactiveDays <= 60 ? "text-amber-600" : "text-rose-600"
-                            )}>
-                              {member.inactiveDays <= 30 ? "High" : member.inactiveDays <= 60 ? "Med" : "Low"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Contact + action links row */}
-                        <div className={cn("flex items-center justify-between mt-4 pt-3 border-t border-slate-100", isSelectionMode && "pointer-events-none opacity-40")}>
-                          <div className="flex items-center gap-2">
-                            <a 
-                              href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!`}
-                              target="_blank" rel="noreferrer"
-                              className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 flex items-center justify-center border border-slate-100 transition-all"
-                              title="WhatsApp"
-                            >
-                              <MessageSquare size={11} />
-                            </a>
-                            <a 
-                              href={`tel:${member.phone}`}
-                              className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center border border-slate-100 transition-all"
-                              title="Call"
-                            >
-                              <Phone size={11} />
-                            </a>
-                            <a 
-                              href={`mailto:${member.email}`}
-                              className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 flex items-center justify-center border border-slate-100 transition-all"
-                              title="Email"
-                            >
-                              <Mail size={11} />
-                            </a>
-                          </div>
-                          <button 
-                            onClick={() => handleDeleteMember(member)}
-                            className={cn("w-7 h-7 rounded-lg transition-all flex items-center justify-center", isSelectionMode ? "opacity-0 pointer-events-none" : "text-slate-300 hover:text-rose-400 hover:bg-rose-50")}
-                            title="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-
-                        {/* Actions */}
-                        <div className={cn("flex items-center gap-2 mt-4", isSelectionMode && "pointer-events-none opacity-40")}>
-                          <button 
-                            onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
-                            className="flex-1 h-10 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-[11px] font-bold transition-all active:scale-[0.98]"
-                          >
-                            Reactivate
-                          </button>
+                        <div className="flex flex-col items-end gap-2.5 shrink-0">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[8px] font-bold border uppercase tracking-wider leading-none font-mono",
+                            member.status === "Expired" ? "bg-rose-50 border-rose-200 text-rose-700" :
+                            member.status === "Cancelled" ? "bg-slate-50 border-slate-200 text-slate-700" :
+                            "bg-red-50 border-red-200 text-red-700"
+                          )}>
+                            {member.status}
+                          </span>
                           <button 
                             onClick={() => setSelectedMember(member)}
-                            className="h-10 px-5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-bold text-slate-600 hover:text-slate-900 transition-all active:scale-[0.98]"
+                            className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
                           >
-                            Details
+                            <MoreVertical size={16} />
                           </button>
                         </div>
+                      </div>
+
+                      {/* Membership Ended / Offboarding Note */}
+                      <div className="relative pl-3.5 mt-4 text-left">
+                        <div className={cn(
+                          "absolute left-0 top-0 bottom-0 w-0.5 rounded-full",
+                          statusColor === "amber" ? "bg-amber-500" :
+                          statusColor === "indigo" ? "bg-indigo-500" : "bg-rose-500"
+                        )} />
+                        <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest leading-none">Membership Ended</p>
+                        <p className="text-xs text-slate-500 mt-1 leading-normal line-clamp-2">
+                          {(member.reason === "Subscription End" || !member.reason) ? (
+                            <>
+                              {(() => {
+                                const end = new Date();
+                                end.setDate(end.getDate() - member.inactiveDays);
+                                return end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                              })()}{" "}
+                              <span className="text-rose-500 font-bold">({member.inactiveDays} days ago)</span>
+                            </>
+                          ) : (
+                            member.reason
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Unified Metric Panel */}
+                      <div className="bg-slate-50/70 border border-slate-100/80 rounded-2xl p-3 grid grid-cols-3 gap-2 mt-4">
+                        {/* Column 1: Inactivity */}
+                        <div className="text-left flex flex-col justify-center">
+                          <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Inactive For</span>
+                          <span className="block text-[15px] font-black text-slate-900 mt-1.5 leading-none">
+                            {member.inactiveDays}
+                          </span>
+                          <span className="block text-[9px] font-bold text-slate-400 mt-1 leading-none">days</span>
+                        </div>
+
+                        {/* Column 2: Pending Value */}
+                        <div className="text-left border-l border-slate-200/60 pl-3 flex flex-col justify-center">
+                          <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Pending Value</span>
+                          <span className="block text-[15px] font-black text-slate-900 mt-1.5 leading-none">
+                            {currencyFormatter.format(member.recoveryValue)}
+                          </span>
+                        </div>
+
+                        {/* Column 3: Recovery Score ring */}
+                        <div className="text-left border-l border-slate-200/60 pl-3 flex flex-col justify-center">
+                          <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Recovery Score</span>
+                          {(() => {
+                            const { score, label, color, ringColor } = getRecoveryScore(member);
+                            const radius = 10;
+                            const circumference = 2 * Math.PI * radius;
+                            const strokeDashoffset = circumference - (score / 100) * circumference;
+
+                            return (
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
+                                  <svg className="w-8 h-8 transform -rotate-90">
+                                    <circle
+                                      cx="16"
+                                      cy="16"
+                                      r={radius}
+                                      className="stroke-slate-200 fill-none"
+                                      strokeWidth="2.5"
+                                    />
+                                    <circle
+                                      cx="16"
+                                      cy="16"
+                                      r={radius}
+                                      className={cn("fill-none transition-all duration-300", ringColor)}
+                                      strokeWidth="2.5"
+                                      strokeDasharray={circumference}
+                                      strokeDashoffset={strokeDashoffset}
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                                  <span className="absolute text-[8px] font-black text-slate-800 leading-none">{score}%</span>
+                                </div>
+                                <span className={cn("text-[9px] font-black uppercase tracking-wider leading-none", color)}>
+                                  {label}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Spacer to push buttons down */}
+                      <div className="flex-1" />
+
+                      {/* Row 1: Contact icons + Document Viewers */}
+                      <div className={cn("flex items-center justify-between mt-4 pt-3.5 border-t border-slate-100", isSelectionMode && "pointer-events-none opacity-40")}>
+                        <div className="flex items-center gap-2">
+                          <a 
+                            href={`https://wa.me/${member.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(member.name)},%20we%20miss%20you%20at%20GymDeck!`}
+                            target="_blank" rel="noreferrer"
+                            className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200 transition-all shadow-sm"
+                            title="WhatsApp"
+                          >
+                            <MessageSquare size={13} />
+                          </a>
+                          <a 
+                            href={`tel:${member.phone}`}
+                            className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200 transition-all shadow-sm"
+                            title="Call"
+                          >
+                            <Phone size={13} />
+                          </a>
+                          <a 
+                            href={`mailto:${member.email}`}
+                            className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200 transition-all shadow-sm"
+                            title="Email"
+                          >
+                            <Mail size={13} />
+                          </a>
+                          <button 
+                            onClick={() => setSelectedMember(member)}
+                            className="w-8 h-8 rounded-xl bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200 transition-all shadow-sm"
+                            title="Member Documents"
+                          >
+                            <FileText size={13} />
+                          </button>
+                        </div>
+                        <button 
+                          onClick={(e) => handleViewPhoto(e, member)}
+                          className={cn("w-8 h-8 rounded-xl bg-white hover:bg-slate-50 flex items-center justify-center border border-slate-200 transition-all shadow-sm text-slate-400 hover:text-slate-700", isSelectionMode && "opacity-0 pointer-events-none")}
+                          title="Offboarding Agreements"
+                        >
+                          <FileText size={13} />
+                        </button>
+                      </div>
+
+                      {/* Row 2: Reactivate + View Details */}
+                      <div className={cn("flex items-center justify-between mt-4 gap-4", isSelectionMode && "pointer-events-none opacity-40")}>
+                        <button 
+                          onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
+                          className="flex-1 h-10 rounded-xl bg-[#0f172a] hover:bg-slate-800 text-white text-[11px] font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                          <Zap size={11} className="fill-white" />
+                          Reactivate
+                        </button>
+                        <button 
+                          onClick={() => setSelectedMember(member)}
+                          className="h-10 px-4 rounded-xl text-[11px] font-black text-slate-900 hover:text-indigo-600 transition-all flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                        >
+                          View Details <ArrowRight size={13} />
+                        </button>
                       </div>
                     </motion.article>
                     );
@@ -1069,10 +1158,10 @@ export default function PastMembers() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ duration: 0.25, delay: idx * 0.03 }}
-                      className="relative grid grid-cols-12 gap-4 p-3.5 bg-white border border-slate-200/90 rounded-xl shadow-sm hover:shadow-md hover:border-slate-350 transition-all duration-200 items-center"
+                      className="relative grid grid-cols-3 gap-4 p-3 bg-white border border-slate-200/90 rounded-lg shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 list-none"
                     >
-                      {/* Col 1: Member Identity (Col span: 3) */}
-                      <div className="col-span-3 flex items-center gap-3 min-w-0 text-left">
+                      {/* Col 1: Member Identity */}
+                      <div className="flex items-center gap-3 min-w-0 text-left">
                         {isSelectionMode && (
                           <button 
                             onClick={(e) => {
@@ -1095,44 +1184,29 @@ export default function PastMembers() {
                           className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
                           title={`View ${member.name}'s photo`}
                         >
-                          <img src={member.image} className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 object-cover shadow-sm" alt="" />
+                          <img src={member.image} className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 object-cover shadow-sm" alt="" />
                         </button>
                         <div className="min-w-0 text-left">
-                          <p className="text-xs font-bold text-slate-900 leading-tight truncate">{member.name}</p>
-                          <p className="text-[9px] font-bold text-slate-500 mt-1 bg-slate-100 px-1.5 py-0.5 rounded w-fit leading-none font-mono">ID: {member.member_code || member.id}</p>
+                          <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">{member.name}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="px-1.5 py-0.2 rounded text-[7px] font-bold bg-slate-100 text-slate-500 uppercase tracking-wider font-mono">
+                              ID: {member.member_code || member.id}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Col 2: Contact Info (Col span: 2) */}
-                      <div className="col-span-2 text-left">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Contact</span>
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 font-mono truncate mt-0.5">
-                          <Phone size={11} className="text-slate-400 shrink-0" />
-                          <span className="truncate">{member.phone}</span>
+                      {/* Col 2: Info & Metrics */}
+                      <div className="flex items-center justify-around gap-2 text-left">
+                        <div className="min-w-0">
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Contact</span>
+                          <span className="text-[11px] font-bold text-slate-900 mt-0.5 block font-mono truncate max-w-[110px] leading-tight" title={member.phone}>{member.phone}</span>
+                          <span className="text-[9px] font-medium text-slate-400 block font-mono truncate max-w-[110px] leading-none mt-0.5" title={member.email}>{member.email}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 font-mono truncate mt-0.5">
-                          <Mail size={11} className="text-slate-400 shrink-0" />
-                          <span className="truncate">{member.email}</span>
-                        </div>
-                      </div>
-
-                      {/* Col 3: Status & Reason (Col span: 3) */}
-                      <div className="col-span-3 text-left">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Status & Reason</span>
-                        <div className="flex flex-col gap-1 mt-0.5">
-                          <span className={cn("px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider w-fit border leading-none font-mono", statusBadgeStyles[member.status])}>
-                            {member.status}
-                          </span>
-                          <p className="text-[11px] font-semibold text-slate-500 truncate italic">"{member.reason}"</p>
-                        </div>
-                      </div>
-
-                      {/* Col 4: Inactivity Period (Col span: 2) */}
-                      <div className="col-span-2 text-left">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Inactivity</span>
-                        <div className="flex flex-col gap-1 mt-0.5">
-                          <span className="text-xs font-bold text-slate-800 font-mono leading-none">{member.inactiveDays} Days</span>
-                          <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Inactivity</span>
+                          <span className="text-xs font-bold text-slate-900 mt-0.5 block font-mono leading-none">{member.inactiveDays} Days</span>
+                          <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden mt-1">
                             <div 
                               className={cn(
                                 "h-full rounded-full transition-all",
@@ -1142,39 +1216,50 @@ export default function PastMembers() {
                             />
                           </div>
                         </div>
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Recovery</span>
+                          <span className="text-xs font-bold text-slate-900 mt-0.5 block font-mono">{currencyFormatter.format(member.recoveryValue)}</span>
+                        </div>
                       </div>
 
-                      {/* Col 5: Recovery Value (Col span: 1) */}
-                      <div className="col-span-1 text-left">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Recovery</span>
-                        <span className="text-xs font-extrabold text-slate-900 font-mono block mt-0.5">
-                          {currencyFormatter.format(member.recoveryValue)}
-                        </span>
-                      </div>
+                      {/* Col 3: Status & Action Menu */}
+                      <div className="flex items-center justify-between gap-4 pr-36 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[8px] font-bold border uppercase tracking-wider leading-none font-mono",
+                            statusBadgeStyles[member.status]
+                          )}>
+                            {member.status}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold italic truncate max-w-[120px]" title={member.reason}>
+                            "{member.reason}"
+                          </span>
+                        </div>
 
-                      {/* Col 6: Actions (Col span: 1) */}
-                      <div className="col-span-1 flex items-center justify-end gap-1.5">
-                        <button 
-                          onClick={() => setSelectedMember(member)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all shrink-0"
-                          title="View Member Details"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button 
-                          onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-450 hover:text-indigo-650 hover:bg-indigo-50 active:scale-95 transition-all shrink-0"
-                          title="Reactivate Member"
-                        >
-                          <RefreshCw size={14} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteMember(member)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-755 hover:bg-rose-50 active:scale-95 transition-all shrink-0"
-                          title="Delete Archive Record"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {/* Actions aligned on the right, matching PlanCard's absolute container but for 3 icons */}
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                          <button 
+                            onClick={() => setSelectedMember(member)}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
+                            title="View Member Details"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button 
+                            onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
+                            title="Reactivate Member"
+                          >
+                            <RefreshCw size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteMember(member)}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
+                            title="Delete Archive Record"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
 
                     </motion.div>
@@ -1304,7 +1389,7 @@ export default function PastMembers() {
 
         </AnimatePresence>
 
-      </main>
+      </div>
 
       {/* ─── SIDEBAR DETAILED PROFILE DETAILS DRAWER ─── */}
       {createPortal(
@@ -1771,6 +1856,6 @@ export const mountPastMembers = () => {
   const container = document.querySelector('[data-stage="past-members"]');
   if (!container) return null;
   const root = createRoot(container);
-  root.render(<PastMembers />);
+  root.render(<><PastMembers /><BrandFooter /></>);
   return root;
 };

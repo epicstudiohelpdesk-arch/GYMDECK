@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -409,20 +410,19 @@ const Agreements = () => {
   }, [searchQuery, activeCategory, activeStatus]);
 
   return (
-    <div className="min-h-full bg-[#f8fafc] flex flex-col font-sans selection:bg-indigo-100">
+    <div className="agreements-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* ─────────────────────────────────────────
           TOP UTILITY HEADER
       ───────────────────────────────────────── */}
-      <header className="h-auto sm:h-20 bg-white backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-0 flex flex-col sm:flex-row items-center justify-between sticky top-0 z-40 gap-4">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 sm:gap-6 flex-1 w-full max-w-2xl">
           <div className="flex flex-col shrink-0">
              <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                 <span>Legal</span>
                 <ChevronRight size={10} className="opacity-50" />
-                <span className="text-slate-900 hidden sm:inline">Agreements & Consent</span>
-                <span className="text-slate-900 sm:hidden">Agreements</span>
+                <span className="text-slate-900 font-bold font-sans">Agreements & Consent</span>
              </div>
-             <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none">Contracts Hub</h1>
+             <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none uppercase">Contracts Hub</h1>
           </div>
           
           <div className="h-8 sm:h-10 w-[1px] bg-slate-200 mx-1 sm:mx-2 hidden xs:block" />
@@ -450,7 +450,7 @@ const Agreements = () => {
         </div>
       </header>
 
-      <main className="p-4 sm:p-8 space-y-6 sm:space-y-8 max-w-[1600px] mx-auto w-full">
+      <div className="max-w-[1600px] mx-auto w-full">
         {/* ─────────────────────────────────────────
             KPI STRIP
         ───────────────────────────────────────── */}
@@ -487,7 +487,8 @@ const Agreements = () => {
           />
         </section>
 
-        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start">
+        <div className="agreements-workspace">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start">
           {/* ─────────────────────────────────────────
               LEFT PANEL → CATEGORIES
           ───────────────────────────────────────── */}
@@ -775,7 +776,8 @@ const Agreements = () => {
              </section>
           </aside>
         </div>
-      </main>
+      </div>
+    </div>
 
       {/* Audit Log Overlay (Bottom) */}
       <footer className="mt-auto bg-white border-t border-slate-200 p-4 px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[8px] sm:text-[9px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -816,7 +818,7 @@ export function mountAgreements() {
 
   try {
     const root = createRoot(rootElement);
-    root.render(<Agreements />);
+    root.render(<><Agreements /><BrandFooter /></>);
     return root;
   } catch (err) {
     console.error("Failed to render Agreements UI:", err);

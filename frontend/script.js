@@ -2606,22 +2606,61 @@ const renderPaginationControls = (totalMatches) => {
   paginationContainer.style.display = "flex";
   paginationNumbers.innerHTML = "";
 
-  // Generate page numbers
-  for (let i = 1; i <= totalPages; i++) {
-    const btn = document.createElement("button");
-    btn.className = `page-number ${i === currentMembersPage ? "is-active" : ""}`;
-    btn.textContent = i;
-    btn.type = "button";
-    btn.addEventListener("click", () => {
-      currentMembersPage = i;
-      updateMemberResults(false); // don't reset page
-      const membersStage = document.querySelector(".members-stage");
-      if (membersStage) membersStage.scrollTop = 0;
-      const membersTableWrap = document.querySelector(".members-table-wrap");
-      if (membersTableWrap) membersTableWrap.scrollTop = 0;
-    });
-    paginationNumbers.appendChild(btn);
+  // Generate page numbers array with ellipses if totalPages > 10
+  const pages = [];
+  if (totalPages <= 10) {
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+  } else {
+    const range = (start, end) => {
+      const ans = [];
+      for (let i = start; i <= end; i++) {
+        ans.push(i);
+      }
+      return ans;
+    };
+
+    if (currentMembersPage <= 6) {
+      pages.push(...range(1, 8));
+      pages.push("...");
+      pages.push(totalPages);
+    } else if (currentMembersPage >= totalPages - 5) {
+      pages.push(1);
+      pages.push("...");
+      pages.push(...range(totalPages - 7, totalPages));
+    } else {
+      pages.push(1);
+      pages.push("...");
+      pages.push(...range(currentMembersPage - 2, currentMembersPage + 2));
+      pages.push("...");
+      pages.push(totalPages);
+    }
   }
+
+  // Render page buttons and ellipses
+  pages.forEach(item => {
+    if (item === "...") {
+      const el = document.createElement("span");
+      el.className = "page-number-ellipsis flex items-center justify-center px-1.5 text-slate-450 font-bold select-none text-[11px]";
+      el.textContent = "...";
+      paginationNumbers.appendChild(el);
+    } else {
+      const btn = document.createElement("button");
+      btn.className = `page-number ${item === currentMembersPage ? "is-active" : ""}`;
+      btn.textContent = item;
+      btn.type = "button";
+      btn.addEventListener("click", () => {
+        currentMembersPage = item;
+        updateMemberResults(false); // don't reset page
+        const membersStage = document.querySelector(".members-stage");
+        if (membersStage) membersStage.scrollTop = 0;
+        const membersTableWrap = document.querySelector(".members-table-wrap");
+        if (membersTableWrap) membersTableWrap.scrollTop = 0;
+      });
+      paginationNumbers.appendChild(btn);
+    }
+  });
 
   // Update Prev/Next buttons
   if (paginationPrev) paginationPrev.disabled = currentMembersPage === 1;
@@ -4063,7 +4102,8 @@ document.addEventListener('click', async (event) => {
         detail: transferredMember
       }));
 
-      // 4. Remove row from directory
+      // 4. Remove from cache and directory
+      cachedMembers = cachedMembers.filter(m => m.id !== memberId && m.id?.toString() !== memberId?.toString());
       row.remove();
       updateMemberResults(false);
       

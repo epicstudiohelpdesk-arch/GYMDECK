@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -323,13 +324,13 @@ const PendingDuesPage = () => {
   };
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100">
+    <div className="pending-dues-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* Top Utility Header */}
-      <header className="h-16 bg-white backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span>Payments & Billing</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-900 font-semibold">Pending Dues</span>
+          <span className="text-slate-900 font-bold">Pending Dues</span>
         </div>
 
         <div className="flex-1 max-w-xl px-8 relative">
@@ -363,35 +364,34 @@ const PendingDuesPage = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto">
-        {/* Title Section */}
-        <section className="mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Pending Dues</h1>
-              <p className="text-slate-500 max-w-2xl">
-                Track overdue payments, recover revenue, automate collections, and reduce membership churn.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {["Recovery Analytics", "AI Insights", "Settlement Offers", "Reminder Automation"].map((pill) => (
-                <button key={pill} className="px-4 py-2 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-                  {pill}
-                </button>
-              ))}
-            </div>
+      {/* Title Section */}
+      <section className="mb-2 relative z-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 leading-none mb-2">Pending Dues</h1>
+            <p className="text-slate-500 text-xs font-semibold leading-relaxed max-w-2xl">
+              Track overdue payments, recover revenue, automate collections, and reduce membership churn.
+            </p>
           </div>
-        </section>
+          <div className="flex flex-wrap gap-2">
+            {["Recovery Analytics", "AI Insights", "Settlement Offers", "Reminder Automation"].map((pill) => (
+              <button key={pill} className="px-4 py-2 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                {pill}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {/* KPI Strip */}
-        <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-8">
-          {kpis.map((kpi, index) => (
-            <StatCard key={index} {...kpi} />
-          ))}
-        </section>
+      {/* KPI Strip */}
+      <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-2 relative z-10">
+        {kpis.map((kpi, index) => (
+          <StatCard key={index} {...kpi} />
+        ))}
+      </section>
 
-        {/* Workspace Layout */}
-        <div className="grid grid-cols-12 gap-8">
+      <div className="pending-dues-workspace">
+        <div className="grid grid-cols-12 gap-8 w-full">
           
           {/* Left Panel - Filters */}
           <aside className="col-span-12 lg:col-span-3 space-y-6">
@@ -748,7 +748,7 @@ const PendingDuesPage = () => {
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       {/* Member Financial Drawer */}
       <AnimatePresence>
@@ -913,7 +913,7 @@ export const mountPendingDues = () => {
     const root = createRoot(rootElement);
     root.render(
       <ErrorBoundary>
-        <PendingDuesPage />
+        <><PendingDuesPage /><BrandFooter /></>
       </ErrorBoundary>
     );
     console.log("GymDeck: Pending Dues module mounted successfully.");

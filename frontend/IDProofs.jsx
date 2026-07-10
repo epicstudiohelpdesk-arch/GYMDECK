@@ -1,3 +1,4 @@
+import BrandFooter from "./BrandFooter.jsx";
 import React, { useState, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -410,19 +411,19 @@ const IDProofs = () => {
   }, [searchQuery, activeCategory, activeStatus]);
 
   return (
-    <div className="min-h-full bg-[#f8fafc] flex flex-col font-sans selection:bg-indigo-100">
+    <div className="id-proofs-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* ─────────────────────────────────────────
           TOP UTILITY HEADER
       ───────────────────────────────────────── */}
-      <header className="h-auto sm:h-20 bg-white backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-0 flex flex-col sm:flex-row items-center justify-between sticky top-0 z-40 gap-4">
+      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 sm:gap-6 flex-1 w-full max-w-2xl">
           <div className="flex flex-col shrink-0">
              <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
                 <span>Identity</span>
                 <ChevronRight size={10} className="opacity-50" />
-                <span className="text-slate-900">KYC Verification</span>
+                <span className="text-slate-900 font-bold font-sans">KYC Verification</span>
              </div>
-             <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none uppercase tracking-[0.1em]">Verification</h1>
+             <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none uppercase">Verification</h1>
           </div>
           
           <div className="h-8 sm:h-10 w-[1px] bg-slate-200 mx-1 sm:mx-2 hidden xs:block" />
@@ -450,7 +451,7 @@ const IDProofs = () => {
         </div>
       </header>
 
-      <main className="p-4 sm:p-8 space-y-6 sm:space-y-8 max-w-[1600px] mx-auto w-full">
+      <div className="max-w-[1600px] mx-auto w-full">
         {/* ─────────────────────────────────────────
             KPI STRIP
         ───────────────────────────────────────── */}
@@ -487,7 +488,8 @@ const IDProofs = () => {
           />
         </section>
 
-        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start">
+        <div className="id-proofs-workspace">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start">
           {/* ─────────────────────────────────────────
               LEFT PANEL → CATEGORIES
           ───────────────────────────────────────── */}
@@ -763,7 +765,8 @@ const IDProofs = () => {
              </section>
           </aside>
         </div>
-      </main>
+      </div>
+    </div>
 
       {/* Audit Log Overlay (Bottom) */}
       <footer className="mt-auto bg-white border-t border-slate-200 p-4 px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -804,7 +807,7 @@ export function mountIDProofs() {
 
   try {
     const root = createRoot(rootElement);
-    root.render(<IDProofs />);
+    root.render(<><IDProofs /><BrandFooter /></>);
     return root;
   } catch (err) {
     console.error("Failed to render ID Proofs UI:", err);

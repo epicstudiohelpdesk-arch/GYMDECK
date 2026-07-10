@@ -63,18 +63,32 @@ const initIntro = async () => {
   const shouldShowIntro = !introShown;
 
   if (shouldShowIntro) {
-    mountIntroScreen(() => {
-      sessionStorage.setItem("gymdeck-intro-shown", "true");
-      sessionStorage.removeItem("gymdeck-enter");
-      
-      document.documentElement.classList.remove("app-loading");
-      document.documentElement.style.backgroundColor = "";
-      
-      if (authPage) {
-        authPage.classList.remove("is-loading");
-        document.documentElement.classList.add("auth-enter-active");
-      }
-    });
+    const triggerIntro = () => {
+      mountIntroScreen(() => {
+        sessionStorage.setItem("gymdeck-intro-shown", "true");
+        sessionStorage.removeItem("gymdeck-enter");
+        
+        document.documentElement.classList.remove("app-loading");
+        document.documentElement.style.backgroundColor = "";
+        
+        if (authPage) {
+          authPage.classList.remove("is-loading");
+          document.documentElement.classList.add("auth-enter-active");
+        }
+      });
+    };
+
+    if (document.visibilityState === "visible") {
+      triggerIntro();
+    } else {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          document.removeEventListener("visibilitychange", handleVisibilityChange);
+          triggerIntro();
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
   } else {
     // Skip intro: immediately reveal the auth page
     document.documentElement.classList.remove("app-loading");
