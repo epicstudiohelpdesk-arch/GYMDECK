@@ -1358,20 +1358,62 @@ export default function PastMembers() {
                     </button>
                     
                     <div className="flex items-center gap-1 font-mono">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={cn(
-                            "w-10 h-10 rounded-xl text-xs font-black transition-all",
-                            currentPage === page 
-                              ? "bg-slate-950 text-white shadow-md border border-slate-950" 
-                              : "text-slate-500 hover:bg-slate-200 hover:text-slate-950"
-                          )}
-                        >
-                          {page}
-                        </button>
-                      ))}
+                      {(() => {
+                        const pages = [];
+                        if (totalPages <= 10) {
+                          for (let i = 1; i <= totalPages; i++) {
+                            pages.push(i);
+                          }
+                        } else {
+                          const range = (start, end) => {
+                            const ans = [];
+                            for (let i = start; i <= end; i++) {
+                              ans.push(i);
+                            }
+                            return ans;
+                          };
+
+                          if (currentPage <= 6) {
+                            pages.push(...range(1, 8));
+                            pages.push("...");
+                            pages.push(totalPages);
+                          } else if (currentPage >= totalPages - 5) {
+                            pages.push(1);
+                            pages.push("...");
+                            pages.push(...range(totalPages - 7, totalPages));
+                          } else {
+                            pages.push(1);
+                            pages.push("...");
+                            pages.push(...range(currentPage - 2, currentPage + 2));
+                            pages.push("...");
+                            pages.push(totalPages);
+                          }
+                        }
+
+                        return pages.map((page, idx) => (
+                          page === "..." ? (
+                            <span
+                              key={`ellipsis-${idx}`}
+                              className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-slate-400 select-none"
+                            >
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={cn(
+                                "w-10 h-10 rounded-xl text-xs font-black transition-all",
+                                currentPage === page 
+                                  ? "bg-slate-950 text-white shadow-md border border-slate-950" 
+                                  : "text-slate-500 hover:bg-slate-200 hover:text-slate-950"
+                              )}
+                            >
+                              {page}
+                            </button>
+                          )
+                        ));
+                      })()}
                     </div>
 
                     <button 
