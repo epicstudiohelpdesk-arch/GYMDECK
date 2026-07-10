@@ -843,6 +843,9 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
   const [accessCards, setAccessCards] = useState([
     { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
   ]);
+  const [isCustomAccessModalOpen, setIsCustomAccessModalOpen] = useState(false);
+  const [customAccessName, setCustomAccessName] = useState("");
+  const [customAccessDesc, setCustomAccessDesc] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -852,6 +855,9 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
       setAccessCards([
         { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
       ]);
+      setIsCustomAccessModalOpen(false);
+      setCustomAccessName("");
+      setCustomAccessDesc("");
     }
   }, [isOpen]);
 
@@ -1079,20 +1085,9 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                           {/* Dotted custom access creator card */}
                           <div
                             onClick={() => {
-                              const label = prompt("Enter Custom Access Name (e.g. Pool Access):");
-                              if (label && label.trim()) {
-                                const description = prompt("Enter description (optional):") || "";
-                                const newId = `custom-${Date.now()}`;
-                                const newCard = {
-                                  id: newId,
-                                  label: label.trim(),
-                                  description: description.trim(),
-                                  icon: Lock,
-                                  color: "bg-indigo-50 text-indigo-600"
-                                };
-                                setAccessCards(prev => [...prev, newCard]);
-                                setAccess(prev => [...prev, label.trim()]);
-                              }
+                              setCustomAccessName("");
+                              setCustomAccessDesc("");
+                              setIsCustomAccessModalOpen(true);
                             }}
                             className="p-3 bg-white border-2 border-dashed border-slate-200 hover:border-slate-350 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-200 hover:bg-slate-50/50 min-h-[62px]"
                           >
@@ -1192,6 +1187,99 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
               </motion.button>
             </footer>
           </motion.div>
+
+          {/* NESTED CUSTOM ACCESS MODAL */}
+          <AnimatePresence>
+            {isCustomAccessModalOpen && (
+              <motion.div
+                key="custom-access-modal-container"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
+              >
+                {/* Dark blur backdrop */}
+                <motion.div
+                  key="custom-access-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsCustomAccessModalOpen(false)}
+                  className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
+                />
+                
+                {/* Small central card */}
+                <motion.div
+                  key="custom-access-panel"
+                  initial={{ scale: 0.95, y: 10, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.95, y: 10, opacity: 0 }}
+                  transition={{ type: "spring", duration: 0.35, bounce: 0.15 }}
+                  className="relative w-full max-w-md bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 z-50 flex flex-col gap-4 text-left"
+                >
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Create Custom Access</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 font-mono uppercase tracking-wide">Define a new facility permission rule</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Access Name *</label>
+                      <input
+                        type="text"
+                        value={customAccessName}
+                        onChange={(e) => setCustomAccessName(e.target.value)}
+                        placeholder="e.g. Steam/Sauna Access"
+                        className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+                        autoFocus
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Description (Optional)</label>
+                      <textarea
+                        value={customAccessDesc}
+                        onChange={(e) => setCustomAccessDesc(e.target.value)}
+                        placeholder="Describe the limits or benefits of this access..."
+                        rows={3}
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-2">
+                    <button
+                      onClick={() => setIsCustomAccessModalOpen(false)}
+                      className="flex-1 h-10 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        const trimmedName = customAccessName.trim();
+                        if (!trimmedName) return;
+                        const newId = `custom-${Date.now()}`;
+                        const newCard = {
+                          id: newId,
+                          label: trimmedName,
+                          description: customAccessDesc.trim(),
+                          icon: Lock,
+                          color: "bg-indigo-50 text-indigo-600"
+                        };
+                        setAccessCards(prev => [...prev, newCard]);
+                        setAccess(prev => [...prev, trimmedName]);
+                        setIsCustomAccessModalOpen(false);
+                      }}
+                      disabled={!customAccessName.trim()}
+                      className="flex-1 h-10 rounded-xl bg-slate-950 hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-black uppercase tracking-widest text-white transition-all shadow-md"
+                    >
+                      Save Access
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>
