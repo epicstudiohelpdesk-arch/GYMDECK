@@ -1539,19 +1539,19 @@ export default function MembershipPortfolioDashboard() {
                 >
                   {/* SEARCH & FILTERS ROW (TOOLBAR) */}
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 pt-4 pb-2.5">
-                    <div className="relative flex-1 max-w-md">
-                      <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <div className="relative flex-1 max-w-md flex items-center h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl focus-within:border-slate-300 focus-within:bg-white transition-all">
+                      <Search size={15} className="text-slate-400 pointer-events-none shrink-0" />
                       <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search plans by name, category or duration..."
-                        className="w-full h-10 pl-11 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-slate-300 focus:bg-white transition-all placeholder:text-slate-400"
+                        className="w-full h-full ml-3 bg-transparent border-0 outline-none text-xs font-semibold text-slate-800 placeholder:text-slate-400"
                       />
                       {searchQuery && (
                         <button
                           onClick={() => setSearchQuery("")}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                          className="ml-2 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
                         >
                           <X size={14} />
                         </button>
