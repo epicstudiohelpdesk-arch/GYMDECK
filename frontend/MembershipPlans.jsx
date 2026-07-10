@@ -838,14 +838,20 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
     duration: "Monthly"
   });
 
-  const [access, setAccess] = useState(["Single Branch Access"]);
+  const [access, setAccess] = useState(["Freeze Support"]);
   const [areas, setAreas] = useState(["Gym Floor", "Cardio Zone"]);
+  const [accessCards, setAccessCards] = useState([
+    { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
+  ]);
 
   useEffect(() => {
     if (isOpen) {
       setStep(1);
-      setAccess(["Single Branch Access"]);
+      setAccess(["Freeze Support"]);
       setAreas(["Gym Floor", "Cardio Zone"]);
+      setAccessCards([
+        { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
+      ]);
     }
   }, [isOpen]);
 
@@ -876,14 +882,6 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
   };
 
   const { kicker, title, description } = stepInfo[step];
-
-  const ACCESS_CARDS = [
-    { id: "branch", label: "Single Branch Access", description: "Limit plan usage to the home branch location.", icon: Shield, color: "bg-slate-100 text-slate-600" },
-    { id: "roaming", label: "All-Network Roaming", description: "Access any branch in the gym network.", icon: Activity, color: "bg-sky-50 text-sky-600" },
-    { id: "priority", label: "Priority Time Slots", description: "Reservations for peak hours and premium slots.", icon: Clock, color: "bg-amber-50 text-amber-600" },
-    { id: "guest", label: "Guest Pass Eligibility", description: "Allow members to bring a guest monthly.", icon: Users, color: "bg-violet-50 text-violet-600" },
-    { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
-  ];
 
   return (
     <AnimatePresence>
@@ -1041,7 +1039,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       <div className="space-y-3">
                         <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Facility Access</h4>
                         <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
-                          {ACCESS_CARDS.map(card => {
+                          {accessCards.map(card => {
                             const Icon = card.icon;
                             const isChecked = access.includes(card.label);
                             return (
@@ -1077,6 +1075,35 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                               </div>
                             );
                           })}
+
+                          {/* Dotted custom access creator card */}
+                          <div
+                            onClick={() => {
+                              const label = prompt("Enter Custom Access Name (e.g. Pool Access):");
+                              if (label && label.trim()) {
+                                const description = prompt("Enter description (optional):") || "";
+                                const newId = `custom-${Date.now()}`;
+                                const newCard = {
+                                  id: newId,
+                                  label: label.trim(),
+                                  description: description.trim(),
+                                  icon: Lock,
+                                  color: "bg-indigo-50 text-indigo-600"
+                                };
+                                setAccessCards(prev => [...prev, newCard]);
+                                setAccess(prev => [...prev, label.trim()]);
+                              }
+                            }}
+                            className="p-3 bg-white border-2 border-dashed border-slate-200 hover:border-slate-350 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-200 hover:bg-slate-50/50 min-h-[62px]"
+                          >
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                              <Plus size={16} className="stroke-[2.5]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-bold text-slate-500">Create Custom Access</h4>
+                              <p className="text-[9px] text-slate-400 mt-0.5">Click to define a new access rule.</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="space-y-3">
