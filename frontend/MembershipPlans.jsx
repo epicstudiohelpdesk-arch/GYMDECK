@@ -1555,10 +1555,10 @@ export default function MembershipPortfolioDashboard() {
                       {searchQuery && (
                         <button
                           onClick={() => setSearchQuery("")}
-                          className="absolute right-3 text-slate-400 hover:text-slate-600 transition-colors"
+                          className="absolute right-3.5 w-5 h-5 rounded-full bg-slate-200/50 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all duration-200 flex items-center justify-center border-0 p-0 outline-none cursor-pointer"
                           style={{ top: "50%", transform: "translateY(-50%)" }}
                         >
-                          <X size={14} />
+                          <X size={10} className="stroke-[2.5]" />
                         </button>
                       )}
                     </div>
