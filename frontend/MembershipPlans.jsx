@@ -893,7 +893,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 1 }}
-          transition={{ duration: 0.65 }}
+          transition={{ duration: 0.5 }}
           className="fixed inset-0 z-[1000] flex items-end justify-center overflow-hidden"
         >
            <motion.div
@@ -901,7 +901,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.55 }}
+            transition={{ type: "tween", ease: "easeInOut", duration: 0.35 }}
             onClick={onClose}
             className="absolute inset-0 backdrop-blur-2xl"
             style={{ 
@@ -911,10 +911,15 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
           />
           <motion.div
             key="panel"
-            initial={{ y: "100%" }}
+            initial={{ y: 650 }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.65 }}
+            exit={{ y: 650 }}
+            transition={{
+              type: "spring",
+              stiffness: 320,
+              damping: 32,
+              mass: 0.85
+            }}
             className="relative w-full max-w-4xl bg-[#f4f6fa] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[600px] z-50"
             style={{ willChange: "transform" }}
           >
