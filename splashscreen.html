@@ -192,7 +192,13 @@
     }
 
     @keyframes splashContainerAnimation {
-      0%, 94% {
+      0% {
+        opacity: 0;
+      }
+      4% {
+        opacity: 1;
+      }
+      94% {
         opacity: 1;
       }
       100% {
@@ -260,18 +266,27 @@
     window.addEventListener('DOMContentLoaded', () => {
       const img = document.querySelector('.splash-image');
       const triggerReady = () => {
-        // Slight 50ms delay for paint buffer
         setTimeout(() => {
           document.body.classList.add('ready');
         }, 50);
       };
 
+      const startReadySequence = () => {
+        if (typeof img.decode === 'function') {
+          img.decode()
+            .then(triggerReady)
+            .catch(triggerReady);
+        } else {
+          triggerReady();
+        }
+      };
+
       if (img.complete) {
-        triggerReady();
+        startReadySequence();
       } else {
-        img.addEventListener('load', triggerReady);
-        img.addEventListener('error', triggerReady);
-        setTimeout(triggerReady, 1000); // 1s safety net
+        img.addEventListener('load', startReadySequence);
+        img.addEventListener('error', startReadySequence);
+        setTimeout(startReadySequence, 1200); // 1.2s safety net
       }
     });
   </script>
