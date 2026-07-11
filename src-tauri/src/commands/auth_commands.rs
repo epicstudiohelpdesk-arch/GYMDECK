@@ -154,3 +154,63 @@ pub async fn logout_command(state: State<'_, AppState>) -> Result<(), AppError> 
     state.session_manager.revoke_session().await?;
     AuthService::logout()
 }
+
+#[tauri::command]
+pub async fn delete_account_command(
+    state: State<'_, AppState>,
+    email: String,
+) -> Result<(), AppError> {
+    let conn = state.db.pool.get()
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+    let user_info: Result<(String, String), _> = conn.query_row(
+        "SELECT id, gym_id FROM users WHERE email = ?;",
+        [&email],
+        |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    );
+
+    let (user_id, gym_id) = match user_info {
+        Ok(info) => info,
+        Err(_) => {
+            return Err(AppError::Database("User not found".to_string()));
+        }
+    };
+
+    let _ = conn.execute_batch("DROP TRIGGER IF EXISTS prevent_audit_log_update;");
+    let _ = conn.execute_batch("DROP TRIGGER IF EXISTS prevent_audit_log_delete;");
+
+    let _ = conn.execute_batch("BEGIN TRANSACTION;");
+
+    let delete_result = (|| -> Result<(), rusqlite::Error> {
+        let mut stmt = conn.prepare("SELECT id FROM users WHERE gym_id = ?;")?;
+        let user_ids: Vec<String> = stmt.query_map([&gym_id], |row| row.get(0))?
+            .collect::<Result<Vec<String>, _>>()?;
+
+        for uid in &user_ids {
+            conn.execute("DELETE FROM sessions WHERE user_id = ?;", [uid])?;
+            conn.execute("DELETE FROM device_trust WHERE user_id = ?;", [uid])?;
+            conn.execute("DELETE FROM users WHERE id = ?;", [uid])?;
+        }
+
+        conn.execute("DELETE FROM gyms WHERE id = ?;", [&gym_id])?;
+
+        Ok(())
+    })();
+
+    if delete_result.is_ok() {
+        let _ = conn.execute_batch("COMMIT;");
+    } else {
+        let _ = conn.execute_batch("ROLLBACK;");
+    }
+
+    let _ = conn.execute_batch(
+        "CREATE TRIGGER IF NOT EXISTS prevent_audit_log_update BEFORE UPDATE ON audit_logs BEGIN SELECT RAISE(ABORT, 'Audit logs are immutable'); END;"
+    );
+    let _ = conn.execute_batch(
+        "CREATE TRIGGER IF NOT EXISTS prevent_audit_log_delete BEFORE DELETE ON audit_logs BEGIN SELECT RAISE(ABORT, 'Audit logs are immutable'); END;"
+    );
+
+    let _ = state.session_manager.revoke_session().await;
+
+    delete_result.map_err(|e| AppError::Database(e.to_string()))
+}

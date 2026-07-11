@@ -52,6 +52,14 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // --- DELETE ACCOUNT STATE ---
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showRedirectLoader, setShowRedirectLoader] = useState(false);
+
   // --- MOCK PROFILE STATE ---
   const [userData, setUserData] = useState({
     fullName: "Subham Das",
@@ -592,6 +600,48 @@ const Profile = () => {
                 </section>
               </motion.div>
             )}
+
+            {activeTab === "Advanced" && (
+              <motion.div 
+                key="advanced"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                {/* DANGER ZONE SECTION */}
+                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
+                  <div className="flex items-center gap-4 mb-10">
+                    <div className="w-12 h-12 rounded-2xl bg-[#FEF2F2] flex items-center justify-center text-[#EF4444]">
+                      <AlertTriangle size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black tracking-tight text-[#111827]">Danger Zone</h2>
+                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Irreversible actions for your GymDeck account</p>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-[#FEF2F2] border border-[#FCA5A5]/30 flex items-center justify-between gap-6">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-[#991B1B]">Delete Account Permanently</h4>
+                      <p className="text-xs text-[#B91C1C] opacity-90 max-w-lg font-medium">
+                        Deleting your account will lead to permanent data loss. All gym metrics, plans, members, check-ins, and payments associated with your profile will be immediately destroyed and are non-recoverable.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setDeleteConfirmEmail("");
+                        setDeleteError("");
+                        setIsConfirmDeleteModalOpen(true);
+                      }}
+                      className="h-12 px-8 rounded-2xl bg-[#EF4444] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#DC2626] transition-all shadow-lg shadow-red-500/10 shrink-0"
+                    >
+                      Delete My Account
+                    </button>
+                  </div>
+                </section>
+              </motion.div>
+            )}
           </AnimatePresence>
         </main>
 
@@ -721,6 +771,169 @@ const Profile = () => {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 19. CONFIRM DELETE ACCOUNT WARNING MODAL */}
+      <AnimatePresence>
+        {isConfirmDeleteModalOpen && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            {/* Dark blur backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { if (!isDeleting) setIsConfirmDeleteModalOpen(false); }}
+              className="absolute inset-0 bg-slate-950/75 backdrop-blur-md"
+            />
+            
+            {/* Modal Box */}
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              transition={{ type: "spring", duration: 0.35 }}
+              className="relative w-full max-w-md bg-white border border-slate-200 rounded-[28px] shadow-2xl p-8 z-10 flex flex-col gap-5 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20} className="stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Delete Account Permanently</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Danger Zone Action</p>
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-500 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                Deleting your account will lead to permanent data loss and is <span className="font-bold text-red-600">non-recoverable</span>. All gym records, plans, payments, and member registrations linked to this tenant will be immediately purged.
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                  Confirm your email address *
+                </label>
+                <input
+                  type="email"
+                  value={deleteConfirmEmail}
+                  onChange={(e) => {
+                    setDeleteConfirmEmail(e.target.value);
+                    setDeleteError("");
+                  }}
+                  placeholder="enter your email to confirm"
+                  disabled={isDeleting}
+                  className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+                />
+                {deleteError && (
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mt-1">
+                    {deleteError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                  className="flex-1 h-11 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const trimmedEmail = deleteConfirmEmail.trim();
+                    if (!trimmedEmail) {
+                      setDeleteError("Please enter your email address.");
+                      return;
+                    }
+                    setIsDeleting(true);
+                    setDeleteError("");
+                    try {
+                      await window.__TAURI__.core.invoke("delete_account_command", { email: trimmedEmail });
+                      setIsConfirmDeleteModalOpen(false);
+                      setDeleteConfirmEmail("");
+                      setShowSuccessModal(true);
+                      
+                      setTimeout(() => {
+                        setShowSuccessModal(false);
+                        setShowRedirectLoader(true);
+                        
+                        setTimeout(() => {
+                          window.location.href = "../index.html";
+                        }, 2000);
+                      }, 2000);
+                    } catch (err) {
+                      setDeleteError(err.toString());
+                      setIsDeleting(false);
+                    }
+                  }}
+                  disabled={isDeleting || !deleteConfirmEmail.trim()}
+                  className="flex-1 h-11 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-xs font-black uppercase tracking-widest text-white transition-all shadow-md shadow-red-500/10 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    "Delete"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 20. SUCCESS ACCOUNT DELETION COMPACT MODAL */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+            {/* Dark blur backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
+            />
+            
+            {/* Small Compact Modal */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-80 bg-slate-900/90 border border-white/10 rounded-2xl shadow-2xl p-6 z-10 flex flex-col items-center gap-3 text-center"
+            >
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center shadow-inner">
+                <CheckCircle2 size={24} className="stroke-[2.5]" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-white uppercase tracking-wider">Account Deleted</h4>
+                <p className="text-[10px] text-slate-400 font-medium mt-1 leading-normal">
+                  Your tenant profile and all associated data have been permanently removed.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 21. PREMIUM REDIRECTING LOADER */}
+      <AnimatePresence>
+        {showRedirectLoader && (
+          <div className="fixed inset-0 z-[3000] flex flex-col items-center justify-center gap-4 bg-slate-950">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+              className="w-12 h-12 rounded-full border-4 border-slate-800 border-t-white"
+            />
+            <motion.p
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]"
+            >
+              redirecting...
+            </motion.p>
+          </div>
         )}
       </AnimatePresence>
     </div>
