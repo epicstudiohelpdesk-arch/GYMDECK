@@ -358,11 +358,11 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             onClick={isSubModalOpen ? undefined : onClose}
-            className={cn(
-              "absolute inset-0 bg-slate-950/82 backdrop-blur-[18px]",
-              isSubModalOpen && "bg-slate-950/92"
-            )}
+            className="absolute inset-0"
             style={{
+              backgroundColor: isSubModalOpen ? "rgba(2, 6, 23, 0.92)" : "rgba(4, 6, 12, 0.82)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
               transition: "background-color 0.3s ease, backdrop-filter 0.3s ease",
               willChange: "opacity, background-color"
             }}
@@ -934,9 +934,11 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
             exit={{ opacity: 0 }}
             transition={{ type: "tween", ease: "easeInOut", duration: 0.35 }}
             onClick={onClose}
-            className="absolute inset-0 backdrop-blur-[18px]"
+            className="absolute inset-0"
             style={{ 
               backgroundColor: "rgba(3, 5, 10, 0.82)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
               willChange: "opacity" 
             }}
           />
