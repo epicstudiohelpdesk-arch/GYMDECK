@@ -46,7 +46,8 @@ import {
   Trash2,
   Hash,
   Circle,
-  FolderPlus
+  FolderPlus,
+  Globe
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorHandlers.jsx";
 
