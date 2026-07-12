@@ -1159,24 +1159,80 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                   </motion.div>
                 )}
                 {step === 4 && (
-                  <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                    <div className="flex flex-col items-center text-center py-4">
-                      <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 shadow-inner"><CheckCircle2 size={28} className="stroke-[2.5]" /></div>
-                      <h3 className="text-lg font-bold text-slate-900">Ready to Publish</h3>
-                      <p className="text-xs font-semibold text-slate-500 mt-1 max-w-sm">Review the strategic plan details before publishing to your portfolio.</p>
+                  <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="grid grid-cols-2 gap-6 items-stretch h-[280px]">
+                    {/* Left Column: Plan Details Summary Card */}
+                    <div className="bg-white border border-slate-200 rounded-[20px] p-5 flex flex-col justify-between shadow-sm text-left">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded-lg text-[9px] font-black text-indigo-700 uppercase tracking-wider leading-none">
+                            {form.category || "Transformation"}
+                          </span>
+                          <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold text-slate-500 uppercase tracking-wider leading-none">
+                            {form.audience || "Athletes"}
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-black text-slate-900 tracking-tight leading-snug truncate">
+                          {form.name || "Untitled Membership Plan"}
+                        </h4>
+                        <div className="mt-4 flex items-baseline gap-1">
+                          <span className="text-2xl font-black text-slate-900">
+                            ₹{form.price || "0"}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                            / {form.duration || "Monthly"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100 space-y-2.5">
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider">Joining Fee</span>
+                          <span className="text-slate-800 font-black font-mono">₹{form.joiningFee || "0"}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider">Selected Zones</span>
+                          <span className="text-slate-800 font-black font-mono">{areas.length} Areas</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider">Access Controls</span>
+                          <span className="text-slate-800 font-black font-mono">{access.length} Rules</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Revenue Potential</p>
-                        <p className="text-base font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) * 100 * (form.duration === "Annual" ? 1 : form.duration === "Half-Yearly" ? 2 : form.duration === "Quarterly" ? 4 : 12)) : "0"}<span className="text-[10px] font-medium text-slate-400">/yr</span></p>
+
+                    {/* Right Column: Strategic Analytics Tiles */}
+                    <div className="flex flex-col gap-3 justify-between">
+                      <div className="p-4 rounded-[16px] bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                          <CheckCircle2 size={18} className="stroke-[2.5]" />
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Revenue Potential</p>
+                          <p className="text-base font-black text-slate-900 mt-1.5 leading-none">
+                            ₹{form.price ? formatCompact(Number(form.price) * 100 * (form.duration === "Annual" ? 1 : form.duration === "Half-Yearly" ? 2 : form.duration === "Quarterly" ? 4 : 12)) : "0"}
+                            <span className="text-[10px] font-medium text-slate-400">/yr</span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Retention Forecast</p>
-                        <p className="text-base font-black text-emerald-600">76%</p>
+
+                      <div className="p-4 rounded-[16px] bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                          <Zap size={18} className="stroke-[2.5]" />
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Retention Forecast</p>
+                          <p className="text-base font-black text-emerald-600 mt-1.5 leading-none">76%</p>
+                        </div>
                       </div>
-                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col items-center text-center">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Market Position</p>
-                        <p className="text-base font-black text-indigo-600">Strategic</p>
+
+                      <div className="p-4 rounded-[16px] bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center shrink-0">
+                          <Globe size={18} className="stroke-[2.5]" />
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Market Position</p>
+                          <p className="text-base font-black text-indigo-600 mt-1.5 leading-none">Strategic</p>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
