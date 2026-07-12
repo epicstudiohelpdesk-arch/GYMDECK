@@ -927,8 +927,8 @@ export default function PastMembers() {
                       className={cn(
                         "h-full rounded-[24px] border bg-white flex flex-col transition-all duration-200 hover:shadow-md relative group cursor-default p-5",
                         isSelectionMode
-                          ? "border-slate-350 hover:border-slate-450"
-                          : "border-slate-200 hover:border-slate-300"
+                          ? "border-slate-400 hover:border-slate-500"
+                          : "border-slate-300/80 hover:border-slate-400"
                       )}
                     >
                       {/* Selection checkbox in selection mode */}
