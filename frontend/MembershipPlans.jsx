@@ -1111,7 +1111,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Monthly Fees *</label>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Plan Price *</label>
                             <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="₹24,999" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
                           </div>
                           <div className="space-y-2">
@@ -1121,7 +1121,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                         </div>
                         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center h-[90px]">
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projected ARPU</p>
-                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) / (form.duration === "Annual" ? 12 : (form.durationDays || 30) / 30)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
+                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact((Number(form.price) * 30) / (form.durationDays || 30)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
                         </div>
                       </div>
                     </div>
