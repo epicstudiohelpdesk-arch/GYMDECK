@@ -368,14 +368,13 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             }}
           />
 
-          {/* Panel */}
           <motion.div
             key="details-panel"
             initial={{ scale: 0.95, y: 15, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.45 }}
-            className="relative w-full max-w-4xl bg-white rounded-[32px] border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col p-8 md:p-10 m-auto text-left max-h-[90vh] md:max-h-[600px] z-50"
+            className="relative w-full max-w-4xl bg-[#f8fafc] rounded-[28px] border border-slate-200/60 shadow-2xl overflow-hidden flex flex-col p-7 md:p-9 m-auto text-left max-h-[90vh] md:max-h-[580px] z-50"
             style={{
               filter: isSubModalOpen ? "blur(5px) brightness(0.65)" : "none",
               pointerEvents: isSubModalOpen ? "none" : "auto",
@@ -388,7 +387,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               whileHover="hovered"
               whileTap={{ scale: 0.95 }}
               onClick={onClose}
-              className="absolute top-8 right-8 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:text-white hover:bg-slate-950 hover:border-slate-950 shadow-sm transition-all duration-200 z-50"
+              className="absolute top-7 right-7 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:text-white hover:bg-slate-950 hover:border-slate-950 shadow-sm transition-all duration-200 z-50"
               variants={{
                 initial: { scale: 1 },
                 hovered: { scale: 1.05 }
@@ -407,81 +406,98 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             </motion.button>
 
             {/* Header section with category and plan ID */}
-            <header className="flex justify-between items-start gap-5 mb-6 shrink-0">
+            <header className="flex justify-between items-start gap-5 mb-5 shrink-0">
               <div className="flex items-center gap-4">
-                <div className={cn(
-                  "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white font-black text-sm shadow-md shrink-0",
-                  plan.color || "from-slate-800 to-indigo-900"
-                )}>
+                <div 
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-base shadow-sm shrink-0 ring-4 ring-white"
+                  style={{
+                    background: plan.category === "Transformation" ? "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)" :
+                                plan.category === "Bodybuilding" ? "linear-gradient(135deg, #10b981 0%, #047857 100%)" :
+                                plan.category === "Weight Loss" ? "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)" :
+                                "linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)"
+                  }}
+                >
                   {getPlanInitials(plan.name)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
+                    <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase tracking-widest leading-none">
                       {plan.category}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest">
+                    <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-slate-100 border border-slate-200 text-slate-500 uppercase tracking-widest leading-none">
                       {plan.duration}
                     </span>
                   </div>
-                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1.5 leading-tight">{plan.name}</h2>
+                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1.5 leading-none">{plan.name}</h2>
                 </div>
               </div>
             </header>
 
             {/* Content Layout */}
-            <div className="space-y-6 flex-1 overflow-y-auto pr-1">
+            <div className="space-y-5 flex-1 overflow-y-auto pr-1">
               
               {/* Financial Strategy Grid */}
               <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pricing</span>
-                  <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.price)}</strong>
-                  <span className="text-[10px] text-slate-400 font-semibold mt-1">Base Fee</span>
+                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Pricing</span>
+                    <DollarSign size={13} className="text-slate-400" />
+                  </div>
+                  <strong className="text-base md:text-lg font-black text-slate-900 mt-2 block">{formatCurrency(plan.price)}</strong>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Base Fee</span>
                 </article>
 
-                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Enrollment</span>
-                  <div className="flex items-baseline gap-1 mt-1">
+                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Active Enrollment</span>
+                    <Users size={13} className="text-slate-400" />
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-2">
                     <strong className="text-base md:text-lg font-black text-slate-900">{plan.activeMembers}</strong>
                     <span className={cn(
-                      "text-[10px] font-bold",
+                      "text-[9px] font-black font-mono",
                       plan.trendUp ? "text-emerald-600" : "text-rose-600"
                     )}>
                       {plan.trend}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-semibold mt-1">Total Members</span>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Total Members</span>
                 </article>
 
-                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Monthly Contribution</span>
-                  <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.monthlyContribution)}</strong>
-                  <span className="text-[10px] text-slate-400 font-semibold mt-1">MRR contribution</span>
+                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Monthly Contribution</span>
+                    <TrendingUp size={13} className="text-slate-400" />
+                  </div>
+                  <strong className="text-base md:text-lg font-black text-slate-900 mt-2 block">{formatCurrency(plan.monthlyContribution)}</strong>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">MRR contribution</span>
                 </article>
 
-                <article className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">LTD Revenue</span>
-                  <strong className="text-base md:text-lg font-black text-slate-900 mt-1 block">{formatCurrency(plan.revenue)}</strong>
-                  <span className="text-[10px] text-slate-400 font-semibold mt-1">Total Generated</span>
+                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">LTD Revenue</span>
+                    <BarChart3 size={13} className="text-slate-400" />
+                  </div>
+                  <strong className="text-base md:text-lg font-black text-slate-900 mt-2 block">{formatCurrency(plan.revenue)}</strong>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Total Generated</span>
                 </article>
               </section>
 
               {/* Grid side-by-side for Analytics and Privileges */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                 
                 {/* Status and Health Analytics */}
-                <section className="md:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 p-4.5 rounded-2xl bg-slate-50/70 border border-slate-100 items-center">
+                <section className="md:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 rounded-2xl bg-white border border-slate-200/60 shadow-sm items-center">
                   
                   {/* Concentric Gauge SVG Column (span 5) */}
-                  <div className="sm:col-span-5 flex justify-center items-center relative h-[130px] w-[130px] mx-auto shrink-0">
-                    <svg className="w-[130px] h-[130px]" viewBox="0 0 120 120">
+                  <div className="sm:col-span-5 flex justify-center items-center relative h-[120px] w-[120px] mx-auto shrink-0">
+                    <svg className="w-[120px] h-[120px]" viewBox="0 0 120 120">
                       {/* Outer Track (Retention) */}
                       <circle
                         cx="60"
                         cy="60"
                         r="44"
-                        className="stroke-slate-200/60 fill-none stroke-[6.5]"
+                        className="stroke-slate-100 fill-none stroke-[7]"
                       />
                       {/* Outer Active Ring (Retention) */}
                       <motion.circle
@@ -489,7 +505,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                         cy="60"
                         r="44"
                         className={cn(
-                          "fill-none stroke-[6.5]",
+                          "fill-none stroke-[7]",
                           statusColor === "rose" ? "stroke-rose-500" : "stroke-emerald-500"
                         )}
                         strokeLinecap="round"
@@ -504,22 +520,22 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                       <circle
                         cx="60"
                         cy="60"
-                        r="34"
-                        className="stroke-slate-200/60 fill-none stroke-[6.5]"
+                        r="33"
+                        className="stroke-slate-100 fill-none stroke-[7]"
                       />
                       {/* Inner Active Ring (Renewal) */}
                       <motion.circle
                         cx="60"
                         cy="60"
-                        r="34"
+                        r="33"
                         className={cn(
-                          "fill-none stroke-[6.5]",
+                          "fill-none stroke-[7]",
                           plan.renewalRate < 60 ? "stroke-rose-500" : "stroke-indigo-500"
                         )}
                         strokeLinecap="round"
-                        strokeDasharray="213.63"
-                        initial={{ strokeDashoffset: 213.63 }}
-                        animate={{ strokeDashoffset: 213.63 - (plan.renewalRate / 100) * 213.63 }}
+                        strokeDasharray="207.35"
+                        initial={{ strokeDashoffset: 207.35 }}
+                        animate={{ strokeDashoffset: 207.35 - (plan.renewalRate / 100) * 207.35 }}
                         transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
                         transform="rotate(-90 60 60)"
                       />
@@ -528,7 +544,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                     {/* Centered text indicators inside Ring */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
                       <span className={cn(
-                        "text-[11px] font-black uppercase tracking-wider leading-none",
+                        "text-[10px] font-black uppercase tracking-wider leading-none",
                         statusColor === "emerald" ? "text-emerald-600" :
                         statusColor === "indigo" ? "text-indigo-600" :
                         statusColor === "rose" ? "text-rose-600" :
@@ -536,7 +552,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                       )}>
                         {plan.status}
                       </span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                         {plan.risk} Risk
                       </span>
                     </div>
@@ -545,13 +561,13 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                   {/* Details and Legend Column (span 7) */}
                   <div className="sm:col-span-7 space-y-3 text-left">
                     <div>
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Plan Performance Index</h4>
+                      <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Plan Performance Index</h4>
                       <p className="text-xs font-semibold text-slate-500 leading-relaxed mt-1">
                         This tier exhibits a <span className="font-extrabold text-slate-900">{plan.trend}</span> growth velocity with optimized operational health parameters.
                       </p>
                     </div>
 
-                    <div className="space-y-2 border-t border-slate-200/50 pt-2.5">
+                    <div className="space-y-2 border-t border-slate-100 pt-2.5">
                       {/* Retention Legend */}
                       <div className="flex items-center justify-between text-xs leading-none">
                         <div className="flex items-center gap-2">
@@ -559,7 +575,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                             "w-2.5 h-2.5 rounded-full shrink-0",
                             statusColor === "rose" ? "bg-rose-500" : "bg-emerald-500"
                           )} />
-                          <span className="font-bold text-slate-650 uppercase tracking-wide">Retention Rate</span>
+                          <span className="font-bold text-slate-500 uppercase tracking-wide">Retention Rate</span>
                         </div>
                         <span className="font-black text-slate-900 font-mono text-sm">{plan.retention}%</span>
                       </div>
@@ -571,7 +587,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                             "w-2.5 h-2.5 rounded-full shrink-0",
                             plan.renewalRate < 60 ? "bg-rose-500" : "bg-indigo-500"
                           )} />
-                          <span className="font-bold text-slate-650 uppercase tracking-wide">Renewal Velocity</span>
+                          <span className="font-bold text-slate-500 uppercase tracking-wide">Renewal Velocity</span>
                         </div>
                         <span className="font-black text-slate-900 font-mono text-sm">{plan.renewalRate}%</span>
                       </div>
@@ -580,8 +596,8 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                 </section>
 
                 {/* Access Strategy & Privileges */}
-                <section className="md:col-span-5 space-y-3">
-                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Access Privileges</h4>
+                <section className="md:col-span-5 p-5 bg-white border border-slate-200/60 rounded-2xl shadow-sm space-y-3 flex flex-col justify-between">
+                  <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Access Privileges</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: "Gym Floor", enabled: true },
@@ -594,12 +610,12 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                       <div 
                         key={idx} 
                         className={cn(
-                          "p-3 rounded-2xl border text-[10px] font-extrabold uppercase tracking-wider flex items-center justify-between shadow-sm",
-                          privilege.enabled ? "bg-white border-slate-200 text-slate-700" : "bg-slate-50 border-slate-100 text-slate-350"
+                          "p-2 rounded-xl border text-[9px] font-black uppercase tracking-wider flex items-center justify-between transition-all leading-none min-h-[30px]",
+                          privilege.enabled ? "bg-emerald-50/40 border-emerald-100 text-slate-700" : "bg-slate-50 border-slate-100 text-slate-350"
                         )}
                       >
                         <span className="truncate mr-1">{privilege.label}</span>
-                        <div className={cn("w-2 h-2 rounded-full shrink-0", privilege.enabled ? "bg-emerald-400 animate-pulse" : "bg-slate-300")} />
+                        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", privilege.enabled ? "bg-emerald-400" : "bg-slate-300")} />
                       </div>
                     ))}
                   </div>
@@ -608,45 +624,44 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             </div>
 
             {/* Bottom Actions Row */}
-            <footer className="mt-10 pt-5 border-t border-slate-100 flex flex-wrap gap-2.5 justify-end shrink-0">
+            <footer className="mt-6 pt-4 border-t border-slate-250/50 flex flex-wrap gap-2.5 justify-end shrink-0">
               <button 
                 onClick={() => { onEdit(plan); onClose(); }}
-                className="px-4.5 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-750 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Edit3 size={13} />
+                <Edit3 size={12} />
                 Edit Plan
               </button>
               
               <button 
                 onClick={() => { onDuplicate(plan); onClose(); }}
-                className="px-4.5 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-750 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Copy size={13} />
+                <Copy size={12} />
                 Duplicate
               </button>
 
               <button 
                 onClick={() => { onArchive(plan); onClose(); }}
-                className="px-4.5 h-11 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-750 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Archive size={13} />
+                <Archive size={12} />
                 Archive
               </button>
 
               <button 
                 onClick={() => { onDelete(plan); }}
-                className="px-4.5 h-11 rounded-2xl bg-rose-50 hover:bg-rose-100/70 text-rose-600 text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl bg-rose-50 hover:bg-rose-100/70 text-rose-600 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
-                <Trash2 size={13} />
+                <Trash2 size={12} />
                 Delete
               </button>
 
-              <div className="h-11 w-[1px] bg-slate-200 mx-1.5" />
-
+              <div className="h-10 w-[1px] bg-slate-200 mx-1.5" />
 
               <button 
                 onClick={onClose}
-                className="px-7 h-11 rounded-2xl bg-slate-900 hover:bg-black text-white text-[11px] font-bold uppercase tracking-wider transition-all duration-200 flex items-center"
+                className="px-6 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center"
               >
                 Done
               </button>
