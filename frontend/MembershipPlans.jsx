@@ -851,7 +851,8 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
     description: "",
     price: "",
     joiningFee: "",
-    duration: "Monthly"
+    duration: "Monthly",
+    customDays: ""
   });
 
   const [access, setAccess] = useState(["Freeze Support"]);
@@ -1061,7 +1062,51 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                               </motion.button>
                             );
                           })}
+
+                          {form.duration === "Custom" ? (
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.01, y: -0.5 }}
+                              whileTap={{ scale: 0.99 }}
+                              onClick={() => setForm({ ...form, duration: "Custom" })}
+                              className="h-14 rounded-xl border flex flex-col items-center justify-center bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10 transition-all duration-200 p-2 col-span-2"
+                            >
+                              <span className="text-[10px] font-black uppercase tracking-wider leading-none">Custom</span>
+                              <span className="text-[9px] font-bold font-mono mt-1.5 leading-none text-slate-300">
+                                {form.customDays ? `${form.customDays} Days` : "Enter Days Below"}
+                              </span>
+                            </motion.button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setForm({ ...form, duration: "Custom", customDays: "" });
+                              }}
+                              className="h-14 rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-350 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-2 p-2 col-span-2"
+                            >
+                              <Plus size={11} className="stroke-[3]" />
+                              <span>Custom Duration</span>
+                            </button>
+                          )}
                         </div>
+
+                        {form.duration === "Custom" && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-1.5 mt-2"
+                          >
+                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Duration in Days *</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={form.customDays}
+                              onChange={(e) => setForm({ ...form, customDays: e.target.value })}
+                              placeholder="e.g. 45"
+                              className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+                            />
+                          </motion.div>
+                        )}
                       </div>
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -1076,7 +1121,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                         </div>
                         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center h-[90px]">
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projected ARPU</p>
-                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) / (form.duration === "Annual" ? 12 : form.duration === "Half-Yearly" ? 6 : form.duration === "Quarterly" ? 3 : 1)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
+                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) / (form.duration === "Annual" ? 12 : form.duration === "Half-Yearly" ? 6 : form.duration === "Quarterly" ? 3 : form.duration === "Custom" ? ((parseFloat(form.customDays) || 30) / 30) : 1)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
                         </div>
                       </div>
                     </div>
@@ -1645,6 +1690,7 @@ export default function MembershipPortfolioDashboard() {
     if (formDetails.duration === "Quarterly") durationDays = 90;
     else if (formDetails.duration === "Half-Yearly") durationDays = 180;
     else if (formDetails.duration === "Annual") durationDays = 365;
+    else if (formDetails.duration === "Custom") durationDays = parseInt(formDetails.customDays) || 30;
 
     const newPlan = {
       id: crypto.randomUUID(),
