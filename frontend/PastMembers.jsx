@@ -51,7 +51,7 @@ const STATUS_OPTIONS = ["All", "Expired", "Cancelled", "Terminated"];
 
 const MOCK_PAST_MEMBERS = [
   {
-    id: "MBR-0104",
+    id: "MBR-0112",
     name: "Rohan Sharma",
     phone: "+91 98765 43210",
     email: "rohan.sharma@example.com",
@@ -59,7 +59,8 @@ const MOCK_PAST_MEMBERS = [
     inactiveDays: 14,
     recoveryValue: 1999,
     reason: "Plan Expired - Forgot to renew",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Rohan"
+    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Rohan",
+    gender: "Male"
   },
   {
     id: "MBR-0238",
@@ -70,7 +71,8 @@ const MOCK_PAST_MEMBERS = [
     inactiveDays: 32,
     recoveryValue: 2499,
     reason: "Relocated to Hyderabad for work",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Priyanka"
+    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Priyanka",
+    gender: "Female"
   },
   {
     id: "MBR-0412",
@@ -81,7 +83,8 @@ const MOCK_PAST_MEMBERS = [
     inactiveDays: 65,
     recoveryValue: 3999,
     reason: "Repeated violation of gym safety policies",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Amit"
+    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Amit",
+    gender: "Male"
   },
   {
     id: "MBR-0519",
@@ -92,7 +95,8 @@ const MOCK_PAST_MEMBERS = [
     inactiveDays: 8,
     recoveryValue: 1999,
     reason: "Personal medical pause (knee injury)",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Sneha"
+    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Sneha",
+    gender: "Female"
   },
   {
     id: "MBR-0683",
@@ -103,7 +107,8 @@ const MOCK_PAST_MEMBERS = [
     inactiveDays: 45,
     recoveryValue: 2999,
     reason: "Subscription cost budget constraints",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Arjun"
+    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Arjun",
+    gender: "Male"
   }
 ];
 
@@ -211,7 +216,7 @@ const normalizeMember = (m) => {
   const photo = m.profile_photo_path || m.image;
   const image = (photo && !photo.includes("dicebear.com"))
     ? photo
-    : getInitialsAvatar(name);
+    : (window.getDefaultAvatar ? window.getDefaultAvatar(m.gender, name) : getInitialsAvatar(name));
 
   return {
     id: m.id || m.member_code || `MBR-${Math.floor(1000 + Math.random() * 9000)}`,

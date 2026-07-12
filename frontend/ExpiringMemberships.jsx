@@ -78,6 +78,7 @@ const INITIAL_EXPIRING_MEMBERS = [
     lastContacted: "Yesterday",
     status: "Contacted",
     color: "#3b82f6",
+    gender: "Male"
   },
   {
     id: "MBR-0721",
@@ -96,6 +97,7 @@ const INITIAL_EXPIRING_MEMBERS = [
     lastContacted: "Never",
     status: "Not Contacted",
     color: "#f59e0b",
+    gender: "Female"
   },
   {
     id: "MBR-0912",
@@ -114,6 +116,7 @@ const INITIAL_EXPIRING_MEMBERS = [
     lastContacted: "3 days ago",
     status: "Interested",
     color: "#10b981",
+    gender: "Male"
   },
   {
     id: "MBR-0554",
@@ -132,6 +135,7 @@ const INITIAL_EXPIRING_MEMBERS = [
     lastContacted: "5 days ago",
     status: "Lost",
     color: "#ef4444",
+    gender: "Female"
   },
   {
     id: "MBR-1022",
@@ -150,6 +154,7 @@ const INITIAL_EXPIRING_MEMBERS = [
     lastContacted: "None",
     status: "Renewed",
     color: "#6366f1",
+    gender: "Male"
   },
 ];
 
@@ -385,7 +390,7 @@ function MemberCard({ member, onProfile, onAction }) {
     <article className={cn("min-w-0 rounded-xl border border-l-4 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-enterprise", priorityBorder)}>
       <div className="flex gap-4">
         <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-           <img src={`https://api.dicebear.com/7.x/adventurer/svg?seed=${member.id}`} alt={member.name} />
+           <img src={window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : ""} alt={member.name} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex justify-between items-start mb-1">
@@ -535,7 +540,7 @@ const MemberProfileDrawer = ({ isOpen, onClose, member, onAction }) => {
         <header className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-950 text-white">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden bg-slate-800">
-               <img src={`https://api.dicebear.com/7.x/adventurer/svg?seed=${member.id}`} alt="" />
+               <img src={window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : ""} alt="" />
             </div>
             <div>
               <h2 className="text-xl font-black">{member.name}</h2>

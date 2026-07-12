@@ -44,6 +44,150 @@
         // Removed removeItem here to allow script.js to detect login state
       }
     </script>
+    <script>
+      (function() {
+        window.getDefaultAvatar = function(gender, seed) {
+          var hashCode = function(str) {
+            var hash = 0;
+            for (var i = 0; i < str.length; i++) {
+              hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return Math.abs(hash);
+          };
+
+          var skins = ['%23FCD3C1', '%23F5C3B2', '%23E5A695', '%23D28E7D', '%23AA7263', '%23825547'];
+          var backgrounds = ['%23FFEAE8', '%23E8F1FF', '%23EAF7EC', '%23FDF4E3', '%23F5ECFF', '%23EBFBFA'];
+          var femaleHairs = ['%234A3728', '%235C4033', '%231A120B', '%238A4F3D', '%23C68B59', '%232D3748'];
+          var maleHairs = ['%232E3A59', '%231A2530', '%232A1F1D', '%234A3728', '%237C8594', '%23111827'];
+          var shirts = ['%23FF6B8B', '%234F46E5', '%2310B981', '%23F59E0B', '%23EC4899', '%233B82F6', '%238B5CF6'];
+
+          var hash = hashCode(seed || "Member");
+          var bg = backgrounds[hash % backgrounds.length];
+          var skin = skins[hash % skins.length];
+          var shirt = shirts[hash % shirts.length];
+
+          var g = (gender || "").toLowerCase();
+          if (g === "female" || g === "f" || g === "woman" || g === "girl") {
+            var hair = femaleHairs[hash % femaleHairs.length];
+            var hairDark = femaleHairs[(hash + 1) % femaleHairs.length];
+            // Premium Female SVG: Flowing long hair, neck shadow, blush cheeks, V-neck dress, linear gradients, and a spherical glass glow reflection.
+            return 'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+              '<defs>' +
+              '  <linearGradient id="feBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23FF9a9e"/><stop offset="100%" stop-color="%23fecfef"/></linearGradient>' +
+              '  <linearGradient id="feSkin" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23FFF5F0"/><stop offset="100%" stop-color="%23FAD9C1"/></linearGradient>' +
+              '  <linearGradient id="feHair" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%234A2E80"/><stop offset="100%" stop-color="%23241445"/></linearGradient>' +
+              '  <linearGradient id="feShirt" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="%23FF5E62"/><stop offset="100%" stop-color="%23FF9966"/></linearGradient>' +
+              '  <radialGradient id="feCheek" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%23FF8A8A" stop-opacity="0.6"/><stop offset="100%" stop-color="%23FF8A8A" stop-opacity="0"/></radialGradient>' +
+              '</defs>' +
+              '<circle cx="50" cy="50" r="50" fill="url(%23feBg)"/>' +
+              '<!-- Hair Back -->' +
+              '<path d="M25,50 Q18,72 32,88 Q50,75 68,88 Q82,72 75,50 C75,30 25,30 25,50 Z" fill="url(%23feHair)"/>' +
+              '<!-- Neck -->' +
+              '<rect x="46" y="55" width="8" height="15" rx="3" fill="url(%23feSkin)"/>' +
+              '<!-- Neck Shadow -->' +
+              '<rect x="46" y="55" width="8" height="3" fill="%23000000" opacity="0.08"/>' +
+              '<!-- Face -->' +
+              '<circle cx="50" cy="45" r="20" fill="url(%23feSkin)"/>' +
+              '<!-- Eyes & Lashes -->' +
+              '<path d="M36,43 Q41,39 44,43" stroke="%232D2D2D" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+              '<path d="M56,43 Q59,39 64,43" stroke="%232D2D2D" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+              '<circle cx="40" cy="45" r="2" fill="%231E1E1E"/>' +
+              '<circle cx="60" cy="45" r="2" fill="%231E1E1E"/>' +
+              '<!-- Blush Cheeks -->' +
+              '<circle cx="37" cy="49" r="4.5" fill="url(%23feCheek)"/>' +
+              '<circle cx="63" cy="49" r="4.5" fill="url(%23feCheek)"/>' +
+              '<!-- Mouth -->' +
+              '<path d="M46,51 Q50,55 54,51" stroke="%232D2D2D" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+              '<!-- Bangs -->' +
+              '<path d="M30,40 C34,26 44,24 50,30 C56,24 66,26 70,40 C75,48 74,58 74,62 C74,62 67,38 50,38 C33,38 26,62 26,62 C26,62 25,48 30,40 Z" fill="url(%23feHair)"/>' +
+              '<!-- Clothes -->' +
+              '<path d="M22,86 C22,74 34,68 50,68 C66,68 78,74 78,86 Z" fill="url(%23feShirt)"/>' +
+              '<path d="M44,68 L50,75 L56,68 Z" fill="url(%23feSkin)"/>' +
+              '<!-- Glass Reflection -->' +
+              '<path d="M10,30 A45,45 0 0,1 90,30 A45,35 0 0,0 10,30 Z" fill="%23FFFFFF" opacity="0.15"/>' +
+              '</svg>';
+          } else if (g === "male" || g === "m" || g === "man" || g === "boy") {
+            var hair = maleHairs[hash % maleHairs.length];
+            var hairDark = maleHairs[(hash + 1) % maleHairs.length];
+            // Premium Male SVG: Confident short spiky hair, neck shadow, collar shirt, linear gradients, and a spherical glass glow reflection.
+            return 'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+              '<defs>' +
+              '  <linearGradient id="maBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%232193b0"/><stop offset="100%" stop-color="%236dd5ed"/></linearGradient>' +
+              '  <linearGradient id="maSkin" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23FFF5F0"/><stop offset="100%" stop-color="%23E8C1A5"/></linearGradient>' +
+              '  <linearGradient id="maHair" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%233A3F47"/><stop offset="100%" stop-color="%231E2229"/></linearGradient>' +
+              '  <linearGradient id="maShirt" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="%233F5EFB"/><stop offset="100%" stop-color="%23FC466B"/></linearGradient>' +
+              '</defs>' +
+              '<circle cx="50" cy="50" r="50" fill="url(%23maBg)"/>' +
+              '<!-- Neck -->' +
+              '<rect x="46" y="55" width="8" height="15" rx="3" fill="url(%23maSkin)"/>' +
+              '<!-- Neck Shadow -->' +
+              '<rect x="46" y="55" width="8" height="3" fill="%23000000" opacity="0.08"/>' +
+              '<!-- Face -->' +
+              '<circle cx="50" cy="45" r="20" fill="url(%23maSkin)"/>' +
+              '<!-- Eyes -->' +
+              '<circle cx="40" cy="44" r="2.2" fill="%231E1E1E"/>' +
+              '<circle cx="60" cy="44" r="2.2" fill="%231E1E1E"/>' +
+              '<!-- Eyebrows -->' +
+              '<path d="M36,39 Q41,36 45,39" stroke="%231E1E1E" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+              '<path d="M55,39 Q59,36 64,39" stroke="%231E1E1E" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+              '<!-- Mouth -->' +
+              '<path d="M45,51 Q50,55 55,51" stroke="%232D2D2D" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+              '<!-- Spiky Hair -->' +
+              '<path d="M30,35 C28,30 32,22 40,20 C43,15 48,15 52,18 C57,15 65,18 68,22 C72,26 71,32 70,36 C70,36 71,40 69,42 C68,40 68,36 67,36 C64,28 36,28 33,36 C32,36 32,40 31,42 C29,40 30,35 30,35 Z" fill="url(%23maHair)"/>' +
+              '<path d="M30,32 L32,38 L34,32" stroke="url(%23maHair)" stroke-width="2" fill="url(%23maHair)"/>' +
+              '<path d="M68,32 L66,38 L64,32" stroke="url(%23maHair)" stroke-width="2" fill="url(%23maHair)"/>' +
+              '<!-- Shirt -->' +
+              '<path d="M22,86 C22,74 34,68 50,68 C66,68 78,74 78,86 Z" fill="url(%23maShirt)"/>' +
+              '<!-- Collar -->' +
+              '<path d="M42,68 L50,77 L45,68 Z" fill="%23FFFFFF" opacity="0.35"/>' +
+              '<path d="M58,68 L50,77 L55,68 Z" fill="%23FFFFFF" opacity="0.35"/>' +
+              '<!-- Glass Reflection -->' +
+              '<path d="M10,30 A45,45 0 0,1 90,30 A45,35 0 0,0 10,30 Z" fill="%23FFFFFF" opacity="0.15"/>' +
+              '</svg>';
+          } else {
+            // Premium Others/Non-binary SVG: Cool round glasses, top hair bun/cap, hoodie, linear gradients, and a spherical glass glow reflection.
+            var beanies = ['%23059669', '%234F46E5', '%23FF6B8B', '%23D97706', '%230891B2'];
+            var beanie = beanies[hash % beanies.length];
+            return 'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+              '<defs>' +
+              '  <linearGradient id="otBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%2311998e"/><stop offset="100%" stop-color="%2338ef7d"/></linearGradient>' +
+              '  <linearGradient id="otSkin" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23FFF5F0"/><stop offset="100%" stop-color="%23E2B899"/></linearGradient>' +
+              '  <linearGradient id="otBeanie" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23ff9966"/><stop offset="100%" stop-color="%23ff5e62"/></linearGradient>' +
+              '  <linearGradient id="otShirt" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="%234A00E0"/><stop offset="100%" stop-color="%238E2DE2"/></linearGradient>' +
+              '</defs>' +
+              '<circle cx="50" cy="50" r="50" fill="url(%23otBg)"/>' +
+              '<!-- Neck -->' +
+              '<rect x="46" y="55" width="8" height="15" rx="3" fill="url(%23otSkin)"/>' +
+              '<!-- Neck Shadow -->' +
+              '<rect x="46" y="55" width="8" height="3" fill="%23000000" opacity="0.08"/>' +
+              '<!-- Face -->' +
+              '<circle cx="50" cy="45" r="20" fill="url(%23otSkin)"/>' +
+              '<!-- Glasses -->' +
+              '<circle cx="41" cy="44" r="5.5" stroke="%232D2D2D" stroke-width="1.8" fill="%23FFFFFF" fill-opacity="0.12"/>' +
+              '<circle cx="59" cy="44" r="5.5" stroke="%232D2D2D" stroke-width="1.8" fill="%23FFFFFF" fill-opacity="0.12"/>' +
+              '<line x1="46.5" y1="44" x2="53.5" y2="44" stroke="%232D2D2D" stroke-width="1.8"/>' +
+              '<path d="M35.5,43 Q38,40 40,43" stroke="%232D2D2D" stroke-width="1" fill="none"/>' +
+              '<path d="M64.5,43 Q62,40 60,43" stroke="%232D2D2D" stroke-width="1" fill="none"/>' +
+              '<!-- Eyes behind Glasses -->' +
+              '<circle cx="41" cy="44" r="1.5" fill="%231E1E1E"/>' +
+              '<circle cx="59" cy="44" r="1.5" fill="%231E1E1E"/>' +
+              '<!-- Smile -->' +
+              '<path d="M46,52 Q50,56 54,52" stroke="%232D2D2D" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+              '<!-- Beanie & Puff -->' +
+              '<circle cx="50" cy="23" r="7" fill="url(%23otBeanie)"/>' +
+              '<path d="M28,40 C32,27 40,24 50,24 C60,24 68,27 72,40 C65,36 35,36 28,40 Z" fill="url(%23otBeanie)"/>' +
+              '<!-- Hoodie -->' +
+              '<path d="M22,86 C22,74 34,68 50,68 C66,68 78,74 78,86 Z" fill="url(%23otShirt)"/>' +
+              '<!-- Drawstrings -->' +
+              '<line x1="46" y1="74" x2="46" y2="82" stroke="%23FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>' +
+              '<line x1="54" y1="74" x2="54" y2="82" stroke="%23FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>' +
+              '<!-- Glass Reflection -->' +
+              '<path d="M10,30 A45,45 0 0,1 90,30 A45,35 0 0,0 10,30 Z" fill="%23FFFFFF" opacity="0.15"/>' +
+              '</svg>';
+          }
+        };
+      })();
+    </script>
     <link rel="preconnect" href="/" />
     <link rel="preconnect" href="https://api.dicebear.com" />
     <link rel="stylesheet" href="/fonts/fonts.css" />
@@ -940,11 +1084,26 @@
             </p>
 
             <!-- Membership Planning Content -->
-            <div class="planning-grid">
+            <div class="planning-grid" id="add-member-planning-grid">
                <!-- We can add plan selection here later, for now just a placeholder to match the layout -->
                <div class="planning-placeholder">
                   <p>Membership plans will be listed here.</p>
                </div>
+            </div>
+
+            <!-- One-Time Joining Fee Input -->
+            <div class="joining-fee-container">
+              <label for="member-joining-fee">One-Time Joining Fee (INR)</label>
+              <div class="joining-fee-input-wrapper">
+                <span class="joining-fee-currency">₹</span>
+                <input 
+                  type="number" 
+                  id="member-joining-fee" 
+                  value="0" 
+                  placeholder="0" 
+                  min="0"
+                />
+              </div>
             </div>
 
           </div>
@@ -1105,6 +1264,17 @@
             <footer class="verification-filmstrip">
               <div class="filmstrip-scroll" data-filmstrip-container>
                 <!-- Thumbnails injected via JS -->
+              </div>
+              
+              <!-- Official Document Vault Disclaimer -->
+              <div class="verification-disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="disclaimer-icon">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <div class="disclaimer-text-group">
+                  <h4>Official Document Vault Disclaimer</h4>
+                  <p>All uploads are stored in an encrypted secure database. Documents are processed in compliance with privacy standards and restricted to authorized personnel only.</p>
+                </div>
               </div>
             </footer>
           </main>
@@ -1910,11 +2080,11 @@
               </div>
               <div class="info-chip">
                 <span class="chip-label">Current Plan</span>
-                <span id="dashPlanName" class="chip-value">Premium Elite</span>
+                <span id="dashPlanNameHeader" class="chip-value">Premium Elite</span>
               </div>
               <div class="info-chip">
                 <span class="chip-label">Expiry Date</span>
-                <span id="dashExpiryDate" class="chip-value">June 2, 2027</span>
+                <span id="dashExpiryDateHeader" class="chip-value">June 2, 2027</span>
               </div>
               <div class="info-chip">
                 <span class="chip-label">Assigned Trainer</span>
@@ -2007,17 +2177,16 @@
                 </div>
               </section>
 
-              <!-- MEMBERSHIP DETAILS -->
               <section class="info-panel highlight-panel">
                 <h2 class="panel-title">Membership Details</h2>
                 <div class="panel-grid cols-3">
                   <div class="data-item">
                     <span class="data-label">Current Plan</span>
-                    <span class="data-value font-black">Annual Elite</span>
+                    <span id="dashCurrentPlan" class="data-value font-black">-</span>
                   </div>
                   <div class="data-item">
                     <span class="data-label">Plan Duration</span>
-                    <span class="data-value">12 Months</span>
+                    <span id="dashPlanDuration" class="data-value">-</span>
                   </div>
                   <div class="data-item">
                     <span class="data-label">Joining Date</span>
@@ -2025,11 +2194,43 @@
                   </div>
                   <div class="data-item">
                     <span class="data-label">Expiry Date</span>
-                    <span class="data-value">June 2, 2027</span>
+                    <span id="dashExpiryDate" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Plan Price</span>
+                    <span id="dashPlanPricePanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Paid Joining Fee</span>
+                    <span id="dashPaidJoiningFeePanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Category</span>
+                    <span id="dashPlanCategoryPanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Target Audience</span>
+                    <span id="dashPlanAudiencePanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Strategic Goal</span>
+                    <span id="dashPlanGoalPanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Training Areas</span>
+                    <span id="dashPlanAreasPanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Access Privileges</span>
+                    <span id="dashPlanAccessPanel" class="data-value">-</span>
                   </div>
                   <div class="data-item highlight-data">
                     <span class="data-label">Remaining Days</span>
-                    <span class="data-value text-indigo-600 font-black">365 Days</span>
+                    <span id="dashRemainingDays" class="data-value text-indigo-600 font-black">-</span>
+                  </div>
+                  <div class="data-item full-width" style="grid-column: span 3 !important;">
+                    <span class="data-label">Plan Description</span>
+                    <span id="dashPlanDescPanel" class="data-value" style="font-style: italic; color: #64748b;">-</span>
                   </div>
                 </div>
               </section>

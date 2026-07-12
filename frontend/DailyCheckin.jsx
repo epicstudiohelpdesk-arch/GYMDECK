@@ -41,19 +41,19 @@ const cn = (...classes) => classes.filter(Boolean).join(" ");
 // MOCK DATA
 // ─────────────────────────────────────────
 const LIVE_FEED = [
-  { id: "LOG-01", type: "success", member: "Aarav Sharma", idCode: "MBR-0142", time: "Just now", plan: "Annual Elite", avatar: "1" },
-  { id: "LOG-02", type: "warning", member: "Priya Desai", idCode: "MBR-0899", time: "2 min ago", message: "Expires in 3 days", avatar: "2" },
-  { id: "LOG-03", type: "trainer", member: "Ankit Kumar", idCode: "TRN-005", time: "5 min ago", message: "Started PT Session", avatar: "3" },
-  { id: "LOG-04", type: "error", member: "Kabir Singh", idCode: "MBR-0319", time: "12 min ago", message: "Access Denied: Frozen", avatar: "4" },
-  { id: "LOG-05", type: "success", member: "Sneha Patel", idCode: "MBR-0721", time: "15 min ago", plan: "Monthly Starter", avatar: "5" },
+  { id: "LOG-01", type: "success", member: "Aarav Sharma", idCode: "MBR-0142", time: "Just now", plan: "Annual Elite", avatar: "1", gender: "Male" },
+  { id: "LOG-02", type: "warning", member: "Priya Desai", idCode: "MBR-0899", time: "2 min ago", message: "Expires in 3 days", avatar: "2", gender: "Female" },
+  { id: "LOG-03", type: "trainer", member: "Ankit Kumar", idCode: "TRN-005", time: "5 min ago", message: "Started PT Session", avatar: "3", gender: "Male" },
+  { id: "LOG-04", type: "error", member: "Kabir Singh", idCode: "MBR-0319", time: "12 min ago", message: "Access Denied: Frozen", avatar: "4", gender: "Male" },
+  { id: "LOG-05", type: "success", member: "Sneha Patel", idCode: "MBR-0721", time: "15 min ago", plan: "Monthly Starter", avatar: "5", gender: "Female" },
 ];
 
 const ATTENDANCE_TABLE = [
-  { id: "ATT-104", time: "09:42 AM", name: "Rahul Verma", mId: "MBR-0211", plan: "Student Basic", status: "success", duration: "1h 15m", trainer: "-", branch: "Main" },
-  { id: "ATT-103", time: "09:30 AM", name: "Meera Nair", mId: "MBR-0521", plan: "Quarterly Transformation", status: "warning", duration: "Active", trainer: "Sneha Patel", branch: "Main" },
-  { id: "ATT-102", time: "09:15 AM", name: "Siddharth Rao", mId: "MBR-0912", plan: "Corporate Wellness", status: "success", duration: "Active", trainer: "-", branch: "Main" },
-  { id: "ATT-101", time: "08:50 AM", name: "Ananya Iyer", mId: "MBR-0721", plan: "Monthly Starter", status: "error", message: "Unpaid Dues", duration: "-", trainer: "-", branch: "Main" },
-  { id: "ATT-100", time: "08:15 AM", name: "Vikram Malhotra", mId: "MBR-0842", plan: "Premium Elite", status: "success", duration: "2h 10m", trainer: "Ankit Kumar", branch: "Main" },
+  { id: "ATT-104", time: "09:42 AM", name: "Rahul Verma", mId: "MBR-0211", plan: "Student Basic", status: "success", duration: "1h 15m", trainer: "-", branch: "Main", gender: "Male" },
+  { id: "ATT-103", time: "09:30 AM", name: "Meera Nair", mId: "MBR-0521", plan: "Quarterly Transformation", status: "warning", duration: "Active", trainer: "Sneha Patel", branch: "Main", gender: "Female" },
+  { id: "ATT-102", time: "09:15 AM", name: "Siddharth Rao", mId: "MBR-0912", plan: "Corporate Wellness", status: "success", duration: "Active", trainer: "-", branch: "Main", gender: "Male" },
+  { id: "ATT-101", time: "08:50 AM", name: "Ananya Iyer", mId: "MBR-0721", plan: "Monthly Starter", status: "error", message: "Unpaid Dues", duration: "-", trainer: "-", branch: "Main", gender: "Female" },
+  { id: "ATT-100", time: "08:15 AM", name: "Vikram Malhotra", mId: "MBR-0842", plan: "Premium Elite", status: "success", duration: "2h 10m", trainer: "Ankit Kumar", branch: "Main", gender: "Male" },
 ];
 
 // ─────────────────────────────────────────
@@ -209,7 +209,7 @@ function LiveFeed() {
         {LIVE_FEED.map((log) => (
           <div key={log.id} className="flex gap-3 items-start group relative transition-all hover:translate-x-1">
             <div className="w-10 h-10 rounded-xl bg-slate-50 overflow-hidden shrink-0 border border-slate-200 shadow-sm">
-              <img src={`https://api.dicebear.com/7.x/adventurer/svg?seed=${log.avatar}`} alt="" className="w-full h-full object-cover" />
+              <img src={window.getDefaultAvatar ? window.getDefaultAvatar(log.gender, log.member) : ""} alt="" className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex justify-between items-center">
@@ -329,7 +329,7 @@ const DailyCheckinPage = () => {
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden shrink-0 shadow-sm">
-                           <img src={`https://api.dicebear.com/7.x/adventurer/svg?seed=${row.mId}`} alt="" className="w-full h-full object-cover" />
+                           <img src={window.getDefaultAvatar ? window.getDefaultAvatar(row.gender, row.name) : ""} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div className="min-w-0">
                           <span className="block text-sm font-black text-slate-950 truncate">{row.name}</span>

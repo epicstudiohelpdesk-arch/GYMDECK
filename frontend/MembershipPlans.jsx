@@ -27,9 +27,7 @@ import {
   Search,
   LayoutGrid,
   Eye,
-  Archive,
   Edit3,
-  Copy,
   Clock,
   Award,
   Sparkles,
@@ -125,6 +123,7 @@ const INITIAL_MOCK_PLANS = [
     name: "Annual Elite Performance",
     category: "Transformation",
     price: 18999,
+    joiningFee: 1500,
     duration: "365 Days",
     activeMembers: 342,
     revenue: 8550000,
@@ -144,6 +143,7 @@ const INITIAL_MOCK_PLANS = [
     name: "Quarterly Transformation",
     category: "Bodybuilding",
     price: 7999,
+    joiningFee: 1000,
     duration: "90 Days",
     activeMembers: 156,
     revenue: 1092000,
@@ -163,6 +163,7 @@ const INITIAL_MOCK_PLANS = [
     name: "Monthly Entry Starter",
     category: "General",
     price: 1999,
+    joiningFee: 500,
     duration: "30 Days",
     activeMembers: 412,
     revenue: 1236000,
@@ -182,6 +183,7 @@ const INITIAL_MOCK_PLANS = [
     name: "Student Basic Flex",
     category: "Student",
     price: 1299,
+    joiningFee: 250,
     duration: "30 Days",
     activeMembers: 218,
     revenue: 436000,
@@ -366,7 +368,7 @@ function PlanCard({ plan, index, onViewDetails }) {
 // ─────────────────────────────────────────
 // PLAN DETAILS MODAL
 // ─────────────────────────────────────────
-function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDelete, isSubModalOpen }) {
+function PlanDetailsModal({ plan, onClose, onEdit, onDelete, isSubModalOpen }) {
   if (!plan) return null;
 
   const statusColor = plan.status === "Healthy" ? "emerald" : plan.status === "Growing" ? "indigo" : plan.status === "At Risk" ? "rose" : "amber";
@@ -408,7 +410,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.45 }}
-            className="relative w-full max-w-4xl bg-slate-50 text-slate-800 rounded-[28px] border border-slate-200/80 shadow-2xl overflow-hidden flex flex-col p-7 md:p-9 m-auto text-left max-h-[90vh] md:max-h-[580px] z-50"
+            className="relative w-full max-w-4xl bg-slate-50 text-slate-800 rounded-[28px] border border-slate-200/80 shadow-2xl overflow-hidden flex flex-col p-2.5 md:p-3 m-auto text-left max-h-[90vh] md:max-h-[580px] z-50"
             style={{
               filter: isSubModalOpen ? "blur(5px) brightness(0.65)" : "none",
               pointerEvents: isSubModalOpen ? "none" : "auto",
@@ -416,28 +418,30 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               transition: "filter 0.3s ease"
             }}
           >
-            {/* Absolute Close Button */}
-            <motion.button
-              whileHover="hovered"
-              whileTap={{ scale: 0.95 }}
-              onClick={onClose}
-              className="absolute top-7 right-7 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-50 shadow-sm transition-all duration-200 z-50"
-              variants={{
-                initial: { scale: 1 },
-                hovered: { scale: 1.05 }
-              }}
-            >
-              <motion.div
+            {/* Inner frame container with thin dark border and custom paddings */}
+            <div className="flex-1 w-full border border-slate-300 rounded-[20px] md:rounded-[22px] flex flex-col p-6 md:p-8 overflow-hidden relative">
+              {/* Absolute Close Button */}
+              <motion.button
+                whileHover="hovered"
+                whileTap={{ scale: 0.95 }}
+                onClick={onClose}
+                className="absolute top-6 right-6 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-50 shadow-sm transition-all duration-200 z-50"
                 variants={{
-                  initial: { rotate: 0 },
-                  hovered: { rotate: 90 }
+                  initial: { scale: 1 },
+                  hovered: { scale: 1.05 }
                 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="flex items-center justify-center w-full h-full"
               >
-                <X size={20} className="stroke-[2.5]" />
-              </motion.div>
-            </motion.button>
+                <motion.div
+                  variants={{
+                    initial: { rotate: 0 },
+                    hovered: { rotate: 90 }
+                  }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center w-full h-full"
+                >
+                  <X size={20} className="stroke-[2.5]" />
+                </motion.div>
+              </motion.button>
 
             {/* Header section with category and plan ID */}
             <header className="flex justify-between items-start gap-5 mb-5 shrink-0">
@@ -472,8 +476,16 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                     <span className="text-[9px] font-black text-slate-455 uppercase tracking-wider">Pricing</span>
                     <DollarSign size={13} className="text-slate-400" />
                   </div>
-                  <strong className="text-base md:text-lg font-black text-slate-900 font-mono mt-2 block">{formatCurrency(plan.price)}</strong>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Base Fee</span>
+                  <div className="flex items-end justify-between mt-2 gap-2">
+                    <div>
+                      <strong className="text-base md:text-lg font-black text-slate-900 font-mono block leading-none">{formatCurrency(plan.price)}</strong>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase mt-1 block">Base Fee</span>
+                    </div>
+                    <div className="text-right">
+                      <strong className="text-sm font-black text-slate-700 font-mono block leading-none">{formatCurrency(plan.joiningFee || 0)}</strong>
+                      <span className="text-[8px] text-slate-400 font-bold uppercase mt-1 block">Joining Fee</span>
+                    </div>
+                  </div>
                 </article>
 
                 <article className="p-4 bg-white border border-slate-200/80 shadow-sm rounded-2xl flex flex-col justify-between min-h-[90px] relative overflow-hidden group transition-all duration-200 hover:shadow-md">
@@ -623,12 +635,12 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                   <h4 className="text-[9px] font-black text-slate-455 uppercase tracking-wider">Access Privileges</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: "Gym Floor", enabled: true },
-                      { label: "Cardio Zone", enabled: true },
-                      { label: "Steam/Sauna", enabled: plan.id !== "M1" && plan.id !== "S1" },
-                      { label: "Group Classes", enabled: plan.id !== "M1" && plan.id !== "S1" },
-                      { label: "PT Sessions", enabled: plan.id === "A1" },
-                      { label: "Roaming", enabled: plan.id === "A1" || plan.id === "Q1" },
+                      { label: "Gym Floor", enabled: plan.areas ? plan.areas.includes("Gym Floor") : true },
+                      { label: "Cardio Zone", enabled: plan.areas ? plan.areas.includes("Cardio Zone") : true },
+                      { label: "Steam/Sauna", enabled: plan.areas ? plan.areas.includes("Steam/Sauna") : (plan.id !== "M1" && plan.id !== "S1") },
+                      { label: "Group Classes", enabled: plan.areas ? plan.areas.includes("Group Classes") : (plan.id !== "M1" && plan.id !== "S1") },
+                      { label: "PT Sessions", enabled: plan.areas ? plan.areas.includes("Personal Training") : (plan.id === "A1") },
+                      { label: "Roaming", enabled: plan.areas ? plan.areas.includes("Locker Premium") : (plan.id === "A1" || plan.id === "Q1") },
                     ].map((privilege, idx) => (
                       <div 
                         key={idx} 
@@ -652,33 +664,17 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             <footer className="mt-6 pt-4 border-t border-slate-200 flex flex-wrap gap-2.5 justify-end shrink-0">
               <button 
                 onClick={() => { onEdit(plan); onClose(); }}
-                className="px-4 h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-slate-200 text-slate-200 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="group px-4 h-10 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-300/80 text-slate-700 hover:text-indigo-600 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 hover:-translate-y-[1px] active:translate-y-0 shadow-sm hover:shadow"
               >
-                <Edit3 size={12} />
+                <Edit3 size={12} className="text-slate-400 group-hover:text-indigo-500 transition-colors duration-200" />
                 Edit Plan
-              </button>
-              
-              <button 
-                onClick={() => { onDuplicate(plan); onClose(); }}
-                className="px-4 h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-slate-200 text-slate-200 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
-              >
-                <Copy size={12} />
-                Duplicate
-              </button>
-
-              <button 
-                onClick={() => { onArchive(plan); onClose(); }}
-                className="px-4 h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-slate-200 text-slate-200 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
-              >
-                <Archive size={12} />
-                Archive
               </button>
 
               <button 
                 onClick={() => { onDelete(plan); }}
-                className="px-4 h-10 rounded-xl bg-rose-50 hover:bg-rose-100/70 border border-rose-150 text-rose-600 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="group px-4 h-10 rounded-xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200 text-rose-600 hover:text-rose-700 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 hover:-translate-y-[1px] active:translate-y-0 shadow-sm hover:shadow"
               >
-                <Trash2 size={12} />
+                <Trash2 size={12} className="text-rose-500 group-hover:text-rose-600 transition-colors duration-200" />
                 Delete
               </button>
 
@@ -686,12 +682,13 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
 
               <button 
                 onClick={onClose}
-                className="px-6 h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center"
+                className="px-6 h-10 rounded-xl bg-slate-950 hover:bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center hover:-translate-y-[1px] active:translate-y-0 shadow-md shadow-slate-950/10 hover:shadow-lg hover:shadow-slate-950/15"
               >
                 Done
               </button>
             </footer>
-          </motion.div>
+          </div>
+        </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -869,7 +866,7 @@ function DeleteConfirmationModal({ isOpen, plan, onClose, onConfirm }) {
 // ─────────────────────────────────────────
 // TRAINERS LIST CONSTANT
 // ─────────────────────────────────────────
-function CreatePlanModal({ isOpen, onClose, onPublish }) {
+function CreatePlanModal({ isOpen, onClose, onPublish, editPlan }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: "",
@@ -907,37 +904,80 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
   useEffect(() => {
     if (isOpen) {
       setStep(1);
-      setForm({
-        name: "",
-        category: "Transformation",
-        audience: "Professionals",
-        goal: "Revenue Generation",
-        description: "",
-        price: "",
-        joiningFee: "",
-        duration: "Monthly",
-        durationDays: 30
-      });
-      setAccess(["Freeze Support"]);
-      setAreas(["Gym Floor", "Cardio Zone"]);
-      setAccessCards([
-        { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
-      ]);
-      setAreaOptions([
-        "Gym Floor", "Cardio Zone", "Steam/Sauna", "Group Classes", "Personal Training", "Locker Premium"
-      ]);
+      if (editPlan) {
+        const durationName = editPlan.duration || "Monthly";
+        const days = editPlan.durationDays || 30;
+
+        const standardList = ["Monthly", "Quarterly", "Half-Yearly", "Annual"];
+        const isCustom = !standardList.includes(durationName);
+        
+        if (isCustom) {
+          setDurationsList([...standardList, durationName]);
+          setCustomDurationsMap(prev => ({ ...prev, [durationName]: days }));
+        } else {
+          setDurationsList(standardList);
+        }
+
+        setForm({
+          name: editPlan.name || "",
+          category: editPlan.category || "Transformation",
+          audience: editPlan.audience || "Professionals",
+          goal: editPlan.goal || "Revenue Generation",
+          description: editPlan.description || "",
+          price: String(editPlan.price || ""),
+          joiningFee: String(editPlan.joiningFee || "0"),
+          duration: durationName,
+          durationDays: days
+        });
+        setAccess(editPlan.access || ["Freeze Support"]);
+        setAreas(editPlan.areas || ["Gym Floor", "Cardio Zone"]);
+        
+        const extraCards = [];
+        (editPlan.access || []).forEach(accItem => {
+          if (accItem !== "Freeze Support") {
+            extraCards.push({
+              id: accItem.toLowerCase().replace(/\s+/g, ""),
+              label: accItem,
+              description: "Custom user-defined access privilege.",
+              icon: Lock,
+              color: "bg-indigo-50 text-indigo-600"
+            });
+          }
+        });
+        setAccessCards([
+          { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" },
+          ...extraCards
+        ]);
+      } else {
+        setForm({
+          name: "",
+          category: "Transformation",
+          audience: "Professionals",
+          goal: "Revenue Generation",
+          description: "",
+          price: "",
+          joiningFee: "",
+          duration: "Monthly",
+          durationDays: 30
+        });
+        setAccess(["Freeze Support"]);
+        setAreas(["Gym Floor", "Cardio Zone"]);
+        setAccessCards([
+          { id: "freeze", label: "Freeze Support", description: "Allows temporary account pause capabilities.", icon: Lock, color: "bg-indigo-50 text-indigo-600" }
+        ]);
+        setDurationsList(["Monthly", "Quarterly", "Half-Yearly", "Annual"]);
+        setCustomDurationsMap({});
+      }
       setIsCustomAccessModalOpen(false);
       setCustomAccessName("");
       setCustomAccessDesc("");
       setIsCustomAreaModalOpen(false);
       setCustomAreaName("");
-      setDurationsList(["Monthly", "Quarterly", "Half-Yearly", "Annual"]);
-      setCustomDurationsMap({});
       setIsCustomDurationModalOpen(false);
       setCustomDurationName("");
       setCustomDurationDays("");
     }
-  }, [isOpen]);
+  }, [isOpen, editPlan]);
 
   const totalSteps = 4;
   const isLast = step === totalSteps;
@@ -945,8 +985,8 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
   const stepInfo = {
     1: {
       kicker: "PLAN CONFIGURATION",
-      title: "Create Membership Plan",
-      description: "Set up the primary value proposition, target audience, and classification for your new plan."
+      title: editPlan ? "Edit Membership Plan" : "Create Membership Plan",
+      description: "Set up the primary value proposition, target audience, and classification for your plan."
     },
     2: {
       kicker: "PRICING & SCHEDULE",
@@ -960,8 +1000,8 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
     },
     4: {
       kicker: "PLAN STRATEGY",
-      title: "Publish to Portfolio",
-      description: "Review the strategic performance forecasts and publish the plan live to your member portal."
+      title: editPlan ? "Review & Save Changes" : "Publish to Portfolio",
+      description: editPlan ? "Review the strategic performance forecasts and save your changes." : "Review the strategic performance forecasts and publish the plan live to your member portal."
     }
   };
 
@@ -1363,7 +1403,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   if (isLast) {
-                    onPublish(form);
+                    onPublish({ ...form, access, areas });
                     onClose();
                   } else {
                     setStep(s => s + 1);
@@ -1371,7 +1411,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                 }}
                 className="h-11 max-w-[360px] flex-1 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
               >
-                {isLast ? "Publish Plan" : "Continue →"}
+                {isLast ? (editPlan ? "Save Changes" : "Publish Plan") : "Continue →"}
               </motion.button>
             </footer>
           </motion.div>
@@ -1686,47 +1726,162 @@ export default function MembershipPortfolioDashboard() {
   const sentinelRef = useRef(null);
 
   const [plans, setPlans] = useState([]);
+  const [editingPlan, setEditingPlan] = useState(null);
 
   const loadPlans = async () => {
     try {
       const dbPlans = await window.__TAURI__.core.invoke("get_plans_command");
-      if (dbPlans && dbPlans.length > 0) {
-        const mapped = dbPlans.map(p => {
-          let category = "General";
-          let desc = p.description || "";
-          if (desc.includes("||")) {
-            const parts = desc.split("||");
+      const activeMembers = await window.__TAURI__.core.invoke("get_members_command", { limit: 10000, offset: 0 }).catch(() => []);
+      const pastMembers = await window.__TAURI__.core.invoke("get_past_members_command", { limit: 10000, offset: 0 }).catch(() => []);
+      const allMembers = [...activeMembers, ...pastMembers];
+
+      const mapPlanData = (p) => {
+        let category = "General";
+        let joiningFee = 0;
+        let audience = "Professionals";
+        let goal = "Revenue Generation";
+        let desc = p.description || "";
+        let areas = ["Gym Floor", "Cardio Zone"];
+        let access = ["Freeze Support"];
+        let durationName = `${p.duration_days} Days`;
+
+        if (desc.includes("||")) {
+          const parts = desc.split("||");
+          if (parts.length >= 8) {
+            category = parts[0];
+            joiningFee = parseFloat(parts[1]) || 0;
+            audience = parts[2];
+            goal = parts[3];
+            desc = parts[4];
+            try {
+              areas = JSON.parse(parts[5]);
+              access = JSON.parse(parts[6]);
+            } catch (e) {
+              areas = parts[5].split(",").filter(Boolean);
+              access = parts[6].split(",").filter(Boolean);
+            }
+            durationName = parts[7];
+          } else if (parts.length >= 7) {
+            category = parts[0];
+            joiningFee = parseFloat(parts[1]) || 0;
+            audience = parts[2];
+            goal = parts[3];
+            desc = parts[4];
+            try {
+              areas = JSON.parse(parts[5]);
+              access = JSON.parse(parts[6]);
+            } catch (e) {
+              areas = parts[5].split(",").filter(Boolean);
+              access = parts[6].split(",").filter(Boolean);
+            }
+          } else if (parts.length >= 5) {
+            category = parts[0];
+            joiningFee = parseFloat(parts[1]) || 0;
+            audience = parts[2];
+            goal = parts[3];
+            desc = parts[4];
+          } else if (parts.length >= 3) {
+            category = parts[0];
+            joiningFee = parseFloat(parts[1]) || 0;
+            desc = parts[2];
+          } else {
             category = parts[0];
             desc = parts[1];
           }
-          const orig = INITIAL_MOCK_PLANS.find(m => m.id === p.id);
-          return {
-            id: p.id,
-            name: p.plan_name,
-            category: category,
-            price: p.price,
-            duration: `${p.duration_days} Days`,
-            activeMembers: orig ? orig.activeMembers : 0,
-            revenue: orig ? orig.revenue : 0,
-            monthlyContribution: orig ? orig.monthlyContribution : 0,
-            renewalRate: orig ? orig.renewalRate : 100,
-            retention: orig ? orig.retention : 100,
-            trend: orig ? orig.trend : "+0%",
-            trendUp: orig ? orig.trendUp : true,
-            status: p.is_active ? (orig ? orig.status : "Healthy") : "At Risk",
-            membersEnrolled: orig ? orig.membersEnrolled : 0,
-            growth: orig ? orig.growth : 0,
-            risk: orig ? orig.risk : "Low",
-            color: orig ? orig.color : (
-              category === "Transformation" ? "from-indigo-600 to-indigo-800" :
-              category === "Bodybuilding" ? "from-emerald-600 to-emerald-800" :
-              category === "Weight Loss" ? "from-amber-600 to-amber-800" :
-              "from-sky-600 to-sky-800"
-            ),
-            description: desc,
-            createdAt: p.created_at
-          };
+        }
+
+        // Real calculations based on all database members
+        const planMembers = allMembers.filter(m => 
+          m.membership_plan_id && 
+          String(m.membership_plan_id).toLowerCase() === String(p.id).toLowerCase()
+        );
+
+        const activePlanMembers = planMembers.filter(m => 
+          m.membership_status === "ACTIVE" || 
+          m.membership_status === "FROZEN"
+        );
+
+        const activeCount = activePlanMembers.length;
+        const totalCount = planMembers.length;
+
+        // Retention Rate: active / total
+        const retention = totalCount > 0 
+          ? Math.min(100, Math.round((activeCount / totalCount) * 100)) 
+          : 100;
+
+        // Renewal Velocity: renewed / eligible
+        const planDurationDays = p.duration_days || 30;
+        const eligibleMembers = planMembers.filter(m => {
+          const joinedDate = new Date(m.joined_at || m.created_at);
+          const elapsedDays = (new Date() - joinedDate) / (1000 * 60 * 60 * 24);
+          return elapsedDays > planDurationDays;
         });
+        const renewedMembers = eligibleMembers.filter(m => 
+          m.membership_status === "ACTIVE" || 
+          m.membership_status === "FROZEN"
+        );
+        const renewalRate = eligibleMembers.length > 0 
+          ? Math.min(100, Math.round((renewedMembers.length / eligibleMembers.length) * 100)) 
+          : 100;
+
+        // LTD Revenue (Estimated based on terms spent by members)
+        let totalRevenue = 0;
+        planMembers.forEach(m => {
+          const joinedDate = new Date(m.joined_at || m.created_at);
+          const elapsedDays = (new Date() - joinedDate) / (1000 * 60 * 60 * 24);
+          const isActive = m.membership_status === "ACTIVE" || m.membership_status === "FROZEN";
+          const terms = isActive 
+            ? Math.max(1, Math.ceil(elapsedDays / planDurationDays))
+            : Math.max(1, Math.floor(elapsedDays / planDurationDays));
+          totalRevenue += (terms * p.price) + joiningFee;
+        });
+
+        // Monthly Contribution (MRR)
+        const monthlyContribution = Math.round((activeCount * p.price * 30) / planDurationDays);
+
+        const trend = retention >= 85 ? "+12%" : retention >= 70 ? "+4%" : "-14%";
+        const trendUp = retention >= 70;
+        const status = p.is_active ? (retention >= 70 ? "Healthy" : "At Risk") : "At Risk";
+        const risk = retention >= 85 ? "Low" : retention >= 70 ? "Medium" : "High";
+
+        const orig = INITIAL_MOCK_PLANS.find(m => m.id === p.id);
+        return {
+          id: p.id,
+          isActive: p.is_active,
+          name: p.plan_name,
+          category: category,
+          price: p.price,
+          joiningFee: joiningFee,
+          audience: audience,
+          goal: goal,
+          areas: areas,
+          access: access,
+          duration: durationName,
+          durationDays: p.duration_days,
+          activeMembers: activeCount,
+          revenue: totalRevenue,
+          monthlyContribution: monthlyContribution,
+          renewalRate: renewalRate,
+          retention: retention,
+          trend: trend,
+          trendUp: trendUp,
+          status: status,
+          membersEnrolled: totalCount,
+          growth: retention - 100,
+          risk: risk,
+          color: orig ? orig.color : (
+            category === "Transformation" ? "from-slate-800 to-indigo-900" :
+            category === "Bodybuilding" ? "from-slate-800 to-emerald-900" :
+            category === "Weight Loss" ? "from-slate-800 to-amber-900" :
+            "from-slate-800 to-sky-900"
+          ),
+          description: desc,
+          createdAt: p.created_at
+        };
+      };
+
+      if (dbPlans && dbPlans.length > 0) {
+        const mapped = dbPlans.map(mapPlanData);
         setPlans(mapped);
       } else {
         // Seed the initial mock plans
@@ -1737,7 +1892,7 @@ export default function MembershipPortfolioDashboard() {
             plan_name: mock.name,
             duration_days: parseInt(mock.duration) || 30,
             price: mock.price,
-            description: `${mock.category}||${mock.description || ""}`,
+            description: `${mock.category}||${mock.joiningFee || 0}||${mock.description || ""}`,
             is_active: true,
             created_by_user_id: "00000000-0000-0000-0000-000000000000",
             updated_by_user_id: "00000000-0000-0000-0000-000000000000",
@@ -1752,42 +1907,7 @@ export default function MembershipPortfolioDashboard() {
           }
         }
         const seeded = await window.__TAURI__.core.invoke("get_plans_command");
-        const mapped = seeded.map(p => {
-          let category = "General";
-          let desc = p.description || "";
-          if (desc.includes("||")) {
-            const parts = desc.split("||");
-            category = parts[0];
-            desc = parts[1];
-          }
-          const orig = INITIAL_MOCK_PLANS.find(m => m.id === p.id);
-          return {
-            id: p.id,
-            name: p.plan_name,
-            category: category,
-            price: p.price,
-            duration: `${p.duration_days} Days`,
-            activeMembers: orig ? orig.activeMembers : 0,
-            revenue: orig ? orig.revenue : 0,
-            monthlyContribution: orig ? orig.monthlyContribution : 0,
-            renewalRate: orig ? orig.renewalRate : 100,
-            retention: orig ? orig.retention : 100,
-            trend: orig ? orig.trend : "+0%",
-            trendUp: orig ? orig.trendUp : true,
-            status: p.is_active ? (orig ? orig.status : "Healthy") : "At Risk",
-            membersEnrolled: orig ? orig.membersEnrolled : 0,
-            growth: orig ? orig.growth : 0,
-            risk: orig ? orig.risk : "Low",
-            color: orig ? orig.color : (
-              category === "Transformation" ? "from-indigo-600 to-indigo-800" :
-              category === "Bodybuilding" ? "from-emerald-600 to-emerald-800" :
-              category === "Weight Loss" ? "from-amber-600 to-amber-800" :
-              "from-sky-600 to-sky-800"
-            ),
-            description: desc,
-            createdAt: p.created_at
-          };
-        });
+        const mapped = seeded.map(mapPlanData);
         setPlans(mapped);
       }
     } catch (err) {
@@ -1821,23 +1941,24 @@ export default function MembershipPortfolioDashboard() {
   };
 
   const handlePublishPlan = async (formDetails) => {
-    let durationDays = 30;
-    if (formDetails.duration === "Quarterly") durationDays = 90;
-    else if (formDetails.duration === "Half-Yearly") durationDays = 180;
-    else if (formDetails.duration === "Annual") durationDays = 365;
-    else if (formDetails.duration === "Custom") durationDays = parseInt(formDetails.customDays) || 30;
+    const durationDays = parseInt(formDetails.durationDays) || 30;
+
+    const isEdit = editingPlan !== null;
+    const planId = isEdit ? editingPlan.id : crypto.randomUUID();
+    const areasStr = JSON.stringify(formDetails.areas || []);
+    const accessStr = JSON.stringify(formDetails.access || []);
 
     const newPlan = {
-      id: crypto.randomUUID(),
+      id: planId,
       gym_id: "00000000-0000-0000-0000-000000000000",
       plan_name: formDetails.name,
       duration_days: durationDays,
       price: parseFloat(formDetails.price) || 0,
-      description: `${formDetails.category}||${formDetails.description || ""}`,
-      is_active: true,
+      description: `${formDetails.category}||${formDetails.joiningFee || 0}||${formDetails.audience || "Professionals"}||${formDetails.goal || "Revenue Generation"}||${formDetails.description || ""}||${areasStr}||${accessStr}||${formDetails.duration}`,
+      is_active: isEdit ? editingPlan.isActive : true,
       created_by_user_id: "00000000-0000-0000-0000-000000000000",
       updated_by_user_id: "00000000-0000-0000-0000-000000000000",
-      created_at: new Date().toISOString(),
+      created_at: isEdit ? editingPlan.createdAt : new Date().toISOString(),
       updated_at: new Date().toISOString(),
       deleted_at: null
     };
@@ -1846,7 +1967,7 @@ export default function MembershipPortfolioDashboard() {
       await window.__TAURI__.core.invoke("create_plan_command", { plan: newPlan });
       await loadPlans();
     } catch (e) {
-      console.error("Failed to create plan:", e);
+      console.error("Failed to save plan:", e);
       alert("Error saving plan to the secure vault database: " + e);
     }
   };
@@ -2494,21 +2615,24 @@ export default function MembershipPortfolioDashboard() {
       </footer>
 
       {/* CREATE PLAN MODAL */}
-      <CreatePlanModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPublish={handlePublishPlan} />
+      <CreatePlanModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingPlan(null);
+        }}
+        onPublish={handlePublishPlan}
+        editPlan={editingPlan}
+      />
 
       {/* PLAN DETAILS MODAL */}
       <PlanDetailsModal
         plan={detailsPlan}
         onClose={() => setDetailsPlan(null)}
         onEdit={(plan) => {
+          setEditingPlan(plan);
           setDetailsPlan(null);
           setIsModalOpen(true);
-        }}
-        onDuplicate={(plan) => {
-          setDetailsPlan(null);
-        }}
-        onArchive={(plan) => {
-          setDetailsPlan(null);
         }}
         onDelete={(plan) => {
           setDeletePlanTarget(plan);

@@ -583,6 +583,7 @@ const memberDocsRegistry = new Map(); // Professional Registry for Session Docum
 
 let memberFormMode = "add";
 let editingMemberId = null;
+let selectedPlanId = null;
 
 /**
  * Enterprise Utility: Converts a Data URL (Base64) to a Byte Array for Rust consumption.
@@ -1459,7 +1460,175 @@ const resetCustomWeightUI = () => {
   }
 };
 
+const loadPlansForSelection = async () => {
+  const gridContainer = document.getElementById("add-member-planning-grid");
+  if (!gridContainer) return;
+
+  try {
+    const dbPlans = await window.__TAURI__.core.invoke("get_plans_command");
+    const activePlans = (dbPlans || []).filter(p => p.is_active && !p.deleted_at);
+    
+    if (activePlans.length === 0) {
+      gridContainer.innerHTML = `
+        <div class="planning-placeholder">
+          <p>Membership plans will be listed here.</p>
+        </div>
+      `;
+      selectedPlanId = null;
+      return;
+    }
+
+    let html = "";
+    activePlans.forEach(plan => {
+      let category = "General";
+      let joiningFee = 0;
+      let audience = "Professionals";
+      let goal = "Revenue Generation";
+      let descText = "";
+      let areas = [];
+      let access = [];
+
+      let desc = plan.description || "";
+      if (desc.includes("||")) {
+        const parts = desc.split("||");
+        category = parts[0] || "General";
+        joiningFee = parseFloat(parts[1]) || 0;
+        audience = parts[2] || "Professionals";
+        goal = parts[3] || "Revenue Generation";
+        descText = parts[4] || "";
+        try {
+          areas = JSON.parse(parts[5] || "[]");
+        } catch (e) {
+          areas = [];
+        }
+        try {
+          access = JSON.parse(parts[6] || "[]");
+        } catch (e) {
+          access = [];
+        }
+      }
+      
+      const formattedPrice = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(plan.price);
+      const formattedJoining = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(joiningFee);
+      
+      let durationName = `${plan.duration_days} Days`;
+      if (desc.includes("||")) {
+        const parts = desc.split("||");
+        if (parts.length >= 8) {
+          durationName = parts[7];
+        } else if (plan.duration_days === 30) {
+          durationName = "Monthly";
+        } else if (plan.duration_days === 90) {
+          durationName = "Quarterly";
+        } else if (plan.duration_days === 180) {
+          durationName = "Half-Yearly";
+        } else if (plan.duration_days === 365) {
+          durationName = "Annual";
+        }
+      }
+
+      const isSelected = selectedPlanId === plan.id;
+
+      html += `
+        <div class="plan-select-card ${isSelected ? 'is-selected' : ''}" data-plan-id="${plan.id}" data-duration-days="${plan.duration_days}" data-joining-fee="${joiningFee}">
+          <span class="plan-select-badge">${category}</span>
+          <div>
+            <h3 class="plan-select-name">${plan.plan_name}</h3>
+            <p class="plan-select-duration">${durationName} (${plan.duration_days} Days)</p>
+          </div>
+          
+          <div class="plan-select-details">
+            <div class="plan-details-row"><strong>Audience:</strong> ${audience}</div>
+            <div class="plan-details-row"><strong>Goal:</strong> ${goal}</div>
+            ${areas.length > 0 ? `<div class="plan-details-row"><strong>Areas:</strong> ${areas.join(", ")}</div>` : ''}
+            ${access.length > 0 ? `<div class="plan-details-row"><strong>Access:</strong> ${access.join(", ")}</div>` : ''}
+            ${descText ? `<div class="plan-details-desc">"${descText}"</div>` : ''}
+          </div>
+
+          <div class="plan-select-footer">
+            <div class="plan-select-price-group">
+              <span class="plan-select-price-label">Price</span>
+              <strong class="plan-select-price">${formattedPrice}</strong>
+            </div>
+            <div class="plan-select-joining">
+              Joining: <span>${formattedJoining}</span>
+            </div>
+          </div>
+
+          <button class="plan-select-pull-btn" type="button" aria-label="Toggle details">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
+      `;
+    });
+
+    gridContainer.innerHTML = html;
+
+    const cards = gridContainer.querySelectorAll(".plan-select-card");
+    cards.forEach(card => {
+      card.addEventListener("click", () => {
+        cards.forEach(c => c.classList.remove("is-selected"));
+        card.classList.add("is-selected");
+        selectedPlanId = card.dataset.planId;
+        
+        const feeInput = document.getElementById("member-joining-fee");
+        if (feeInput) {
+          feeInput.value = card.dataset.joiningFee || 0;
+        }
+        console.log("GymDeck: Selected Plan ID:", selectedPlanId);
+      });
+
+      const pullBtn = card.querySelector(".plan-select-pull-btn");
+      pullBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        card.classList.toggle("is-expanded");
+      });
+    });
+
+    const feeInput = document.getElementById("member-joining-fee");
+    if (feeInput) {
+      let defaultFee = 0;
+      if (selectedPlanId) {
+        const activePlan = activePlans.find(p => p.id === selectedPlanId);
+        if (activePlan) {
+          let desc = activePlan.description || "";
+          if (desc.includes("||")) {
+            defaultFee = parseFloat(desc.split("||")[1]) || 0;
+          }
+        }
+      }
+      
+      if (memberFormMode === "edit" && activeMoreOptionsRow) {
+        const notes = activeMoreOptionsRow.dataset.memberDocsLabel || "";
+        if (notes.includes("Joining Fee: ₹")) {
+          const match = notes.split("|")[0].replace("Joining Fee: ₹", "").trim();
+          feeInput.value = parseFloat(match) || 0;
+        } else {
+          feeInput.value = defaultFee;
+        }
+      } else {
+        feeInput.value = defaultFee;
+      }
+    }
+
+  } catch (err) {
+    console.error("GymDeck: Failed to load plans for selection:", err);
+    gridContainer.innerHTML = `
+      <div class="planning-placeholder">
+        <p>Error loading plans: ${err}</p>
+      </div>
+    `;
+  }
+};
+
 const resetMemberForm = () => {
+  selectedPlanId = null;
+  const feeInput = document.getElementById("member-joining-fee");
+  if (feeInput) {
+    feeInput.value = "0";
+  }
   addMemberForm?.reset();
 
   if (addMemberDobInput) {
@@ -1750,9 +1919,158 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
       const addressEl = row.querySelector('[data-label="Address"]');
       document.getElementById("dashAddress").textContent = addressEl?.textContent?.trim() || "-";
       
-      // Stats
-      const docsLabel = row.dataset.memberDocsLabel || "0 Documents";
-      document.getElementById("dashDocsCount").textContent = docsLabel.includes("Verified") ? "4 / 4" : "1 / 4";
+      // Stats & Plan Details
+      if (window.__TAURI__) {
+        const rawMemberStr = row.dataset.rawMember;
+        let memberObj = null;
+        if (rawMemberStr) {
+          try { memberObj = JSON.parse(rawMemberStr); } catch (e) {}
+        }
+
+        if (memberObj) {
+          // Fetch exact documents count dynamically
+          window.__TAURI__.core.invoke("get_member_documents_command", { memberId: memberObj.id }).then(docsList => {
+            const docsCountEl = document.getElementById("dashDocsCount");
+            if (docsCountEl) {
+              docsCountEl.textContent = `${docsList.length} / 4`;
+            }
+          }).catch(err => {
+            console.error("GymDeck: Failed to load documents for details modal:", err);
+          });
+
+          // Fetch plan details dynamically
+          window.__TAURI__.core.invoke("get_plans_command").then(plansList => {
+            const memberPlan = plansList.find(p => p.id === memberObj.membership_plan_id);
+            const planNameHeaderEl = document.getElementById("dashPlanNameHeader");
+            const planNamePanelEl = document.getElementById("dashCurrentPlan");
+            const planDurationEl = document.getElementById("dashPlanDuration");
+            const expiryDateHeaderEl = document.getElementById("dashExpiryDateHeader");
+            const expiryDatePanelEl = document.getElementById("dashExpiryDate");
+            const remainingDaysEl = document.getElementById("dashRemainingDays");
+
+            // New detail elements
+            const planPriceEl = document.getElementById("dashPlanPricePanel");
+            const paidJoiningFeeEl = document.getElementById("dashPaidJoiningFeePanel");
+            const planCategoryEl = document.getElementById("dashPlanCategoryPanel");
+            const planAudienceEl = document.getElementById("dashPlanAudiencePanel");
+            const planGoalEl = document.getElementById("dashPlanGoalPanel");
+            const planAreasEl = document.getElementById("dashPlanAreasPanel");
+            const planAccessEl = document.getElementById("dashPlanAccessPanel");
+            const planDescEl = document.getElementById("dashPlanDescPanel");
+
+            // Extract joining fee from member notes
+            let paidJoiningFee = "₹0";
+            const notes = memberObj.notes || "";
+            if (notes.includes("Joining Fee: ₹")) {
+              const parts = notes.split("|");
+              const feePart = parts.find(p => p.includes("Joining Fee: ₹"));
+              if (feePart) {
+                paidJoiningFee = feePart.replace("Joining Fee:", "").trim();
+              }
+            }
+            if (paidJoiningFeeEl) paidJoiningFeeEl.textContent = paidJoiningFee;
+
+            if (memberPlan) {
+              if (planNameHeaderEl) planNameHeaderEl.textContent = memberPlan.plan_name;
+              if (planNamePanelEl) planNamePanelEl.textContent = memberPlan.plan_name;
+              if (planPriceEl) {
+                planPriceEl.textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(memberPlan.price);
+              }
+              
+              let durationName = `${memberPlan.duration_days} Days`;
+              let category = "General";
+              let defaultJoiningFee = 0;
+              let audience = "Professionals";
+              let goal = "Revenue Generation";
+              let descText = "";
+              let areas = [];
+              let access = [];
+
+              const desc = memberPlan.description || "";
+              if (desc.includes("||")) {
+                const parts = desc.split("||");
+                category = parts[0] || "General";
+                defaultJoiningFee = parseFloat(parts[1]) || 0;
+                audience = parts[2] || "Professionals";
+                goal = parts[3] || "Revenue Generation";
+                descText = parts[4] || "";
+                try {
+                  areas = JSON.parse(parts[5] || "[]");
+                } catch (e) {
+                  areas = [];
+                }
+                try {
+                  access = JSON.parse(parts[6] || "[]");
+                } catch (e) {
+                  access = [];
+                }
+                if (parts.length >= 8) {
+                  durationName = parts[7];
+                }
+              } else {
+                if (memberPlan.duration_days === 30) {
+                  durationName = "Monthly";
+                } else if (memberPlan.duration_days === 90) {
+                  durationName = "Quarterly";
+                } else if (memberPlan.duration_days === 180) {
+                  durationName = "Half-Yearly";
+                } else if (memberPlan.duration_days === 365) {
+                  durationName = "Annual";
+                }
+              }
+              if (planDurationEl) planDurationEl.textContent = durationName;
+              if (planCategoryEl) planCategoryEl.textContent = category;
+              if (planAudienceEl) planAudienceEl.textContent = audience;
+              if (planGoalEl) planGoalEl.textContent = goal;
+              if (planAreasEl) planAreasEl.textContent = areas.length > 0 ? areas.join(", ") : "None";
+              if (planAccessEl) planAccessEl.textContent = access.length > 0 ? access.join(", ") : "None";
+              if (planDescEl) planDescEl.textContent = descText ? `"${descText}"` : "No description provided.";
+            } else {
+              if (planNameHeaderEl) planNameHeaderEl.textContent = "No Active Plan";
+              if (planNamePanelEl) planNamePanelEl.textContent = "No Active Plan";
+              if (planDurationEl) planDurationEl.textContent = "-";
+              if (planPriceEl) planPriceEl.textContent = "-";
+              if (planCategoryEl) planCategoryEl.textContent = "-";
+              if (planAudienceEl) planAudienceEl.textContent = "-";
+              if (planGoalEl) planGoalEl.textContent = "-";
+              if (planAreasEl) planAreasEl.textContent = "-";
+              if (planAccessEl) planAccessEl.textContent = "-";
+              if (planDescEl) planDescEl.textContent = "-";
+            }
+
+            if (memberObj.expires_at) {
+              const expiryDate = new Date(memberObj.expires_at);
+              const expiryStr = expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+              
+              if (expiryDateHeaderEl) expiryDateHeaderEl.textContent = expiryStr;
+              if (expiryDatePanelEl) expiryDatePanelEl.textContent = expiryStr;
+              
+              const diffMs = expiryDate - new Date();
+              const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+              if (remainingDaysEl) {
+                remainingDaysEl.textContent = `${diffDays} Days`;
+                if (diffDays <= 7) {
+                  remainingDaysEl.className = "data-value text-rose-600 font-black";
+                } else {
+                  remainingDaysEl.className = "data-value text-indigo-600 font-black";
+                }
+              }
+            } else {
+              if (expiryDateHeaderEl) expiryDateHeaderEl.textContent = "-";
+              if (expiryDatePanelEl) expiryDatePanelEl.textContent = "-";
+              if (remainingDaysEl) {
+                remainingDaysEl.textContent = "-";
+                remainingDaysEl.className = "data-value text-slate-500 font-black";
+              }
+            }
+          }).catch(err => {
+            console.error("GymDeck: Failed to fetch plans for details modal:", err);
+          });
+        }
+      } else {
+        const docsLabel = row.dataset.memberDocsLabel || "0 Documents";
+        document.getElementById("dashDocsCount").textContent = docsLabel.includes("Verified") ? "4 / 4" : "1 / 4";
+      }
     }
 
     backdrop?.classList.add("is-active");
@@ -1907,6 +2225,19 @@ document.getElementById("editMemberFromModal")?.addEventListener("click", () => 
   if (activeMoreOptionsRow) {
     memberFormMode = "edit";
     editingMemberId = activeMoreOptionsRow.dataset.memberId || null;
+    
+    // Set plan ID from rawMember dataset attribute
+    const rawMemberStr = activeMoreOptionsRow.dataset.rawMember;
+    if (rawMemberStr) {
+      try {
+        const m = JSON.parse(rawMemberStr);
+        selectedPlanId = m.membership_plan_id || null;
+      } catch (e) {
+        selectedPlanId = null;
+      }
+    } else {
+      selectedPlanId = null;
+    }
     
     // Prefill form fields
     prefillMemberForm(activeMoreOptionsRow);
@@ -2152,8 +2483,9 @@ const getNewMemberPayload = () => {
   const email = getFieldValue("Email Address");
   const dobValue = addMemberDobInput?.value || "";
 
+  const gender = getFieldValue("Gender", "select");
   // Preserve previously uploaded profile photo in this session
-  const photoUrl = pendingMemberData?.photoUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(fullName || "GymDeckMember")}`;
+  const photoUrl = pendingMemberData?.photoUrl || (window.getDefaultAvatar ? window.getDefaultAvatar(gender, fullName) : "");
   const photoBase64 = pendingMemberData?.photoBase64 || null;
 
   return {
@@ -2433,7 +2765,7 @@ const setDocumentModalContent = ({ memberName, title, imageSrc = "", imageAlt = 
     idLabel.textContent = "#" + (Math.floor(Math.random() * 9000) + 1000);
   }
 
-  const finalPortraitSrc = imageSrc || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(memberName || "GymDeck")}`;
+  const finalPortraitSrc = imageSrc || (window.getDefaultAvatar ? window.getDefaultAvatar("OTHER", memberName) : "");
   
   if (documentImage) {
     documentImage.src = finalPortraitSrc;
@@ -2781,7 +3113,7 @@ const mapBackendMember = (m) => ({
   joiningTimeValue: m.joined_at ? (m.joined_at.split('T')[1]?.slice(0, 5) || "00:00") : "00:00",
   joiningDateDisplay: m.joined_at ? formatJoinDateDisplay(new Date(m.joined_at)) : "",
   joiningTimeDisplay: m.joined_at ? formatJoinTimeDisplay(new Date(m.joined_at)) : "",
-  photoUrl: m.profile_photo_path || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(m.full_name || "GymDeckMember")}`,
+  photoUrl: m.profile_photo_path || (window.getDefaultAvatar ? window.getDefaultAvatar(m.gender, m.full_name) : ""),
   photoBase64: (m.profile_photo_path && m.profile_photo_path.startsWith("data:")) ? m.profile_photo_path : "",
   joinedAt: m.joined_at
 });
@@ -3155,11 +3487,12 @@ photoUploadBackButton?.addEventListener("click", () => {
     addMemberModal?.classList.remove("is-page-2");
 });
 
-photoUploadNextButton?.addEventListener("click", () => {
+photoUploadNextButton?.addEventListener("click", async () => {
     addMemberModal?.classList.remove("is-page-2");
     if (memberFormMode === "edit") {
         addMemberModal?.classList.add("is-page-4");
         addMemberModal?.classList.remove("is-page-3");
+        await loadPlansForSelection();
     } else {
         setDocUploadModalState(true, pendingMemberData?.name || "Member");
     }
@@ -3208,6 +3541,7 @@ docUploadNextButton?.addEventListener("click", async () => {
   } else {
     addMemberModal?.classList.remove("is-page-3");
     addMemberModal?.classList.add("is-page-4");
+    await loadPlansForSelection();
   }
 });
 
@@ -3411,6 +3745,17 @@ const saveUploadedDocuments = async (submitButton) => {
 
   if (memberFormMode === "edit") {
     // --- Edit Member Saving Flow ---
+    const feeInput = document.getElementById("member-joining-fee");
+    const joiningFeeVal = feeInput ? feeInput.value : 0;
+    let docsOnly = activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberDocsLabel || "") : "";
+    if (docsOnly.includes("|")) {
+      docsOnly = docsOnly.split("|").slice(1).join("|").trim();
+    } else if (docsOnly.includes("Joining Fee: ₹")) {
+      docsOnly = "";
+    }
+    const finalDocs = uploadedDocs.length > 0 ? uploadedDocs.map(d => d.label).join(", ") : docsOnly;
+    const finalNotes = finalDocs ? `Joining Fee: ₹${joiningFeeVal} | ${finalDocs}` : `Joining Fee: ₹${joiningFeeVal}`;
+
     const updatedMember = {
       name: pendingMemberData.name,
       contactNumber: pendingMemberData.contactNumber,
@@ -3423,7 +3768,7 @@ const saveUploadedDocuments = async (submitButton) => {
       gender: pendingMemberData.gender || "OTHER",
       bloodGroup: pendingMemberData.bloodGroup || "",
       address: pendingMemberData.address || "",
-      docsLabel: activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberDocsLabel || "No Documents") : "No Documents",
+      docsLabel: finalNotes,
       joiningDateValue: activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberJoinedDateVal || "") : "",
       joiningTimeValue: activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberJoinedTimeVal || "") : "",
       joiningDateDisplay: activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberJoinedDateDisp || "") : "",
@@ -3469,6 +3814,19 @@ const saveUploadedDocuments = async (submitButton) => {
             if (pendingMemberData.photoBase64) {
               m.profile_photo_path = pendingMemberData.photoBase64;
             }
+            
+            // Link selected plan and calculate expiry
+            m.membership_plan_id = selectedPlanId || null;
+            if (selectedPlanId) {
+              const cardEl = document.querySelector(`.plan-select-card[data-plan-id="${selectedPlanId}"]`);
+              const days = cardEl ? parseInt(cardEl.dataset.durationDays) || 30 : 30;
+              m.expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+            } else {
+              m.expires_at = null;
+            }
+            
+            // Save custom joining fee
+            m.notes = finalNotes;
             
             await window.__TAURI__.core.invoke("update_member_command", { member: m });
             console.log(`GymDeck: Member ${m.id} successfully updated in SQLite.`);
@@ -3624,12 +3982,24 @@ const saveUploadedDocuments = async (submitButton) => {
           address: pendingMemberData.address,
           height: pendingMemberData.height,
           weight: pendingMemberData.weight,
-          membership_plan_id: null,
+          membership_plan_id: selectedPlanId || null,
           membership_status: "ACTIVE",
           joined_at: new Date().toISOString(),
-          expires_at: null,
+          expires_at: (() => {
+            if (selectedPlanId) {
+              const cardEl = document.querySelector(`.plan-select-card[data-plan-id="${selectedPlanId}"]`);
+              const days = cardEl ? parseInt(cardEl.dataset.durationDays) || 30 : 30;
+              return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+            }
+            return null;
+          })(),
           profile_photo_path: pendingMemberData.photoBase64 || null,
-          notes: uploadedDocs.map(d => d.label).join(", "),
+          notes: (() => {
+            const feeInput = document.getElementById("member-joining-fee");
+            const joiningFeeVal = feeInput ? feeInput.value : 0;
+            const docList = uploadedDocs.map(d => d.label).join(", ");
+            return docList ? `Joining Fee: ₹${joiningFeeVal} | ${docList}` : `Joining Fee: ₹${joiningFeeVal}`;
+          })(),
           created_by_user_id: "00000000-0000-0000-0000-000000000000",
           updated_by_user_id: "00000000-0000-0000-0000-000000000000",
           created_at: new Date().toISOString(),

@@ -60,7 +60,15 @@ impl PlanRepository {
             "INSERT INTO membership_plans (
                 id, gym_id, plan_name, duration_days, price, description, is_active,
                 created_by_user_id, updated_by_user_id, created_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            ON CONFLICT(id) DO UPDATE SET
+                plan_name = excluded.plan_name,
+                duration_days = excluded.duration_days,
+                price = excluded.price,
+                description = excluded.description,
+                is_active = excluded.is_active,
+                updated_by_user_id = excluded.updated_by_user_id,
+                updated_at = excluded.updated_at",
             (
                 plan.id.to_string(),
                 ctx.gym_id.to_string(),
