@@ -408,7 +408,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.45 }}
-            className="relative w-full max-w-4xl bg-[#f8fafc] rounded-[28px] border border-slate-200/60 shadow-2xl overflow-hidden flex flex-col p-7 md:p-9 m-auto text-left max-h-[90vh] md:max-h-[580px] z-50"
+            className="relative w-full max-w-4xl bg-[#090d16] text-white rounded-[28px] border border-white/10 shadow-2xl overflow-hidden flex flex-col p-7 md:p-9 m-auto text-left max-h-[90vh] md:max-h-[580px] z-50"
             style={{
               filter: isSubModalOpen ? "blur(5px) brightness(0.65)" : "none",
               pointerEvents: isSubModalOpen ? "none" : "auto",
@@ -421,7 +421,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               whileHover="hovered"
               whileTap={{ scale: 0.95 }}
               onClick={onClose}
-              className="absolute top-7 right-7 w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:text-white hover:bg-slate-950 hover:border-slate-950 shadow-sm transition-all duration-200 z-50"
+              className="absolute top-7 right-7 w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 shadow-sm transition-all duration-200 z-50"
               variants={{
                 initial: { scale: 1 },
                 hovered: { scale: 1.05 }
@@ -443,21 +443,21 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             <header className="flex justify-between items-start gap-5 mb-5 shrink-0">
               <div className="flex items-center gap-4">
                 <div 
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0 ring-4 ring-white"
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0 ring-4 ring-white/10"
                   style={{ background: gradient }}
                 >
                   <IconComponent size={24} strokeWidth={2.5} className="drop-shadow-sm" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase tracking-widest leading-none">
+                    <span className="px-2.5 py-1 rounded-md text-[8px] font-black bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 uppercase tracking-widest leading-none">
                       {plan.category}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-slate-100 border border-slate-200 text-slate-500 uppercase tracking-widest leading-none">
+                    <span className="px-2.5 py-1 rounded-md text-[8px] font-black bg-white/[0.04] border border-white/[0.08] text-slate-400 uppercase tracking-widest leading-none">
                       {plan.duration}
                     </span>
                   </div>
-                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1.5 leading-none">{plan.name}</h2>
+                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight mt-1.5 leading-none">{plan.name}</h2>
                 </div>
               </div>
             </header>
@@ -467,48 +467,48 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               
               {/* Financial Strategy Grid */}
               <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                <article className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-2xl flex flex-col justify-between min-h-[90px] relative overflow-hidden group transition-all duration-200">
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Pricing</span>
-                    <DollarSign size={13} className="text-slate-400" />
+                    <DollarSign size={13} className="text-slate-500" />
                   </div>
-                  <strong className="text-base md:text-lg font-black text-slate-900 mt-2 block">{formatCurrency(plan.price)}</strong>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Base Fee</span>
+                  <strong className="text-base md:text-lg font-black text-white font-mono mt-2 block">{formatCurrency(plan.price)}</strong>
+                  <span className="text-[9px] text-slate-550 font-bold uppercase mt-1">Base Fee</span>
                 </article>
 
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                <article className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-2xl flex flex-col justify-between min-h-[90px] relative overflow-hidden group transition-all duration-200">
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Active Enrollment</span>
-                    <Users size={13} className="text-slate-400" />
+                    <Users size={13} className="text-slate-500" />
                   </div>
                   <div className="flex items-baseline gap-1 mt-2">
-                    <strong className="text-base md:text-lg font-black text-slate-900">{plan.activeMembers}</strong>
+                    <strong className="text-base md:text-lg font-black text-white font-mono">{plan.activeMembers}</strong>
                     <span className={cn(
                       "text-[9px] font-black font-mono",
-                      plan.trendUp ? "text-emerald-600" : "text-rose-600"
+                      plan.trendUp ? "text-emerald-400" : "text-rose-400"
                     )}>
                       {plan.trend}
                     </span>
                   </div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Total Members</span>
+                  <span className="text-[9px] text-slate-550 font-bold uppercase mt-1">Total Members</span>
                 </article>
 
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                <article className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-2xl flex flex-col justify-between min-h-[90px] relative overflow-hidden group transition-all duration-200">
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Monthly Contribution</span>
-                    <TrendingUp size={13} className="text-slate-400" />
+                    <TrendingUp size={13} className="text-slate-500" />
                   </div>
-                  <strong className="text-base md:text-lg font-black text-slate-900 mt-2 block">{formatCurrency(plan.monthlyContribution)}</strong>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">MRR contribution</span>
+                  <strong className="text-base md:text-lg font-black text-white font-mono mt-2 block">{formatCurrency(plan.monthlyContribution)}</strong>
+                  <span className="text-[9px] text-slate-550 font-bold uppercase mt-1">MRR contribution</span>
                 </article>
 
-                <article className="p-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between min-h-[90px] relative overflow-hidden group hover:shadow-md transition-all duration-200">
+                <article className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-2xl flex flex-col justify-between min-h-[90px] relative overflow-hidden group transition-all duration-200">
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">LTD Revenue</span>
-                    <BarChart3 size={13} className="text-slate-400" />
+                    <BarChart3 size={13} className="text-slate-500" />
                   </div>
-                  <strong className="text-base md:text-lg font-black text-slate-900 mt-2 block">{formatCurrency(plan.revenue)}</strong>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Total Generated</span>
+                  <strong className="text-base md:text-lg font-black text-white font-mono mt-2 block">{formatCurrency(plan.revenue)}</strong>
+                  <span className="text-[9px] text-slate-550 font-bold uppercase mt-1">Total Generated</span>
                 </article>
               </section>
 
@@ -516,7 +516,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                 
                 {/* Status and Health Analytics */}
-                <section className="md:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 rounded-2xl bg-white border border-slate-200/60 shadow-sm items-center">
+                <section className="md:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] items-center">
                   
                   {/* Concentric Gauge SVG Column (span 5) */}
                   <div className="sm:col-span-5 flex justify-center items-center relative h-[120px] w-[120px] mx-auto shrink-0">
@@ -526,7 +526,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                         cx="60"
                         cy="60"
                         r="44"
-                        className="stroke-slate-100 fill-none stroke-[7]"
+                        className="stroke-white/[0.04] fill-none stroke-[7]"
                       />
                       {/* Outer Active Ring (Retention) */}
                       <motion.circle
@@ -550,7 +550,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                         cx="60"
                         cy="60"
                         r="33"
-                        className="stroke-slate-100 fill-none stroke-[7]"
+                        className="stroke-white/[0.04] fill-none stroke-[7]"
                       />
                       {/* Inner Active Ring (Renewal) */}
                       <motion.circle
@@ -574,14 +574,14 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
                       <span className={cn(
                         "text-[10px] font-black uppercase tracking-wider leading-none",
-                        statusColor === "emerald" ? "text-emerald-600" :
-                        statusColor === "indigo" ? "text-indigo-600" :
-                        statusColor === "rose" ? "text-rose-600" :
-                        "text-amber-600"
+                        statusColor === "emerald" ? "text-emerald-400" :
+                        statusColor === "indigo" ? "text-indigo-400" :
+                        statusColor === "rose" ? "text-rose-400" :
+                        "text-amber-400"
                       )}>
                         {plan.status}
                       </span>
-                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">
                         {plan.risk} Risk
                       </span>
                     </div>
@@ -591,12 +591,12 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                   <div className="sm:col-span-7 space-y-3 text-left">
                     <div>
                       <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Plan Performance Index</h4>
-                      <p className="text-xs font-semibold text-slate-500 leading-relaxed mt-1">
-                        This tier exhibits a <span className="font-extrabold text-slate-900">{plan.trend}</span> growth velocity with optimized operational health parameters.
+                      <p className="text-xs font-semibold text-slate-400 leading-relaxed mt-1">
+                        This tier exhibits a <span className="font-extrabold text-white">{plan.trend}</span> growth velocity with optimized operational health parameters.
                       </p>
                     </div>
 
-                    <div className="space-y-2 border-t border-slate-100 pt-2.5">
+                    <div className="space-y-2 border-t border-white/[0.06] pt-2.5">
                       {/* Retention Legend */}
                       <div className="flex items-center justify-between text-xs leading-none">
                         <div className="flex items-center gap-2">
@@ -604,9 +604,9 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                             "w-2.5 h-2.5 rounded-full shrink-0",
                             statusColor === "rose" ? "bg-rose-500" : "bg-emerald-500"
                           )} />
-                          <span className="font-bold text-slate-500 uppercase tracking-wide">Retention Rate</span>
+                          <span className="font-bold text-slate-400 uppercase tracking-wide">Retention Rate</span>
                         </div>
-                        <span className="font-black text-slate-900 font-mono text-sm">{plan.retention}%</span>
+                        <span className="font-black text-white font-mono text-sm">{plan.retention}%</span>
                       </div>
 
                       {/* Renewal Legend */}
@@ -616,16 +616,16 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                             "w-2.5 h-2.5 rounded-full shrink-0",
                             plan.renewalRate < 60 ? "bg-rose-500" : "bg-indigo-500"
                           )} />
-                          <span className="font-bold text-slate-500 uppercase tracking-wide">Renewal Velocity</span>
+                          <span className="font-bold text-slate-400 uppercase tracking-wide">Renewal Velocity</span>
                         </div>
-                        <span className="font-black text-slate-900 font-mono text-sm">{plan.renewalRate}%</span>
+                        <span className="font-black text-white font-mono text-sm">{plan.renewalRate}%</span>
                       </div>
                     </div>
                   </div>
                 </section>
 
                 {/* Access Strategy & Privileges */}
-                <section className="md:col-span-5 p-5 bg-white border border-slate-200/60 rounded-2xl shadow-sm space-y-3 flex flex-col justify-between">
+                <section className="md:col-span-5 p-5 bg-white/[0.02] border border-white/[0.06] rounded-2xl space-y-3 flex flex-col justify-between">
                   <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Access Privileges</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {[
@@ -640,11 +640,13 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
                         key={idx} 
                         className={cn(
                           "p-2 rounded-xl border text-[9px] font-black uppercase tracking-wider flex items-center justify-between transition-all leading-none min-h-[30px]",
-                          privilege.enabled ? "bg-emerald-50/40 border-emerald-100 text-slate-700" : "bg-slate-50 border-slate-100 text-slate-350"
+                          privilege.enabled 
+                            ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400" 
+                            : "bg-white/[0.01] border-white/[0.04] text-slate-550"
                         )}
                       >
                         <span className="truncate mr-1">{privilege.label}</span>
-                        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", privilege.enabled ? "bg-emerald-400" : "bg-slate-300")} />
+                        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", privilege.enabled ? "bg-emerald-500" : "bg-slate-700")} />
                       </div>
                     ))}
                   </div>
@@ -653,10 +655,10 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             </div>
 
             {/* Bottom Actions Row */}
-            <footer className="mt-6 pt-4 border-t border-slate-250/50 flex flex-wrap gap-2.5 justify-end shrink-0">
+            <footer className="mt-6 pt-4 border-t border-white/[0.06] flex flex-wrap gap-2.5 justify-end shrink-0">
               <button 
                 onClick={() => { onEdit(plan); onClose(); }}
-                className="px-4 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-750 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
                 <Edit3 size={12} />
                 Edit Plan
@@ -664,7 +666,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
               
               <button 
                 onClick={() => { onDuplicate(plan); onClose(); }}
-                className="px-4 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-750 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
                 <Copy size={12} />
                 Duplicate
@@ -672,7 +674,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
 
               <button 
                 onClick={() => { onArchive(plan); onClose(); }}
-                className="px-4 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-750 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
                 <Archive size={12} />
                 Archive
@@ -680,17 +682,17 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
 
               <button 
                 onClick={() => { onDelete(plan); }}
-                className="px-4 h-10 rounded-xl bg-rose-50 hover:bg-rose-100/70 text-rose-600 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                className="px-4 h-10 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-450 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5"
               >
                 <Trash2 size={12} />
                 Delete
               </button>
 
-              <div className="h-10 w-[1px] bg-slate-200 mx-1.5" />
+              <div className="h-10 w-[1px] bg-white/[0.08] mx-1.5" />
 
               <button 
                 onClick={onClose}
-                className="px-6 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center"
+                className="px-6 h-10 rounded-xl bg-white hover:bg-slate-200 text-slate-950 text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center"
               >
                 Done
               </button>
