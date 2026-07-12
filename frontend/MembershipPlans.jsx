@@ -359,8 +359,8 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             transition={{ duration: 0.25 }}
             onClick={isSubModalOpen ? undefined : onClose}
             className={cn(
-              "absolute inset-0 bg-slate-950/95 backdrop-blur-3xl",
-              isSubModalOpen && "bg-black/98"
+              "absolute inset-0 bg-slate-950/72 backdrop-blur-[12px]",
+              isSubModalOpen && "bg-slate-950/85"
             )}
             style={{
               transition: "background-color 0.3s ease, backdrop-filter 0.3s ease",
@@ -934,9 +934,9 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
             exit={{ opacity: 0 }}
             transition={{ type: "tween", ease: "easeInOut", duration: 0.35 }}
             onClick={onClose}
-            className="absolute inset-0 backdrop-blur-3xl"
+            className="absolute inset-0 backdrop-blur-[12px]"
             style={{ 
-              backgroundColor: "rgba(3, 7, 18, 0.97)",
+              backgroundColor: "rgba(4, 6, 12, 0.72)",
               willChange: "opacity" 
             }}
           />
