@@ -852,7 +852,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
     price: "",
     joiningFee: "",
     duration: "Monthly",
-    customDays: ""
+    durationDays: 30
   });
 
   const [access, setAccess] = useState(["Freeze Support"]);
@@ -870,9 +870,26 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
   const [isCustomAreaModalOpen, setIsCustomAreaModalOpen] = useState(false);
   const [customAreaName, setCustomAreaName] = useState("");
 
+  const [durationsList, setDurationsList] = useState(["Monthly", "Quarterly", "Half-Yearly", "Annual"]);
+  const [customDurationsMap, setCustomDurationsMap] = useState({});
+  const [isCustomDurationModalOpen, setIsCustomDurationModalOpen] = useState(false);
+  const [customDurationName, setCustomDurationName] = useState("");
+  const [customDurationDays, setCustomDurationDays] = useState("");
+
   useEffect(() => {
     if (isOpen) {
       setStep(1);
+      setForm({
+        name: "",
+        category: "Transformation",
+        audience: "Professionals",
+        goal: "Revenue Generation",
+        description: "",
+        price: "",
+        joiningFee: "",
+        duration: "Monthly",
+        durationDays: 30
+      });
       setAccess(["Freeze Support"]);
       setAreas(["Gym Floor", "Cardio Zone"]);
       setAccessCards([
@@ -886,6 +903,11 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
       setCustomAccessDesc("");
       setIsCustomAreaModalOpen(false);
       setCustomAreaName("");
+      setDurationsList(["Monthly", "Quarterly", "Half-Yearly", "Annual"]);
+      setCustomDurationsMap({});
+      setIsCustomDurationModalOpen(false);
+      setCustomDurationName("");
+      setCustomDurationDays("");
     }
   }, [isOpen]);
 
@@ -1033,18 +1055,27 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       <div className="space-y-3">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Duration</label>
                         <div className="grid grid-cols-2 gap-3">
-                          {["Monthly", "Quarterly", "Half-Yearly", "Annual"].map(d => {
-                            const days = d === "Monthly" ? "30 Days" :
-                                         d === "Quarterly" ? "90 Days" :
-                                         d === "Half-Yearly" ? "180 Days" :
-                                         "365 Days";
+                          {durationsList.map(d => {
+                            let daysLabel = "";
+                            if (d === "Monthly") daysLabel = "30 Days";
+                            else if (d === "Quarterly") daysLabel = "90 Days";
+                            else if (d === "Half-Yearly") daysLabel = "180 Days";
+                            else if (d === "Annual") daysLabel = "365 Days";
+                            else daysLabel = `${customDurationsMap[d] || 30} Days`;
+
+                            const daysCount = d === "Monthly" ? 30 :
+                                              d === "Quarterly" ? 90 :
+                                              d === "Half-Yearly" ? 180 :
+                                              d === "Annual" ? 365 :
+                                              (customDurationsMap[d] || 30);
+
                             return (
                               <motion.button
                                 key={d}
                                 type="button"
                                 whileHover={{ scale: 1.02, y: -0.5 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setForm({ ...form, duration: d })}
+                                onClick={() => setForm({ ...form, duration: d, durationDays: daysCount })}
                                 className={cn(
                                   "h-14 rounded-xl border flex flex-col items-center justify-center transition-all duration-200 shadow-sm p-2",
                                   form.duration === d
@@ -1052,61 +1083,30 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                                     : "border-slate-200 bg-white text-slate-500 hover:border-slate-350 hover:bg-slate-50/50"
                                 )}
                               >
-                                <span className="text-[10px] font-black uppercase tracking-wider leading-none">{d}</span>
+                                <span className="text-[10px] font-black uppercase tracking-wider leading-none truncate max-w-full px-1">{d}</span>
                                 <span className={cn(
                                   "text-[9px] font-bold font-mono mt-1.5 leading-none",
                                   form.duration === d ? "text-slate-300" : "text-slate-400"
                                 )}>
-                                  {days}
+                                  {daysLabel}
                                 </span>
                               </motion.button>
                             );
                           })}
 
-                          {form.duration === "Custom" ? (
-                            <motion.button
-                              type="button"
-                              whileHover={{ scale: 1.01, y: -0.5 }}
-                              whileTap={{ scale: 0.99 }}
-                              onClick={() => setForm({ ...form, duration: "Custom" })}
-                              className="h-14 rounded-xl border flex flex-col items-center justify-center bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10 transition-all duration-200 p-2 col-span-2"
-                            >
-                              <span className="text-[10px] font-black uppercase tracking-wider leading-none">Custom</span>
-                              <span className="text-[9px] font-bold font-mono mt-1.5 leading-none text-slate-300">
-                                {form.customDays ? `${form.customDays} Days` : "Enter Days Below"}
-                              </span>
-                            </motion.button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setForm({ ...form, duration: "Custom", customDays: "" });
-                              }}
-                              className="h-14 rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-350 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-2 p-2 col-span-2"
-                            >
-                              <Plus size={11} className="stroke-[3]" />
-                              <span>Custom Duration</span>
-                            </button>
-                          )}
-                        </div>
-
-                        {form.duration === "Custom" && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="space-y-1.5 mt-2"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomDurationName("");
+                              setCustomDurationDays("");
+                              setIsCustomDurationModalOpen(true);
+                            }}
+                            className="h-14 rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-350 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-2 p-2 col-span-2"
                           >
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Duration in Days *</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={form.customDays}
-                              onChange={(e) => setForm({ ...form, customDays: e.target.value })}
-                              placeholder="e.g. 45"
-                              className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
-                            />
-                          </motion.div>
-                        )}
+                            <Plus size={11} className="stroke-[3]" />
+                            <span>Custom Duration</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -1121,7 +1121,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                         </div>
                         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center h-[90px]">
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projected ARPU</p>
-                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) / (form.duration === "Annual" ? 12 : form.duration === "Half-Yearly" ? 6 : form.duration === "Quarterly" ? 3 : form.duration === "Custom" ? ((parseFloat(form.customDays) || 30) / 30) : 1)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
+                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact(Number(form.price) / (form.duration === "Annual" ? 12 : (form.durationDays || 30) / 30)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
                         </div>
                       </div>
                     </div>
@@ -1259,7 +1259,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                             / {form.duration || "Monthly"}
                           </span>
                           <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded-md leading-none">
-                            {form.duration === "Annual" ? "365 Days" : form.duration === "Half-Yearly" ? "180 Days" : form.duration === "Quarterly" ? "90 Days" : "30 Days"}
+                            {form.durationDays ? `${form.durationDays} Days` : "30 Days"}
                           </span>
                         </div>
                       </div>
@@ -1442,6 +1442,113 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       className="flex-1 h-10 rounded-xl bg-slate-950 hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-black uppercase tracking-widest text-white transition-all shadow-md"
                     >
                       Save Access
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* NESTED CUSTOM DURATION MODAL */}
+          <AnimatePresence>
+            {isCustomDurationModalOpen && (
+              <motion.div
+                key="custom-duration-modal-container"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
+              >
+                {/* Dark blur backdrop */}
+                <motion.div
+                  key="custom-duration-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsCustomDurationModalOpen(false)}
+                  className="absolute inset-0"
+                  style={{
+                    backgroundColor: "rgba(4, 6, 12, 0.82)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    willChange: "opacity"
+                  }}
+                />
+                
+                {/* Small central card */}
+                <motion.div
+                  key="custom-duration-panel"
+                  initial={{ scale: 0.95, y: 10, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.95, y: 10, opacity: 0 }}
+                  transition={{ type: "spring", duration: 0.35, bounce: 0.15 }}
+                  className="relative w-full max-w-md bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 z-50 flex flex-col gap-4 text-left"
+                >
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider font-mono">Create Custom Duration</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 font-mono uppercase tracking-wide">Add a custom period of time to the list</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Duration Label *</label>
+                        <span className="text-[8px] font-mono text-slate-400">{customDurationName.length}/25</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={customDurationName}
+                        onChange={(e) => setCustomDurationName(e.target.value)}
+                        maxLength={25}
+                        placeholder="e.g. 45 Days, Trial Period"
+                        className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+                        autoFocus
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Number of Days *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={customDurationDays}
+                        onChange={(e) => setCustomDurationDays(e.target.value)}
+                        placeholder="e.g. 45"
+                        className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-2">
+                    <button
+                      onClick={() => setIsCustomDurationModalOpen(false)}
+                      className="flex-1 h-10 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        const trimmedName = customDurationName.trim();
+                        const daysVal = parseInt(customDurationDays);
+                        if (!trimmedName || isNaN(daysVal) || daysVal <= 0) return;
+                        
+                        if (!durationsList.includes(trimmedName)) {
+                          setDurationsList([...durationsList, trimmedName]);
+                        }
+                        setCustomDurationsMap({
+                          ...customDurationsMap,
+                          [trimmedName]: daysVal
+                        });
+                        setForm({
+                          ...form,
+                          duration: trimmedName,
+                          durationDays: daysVal
+                        });
+                        setIsCustomDurationModalOpen(false);
+                      }}
+                      className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-xs font-black uppercase tracking-widest text-white transition-all"
+                    >
+                      Save
                     </button>
                   </div>
                 </motion.div>
