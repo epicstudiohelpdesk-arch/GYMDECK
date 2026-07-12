@@ -47,7 +47,10 @@ import {
   Hash,
   Circle,
   FolderPlus,
-  Globe
+  Globe,
+  Dumbbell,
+  Flame,
+  Crown
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorHandlers.jsx";
 
@@ -74,6 +77,35 @@ const getPlanInitials = (name) => {
   const words = name.trim().split(/\s+/);
   const initials = words.map(w => w[0]).join("").toUpperCase();
   return initials.substring(0, 3);
+};
+
+const getPlanVisual = (plan) => {
+  if (!plan) return { gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", IconComponent: Activity };
+  
+  const name = (plan.name || "").toLowerCase();
+  const category = (plan.category || "").toLowerCase();
+  
+  let gradient = "linear-gradient(135deg, #0ea5e9, #0284c7)"; // default sky
+  let IconComponent = Activity;
+  
+  if (category === "transformation" || name.includes("elite") || name.includes("platinum") || name.includes("transform")) {
+    gradient = "linear-gradient(135deg, #6366f1, #4f46e5)"; // indigo
+    IconComponent = Sparkles;
+  } else if (category === "bodybuilding" || name.includes("strength") || name.includes("muscle") || name.includes("heavy") || name.includes("body")) {
+    gradient = "linear-gradient(135deg, #10b981, #059669)"; // emerald
+    IconComponent = Dumbbell;
+  } else if (category === "weight loss" || name.includes("burn") || name.includes("fat") || name.includes("slimming") || name.includes("loss")) {
+    gradient = "linear-gradient(135deg, #f59e0b, #d97706)"; // amber
+    IconComponent = Flame;
+  } else if (name.includes("starter") || name.includes("basic") || name.includes("flex")) {
+    gradient = "linear-gradient(135deg, #f43f5e, #e11d48)"; // rose
+    IconComponent = Zap;
+  } else if (name.includes("student") || name.includes("scholar")) {
+    gradient = "linear-gradient(135deg, #8b5cf6, #7c3aed)"; // violet
+    IconComponent = Crown;
+  }
+  
+  return { gradient, IconComponent };
 };
 
 const PORTFOLIO_STATS = {
@@ -246,6 +278,7 @@ function KPICard({ label, value, trend, trendUp, subtitle, icon: Icon, accent })
 // ─────────────────────────────────────────
 function PlanCard({ plan, index, onViewDetails }) {
   const statusColor = plan.status === "Healthy" ? "emerald" : plan.status === "Growing" ? "indigo" : plan.status === "At Risk" ? "rose" : "amber";
+  const { gradient, IconComponent } = getPlanVisual(plan);
 
   return (
     <motion.tr
@@ -258,11 +291,11 @@ function PlanCard({ plan, index, onViewDetails }) {
     >
       {/* Col 1: Identity & Classification */}
       <div className="flex items-center gap-3 min-w-0 text-left">
-        <div className={cn(
-          "w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0",
-          plan.color || "from-slate-800 to-indigo-900"
-        )}>
-          {getPlanInitials(plan.name)}
+        <div 
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
+          style={{ background: gradient }}
+        >
+          <IconComponent size={18} strokeWidth={2.5} className="drop-shadow-sm" />
         </div>
         <div className="min-w-0 text-left">
           <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">{plan.name}</h4>
@@ -338,6 +371,7 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
 
   const statusColor = plan.status === "Healthy" ? "emerald" : plan.status === "Growing" ? "indigo" : plan.status === "At Risk" ? "rose" : "amber";
   const riskColor = plan.risk === "Low" ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-rose-600 bg-rose-50 border-rose-200";
+  const { gradient, IconComponent } = getPlanVisual(plan);
 
   return (
     <AnimatePresence>
@@ -409,15 +443,10 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDuplicate, onArchive, onDel
             <header className="flex justify-between items-start gap-5 mb-5 shrink-0">
               <div className="flex items-center gap-4">
                 <div 
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-base shadow-sm shrink-0 ring-4 ring-white"
-                  style={{
-                    background: plan.category === "Transformation" ? "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)" :
-                                plan.category === "Bodybuilding" ? "linear-gradient(135deg, #10b981 0%, #047857 100%)" :
-                                plan.category === "Weight Loss" ? "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)" :
-                                "linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)"
-                  }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0 ring-4 ring-white"
+                  style={{ background: gradient }}
                 >
-                  {getPlanInitials(plan.name)}
+                  <IconComponent size={24} strokeWidth={2.5} className="drop-shadow-sm" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -788,11 +817,14 @@ function DeleteConfirmationModal({ isOpen, plan, onClose, onConfirm }) {
             {/* Target Card Preview */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 mb-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-white font-bold text-[10px] shadow-sm shrink-0",
-                  plan.color || "from-slate-800 to-indigo-900"
-                )}>
-                  {getPlanInitials(plan.name)}
+                <div 
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm shrink-0"
+                  style={{ background: getPlanVisual(plan).gradient }}
+                >
+                  {(() => {
+                    const { IconComponent } = getPlanVisual(plan);
+                    return <IconComponent size={14} strokeWidth={2.5} className="drop-shadow-sm" />;
+                  })()}
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 leading-tight">{plan.name}</h4>
