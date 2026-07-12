@@ -1030,21 +1030,35 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                       <div className="space-y-3">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Duration</label>
                         <div className="grid grid-cols-2 gap-3">
-                          {["Monthly", "Quarterly", "Half-Yearly", "Annual"].map(d => (
-                            <motion.button
-                              key={d}
-                              type="button"
-                              whileHover={{ scale: 1.02, y: -0.5 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => setForm({ ...form, duration: d })}
-                              className={cn(
-                                "h-11 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm",
-                                form.duration === d
-                                  ? "border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10"
-                                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-350 hover:bg-slate-50/50"
-                              )}
-                            >{d}</motion.button>
-                          ))}
+                          {["Monthly", "Quarterly", "Half-Yearly", "Annual"].map(d => {
+                            const days = d === "Monthly" ? "30 Days" :
+                                         d === "Quarterly" ? "90 Days" :
+                                         d === "Half-Yearly" ? "180 Days" :
+                                         "365 Days";
+                            return (
+                              <motion.button
+                                key={d}
+                                type="button"
+                                whileHover={{ scale: 1.02, y: -0.5 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setForm({ ...form, duration: d })}
+                                className={cn(
+                                  "h-14 rounded-xl border flex flex-col items-center justify-center transition-all duration-200 shadow-sm p-2",
+                                  form.duration === d
+                                    ? "border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-350 hover:bg-slate-50/50"
+                                )}
+                              >
+                                <span className="text-[10px] font-black uppercase tracking-wider leading-none">{d}</span>
+                                <span className={cn(
+                                  "text-[9px] font-bold font-mono mt-1.5 leading-none",
+                                  form.duration === d ? "text-slate-300" : "text-slate-400"
+                                )}>
+                                  {days}
+                                </span>
+                              </motion.button>
+                            );
+                          })}
                         </div>
                       </div>
                       <div className="space-y-4">
@@ -1190,12 +1204,15 @@ function CreatePlanModal({ isOpen, onClose, onPublish }) {
                         <h4 className="text-sm font-black text-slate-900 tracking-tight leading-snug truncate">
                           {form.name || "Untitled Membership Plan"}
                         </h4>
-                        <div className="mt-4 flex items-baseline gap-1">
+                        <div className="mt-4 flex items-baseline gap-1.5 flex-wrap">
                           <span className="text-2xl font-black text-slate-900">
                             ₹{form.price || "0"}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                             / {form.duration || "Monthly"}
+                          </span>
+                          <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded-md leading-none">
+                            {form.duration === "Annual" ? "365 Days" : form.duration === "Half-Yearly" ? "180 Days" : form.duration === "Quarterly" ? "90 Days" : "30 Days"}
                           </span>
                         </div>
                       </div>
