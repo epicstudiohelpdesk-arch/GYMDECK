@@ -169,7 +169,7 @@ pub async fn delete_account_command(
         |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
     );
 
-    let (user_id, gym_id) = match user_info {
+    let (_user_id, gym_id) = match user_info {
         Ok(info) => info,
         Err(_) => {
             return Err(AppError::Database("User not found".to_string()));
