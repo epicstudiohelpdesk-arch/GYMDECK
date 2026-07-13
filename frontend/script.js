@@ -201,14 +201,25 @@ const getMockDocuments = (memberName, memberId = "", docsLabel = "") => {
     return memberDocsRegistry.get(key);
   }
 
+  // Clean the docsLabel by removing "Joining Fee: ..." prefix if present
+  let cleanLabel = docsLabel;
+  if (docsLabel.includes("Joining Fee: ₹")) {
+    const parts = docsLabel.split("|");
+    if (parts.length > 1) {
+      cleanLabel = parts.slice(1).join("|").trim();
+    } else {
+      cleanLabel = "No Documents";
+    }
+  }
+
   // 2. Fallback to intelligent placeholders for professional look
-  if (memberName === "Unnamed Member" || docsLabel === "No Documents") return [];
+  if (memberName === "Unnamed Member" || cleanLabel === "No Documents" || !cleanLabel) return [];
   
   const docs = [];
   // Use consistent keys for same member
   const salt = (memberId || memberName).substring(0, 5);
 
-  if (docsLabel.toLowerCase().includes("aadhaar")) {
+  if (cleanLabel.toLowerCase().includes("aadhaar")) {
     docs.push({ 
         id: `aadhaar_${salt}`, 
         name: "Aadhaar Card", 
@@ -221,10 +232,10 @@ const getMockDocuments = (memberName, memberId = "", docsLabel = "") => {
   }
 
   // Generic Fallback for "3 Documents" or comma-separated lists like "1,1,1"
-  const docCountMatch = docsLabel.match(/(\d+)\s+Documents/i);
-  const commaSeparatedList = docsLabel.split(',').map(s => s.trim()).filter(Boolean);
+  const docCountMatch = cleanLabel.match(/(\d+)\s+Documents/i);
+  const commaSeparatedList = cleanLabel.split(',').map(s => s.trim()).filter(Boolean);
   
-  if (docs.length === 0 && (docCountMatch || commaSeparatedList.length > 0 || docsLabel !== "No Documents")) {
+  if (docs.length === 0 && (docCountMatch || commaSeparatedList.length > 0 || cleanLabel !== "No Documents")) {
       const count = docCountMatch ? parseInt(docCountMatch[1]) : (commaSeparatedList.length > 0 ? commaSeparatedList.length : 1);
       const safeCount = Math.min(Math.max(count, 1), 3); // Ensure at least 1, max 3
       
@@ -243,7 +254,7 @@ const getMockDocuments = (memberName, memberId = "", docsLabel = "") => {
       }
   }
 
-  if (docsLabel.toLowerCase().includes("residential") || docsLabel.toLowerCase().includes("address") || docsLabel.toLowerCase().includes("proof")) {
+  if (cleanLabel.toLowerCase().includes("residential") || cleanLabel.toLowerCase().includes("address") || cleanLabel.toLowerCase().includes("proof")) {
     docs.push({ 
         id: `address_${salt}`, 
         name: "Residential Proof", 
@@ -2301,7 +2312,23 @@ const renderDocsLabel = (label) => {
   if (!label || label === "No Documents") {
     return "No Documents";
   }
-  const escaped = escapeHtml(label);
+
+  // Clean the label by removing "Joining Fee: ..." prefix if present
+  let cleanLabel = label;
+  if (label.includes("Joining Fee: ₹")) {
+    const parts = label.split("|");
+    if (parts.length > 1) {
+      cleanLabel = parts.slice(1).join("|").trim();
+    } else {
+      cleanLabel = "No Documents";
+    }
+  }
+
+  if (!cleanLabel || cleanLabel === "No Documents") {
+    return "No Documents";
+  }
+
+  const escaped = escapeHtml(cleanLabel);
   return escaped.replace(/aadhaar card/gi, (match) => {
     const aadhaarPart = match.substring(0, match.length - 4).trim();
     const cardPart = match.substring(match.length - 4);
