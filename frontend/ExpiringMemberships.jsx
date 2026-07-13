@@ -20,7 +20,6 @@ import {
   Edit,
   Eye,
   Filter,
-  Globe,
   HelpCircle,
   Info,
   Layers,
@@ -194,7 +193,16 @@ const laneConfig = {
 // ─────────────────────────────────────────
 // SHARED UI COMPONENTS
 // ─────────────────────────────────────────
-function DashboardHeader({ title, description, stats }) {
+function DashboardHeader({ title, description, stats, onRenew }) {
+  const [campaignLaunched, setCampaignLaunched] = useState(false);
+
+  const handleLaunchCampaign = () => {
+    setCampaignLaunched(true);
+    setTimeout(() => {
+      setCampaignLaunched(false);
+    }, 5000);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between relative z-10">
@@ -205,31 +213,148 @@ function DashboardHeader({ title, description, stats }) {
           </h1>
           <p className="mt-3 max-w-3xl text-xs font-semibold leading-relaxed text-slate-500">{description}</p>
         </div>
+        <div className="flex items-center gap-3 shrink-0 lg:mt-0 mt-4">
+          <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"><Bell size={18} /></button>
+          <button onClick={onRenew} className="h-10 px-6 rounded-xl bg-slate-950 text-white flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"><Plus size={18} /> Renew Membership</button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px] relative z-10">
-        <StatTile label="Expiring Today" value={stats.expiringToday} tone="rose" />
-        <StatTile label="Upcoming (Week)" value={stats.totalExpiring} tone="blue" />
-        <StatTile label="Revenue At Risk" value={currencyFormatter.format(stats.revenueAtRisk / 1000) + "K"} tone="amber" />
-        <StatTile label="Renewal Prob." value={`${stats.avgRenewalProb}%`} tone="emerald" />
+      <div className="flex flex-col lg:flex-row gap-4 relative z-10 items-stretch">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px] relative z-10 shrink-0">
+          <StatTile label="Expiring Today" value={stats.expiringToday} tone="rose" />
+          <StatTile label="Upcoming (Week)" value={stats.totalExpiring} tone="blue" />
+          <StatTile label="Revenue At Risk" value={currencyFormatter.format(stats.revenueAtRisk / 1000) + "K"} tone="amber" />
+          <StatTile label="Renewal Prob." value={`${stats.avgRenewalProb}%`} tone="emerald" />
+        </div>
+
+        <div className="flex-1 min-w-[280px] rounded-xl bg-slate-950 text-white p-3 flex flex-col justify-between border border-slate-800/80 relative overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:border-slate-700/80">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full -mr-12 -mt-12 blur-2xl pointer-events-none" />
+          
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              {campaignLaunched ? (
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.15em] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  Active
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.15em] bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  Radar
+                </div>
+              )}
+            </div>
+            
+            <h3 className="text-xs font-black text-white tracking-tight leading-none mt-1">
+              Auto-Campaign: Annual Upgrades
+            </h3>
+            <p className="mt-1 text-[9px] font-semibold text-slate-400 leading-tight">
+              {campaignLaunched 
+                ? `Sending automated renewal reminders & 10% discounts...`
+                : `Targeting ${stats.totalExpiring} upcoming expiries with loyalty offers.`
+              }
+            </p>
+          </div>
+          
+          <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-900 pt-2">
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Est. Revenue</span>
+              <strong className="text-xs font-black text-emerald-400 leading-none mt-0.5">
+                {currencyFormatter.format(stats.revenueAtRisk * 1.12)}
+              </strong>
+            </div>
+            <button 
+              onClick={handleLaunchCampaign}
+              disabled={campaignLaunched}
+              className={cn(
+                "h-7 px-2.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shadow-md",
+                campaignLaunched 
+                  ? "bg-emerald-600 text-white shadow-emerald-950/30 cursor-not-allowed" 
+                  : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/30 active:scale-95"
+              )}
+            >
+              {campaignLaunched ? (
+                <>Sending...</>
+              ) : (
+                <>Run Campaign <ChevronRight size={8} /></>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 function StatTile({ label, value, tone = "slate" }) {
-  const toneClass = {
-    slate: "bg-slate-50 text-slate-950 border-slate-200",
-    amber: "bg-amber-50 text-amber-800 border-amber-200",
-    rose: "bg-rose-50 text-rose-800 border-rose-200",
-    blue: "bg-blue-50 text-blue-800 border-blue-200",
-    emerald: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  const config = {
+    rose: {
+      border: "border-l-rose-500 border-slate-200/60",
+      dot: "bg-rose-500",
+      bg: "bg-rose-50/10",
+      badge: "bg-rose-100 text-rose-700",
+      badgeText: "Urgent",
+      subtext: "Immediate action required",
+    },
+    blue: {
+      border: "border-l-blue-500 border-slate-200/60",
+      dot: "bg-blue-500",
+      bg: "bg-blue-50/10",
+      badge: "bg-blue-100 text-blue-700",
+      badgeText: "Pipeline",
+      subtext: "4 of 5 members contacted",
+    },
+    amber: {
+      border: "border-l-amber-500 border-slate-200/60",
+      dot: "bg-amber-500",
+      bg: "bg-amber-50/10",
+      badge: "bg-amber-100 text-amber-700",
+      badgeText: "At Risk",
+      subtext: "Requires active recovery",
+    },
+    emerald: {
+      border: "border-l-emerald-500 border-slate-200/60",
+      dot: "bg-emerald-500",
+      bg: "bg-emerald-50/10",
+      badge: "bg-emerald-100 text-emerald-700",
+      badgeText: "+2.4% trend",
+      subtext: "Average retention health",
+    },
+    slate: {
+      border: "border-l-slate-400 border-slate-200/60",
+      dot: "bg-slate-400",
+      bg: "bg-white",
+      badge: "bg-slate-100 text-slate-700",
+      badgeText: "Info",
+      subtext: "System status stable",
+    },
   }[tone];
 
   return (
-    <div className={cn("min-w-0 rounded-lg border p-3", toneClass)}>
-      <span className="block text-[10px] font-black uppercase tracking-[0.14em] opacity-70">{label}</span>
-      <strong className="mt-2 block truncate text-xl font-black leading-none tracking-normal">{value}</strong>
+    <div className={cn(
+      "min-w-0 rounded-xl border border-l-4 p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md flex flex-col justify-between h-full",
+      config.border,
+      config.bg
+    )}>
+      <div>
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", config.dot)} />
+            <span className="block truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+              {label}
+            </span>
+          </div>
+          <span className={cn("text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shrink-0", config.badge)}>
+            {config.badgeText}
+          </span>
+        </div>
+        <strong className="block truncate text-xl font-black tracking-tight text-slate-900 leading-none mt-0.5">
+          {value}
+        </strong>
+      </div>
+      <p className="mt-2 text-[9px] font-semibold text-slate-500 leading-tight">
+        {config.subtext}
+      </p>
     </div>
   );
 }
@@ -923,31 +1048,12 @@ const ExpiringMembershipsPage = () => {
 
   return (
     <div className="expiring-memberships-shell font-sans text-slate-950">
-      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-6">
-          <button className="h-10 px-4 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-3 hover:bg-white transition-all">
-            <Globe size={14} className="text-slate-400" />
-            Main Branch • Koramangala
-            <ChevronDown size={14} className="text-slate-400" />
-          </button>
-        </div>
-        <div className="flex-1 max-w-md mx-12">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Search members, plans, trainers..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 text-xs font-semibold outline-none focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100 transition-all" />
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"><Bell size={18} /></button>
-          <button onClick={openRenewalModal} className="h-10 px-6 rounded-xl bg-slate-950 text-white flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"><Plus size={18} /> Renew Membership</button>
-        </div>
-      </header>
-
       <div className="expiring-memberships-workspace">
         <DashboardHeader 
           title="Retention Command Center" 
           description="Monitor upcoming expiries, recover revenue, automate renewals, and reduce membership churn across your fitness ecosystem."
           stats={stats}
+          onRenew={openRenewalModal}
         />
 
         <section className="expiring-memberships-workspace-sticky-header">
