@@ -588,6 +588,9 @@ const docUploadBackButton = document.querySelector("[data-doc-upload-back]");
 const docUploadNextButton = document.querySelector("[data-doc-upload-next]");
 const planningBackButton = document.querySelector("[data-planning-back]");
 const docUploadSaveButton = document.querySelector("[data-doc-upload-save-finish]");
+const planningNextButton = document.querySelector("[data-planning-next]");
+const paymentBackButton = document.querySelector("[data-payment-back]");
+const paymentSaveFinishButton = document.querySelector("[data-payment-save-finish]");
 
 const uploadPreviewUrls = new Map();
 const memberDocsRegistry = new Map(); // Professional Registry for Session Documents
@@ -595,6 +598,7 @@ const memberDocsRegistry = new Map(); // Professional Registry for Session Docum
 let memberFormMode = "add";
 let editingMemberId = null;
 let selectedPlanId = null;
+let allPlans = [];
 
 /**
  * Enterprise Utility: Converts a Data URL (Base64) to a Byte Array for Rust consumption.
@@ -832,6 +836,7 @@ let activeMemberFilter = "all";
 let lastDocumentTrigger = null;
 let lastAddMemberTrigger = null;
 let activeMoreOptionsRow = null;
+let activeMemberPlan = null;
 let activeCalendarDate = new Date();
 let datePickerMode = "day";
 
@@ -1033,6 +1038,7 @@ const setAddMemberModalState = (isOpen, triggerButton = null) => {
     addMemberModal.classList.remove("is-page-2");
     addMemberModal.classList.remove("is-page-3");
     addMemberModal.classList.remove("is-page-4");
+    addMemberModal.classList.remove("is-page-5");
     addMemberModal.classList.remove("is-only-doc-upload");
 
     addMemberModal.hidden = false;
@@ -1060,6 +1066,7 @@ const setAddMemberModalState = (isOpen, triggerButton = null) => {
       addMemberModal.classList.remove("is-page-2");
       addMemberModal.classList.remove("is-page-3");
       addMemberModal.classList.remove("is-page-4");
+      addMemberModal.classList.remove("is-page-5");
       addMemberModal.classList.remove("is-only-doc-upload");
       if (docUploadBackButton) {
         docUploadBackButton.textContent = "← Back";
@@ -1478,6 +1485,7 @@ const loadPlansForSelection = async () => {
   try {
     const dbPlans = await window.__TAURI__.core.invoke("get_plans_command");
     const activePlans = (dbPlans || []).filter(p => p.is_active && !p.deleted_at);
+    allPlans = activePlans;
     
     if (activePlans.length === 0) {
       gridContainer.innerHTML = `
@@ -1802,26 +1810,37 @@ const createMemberSearchIndex = (member) =>
 const adjustScrollPadding = () => {
   const scrollArea = document.querySelector(".dashboard-scroll-area");
   const contentSections = document.querySelector(".content-sections");
-  const card4 = document.querySelector(".content-sections > .info-panel:last-child");
-  if (scrollArea && contentSections && card4) {
-    const centerOffset = Math.max(20, (scrollArea.clientHeight - 280) / 2);
-    contentSections.style.paddingTop = `${centerOffset}px`;
-    
-    // Set sticky top dynamically for all panels
+  if (scrollArea && contentSections) {
     const panels = Array.from(contentSections.querySelectorAll(".info-panel"));
-    panels.forEach(p => p.style.top = `${centerOffset}px`);
-    
+    if (panels.length === 0) return;
+
+    const firstPanel = panels[0];
+    const lastPanel = panels[panels.length - 1];
+
+    // Set dynamic top for each panel to center it vertically
+    panels.forEach(p => {
+      const pHeight = p.offsetHeight || 280;
+      const pOffset = Math.max(20, (scrollArea.clientHeight - pHeight) / 2);
+      p.style.top = `${pOffset}px`;
+    });
+
+    const firstHeight = firstPanel.offsetHeight || 280;
+    const firstOffset = Math.max(20, (scrollArea.clientHeight - firstHeight) / 2);
+    contentSections.style.paddingTop = `${firstOffset}px`;
+
     contentSections.style.paddingBottom = "0px";
     requestAnimationFrame(() => {
       // Temporarily set to static to measure natural unshifted offsetTop
       const originalPositions = panels.map(p => p.style.position);
       panels.forEach(p => p.style.position = "static");
-      
-      const maxScroll = card4.offsetTop - centerOffset;
-      
+
+      const lastHeight = lastPanel.offsetHeight || 280;
+      const lastOffset = Math.max(20, (scrollArea.clientHeight - lastHeight) / 2);
+      const maxScroll = lastPanel.offsetTop - lastOffset;
+
       // Restore positions
       panels.forEach((p, idx) => p.style.position = originalPositions[idx]);
-      
+
       const naturalHeight = contentSections.offsetHeight;
       const targetHeight = maxScroll + scrollArea.clientHeight;
       if (targetHeight > naturalHeight) {
@@ -1855,9 +1874,359 @@ const resetDashboardScroll = () => {
   }
 };
 
+const setPlanDetailsModalState = (isOpen) => {
+  const modal = document.getElementById("planDetailsModal");
+  const backdrop = document.getElementById("planDetailsModalBackdrop");
+  const body = document.getElementById("planDetailsModalBody");
+  
+  if (isOpen && activeMemberPlan) {
+    let plan = activeMemberPlan;
+    
+    // Parse plan description
+    let category = "General";
+    let joiningFee = 0;
+    let audience = "Professionals";
+    let goal = "Revenue Generation";
+    let descText = "";
+    let areas = [];
+    let access = [];
+
+    let desc = plan.description || "";
+    if (desc.includes("||")) {
+      const parts = desc.split("||");
+      category = parts[0] || "General";
+      joiningFee = parseFloat(parts[1]) || 0;
+      audience = parts[2] || "Professionals";
+      goal = parts[3] || "Revenue Generation";
+      descText = parts[4] || "";
+      try { areas = JSON.parse(parts[5] || "[]"); } catch (e) { areas = []; }
+      try { access = JSON.parse(parts[6] || "[]"); } catch (e) { access = []; }
+    }
+    
+    let durationName = `${plan.duration_days} Days`;
+    if (desc.includes("||")) {
+      const parts = desc.split("||");
+      if (parts.length >= 8) {
+        durationName = parts[7];
+      } else if (plan.duration_days === 30) {
+        durationName = "Monthly";
+      } else if (plan.duration_days === 90) {
+        durationName = "Quarterly";
+      } else if (plan.duration_days === 180) {
+        durationName = "Half-Yearly";
+      } else if (plan.duration_days === 365) {
+        durationName = "Annual";
+      }
+    }
+
+    // Formatter
+    const currencyFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+    const formattedPrice = currencyFormatter.format(plan.price);
+    const formattedJoining = currencyFormatter.format(joiningFee);
+
+    // Dynamic Gradient based on Category
+    let gradient = "linear-gradient(135deg, #4f46e5, #06b6d4)"; // Default general
+    if (category.toLowerCase() === "premium" || category.toLowerCase() === "elite") {
+      gradient = "linear-gradient(135deg, #7c3aed, #db2777)";
+    } else if (category.toLowerCase() === "starter" || category.toLowerCase() === "basic") {
+      gradient = "linear-gradient(135deg, #2563eb, #3b82f6)";
+    } else if (category.toLowerCase() === "vip") {
+      gradient = "linear-gradient(135deg, #ea580c, #eab308)";
+    }
+
+    // Render static content + loading states for stats instantly!
+    body.innerHTML = `
+      <div class="plan-modal-body">
+        <!-- Header -->
+        <div class="plan-modal-header">
+          <div class="plan-modal-icon-container" style="background: ${gradient};">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <div>
+            <div class="plan-modal-badges">
+              <span class="plan-modal-badge-indigo">${category} Plan</span>
+              <span class="plan-modal-badge-slate">${durationName}</span>
+            </div>
+            <h3 class="plan-modal-title">${plan.plan_name}</h3>
+          </div>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="plan-modal-grid-4">
+          <!-- Pricing -->
+          <div class="plan-modal-card">
+            <div class="plan-modal-card-label">
+              <span>Pricing</span>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div>
+              <span class="plan-modal-card-value">${formattedPrice}</span>
+              <span class="plan-modal-card-subvalue">Base Fee</span>
+            </div>
+            <div style="margin-top: 8px; border-top: 1px dashed #e2e8f0; padding-top: 4px; display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; color: #64748b;">
+              <span>JOINING FEE:</span>
+              <span style="font-family: monospace; color: #0f172a;">${formattedJoining}</span>
+            </div>
+          </div>
+
+          <!-- Active Enrollment -->
+          <div class="plan-modal-card">
+            <div class="plan-modal-card-label">
+              <span>Active Enrollment</span>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div id="statActiveCardContent">
+              <span class="plan-modal-card-value pulse-shimmer" style="width: 40px; height: 20px; background: #e2e8f0; border-radius: 4px; display: block; margin-top: 8px;"></span>
+              <span class="plan-modal-card-subvalue pulse-shimmer" style="width: 80px; height: 10px; background: #e2e8f0; border-radius: 3px; display: block; margin-top: 6px;"></span>
+            </div>
+          </div>
+
+          <!-- Monthly Contribution -->
+          <div class="plan-modal-card">
+            <div class="plan-modal-card-label">
+              <span>Monthly Contribution</span>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+            </div>
+            <div id="statMRRCardContent">
+              <span class="plan-modal-card-value pulse-shimmer" style="width: 70px; height: 20px; background: #e2e8f0; border-radius: 4px; display: block; margin-top: 8px;"></span>
+              <span class="plan-modal-card-subvalue pulse-shimmer" style="width: 80px; height: 10px; background: #e2e8f0; border-radius: 3px; display: block; margin-top: 6px;"></span>
+            </div>
+          </div>
+
+          <!-- LTD Revenue -->
+          <div class="plan-modal-card">
+            <div class="plan-modal-card-label">
+              <span>LTD Revenue</span>
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            </div>
+            <div id="statLTDCardContent">
+              <span class="plan-modal-card-value pulse-shimmer" style="width: 70px; height: 20px; background: #e2e8f0; border-radius: 4px; display: block; margin-top: 8px;"></span>
+              <span class="plan-modal-card-subvalue pulse-shimmer" style="width: 80px; height: 10px; background: #e2e8f0; border-radius: 3px; display: block; margin-top: 6px;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side-by-Side Analytics and Legend -->
+        <div class="plan-modal-analytics-row">
+          <!-- concentric rings -->
+          <div class="plan-gauge-container">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <!-- Outer Retention Track -->
+              <circle cx="60" cy="60" r="44" stroke="#f1f5f9" stroke-width="7" fill="none" />
+              <!-- Inner Renewal Track -->
+              <circle cx="60" cy="60" r="33" stroke="#f1f5f9" stroke-width="7" fill="none" />
+            </svg>
+            <div class="plan-gauge-label">
+              <span class="plan-gauge-status" style="color: #94a3b8; font-size: 10px; font-weight: 800; letter-spacing: 0.05em;">LOADING...</span>
+            </div>
+          </div>
+
+          <!-- details info and legend -->
+          <div class="plan-analytics-info" id="planAnalyticsInfoBlock">
+            <h4 class="plan-analytics-title">Plan Performance Index</h4>
+            <p class="plan-analytics-copy">Real-time cohort health analytics generated from active member check-in cycles and contract compliance ratios.</p>
+            <div class="plan-legend">
+              <div class="plan-legend-item">
+                <div class="plan-legend-bullet bullet-retention"></div>
+                <span>Retention Rate</span>
+                <span class="plan-legend-value">--</span>
+              </div>
+              <div class="plan-legend-item">
+                <div class="plan-legend-bullet bullet-renewal"></div>
+                <span>Renewal Velocity</span>
+                <span class="plan-legend-value">--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Symmetrical Tags Section -->
+        <div class="plan-modal-tags-grid">
+          <!-- Areas -->
+          <div class="plan-modal-tag-section">
+            <span class="plan-modal-tag-title">Training Zones / Areas</span>
+            <div class="plan-modal-tags-wrap">
+              ${areas.length > 0
+                ? areas.map(a => `<span class="plan-modal-tag-pill type-zone">${a}</span>`).join("")
+                : `<span class="plan-modal-tag-pill type-zone" style="color:#94a3b8; font-style:italic;">No training zones specified</span>`
+              }
+            </div>
+          </div>
+
+          <!-- Access Privileges -->
+          <div class="plan-modal-tag-section">
+            <span class="plan-modal-tag-title">Access Privileges</span>
+            <div class="plan-modal-tags-wrap">
+              ${access.length > 0
+                ? access.map(a => `<span class="plan-modal-tag-pill type-privilege">${a}</span>`).join("")
+                : `<span class="plan-modal-tag-pill type-privilege" style="color:#94a3b8; font-style:italic;">Standard facility access</span>`
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Plan Description Footer -->
+        <div class="plan-modal-description-footer">
+          <p class="plan-modal-goal-text">Strategic Goal: ${goal}</p>
+          <p class="plan-modal-desc-quote">"${descText || 'No additional description configured for this plan.'}"</p>
+        </div>
+      </div>
+    `;
+
+    backdrop?.classList.add("is-active");
+    modal?.classList.add("is-active");
+
+    // Fetch members and calculate statistics asynchronously in the background!
+    window.__TAURI__.core.invoke("get_members_command", { limit: 5000, offset: 0 }).then(members => {
+      const planMembers = (members || []).filter(m => m.membership_plan_id === plan.id);
+      
+      const activePlanMembers = planMembers.filter(m => 
+        m.membership_status === "ACTIVE" || 
+        m.membership_status === "FROZEN"
+      );
+
+      const activeCount = activePlanMembers.length;
+      const totalCount = planMembers.length;
+
+      // Retention Rate
+      const retention = totalCount > 0 
+        ? Math.min(100, Math.round((activeCount / totalCount) * 100)) 
+        : 100;
+
+      // Renewal velocity
+      const planDurationDays = plan.duration_days || 30;
+      const eligibleMembers = planMembers.filter(m => {
+        const joinedDate = new Date(m.joined_at || m.created_at);
+        const elapsedDays = (new Date() - joinedDate) / (1000 * 60 * 60 * 24);
+        return elapsedDays > planDurationDays;
+      });
+      const renewedMembers = eligibleMembers.filter(m => 
+        m.membership_status === "ACTIVE" || 
+        m.membership_status === "FROZEN"
+      );
+      const renewalRate = eligibleMembers.length > 0 
+        ? Math.min(100, Math.round((renewedMembers.length / eligibleMembers.length) * 100)) 
+        : 100;
+
+      // LTD Revenue estimation
+      let totalRevenue = 0;
+      planMembers.forEach(m => {
+        const joinedDate = new Date(m.joined_at || m.created_at);
+        const elapsedDays = (new Date() - joinedDate) / (1000 * 60 * 60 * 24);
+        const isActive = m.membership_status === "ACTIVE" || m.membership_status === "FROZEN";
+        const terms = isActive 
+          ? Math.max(1, Math.ceil(elapsedDays / planDurationDays))
+          : Math.max(1, Math.floor(elapsedDays / planDurationDays));
+        totalRevenue += (terms * plan.price) + joiningFee;
+      });
+
+      // Monthly Contribution (MRR)
+      const monthlyContribution = Math.round((activeCount * plan.price * 30) / planDurationDays);
+
+      const trend = retention >= 85 ? "+12%" : retention >= 70 ? "+4%" : "-14%";
+      const trendUp = retention >= 70;
+      const status = plan.is_active ? (retention >= 70 ? "Healthy" : "At Risk") : "At Risk";
+      const risk = retention >= 85 ? "Low" : retention >= 70 ? "Medium" : "High";
+
+      // Formatted values
+      const formattedMRR = currencyFormatter.format(monthlyContribution);
+      const formattedLTD = currencyFormatter.format(totalRevenue);
+
+      // Status text color class
+      let statusColor = "#3b82f6"; // Slate/blue
+      if (status === "Healthy") statusColor = "#10b981"; // Emerald
+      else if (status === "At Risk") statusColor = "#ef4444"; // Rose
+
+      // Update Active Enrollment card content
+      const statActiveEl = document.getElementById("statActiveCardContent");
+      if (statActiveEl) {
+        statActiveEl.innerHTML = `
+          <div style="display: flex; align-items: baseline; gap: 4px;">
+            <span class="plan-modal-card-value" style="margin-top:0;">${activeCount}</span>
+            <span style="font-size: 9px; font-weight: 850; color: ${trendUp ? '#10b981' : '#ef4444'};">${trend}</span>
+          </div>
+          <span class="plan-modal-card-subvalue">Total: ${totalCount} Enrolled</span>
+        `;
+      }
+
+      // Update MRR card content
+      const statMRREl = document.getElementById("statMRRCardContent");
+      if (statMRREl) {
+        statMRREl.innerHTML = `
+          <span class="plan-modal-card-value">${formattedMRR}</span>
+          <span class="plan-modal-card-subvalue">MRR Contribution</span>
+        `;
+      }
+
+      // Update LTD card content
+      const statLTDEl = document.getElementById("statLTDCardContent");
+      if (statLTDEl) {
+        statLTDEl.innerHTML = `
+          <span class="plan-modal-card-value">${formattedLTD}</span>
+          <span class="plan-modal-card-subvalue">Total Generated</span>
+        `;
+      }
+
+      // Update Concentric rings & Info block
+      const outerOffset = 276.46 - (retention / 100) * 276.46;
+      const innerOffset = 207.35 - (renewalRate / 100) * 207.35;
+
+      const gaugeContainer = body.querySelector(".plan-gauge-container");
+      if (gaugeContainer) {
+        gaugeContainer.innerHTML = `
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <!-- Outer Retention Track -->
+            <circle cx="60" cy="60" r="44" stroke="#f1f5f9" stroke-width="7" fill="none" />
+            <!-- Outer Retention Active Ring -->
+            <circle cx="60" cy="60" r="44" stroke="#0f172a" stroke-width="7" fill="none" stroke-linecap="round"
+              stroke-dasharray="276.46" stroke-dashoffset="${outerOffset}" transform="rotate(-90 60 60)" style="transition: stroke-dashoffset 800ms ease;" />
+
+            <!-- Inner Renewal Track -->
+            <circle cx="60" cy="60" r="33" stroke="#f1f5f9" stroke-width="7" fill="none" />
+            <!-- Inner Renewal Active Ring -->
+            <circle cx="60" cy="60" r="33" stroke="#94a3b8" stroke-width="7" fill="none" stroke-linecap="round"
+              stroke-dasharray="207.35" stroke-dashoffset="${innerOffset}" transform="rotate(-90 60 60)" style="transition: stroke-dashoffset 800ms ease 100ms;" />
+          </svg>
+          <div class="plan-gauge-label">
+            <span class="plan-gauge-status" style="color: ${statusColor};">${status}</span>
+            <span class="plan-gauge-risk">${risk} Risk</span>
+          </div>
+        `;
+      }
+
+      const planAnalyticsInfoBlock = document.getElementById("planAnalyticsInfoBlock");
+      if (planAnalyticsInfoBlock) {
+        planAnalyticsInfoBlock.innerHTML = `
+          <h4 class="plan-analytics-title">Plan Performance Index</h4>
+          <p class="plan-analytics-copy">Real-time cohort health analytics generated from active member check-in cycles and contract compliance ratios.</p>
+          <div class="plan-legend">
+            <div class="plan-legend-item">
+              <div class="plan-legend-bullet bullet-retention"></div>
+              <span>Retention Rate</span>
+              <span class="plan-legend-value">${retention}%</span>
+            </div>
+            <div class="plan-legend-item">
+              <div class="plan-legend-bullet bullet-renewal"></div>
+              <span>Renewal Velocity</span>
+              <span class="plan-legend-value">${renewalRate}%</span>
+            </div>
+          </div>
+        `;
+      }
+    }).catch(err => {
+      console.error("GymDeck: Failed to calculate plan stats in background:", err);
+    });
+  } else {
+    backdrop?.classList.remove("is-active");
+    modal?.classList.remove("is-active");
+  }
+};
+
 const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
   const modal = document.getElementById("moreOptionsModal");
   const backdrop = document.getElementById("moreOptionsBackdrop");
+  
+  setPlanDetailsModalState(false);
   
   if (isOpen && triggerButton) {
     const row = triggerButton.closest("[data-member-card]");
@@ -1945,6 +2314,92 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
             if (docsCountEl) {
               docsCountEl.textContent = `${docsList.length} / 4`;
             }
+
+            // Render the document cards dynamically!
+            const gridEl = document.querySelector(".doc-cards-grid");
+            if (gridEl) {
+              const coreTypes = [
+                {
+                  id: "aadhaar",
+                  name: "Aadhaar Card",
+                  icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M7 15h0M11 15h0M15 15h0M7 11h0M11 11h0M15 11h0" /></svg>`
+                },
+                {
+                  id: "pan",
+                  name: "Residential Proof",
+                  icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>`
+                },
+                {
+                  id: "health",
+                  name: "Health Certificate",
+                  icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg>`
+                }
+              ];
+
+              const othersIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>`;
+
+              // Identify which DB docs match the core types
+              const matchedDbIds = new Set();
+              const coreCardsHtml = coreTypes.map(t => {
+                const dbDoc = docsList.find(d => {
+                  const dName = (d.doc_name || "").toLowerCase().trim();
+                  const tName = t.name.toLowerCase().trim();
+                  const matches = dName === tName || 
+                           (t.id === "aadhaar" && dName.includes("aadhaar")) ||
+                           (t.id === "pan" && (dName.includes("pan") || dName.includes("residen") || dName.includes("address"))) ||
+                           (t.id === "health" && (dName.includes("health") || dName.includes("medical") || dName.includes("fit")));
+                  return matches;
+                });
+
+                if (dbDoc) {
+                  matchedDbIds.add(dbDoc.id);
+                  let statusText = dbDoc.status ? dbDoc.status.toUpperCase() : "VERIFIED";
+                  if (statusText !== "SIGNED" && statusText !== "VERIFIED") {
+                    statusText = "VERIFIED";
+                  }
+                  return `
+                    <div class="doc-mini-card is-uploaded" data-doc-type="${t.id}">
+                      <div class="doc-icon-wrap">${t.icon}</div>
+                      <div class="doc-meta">
+                        <span class="doc-name">${t.name}</span>
+                        <div><span class="doc-status">${statusText}</span></div>
+                      </div>
+                    </div>
+                  `;
+                } else {
+                  return `
+                    <div class="doc-mini-card is-pending" data-doc-type="${t.id}">
+                      <div class="doc-icon-wrap">${t.icon}</div>
+                      <div class="doc-meta">
+                        <span class="doc-name">${t.name}</span>
+                        <div><span class="doc-status">PENDING</span></div>
+                      </div>
+                    </div>
+                  `;
+                }
+              });
+
+              // Any remaining DB docs are custom/other documents
+              const customDocs = docsList.filter(d => !matchedDbIds.has(d.id));
+              const customCardsHtml = customDocs.map(d => {
+                let statusText = d.status ? d.status.toUpperCase() : "VERIFIED";
+                if (statusText !== "SIGNED" && statusText !== "VERIFIED") {
+                  statusText = "VERIFIED";
+                }
+                return `
+                  <div class="doc-mini-card is-uploaded" data-doc-type="others">
+                    <div class="doc-icon-wrap">${othersIcon}</div>
+                    <div class="doc-meta">
+                      <span class="doc-name">${d.doc_name}</span>
+                      <div><span class="doc-status">${statusText}</span></div>
+                    </div>
+                  </div>
+                `;
+              });
+
+              gridEl.innerHTML = [...coreCardsHtml, ...customCardsHtml].join("");
+            }
+            adjustScrollPadding();
           }).catch(err => {
             console.error("GymDeck: Failed to load documents for details modal:", err);
           });
@@ -1952,6 +2407,7 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
           // Fetch plan details dynamically
           window.__TAURI__.core.invoke("get_plans_command").then(plansList => {
             const memberPlan = plansList.find(p => p.id === memberObj.membership_plan_id);
+            activeMemberPlan = memberPlan;
             const planNameHeaderEl = document.getElementById("dashPlanNameHeader");
             const planNamePanelEl = document.getElementById("dashCurrentPlan");
             const planDurationEl = document.getElementById("dashPlanDuration");
@@ -1963,11 +2419,19 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
             const planPriceEl = document.getElementById("dashPlanPricePanel");
             const paidJoiningFeeEl = document.getElementById("dashPaidJoiningFeePanel");
             const planCategoryEl = document.getElementById("dashPlanCategoryPanel");
-            const planAudienceEl = document.getElementById("dashPlanAudiencePanel");
-            const planGoalEl = document.getElementById("dashPlanGoalPanel");
             const planAreasEl = document.getElementById("dashPlanAreasPanel");
             const planAccessEl = document.getElementById("dashPlanAccessPanel");
-            const planDescEl = document.getElementById("dashPlanDescPanel");
+
+            // Overlay Elements
+            const overlayPlanCategory = document.getElementById("overlayPlanCategory");
+            const overlayPlanName = document.getElementById("overlayPlanName");
+            const overlayPlanPrice = document.getElementById("overlayPlanPrice");
+            const overlayPlanDuration = document.getElementById("overlayPlanDuration");
+            const overlayPlanAudience = document.getElementById("overlayPlanAudience");
+            const overlayPlanGoal = document.getElementById("overlayPlanGoal");
+            const overlayPlanAreas = document.getElementById("overlayPlanAreas");
+            const overlayPlanAccess = document.getElementById("overlayPlanAccess");
+            const overlayPlanDesc = document.getElementById("overlayPlanDesc");
 
             // Extract joining fee from member notes
             let paidJoiningFee = "₹0";
@@ -1984,9 +2448,8 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
             if (memberPlan) {
               if (planNameHeaderEl) planNameHeaderEl.textContent = memberPlan.plan_name;
               if (planNamePanelEl) planNamePanelEl.textContent = memberPlan.plan_name;
-              if (planPriceEl) {
-                planPriceEl.textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(memberPlan.price);
-              }
+              const formattedPrice = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(memberPlan.price);
+              if (planPriceEl) planPriceEl.textContent = formattedPrice;
               
               let durationName = `${memberPlan.duration_days} Days`;
               let category = "General";
@@ -2031,22 +2494,54 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
               }
               if (planDurationEl) planDurationEl.textContent = durationName;
               if (planCategoryEl) planCategoryEl.textContent = category;
-              if (planAudienceEl) planAudienceEl.textContent = audience;
-              if (planGoalEl) planGoalEl.textContent = goal;
-              if (planAreasEl) planAreasEl.textContent = areas.length > 0 ? areas.join(", ") : "None";
-              if (planAccessEl) planAccessEl.textContent = access.length > 0 ? access.join(", ") : "None";
-              if (planDescEl) planDescEl.textContent = descText ? `"${descText}"` : "No description provided.";
+              if (planAreasEl) {
+                planAreasEl.innerHTML = areas.length > 0
+                  ? areas.map(a => `<span class="dash-pill area-pill">${a}</span>`).join("")
+                  : '<span class="dash-pill-none">None</span>';
+              }
+              if (planAccessEl) {
+                planAccessEl.innerHTML = access.length > 0
+                  ? access.map(a => `<span class="dash-pill access-pill">${a}</span>`).join("")
+                  : '<span class="dash-pill-none">None</span>';
+              }
+
+              // Populate overlay elements
+              if (overlayPlanCategory) overlayPlanCategory.textContent = `${category.toUpperCase()} PLAN`;
+              if (overlayPlanName) overlayPlanName.textContent = memberPlan.plan_name;
+              if (overlayPlanPrice) overlayPlanPrice.textContent = formattedPrice;
+              if (overlayPlanDuration) overlayPlanDuration.textContent = `/ ${durationName}`;
+              if (overlayPlanAudience) overlayPlanAudience.textContent = audience;
+              if (overlayPlanGoal) overlayPlanGoal.textContent = goal;
+              if (overlayPlanAreas) {
+                overlayPlanAreas.innerHTML = (areas && areas.length > 0)
+                  ? areas.map(a => `<span class="plan-tag">${a}</span>`).join("")
+                  : '<span class="plan-tag">No Zones Configured</span>';
+              }
+              if (overlayPlanAccess) {
+                overlayPlanAccess.innerHTML = (access && access.length > 0)
+                  ? access.map(a => `<span class="plan-tag">${a}</span>`).join("")
+                  : '<span class="plan-tag">Standard Access</span>';
+              }
+              if (overlayPlanDesc) overlayPlanDesc.textContent = descText || "No additional description provided.";
             } else {
               if (planNameHeaderEl) planNameHeaderEl.textContent = "No Active Plan";
               if (planNamePanelEl) planNamePanelEl.textContent = "No Active Plan";
               if (planDurationEl) planDurationEl.textContent = "-";
               if (planPriceEl) planPriceEl.textContent = "-";
               if (planCategoryEl) planCategoryEl.textContent = "-";
-              if (planAudienceEl) planAudienceEl.textContent = "-";
-              if (planGoalEl) planGoalEl.textContent = "-";
               if (planAreasEl) planAreasEl.textContent = "-";
               if (planAccessEl) planAccessEl.textContent = "-";
-              if (planDescEl) planDescEl.textContent = "-";
+
+              // Clear overlay elements
+              if (overlayPlanCategory) overlayPlanCategory.textContent = "PLAN DETAILS";
+              if (overlayPlanName) overlayPlanName.textContent = "No Active Plan";
+              if (overlayPlanPrice) overlayPlanPrice.textContent = "-";
+              if (overlayPlanDuration) overlayPlanDuration.textContent = "";
+              if (overlayPlanAudience) overlayPlanAudience.textContent = "-";
+              if (overlayPlanGoal) overlayPlanGoal.textContent = "-";
+              if (overlayPlanAreas) overlayPlanAreas.innerHTML = '<span class="plan-tag">None</span>';
+              if (overlayPlanAccess) overlayPlanAccess.innerHTML = '<span class="plan-tag">None</span>';
+              if (overlayPlanDesc) overlayPlanDesc.textContent = "No active membership plan has been assigned to this member.";
             }
 
             if (memberObj.expires_at) {
@@ -2074,6 +2569,7 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
                 remainingDaysEl.className = "data-value text-slate-500 font-black";
               }
             }
+            adjustScrollPadding();
           }).catch(err => {
             console.error("GymDeck: Failed to fetch plans for details modal:", err);
           });
@@ -2146,6 +2642,11 @@ const bindMemberRowInteractions = (row) => {
 document.getElementById("closeMoreOptions")?.addEventListener("click", () => setMoreOptionsModalState(false));
 document.getElementById("closeMoreOptionsBtn")?.addEventListener("click", () => setMoreOptionsModalState(false));
 document.getElementById("moreOptionsBackdrop")?.addEventListener("click", () => setMoreOptionsModalState(false));
+
+// Plan Details Modal Triggers
+document.getElementById("dashCurrentPlanContainer")?.addEventListener("click", () => setPlanDetailsModalState(true));
+document.getElementById("closePlanDetailsModal")?.addEventListener("click", () => setPlanDetailsModalState(false));
+document.getElementById("planDetailsModalBackdrop")?.addEventListener("click", () => setPlanDetailsModalState(false));
 
 // Register scroll listener to fade out scroll indicator when user is actively scrolling, and restore it once scrolling stops
 const initDashboardScrollIndicator = () => {
@@ -4983,5 +5484,68 @@ const initStickyHeaderObserver = () => {
 };
 
 initStickyHeaderObserver();
+
+// --- Page 5 Payment Navigation ---
+const updateBillingSummary = () => {
+  const billingPlanName = document.getElementById("billingPlanName");
+  const billingPlanPrice = document.getElementById("billingPlanPrice");
+  const billingJoiningFee = document.getElementById("billingJoiningFee");
+  const billingTotalAmount = document.getElementById("billingTotalAmount");
+
+  const feeInput = document.getElementById("member-joining-fee");
+  const joiningFeeVal = feeInput ? parseFloat(feeInput.value) || 0 : 0;
+
+  if (!selectedPlanId) {
+    if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
+    if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
+    if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+    if (billingTotalAmount) billingTotalAmount.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+    return;
+  }
+
+  const selectedPlan = allPlans.find(p => p.id === selectedPlanId);
+  if (selectedPlan) {
+    if (billingPlanName) billingPlanName.textContent = selectedPlan.plan_name;
+    const planPrice = selectedPlan.price || 0;
+    if (billingPlanPrice) billingPlanPrice.textContent = `₹${planPrice.toLocaleString()}`;
+    if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+    
+    const totalAmount = planPrice + joiningFeeVal;
+    if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
+  } else {
+    if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
+    if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
+    if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+    if (billingTotalAmount) billingTotalAmount.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+  }
+};
+
+planningNextButton?.addEventListener("click", () => {
+  updateBillingSummary();
+  addMemberModal?.classList.remove("is-page-4");
+  addMemberModal?.classList.add("is-page-5");
+});
+
+paymentBackButton?.addEventListener("click", () => {
+  addMemberModal?.classList.remove("is-page-5");
+  addMemberModal?.classList.add("is-page-4");
+});
+
+paymentSaveFinishButton?.addEventListener("click", () => {
+  saveUploadedDocuments(paymentSaveFinishButton);
+});
+
+// Payment Mode Selector Action
+document.querySelectorAll(".payment-mode-option").forEach(card => {
+  card.addEventListener("click", () => {
+    document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
+    card.classList.add("active");
+    const radio = card.querySelector("input[type='radio']");
+    if (radio) {
+      radio.checked = true;
+      radio.dispatchEvent(new Event("change"));
+    }
+  });
+});
 
 

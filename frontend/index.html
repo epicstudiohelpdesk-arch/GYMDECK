@@ -1107,6 +1107,366 @@
             </div>
 
           </div>
+
+          <!-- Page 5: Collect Initial Payment / Redesigned Checkout Page -->
+          <div class="member-form-page" data-member-form-page="5">
+            <div class="member-form-top">
+              <div>
+                <p class="member-form-kicker-premium">Collect Initial Payment</p>
+                <h2 id="payment-title" class="checkout-title-premium">Bill Summary &amp; Pay</h2>
+              </div>
+            </div>
+            <p class="member-form-copy-premium">
+              Verify the billing details and record the transaction to activate the membership.
+            </p>
+
+            <div class="payment-split-layout">
+              <!-- Left Column: Premium Ticket Receipt -->
+              <div class="checkout-billing-section">
+                <div class="premium-receipt-card">
+                  <!-- Receipt Top Ribbon -->
+                  <div class="receipt-header">
+                    <div class="receipt-brand">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                      <span>INVOICE SUMMARY</span>
+                    </div>
+                    <span class="receipt-status-badge">PENDING</span>
+                  </div>
+                  
+                  <div class="receipt-meta">
+                    <span class="receipt-id">TX-GD-REC-24B</span>
+                    <span class="receipt-date" id="receiptCurrentDate">-</span>
+                  </div>
+
+                  <div class="receipt-divider"></div>
+
+                  <!-- Details -->
+                  <div class="receipt-item-list">
+                    <div class="receipt-item-row">
+                      <div class="item-label-group">
+                        <div class="item-icon-wrapper plan-glow">
+                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        </div>
+                        <div class="item-text">
+                          <span class="item-name">Selected Plan</span>
+                          <span class="item-desc">Membership type</span>
+                        </div>
+                      </div>
+                      <span id="billingPlanName" class="item-value badge-plan-premium">-</span>
+                    </div>
+
+                    <div class="receipt-item-row">
+                      <div class="item-label-group">
+                        <div class="item-icon-wrapper price-glow">
+                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M18 8.01h.01M6 16.01h.01"/></svg>
+                        </div>
+                        <div class="item-text">
+                          <span class="item-name">Plan Price</span>
+                          <span class="item-desc">Base membership rate</span>
+                        </div>
+                      </div>
+                      <span id="billingPlanPrice" class="item-value">₹0</span>
+                    </div>
+
+                    <div class="receipt-item-row">
+                      <div class="item-label-group">
+                        <div class="item-icon-wrapper fee-glow">
+                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        </div>
+                        <div class="item-text">
+                          <span class="item-name">Joining Fee</span>
+                          <span class="item-desc">One-time registration</span>
+                        </div>
+                      </div>
+                      <span id="billingJoiningFee" class="item-value">₹0</span>
+                    </div>
+                  </div>
+
+                  <!-- Tear-off line -->
+                  <div class="receipt-tear-line"></div>
+
+                  <!-- Total -->
+                  <div class="receipt-total-section">
+                    <div class="total-label-group">
+                      <span class="total-label">Total Amount</span>
+                      <span class="total-subtext">Tax inclusive summary</span>
+                    </div>
+                    <div class="total-value-wrapper">
+                      <span id="billingTotalAmount" class="receipt-total-value">₹0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Payment Method Selection -->
+              <div class="checkout-payment-section">
+                <span class="payment-selection-title">Select Payment Mode</span>
+                <div class="payment-modes-stack">
+                  <!-- Cash -->
+                  <label class="payment-mode-option active" data-pay-mode="Cash">
+                    <input type="radio" name="paymentMode" value="Cash" checked style="display: none;" />
+                    <div class="payment-mode-left">
+                      <div class="payment-mode-icon-wrapper cash-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01"/></svg>
+                      </div>
+                      <div class="payment-mode-details">
+                        <span class="payment-mode-name">Cash</span>
+                        <span class="payment-mode-desc">Collect physical cash from the member</span>
+                      </div>
+                    </div>
+                    <div class="payment-mode-selector">
+                      <div class="custom-radio-indicator"></div>
+                    </div>
+                  </label>
+
+                  <!-- UPI -->
+                  <label class="payment-mode-option" data-pay-mode="UPI">
+                    <input type="radio" name="paymentMode" value="UPI" style="display: none;" />
+                    <div class="payment-mode-left">
+                      <div class="payment-mode-icon-wrapper upi-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="2" /><line x1="3" y1="10" x2="21" y2="10"/><line x1="7" y1="15" x2="13" y2="15"/></svg>
+                      </div>
+                      <div class="payment-mode-details">
+                        <span class="payment-mode-name" id="upiCardNameText">UPI / Scan QR</span>
+                        <span class="payment-mode-desc" id="upiCardDescText">Scan dynamic QR code via UPI app</span>
+                      </div>
+                    </div>
+                    <div class="payment-mode-selector">
+                      <div class="custom-radio-indicator"></div>
+                    </div>
+                  </label>
+
+                  <!-- Card -->
+                  <label class="payment-mode-option" data-pay-mode="Card">
+                    <input type="radio" name="paymentMode" value="Card" style="display: none;" />
+                    <div class="payment-mode-left">
+                      <div class="payment-mode-icon-wrapper card-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                      </div>
+                      <div class="payment-mode-details">
+                        <span class="payment-mode-name">Card Terminal</span>
+                        <span class="payment-mode-desc">Process credit or debit card swipe/tap</span>
+                      </div>
+                    </div>
+                    <div class="payment-mode-selector">
+                      <div class="custom-radio-indicator"></div>
+                    </div>
+                  </label>
+                </div>
+                
+                <!-- Dynamic Helper Box based on selection -->
+                <div class="payment-helper-box">
+                  <!-- Cash helper -->
+                  <div class="helper-message helper-cash">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Please count cash currency accurately and store it in the register drawer before saving.</span>
+                  </div>
+
+                  <!-- UPI ID helper -->
+                  <div class="helper-message helper-upi-id">
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                      <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-top: 2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span>Enter the member's UPI address (VPA) below to trigger a push payment request directly to their UPI app.</span>
+                      </div>
+                      <div class="upi-id-input-container">
+                        <input type="text" placeholder="member@upi" class="upi-id-input-field" id="upiIdInputField" />
+                        <button class="upi-request-btn" type="button" id="upiRequestPushBtn">Request</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- UPI QR helper -->
+                  <div class="helper-message helper-upi-qr">
+                    <div class="upi-qr-display-container">
+                      <div class="upi-qr-frame">
+                        <div class="qr-scanner-line" style="position: absolute; top: 0; left: 0; right: 0; height: 2.5px; background: #6366f1; box-shadow: 0 0 8px #6366f1;"></div>
+                        <svg viewBox="0 0 24 24" width="60" height="60" fill="currentColor" class="mock-qr-svg">
+                          <rect x="2" y="2" width="6" height="6" fill="#1e293b"/>
+                          <rect x="3" y="3" width="4" height="4" fill="#ffffff"/>
+                          <rect x="16" y="2" width="6" height="6" fill="#1e293b"/>
+                          <rect x="17" y="3" width="4" height="4" fill="#ffffff"/>
+                          <rect x="2" y="16" width="6" height="6" fill="#1e293b"/>
+                          <rect x="3" y="17" width="4" height="4" fill="#ffffff"/>
+                          <rect x="10" y="2" width="2" height="2"/>
+                          <rect x="13" y="4" width="2" height="2"/>
+                          <rect x="9" y="8" width="3" height="1"/>
+                          <rect x="10" y="11" width="2" height="2"/>
+                          <rect x="14" y="9" width="2" height="3"/>
+                          <rect x="18" y="10" width="3" height="2"/>
+                          <rect x="2" y="10" width="4" height="2"/>
+                          <rect x="9" y="15" width="2" height="4"/>
+                          <rect x="15" y="16" width="4" height="2"/>
+                          <rect x="19" y="19" width="3" height="3"/>
+                          <rect x="13" y="13" width="2" height="2"/>
+                        </svg>
+                      </div>
+                      <div class="upi-qr-details">
+                        <div class="upi-qr-status">
+                          <span class="qr-status-indicator pulse"></span>
+                          <span class="qr-status-text">Awaiting UPI Scan...</span>
+                        </div>
+                        <span class="upi-qr-help-text">Ask member to scan this QR code using any UPI app (GPay, PhonePe, Paytm) to complete payment.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Card helper -->
+                  <div class="helper-message helper-card">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Initiate sale transaction on POS terminal. Ensure reader displays "Approved" message.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <script>
+              (function() {
+                const init = () => {
+                  const setDate = () => {
+                    const el = document.getElementById("receiptCurrentDate");
+                    if (el) {
+                      const options = { day: '2-digit', month: 'short', year: 'numeric' };
+                      el.textContent = new Date().toLocaleDateString('en-US', options);
+                    }
+                  };
+                  
+                  const upiCard = document.querySelector('.payment-mode-option[data-pay-mode="UPI"]');
+                  const upiSubmodal = document.getElementById('upiSubmodal');
+                  let previousActiveMode = 'Cash';
+
+                  const updateHelper = (mode, subMode) => {
+                    document.querySelectorAll(".payment-helper-box .helper-message").forEach(msg => {
+                      msg.style.setProperty('display', 'none', 'important');
+                    });
+                    
+                    let targetClass = mode.toLowerCase();
+                    if (targetClass === 'upi') {
+                      targetClass = 'upi-' + (subMode || 'qr');
+                    }
+                    
+                    const activeMsg = document.querySelector(".payment-helper-box .helper-" + targetClass);
+                    if (activeMsg) {
+                      activeMsg.style.setProperty('display', 'flex', 'important');
+                    }
+                  };
+
+                  setDate();
+                  
+                  // Hook to set dynamic date when entering the page
+                  document.querySelector("[data-planning-next]")?.addEventListener("click", () => {
+                    setDate();
+                    const activeOpt = document.querySelector(".payment-mode-option.active");
+                    if (activeOpt) {
+                      updateHelper(activeOpt.dataset.payMode, upiCard?.dataset?.subMode);
+                    }
+                  });
+
+                  // Monitor previous mode selection changes
+                  document.querySelectorAll(".payment-mode-option").forEach(card => {
+                    card.addEventListener("click", (e) => {
+                      const mode = card.dataset.payMode;
+                      if (mode !== 'UPI') {
+                        previousActiveMode = mode;
+                        updateHelper(mode);
+                      } else {
+                        // Trigger sub-modal swiftly
+                        if (upiSubmodal) {
+                          upiSubmodal.removeAttribute('hidden');
+                          // Enforce reflow
+                          upiSubmodal.getBoundingClientRect();
+                          upiSubmodal.classList.add('active');
+                        }
+                      }
+                    });
+                  });
+
+                  // Close submodal logic
+                  const closeUpiSubmodalFunc = () => {
+                    if (upiSubmodal) {
+                      upiSubmodal.classList.remove('active');
+                      setTimeout(() => {
+                        upiSubmodal.setAttribute('hidden', 'true');
+                      }, 200);
+                    }
+
+                    // If UPI has no submode selected yet, revert active selection to previous mode
+                    if (upiCard && !upiCard.dataset.subMode) {
+                      document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
+                      const prevCard = document.querySelector(`.payment-mode-option[data-pay-mode="${previousActiveMode}"]`);
+                      if (prevCard) {
+                        prevCard.classList.add("active");
+                        const radio = prevCard.querySelector("input[type='radio']");
+                        if (radio) radio.checked = true;
+                        updateHelper(previousActiveMode);
+                      }
+                    }
+                  };
+
+                  document.getElementById('closeUpiSubmodal')?.addEventListener('click', closeUpiSubmodalFunc);
+                  upiSubmodal?.addEventListener('click', (e) => {
+                    if (e.target === upiSubmodal) {
+                      closeUpiSubmodalFunc();
+                    }
+                  });
+
+                  // Select UPI ID option
+                  document.getElementById('upiOptionIdBtn')?.addEventListener('click', () => {
+                    if (upiCard) upiCard.dataset.subMode = 'id';
+                    const nameTxt = document.getElementById('upiCardNameText');
+                    const descTxt = document.getElementById('upiCardDescText');
+                    if (nameTxt) nameTxt.textContent = 'UPI / Push VPA';
+                    if (descTxt) descTxt.textContent = 'Selected: Enter UPI address';
+                    closeUpiSubmodalFunc();
+                    updateHelper('UPI', 'id');
+                  });
+
+                  // Select UPI QR option
+                  document.getElementById('upiOptionQrBtn')?.addEventListener('click', () => {
+                    if (upiCard) upiCard.dataset.subMode = 'qr';
+                    const nameTxt = document.getElementById('upiCardNameText');
+                    const descTxt = document.getElementById('upiCardDescText');
+                    if (nameTxt) nameTxt.textContent = 'UPI / Scan QR';
+                    if (descTxt) descTxt.textContent = 'Selected: Display scan code';
+                    closeUpiSubmodalFunc();
+                    updateHelper('UPI', 'qr');
+                  });
+
+                  // Poland action details for send request button
+                  document.getElementById('upiRequestPushBtn')?.addEventListener('click', function() {
+                    const btn = this;
+                    const input = document.getElementById('upiIdInputField');
+                    if (!input || !input.value.trim()) {
+                      if (input) input.style.borderColor = '#ef4444';
+                      return;
+                    }
+                    input.style.borderColor = '#cbd5e1';
+                    const origText = btn.textContent;
+                    btn.textContent = 'Sending...';
+                    btn.disabled = true;
+                    setTimeout(() => {
+                      btn.textContent = 'Sent!';
+                      btn.style.background = '#10b981';
+                      btn.style.color = '#ffffff';
+                      setTimeout(() => {
+                        btn.textContent = origText;
+                        btn.style.background = '';
+                        btn.style.color = '';
+                        btn.disabled = false;
+                      }, 2000);
+                    }, 1200);
+                  });
+                };
+
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', init);
+                } else {
+                  init();
+                }
+              })();
+            </script>
+          </div>
         </div>
 
         <!-- Shared Action Footer Container (fixed at bottom of modal) -->
@@ -1147,7 +1507,18 @@
           <!-- Page 4 Actions -->
           <div class="member-form-page-actions" data-for-page="4">
             <button class="dialog-btn dialog-btn-muted" type="button" data-planning-back>← Back</button>
-            <button class="dialog-btn dialog-btn-danger" type="button" data-doc-upload-save-finish>Save &amp; Finish</button>
+            <button class="dialog-btn dialog-btn-danger" type="button" data-planning-next>
+              <span>NEXT</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Page 5 Actions -->
+          <div class="member-form-page-actions" data-for-page="5">
+            <button class="dialog-btn dialog-btn-muted" type="button" data-payment-back>← Back</button>
+            <button class="dialog-btn dialog-btn-danger" type="button" data-payment-save-finish>Save &amp; Finish</button>
           </div>
         </div>
       </section>
@@ -2021,8 +2392,7 @@
         </section>
       </main>
     </div>
-
-    <div class="modal-backdrop" id="moreOptionsBackdrop" aria-hidden="true"></div>
+<div class="modal-backdrop" id="moreOptionsBackdrop" aria-hidden="true"></div>
     <div class="modal-window profile-dashboard-modal" id="moreOptionsModal" aria-hidden="true" role="dialog">
       <!-- DASHBOARD BODY -->
       <div class="modal-body dashboard-layout">
@@ -2052,6 +2422,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
             <span>Delete Member Profile</span>
           </button>
+
+          <!-- PLAN DETAILS OVERLAY REMOVED -->
         </aside>
 
         <!-- RIGHT COLUMN: INTELLIGENCE CENTER -->
@@ -2122,8 +2494,8 @@
               <!-- PERSONAL INFO -->
               <section class="info-panel">
                 <h2 class="panel-title">Personal Information</h2>
-                <div class="panel-grid cols-3">
-                  <div class="data-item">
+                <div class="panel-grid cols-4">
+                  <div class="data-item span-2">
                     <span class="data-label">Full Name</span>
                     <span id="dashFullName" class="data-value">-</span>
                   </div>
@@ -2157,7 +2529,7 @@
               <!-- CONTACT INFO -->
               <section class="info-panel">
                 <h2 class="panel-title">Contact Information</h2>
-                <div class="panel-grid cols-2">
+                <div class="panel-grid cols-4">
                   <div class="data-item">
                     <span class="data-label">Primary Phone</span>
                     <span id="dashPrimaryPhone" class="data-value">-</span>
@@ -2166,11 +2538,11 @@
                     <span class="data-label">Alternate Phone</span>
                     <span id="dashAltPhone" class="data-value">-</span>
                   </div>
-                  <div class="data-item">
+                  <div class="data-item span-2">
                     <span class="data-label">Email Address</span>
                     <span id="dashEmail" class="data-value">-</span>
                   </div>
-                  <div class="data-item full-width">
+                  <div class="data-item span-4">
                     <span class="data-label">Home Address</span>
                     <span id="dashAddress" class="data-value">-</span>
                   </div>
@@ -2179,15 +2551,29 @@
 
               <section class="info-panel highlight-panel">
                 <h2 class="panel-title">Membership Details</h2>
-                <div class="panel-grid cols-3">
+                <div class="panel-grid cols-4">
+                  <!-- Row 1 -->
                   <div class="data-item">
                     <span class="data-label">Current Plan</span>
-                    <span id="dashCurrentPlan" class="data-value font-black">-</span>
+                    <div id="dashCurrentPlanContainer" class="distinguished-plan-badge">
+                      <span id="dashCurrentPlan">-</span>
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" style="color: #6366f1;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                    </div>
                   </div>
                   <div class="data-item">
                     <span class="data-label">Plan Duration</span>
                     <span id="dashPlanDuration" class="data-value">-</span>
                   </div>
+                  <div class="data-item">
+                    <span class="data-label">Plan Price</span>
+                    <span id="dashPlanPricePanel" class="data-value">-</span>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Remaining Days</span>
+                    <span id="dashRemainingDays" class="data-value text-indigo-600 font-black">-</span>
+                  </div>
+                  
+                  <!-- Row 2 -->
                   <div class="data-item">
                     <span class="data-label">Joining Date</span>
                     <span id="dashJoinDatePanel" class="data-value">-</span>
@@ -2197,10 +2583,6 @@
                     <span id="dashExpiryDate" class="data-value">-</span>
                   </div>
                   <div class="data-item">
-                    <span class="data-label">Plan Price</span>
-                    <span id="dashPlanPricePanel" class="data-value">-</span>
-                  </div>
-                  <div class="data-item">
                     <span class="data-label">Paid Joining Fee</span>
                     <span id="dashPaidJoiningFeePanel" class="data-value">-</span>
                   </div>
@@ -2208,29 +2590,15 @@
                     <span class="data-label">Category</span>
                     <span id="dashPlanCategoryPanel" class="data-value">-</span>
                   </div>
-                  <div class="data-item">
-                    <span class="data-label">Target Audience</span>
-                    <span id="dashPlanAudiencePanel" class="data-value">-</span>
-                  </div>
-                  <div class="data-item">
-                    <span class="data-label">Strategic Goal</span>
-                    <span id="dashPlanGoalPanel" class="data-value">-</span>
-                  </div>
-                  <div class="data-item">
+
+                  <!-- Row 3 -->
+                  <div class="data-item span-2">
                     <span class="data-label">Training Areas</span>
                     <span id="dashPlanAreasPanel" class="data-value">-</span>
                   </div>
-                  <div class="data-item">
+                  <div class="data-item span-2">
                     <span class="data-label">Access Privileges</span>
                     <span id="dashPlanAccessPanel" class="data-value">-</span>
-                  </div>
-                  <div class="data-item highlight-data">
-                    <span class="data-label">Remaining Days</span>
-                    <span id="dashRemainingDays" class="data-value text-indigo-600 font-black">-</span>
-                  </div>
-                  <div class="data-item full-width" style="grid-column: span 3 !important;">
-                    <span class="data-label">Plan Description</span>
-                    <span id="dashPlanDescPanel" class="data-value" style="font-style: italic; color: #64748b;">-</span>
                   </div>
                 </div>
               </section>
@@ -2401,6 +2769,64 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
       </div>
       <span id="toastMessage">Member deleted successfully</span>
+    </div>
+
+    <!-- UPI Option Selection Sub-Modal Overlay (Global Body Level) -->
+    <div class="upi-submodal-backdrop" id="upiSubmodal" hidden>
+      <div class="upi-submodal-card">
+        <button class="upi-submodal-close-btn" type="button" aria-label="Close" id="closeUpiSubmodal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="upi-submodal-header">
+          <div class="upi-submodal-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="2" /><line x1="3" y1="10" x2="21" y2="10"/><line x1="7" y1="15" x2="13" y2="15"/></svg>
+          </div>
+          <h3>Select UPI Method</h3>
+          <p>Choose how you would like to collect the UPI payment from the member.</p>
+        </div>
+        
+        <div class="upi-submodal-options">
+          <button type="button" class="upi-option-card" id="upiOptionIdBtn">
+            <div class="upi-option-icon-wrapper upi-id-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+            </div>
+            <div class="upi-option-info">
+              <span class="upi-option-title">UPI ID / VPA</span>
+              <span class="upi-option-desc">Enter the member's UPI ID to push a payment request</span>
+            </div>
+            <div class="upi-option-arrow">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+          </button>
+
+          <button type="button" class="upi-option-card" id="upiOptionQrBtn">
+            <div class="upi-option-icon-wrapper upi-qr-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><line x1="7" y1="7" x2="7.01" y2="7"/><line x1="17" y1="7" x2="17.01" y2="7"/><line x1="7" y1="17" x2="7.01" y2="17"/><line x1="17" y1="17" x2="17.01" y2="17"/></svg>
+            </div>
+            <div class="upi-option-info">
+              <span class="upi-option-title">Dynamic QR Code</span>
+              <span class="upi-option-desc">Display a QR code on screen for the member to scan</span>
+            </div>
+            <div class="upi-option-arrow">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DYNAMIC PLAN DETAILS MODAL OVERLAY -->
+    <div class="modal-backdrop" id="planDetailsModalBackdrop" aria-hidden="true"></div>
+    <div class="modal-window" id="planDetailsModal" aria-hidden="true" role="dialog">
+      <div class="modal-header" style="border-bottom: 1px solid #e2e8f0; padding: 20px 24px 16px; margin: 0; position: relative; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+        <h2 class="modal-title" style="font-size: 16px; font-weight: 900; color: #0f172a; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;">Membership Plan Details</h2>
+        <button class="plan-display-close-btn" id="closePlanDetailsModal" type="button" aria-label="Close Modal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="planDetailsModalBody" style="padding: 24px; overflow-y: auto; flex: 1;">
+         <!-- Populated dynamically in script.js -->
+      </div>
     </div>
 
     <script type="module" src="./script.js"></script>

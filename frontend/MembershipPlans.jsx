@@ -348,10 +348,10 @@ function PlanCard({ plan, index, onViewDetails }) {
         {/* More options button */}
         <div className="absolute right-2.5 top-2.5">
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.05, backgroundColor: "rgba(241, 245, 249, 0.9)" }}
+            whileTap={{ scale: 0.94, backgroundColor: "rgba(226, 232, 240, 0.8)" }}
             onClick={() => onViewDetails(plan)}
-            className="w-7 h-7 rounded-full flex items-center justify-center border border-transparent bg-transparent hover:bg-slate-50 hover:border-slate-200/60 hover:text-slate-700 text-slate-400 transition-all duration-200 focus:outline-none"
+            className="w-7 h-7 rounded-lg flex items-center justify-center border border-transparent bg-transparent text-slate-400 hover:text-slate-700 active:text-slate-800 transition-colors duration-150 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
           >
             <motion.div
               className="flex items-center justify-center"
@@ -840,7 +840,7 @@ function DeleteConfirmationModal({ isOpen, plan, onClose, onConfirm }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 h-11 rounded-xl bg-slate-105 hover:bg-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider transition-all duration-150"
+                className="flex-1 h-11 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 text-xs font-bold uppercase tracking-wider transition-all duration-150 outline-none focus:outline-none focus:ring-2 focus:ring-slate-100"
               >
                 Cancel
               </button>
