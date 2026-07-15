@@ -377,10 +377,6 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
 
         // --- Frontend Validation ---
         if (isSignup) {
-          if (!gymNameInput?.value.trim()) {
-            showError(gymNameInput, "Gym Name required");
-            hasErrors = true;
-          }
           if (!nameInput?.value.trim()) {
             showError(nameInput, "Full name required");
             hasErrors = true;
@@ -417,11 +413,14 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
           window.localStorage.clear();
 
           let response;
-          if (isSignup && nameInput && gymNameInput) {
+          if (isSignup && nameInput) {
+            // Generate a default gym name based on the user's name
+            const defaultGymName = nameInput.value ? `${nameInput.value.trim()}'s Gym` : "My Gym";
+
             // Invoke the native Rust Signup engine
             response = await window.__TAURI__.core.invoke("signup_command", {
               payload: {
-                gym_name: gymNameInput.value,
+                gym_name: defaultGymName,
                 name: nameInput.value,
                 email: emailInput.value,
                 password: passwordInput.value
