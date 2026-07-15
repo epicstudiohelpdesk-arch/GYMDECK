@@ -160,7 +160,7 @@
             </p>
           </div>
 
-          <form class="otp-form" action="../frontend/index.html" data-redirect="../frontend/index.html" data-enter-state="dashboard">
+          <form class="otp-form" onsubmit="return false;">
             <div class="otp-grid" aria-label="One-time password">
               <input class="otp-slot" type="text" inputmode="numeric" maxlength="1" />
               <input class="otp-slot" type="text" inputmode="numeric" maxlength="1" />
@@ -172,7 +172,7 @@
             <!-- Error container for script.js to inject error messages -->
             <div class="meta-row" style="display: none;"></div>
 
-            <button class="primary-btn" type="submit">Continue</button>
+            <button class="primary-btn" type="button">Continue</button>
           </form>
 
           <p class="otp-note">Didn't get OTP? <a href="./forgot-password.html" data-enter-state="auth">Resend OTP</a></p>
