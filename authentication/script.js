@@ -32,6 +32,16 @@ const spellcheckObserver = new MutationObserver((mutations) => {
 
 spellcheckObserver.observe(document.body, { childList: true, subtree: true });
 
+// Restrict phone number inputs globally to digits only and max 10 length
+document.addEventListener('input', (e) => {
+  if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'tel') {
+    e.target.value = e.target.value.replace(/\D/g, '');
+    if (e.target.value.length > 10) {
+      e.target.value = e.target.value.slice(0, 10);
+    }
+  }
+});
+
 // Initializing the app with the Intro sequence on launch or logout
 const initIntro = async () => {
   const authPage = document.querySelector(".auth-page");
