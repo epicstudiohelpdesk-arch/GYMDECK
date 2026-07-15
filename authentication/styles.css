@@ -673,19 +673,20 @@ body.is-transitioning .auth-page {
 }
 
 .otp-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin: 4px 0;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0;
 }
 
 .otp-slot {
-  height: 52px;
+  width: 52px;
+  height: 58px;
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
   background: #f8fafc;
   text-align: center;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: var(--text-dark);
   transition: all 150ms ease;
