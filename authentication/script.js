@@ -272,7 +272,8 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
       const passwordInput = form.querySelector('input[type="password"]') || 
                            form.querySelector('input[placeholder*="password"]');
       const nameInput = form.querySelector('input[type="text"][placeholder*="Full Name"]');
-      const gymNameInput = form.querySelector('input[type="text"][placeholder*="Gym Name"]');
+      const gymNameInput = form.querySelector('input[type="text"][placeholder*="Gym Name"]'); // may be null
+      const phoneInput = form.querySelector('input[type="tel"]');
       
       const isSignup = form.closest(".auth-page-signup") !== null;
 
@@ -383,6 +384,10 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
           }
           if (!emailInput.value.trim()) {
             showError(emailInput, "Valid email required");
+            hasErrors = true;
+          }
+          if (phoneInput && !phoneInput.value.trim()) {
+            showError(phoneInput, "Phone number required");
             hasErrors = true;
           }
           if (!passwordInput.value.trim()) {

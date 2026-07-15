@@ -369,6 +369,17 @@ body.is-transitioning .auth-page {
   gap: 16px;
 }
 
+.field-row {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.field-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -866,6 +877,11 @@ body.is-transitioning .auth-page {
     padding: 16px 12px;
     justify-content: center;
     background-color: #f8fafc;
+  }
+
+  .field-row {
+    flex-direction: column;
+    gap: 16px;
   }
 
   .auth-page {
