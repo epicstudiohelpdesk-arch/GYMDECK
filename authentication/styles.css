@@ -393,6 +393,13 @@ body.is-transitioning .auth-page {
   letter-spacing: -0.01em;
 }
 
+.field-label .field-hint {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-left: 4px;
+}
+
 .input-wrap {
   display: flex;
   align-items: center;
