@@ -297,7 +297,7 @@ export default function PastMembers() {
   const [pastMembers, setPastMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState("grid"); // "grid", "table", "analytics"
+  const [viewMode, setViewMode] = useState("table"); // "grid", "table", "analytics"
   const [selectedMember, setSelectedMember] = useState(null);
   const [reactivateMember, setReactivateMember] = useState(null);
   const [plans, setPlans] = useState(MOCK_PLANS);
@@ -723,35 +723,36 @@ export default function PastMembers() {
             </label>
 
             {/* Filter Tabs */}
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-1" aria-label="Retention filters">
-              <div className="flex h-9 items-center gap-1">
-                <span className="flex shrink-0 items-center gap-1.5 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 font-sans">
-                  <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-                  Filter
-                </span>
-                {STATUS_OPTIONS.map((opt) => {
-                  const isActive = activeStatus === opt;
-                  const count = opt === "All" 
-                    ? pastMembers.length 
-                    : pastMembers.filter(m => m.status === opt).length;
-                  return (
-                    <button
-                      key={opt}
-                      className={cn(
-                        "inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-4 text-xs font-black uppercase tracking-wider transition",
-                        isActive
-                          ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200"
-                          : "text-slate-500 hover:bg-white hover:text-slate-950"
-                      )}
-                      type="button"
-                      onClick={() => setActiveStatus(opt)}
-                    >
-                      {opt}
-                      <span className="rounded bg-slate-200/60 px-1.5 py-0.5 text-[9px] font-black text-slate-600 font-mono">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex flex-wrap items-center gap-1.5" aria-label="Retention filters">
+              <span className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-450 font-sans">
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                Filter
+              </span>
+              {STATUS_OPTIONS.map((opt) => {
+                const isActive = activeStatus === opt;
+                const count = opt === "All" 
+                  ? pastMembers.length 
+                  : pastMembers.filter(m => m.status === opt).length;
+                return (
+                  <button
+                    key={opt}
+                    className={cn(
+                      "inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-4 text-[10px] font-black uppercase tracking-wider transition-all",
+                      isActive
+                        ? "bg-slate-950 text-white shadow-md animate-fadeIn"
+                        : "bg-slate-50 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                    )}
+                    type="button"
+                    onClick={() => setActiveStatus(opt)}
+                  >
+                    {opt}
+                    <span className={cn(
+                      "rounded px-1.5 py-0.5 text-[9px] font-black font-mono",
+                      isActive ? "bg-white/20 text-white" : "bg-slate-200/60 text-slate-500"
+                    )}>{count}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* View Mode & Count Status (with Selection Controls inline in the red marked space!) */}
@@ -769,36 +770,36 @@ export default function PastMembers() {
                   </span>
                 )}
                 
-                <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
+                <div className="flex rounded-lg bg-slate-50 border border-slate-200/40 p-1 gap-1">
                   <button 
                     onClick={() => setViewMode("grid")}
                     className={cn(
                       "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
-                      viewMode === "grid" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
+                      viewMode === "grid" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
                     )}
                     title="Grid View"
                   >
-                    <LayoutGrid size={16} />
+                    <LayoutGrid size={18} />
                   </button>
                   <button 
                     onClick={() => setViewMode("table")}
                     className={cn(
                       "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
-                      viewMode === "table" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
+                      viewMode === "table" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
                     )}
                     title="List View"
                   >
-                    <List size={16} />
+                    <List size={18} />
                   </button>
                   <button 
                     onClick={() => setViewMode("analytics")}
                     className={cn(
                       "w-9 h-8 flex items-center justify-center rounded-md transition-all", 
-                      viewMode === "analytics" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700"
+                      viewMode === "analytics" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
                     )}
                     title="Retention Analytics"
                   >
-                    <BarChart3 size={16} />
+                    <BarChart3 size={18} />
                   </button>
                 </div>
               </div>
@@ -886,18 +887,18 @@ export default function PastMembers() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="py-28 bg-white border border-slate-200 rounded-2xl shadow-sm text-center px-4"
+              className="py-16 bg-white border-2 border-dotted border-slate-300 rounded-2xl shadow-sm text-center px-4"
             >
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-200">
-                <Search size={24} className="text-slate-400" />
+              <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mx-auto mb-4 border border-slate-200">
+                <Search size={20} className="text-slate-400" />
               </div>
-              <h3 className="text-lg font-black text-slate-900 uppercase tracking-wider">No Archived Members Recorded</h3>
+              <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">No Archived Members Recorded</h3>
               <p className="text-xs font-semibold text-slate-400 mt-2 max-w-sm mx-auto leading-relaxed">
                 Clear active filters or modify search configurations to display archived member profiles.
               </p>
               <button 
                 onClick={() => { setSearchQuery(""); setActiveStatus("All"); }}
-                className="mt-6 px-5 py-3 bg-slate-950 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-slate-950/10 hover:bg-slate-800"
+                className="mt-4 px-5 py-2.5 bg-slate-950 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-slate-950/10 hover:bg-slate-800"
               >
                 Clear Filters
               </button>
@@ -913,6 +914,7 @@ export default function PastMembers() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
                   {paginatedMembers.map(member => {
@@ -922,8 +924,6 @@ export default function PastMembers() {
                     return (
                     <motion.article 
                       key={member.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
                       whileHover={{ y: -2 }}
                       onDoubleClick={() => {
                         setIsSelectionMode(true);
@@ -1147,129 +1147,128 @@ export default function PastMembers() {
               )}
 
               {/* 2. CLASSY GLOW DATA TABLE */}
+              {/* 2. CLASSY GLOW DATA TABLE */}
               {viewMode === "table" && (
-                <motion.div 
-                  key="table"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="space-y-3"
-                >
-                  {paginatedMembers.map((member, idx) => (
-                    <motion.div
-                      key={member.id}
-                      layout
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ duration: 0.25, delay: idx * 0.03 }}
-                      className="relative grid grid-cols-3 gap-4 p-3 bg-white border border-slate-200/90 rounded-lg shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 list-none"
-                    >
-                      {/* Col 1: Member Identity */}
-                      <div className="flex items-center gap-3 min-w-0 text-left">
-                        {isSelectionMode && (
+                <table className="members-table">
+                  <tbody className="grid gap-3">
+                    {paginatedMembers.map((member, idx) => (
+                      <motion.tr
+                        layout
+                        key={member.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.25, delay: idx * 0.03 }}
+                        className="relative grid grid-cols-3 gap-4 p-3 bg-white border border-slate-200/90 rounded-lg shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 list-none"
+                      >
+                        {/* Col 1: Member Identity */}
+                        <div className="flex items-center gap-3 min-w-0 text-left">
+                          {isSelectionMode && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleSelectMember(member.id);
+                              }}
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all shadow-sm",
+                                selectedMemberIds.includes(member.id)
+                                  ? "bg-slate-950 border-slate-950 text-white"
+                                  : "bg-slate-50 border-slate-300 hover:border-slate-400"
+                              )}
+                            >
+                              {selectedMemberIds.includes(member.id) && <Check size={12} className="stroke-[3]" />}
+                            </button>
+                          )}
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleSelectMember(member.id);
-                            }}
-                            className={cn(
-                              "w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-all shadow-sm",
-                              selectedMemberIds.includes(member.id)
-                                ? "bg-slate-950 border-slate-950 text-white"
-                                : "bg-slate-50 border-slate-300 hover:border-slate-400"
-                            )}
+                            type="button"
+                            onClick={(e) => handleViewPhoto(e, member)}
+                            className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
+                            title={`View ${member.name}'s photo`}
                           >
-                            {selectedMemberIds.includes(member.id) && <Check size={12} className="stroke-[3]" />}
+                            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm shrink-0 border border-slate-200 bg-slate-50 flex items-center justify-center">
+                              <img src={member.image} className="w-full h-full object-cover" alt="" />
+                            </div>
                           </button>
-                        )}
-                        <button 
-                          type="button"
-                          onClick={(e) => handleViewPhoto(e, member)}
-                          className="bg-transparent border-0 p-0 block hover:scale-105 active:scale-95 transition-transform duration-150 shrink-0 cursor-pointer focus:outline-none outline-none"
-                          title={`View ${member.name}'s photo`}
-                        >
-                          <img src={member.image} className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 object-cover shadow-sm" alt="" />
-                        </button>
-                        <div className="min-w-0 text-left">
-                          <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">{member.name}</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="px-1.5 py-0.2 rounded text-[7px] font-bold bg-slate-100 text-slate-500 uppercase tracking-wider font-mono">
-                              ID: {member.member_code || member.id}
+                          <div className="min-w-0 text-left">
+                            <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">{member.name}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="px-1.5 py-0.2 rounded text-[7px] font-bold bg-slate-100 text-slate-500 uppercase tracking-wider font-mono">
+                                ID: {member.member_code || member.id}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Col 2: Info & Metrics */}
+                        <div className="flex items-center justify-around gap-2 text-left">
+                          <div className="min-w-0">
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Contact</span>
+                            <span className="text-[11px] font-bold text-slate-900 mt-0.5 block font-mono truncate max-w-[110px] leading-tight" title={member.phone}>{member.phone}</span>
+                            <span className="text-[9px] font-medium text-slate-400 block font-mono truncate max-w-[110px] leading-none mt-0.5" title={member.email}>{member.email}</span>
+                          </div>
+                          <div>
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Inactivity</span>
+                            <span className="text-xs font-bold text-slate-900 mt-0.5 block font-mono leading-none">{member.inactiveDays} Days</span>
+                            <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden mt-1">
+                              <div 
+                                className={cn(
+                                  "h-full rounded-full transition-all",
+                                  member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500"
+                                )} 
+                                style={{ width: `${Math.min((member.inactiveDays / 90) * 100, 100)}%` }} 
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Recovery</span>
+                            <span className="text-xs font-bold text-slate-900 mt-0.5 block font-mono">{currencyFormatter.format(member.recoveryValue)}</span>
+                          </div>
+                        </div>
+
+                        {/* Col 3: Status & Action Menu */}
+                        <div className="flex items-center justify-between gap-4 pr-36 text-left">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "px-2 py-0.5 rounded-full text-[8px] font-bold border uppercase tracking-wider leading-none font-mono",
+                              statusBadgeStyles[member.status]
+                            )}>
+                              {member.status}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-semibold italic truncate max-w-[120px]" title={member.reason}>
+                              "{member.reason}"
                             </span>
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Col 2: Info & Metrics */}
-                      <div className="flex items-center justify-around gap-2 text-left">
-                        <div className="min-w-0">
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Contact</span>
-                          <span className="text-[11px] font-bold text-slate-900 mt-0.5 block font-mono truncate max-w-[110px] leading-tight" title={member.phone}>{member.phone}</span>
-                          <span className="text-[9px] font-medium text-slate-400 block font-mono truncate max-w-[110px] leading-none mt-0.5" title={member.email}>{member.email}</span>
-                        </div>
-                        <div>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Inactivity</span>
-                          <span className="text-xs font-bold text-slate-900 mt-0.5 block font-mono leading-none">{member.inactiveDays} Days</span>
-                          <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden mt-1">
-                            <div 
-                              className={cn(
-                                "h-full rounded-full transition-all",
-                                member.inactiveDays <= 30 ? "bg-emerald-500" : member.inactiveDays <= 60 ? "bg-amber-500" : "bg-rose-500"
-                              )} 
-                              style={{ width: `${Math.min((member.inactiveDays / 90) * 100, 100)}%` }} 
-                            />
+                          {/* Actions aligned on the right, matching PlanCard's absolute container but for 3 icons */}
+                          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                            <button 
+                              onClick={() => setSelectedMember(member)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
+                              title="View Member Details"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button 
+                              onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
+                              title="Reactivate Member"
+                            >
+                              <RefreshCw size={14} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteMember(member)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
+                              title="Delete Archive Record"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
-                        <div>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Recovery</span>
-                          <span className="text-xs font-bold text-slate-900 mt-0.5 block font-mono">{currencyFormatter.format(member.recoveryValue)}</span>
-                        </div>
-                      </div>
 
-                      {/* Col 3: Status & Action Menu */}
-                      <div className="flex items-center justify-between gap-4 pr-36 text-left">
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-[8px] font-bold border uppercase tracking-wider leading-none font-mono",
-                            statusBadgeStyles[member.status]
-                          )}>
-                            {member.status}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-semibold italic truncate max-w-[120px]" title={member.reason}>
-                            "{member.reason}"
-                          </span>
-                        </div>
-
-                        {/* Actions aligned on the right, matching PlanCard's absolute container but for 3 icons */}
-                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                          <button 
-                            onClick={() => setSelectedMember(member)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
-                            title="View Member Details"
-                          >
-                            <Eye size={14} />
-                          </button>
-                          <button 
-                            onClick={() => { setReactivateMember(member); setSelectedPlan(plans[0].id); }}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
-                            title="Reactivate Member"
-                          >
-                            <RefreshCw size={14} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteMember(member)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 active:scale-95 transition-all shrink-0 border border-transparent hover:border-slate-200/60"
-                            title="Delete Archive Record"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-
-                    </motion.div>
-                  ))}
-                </motion.div>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
 
               {/* 3. RETENTION DIAGNOSTICS ANALYTICS */}

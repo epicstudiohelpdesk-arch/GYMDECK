@@ -401,7 +401,8 @@ const Agreements = () => {
     return AGREEMENTS_DATA.filter(agr => {
       const matchesSearch = agr.memberName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            agr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           agr.id.toLowerCase().includes(searchQuery.toLowerCase());
+                           agr.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (agr.memberId && agr.memberId.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesCategory = activeCategory === "All Agreements" || agr.category === activeCategory;
       const matchesStatus = activeStatus === "all" || agr.status === activeStatus;
       

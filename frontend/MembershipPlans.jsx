@@ -2063,14 +2063,14 @@ export default function MembershipPortfolioDashboard() {
 
             <div className="flex items-center gap-3.5">
               {/* Segmented Control */}
-              <div className="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/20">
+              <div className="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/20 gap-1">
                 <button
                   onClick={() => setView("portfolio")}
                   className={cn(
                     "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
                     view === "portfolio"
-                      ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-slate-950 text-white shadow-sm"
+                      : "bg-white text-slate-500 hover:text-slate-800 shadow-sm border border-slate-200/40"
                   )}
                 >
                   Portfolio
@@ -2080,8 +2080,8 @@ export default function MembershipPortfolioDashboard() {
                   className={cn(
                     "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200",
                     view === "analytics"
-                      ? "bg-white text-slate-900 shadow-sm border border-slate-200/40"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-slate-950 text-white shadow-sm"
+                      : "bg-white text-slate-500 hover:text-slate-800 shadow-sm border border-slate-200/40"
                   )}
                 >
                   Analytics
@@ -2193,10 +2193,10 @@ export default function MembershipPortfolioDashboard() {
                           key={filter}
                           onClick={() => setActiveFilter(filter)}
                           className={cn(
-                            "h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all duration-200 flex items-center justify-center shadow-sm",
+                            "h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all duration-200 flex items-center justify-center shadow-sm",
                             activeFilter === filter
-                              ? "bg-slate-950 border-slate-950 text-white shadow-sm"
-                              : "bg-white border-slate-200 text-slate-500 hover:border-slate-350 hover:bg-slate-50 hover:text-slate-900"
+                              ? "bg-slate-950 border-transparent text-white shadow-md animate-fadeIn"
+                              : "bg-slate-50 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                           )}
                         >
                           {filter}

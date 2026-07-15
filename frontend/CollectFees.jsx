@@ -1,5 +1,5 @@
 import BrandFooter from "./BrandFooter.jsx";
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   AlertCircle,
@@ -68,6 +68,33 @@ const mockMember = {
 };
 
 const CollectFeesPage = () => {
+  const sentinelRef = useRef(null);
+  const [isHeaderStuck, setIsHeaderStuck] = useState(false);
+  const [isBellActive, setIsBellActive] = useState(false);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsHeaderStuck(!entry.isIntersecting);
+      },
+      {
+        root: null,
+        threshold: [0],
+        rootMargin: "-20px 0px 0px 0px"
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => {
+      if (sentinel) {
+        observer.unobserve(sentinel);
+      }
+    };
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMember, setSelectedMember] = useState(mockMember);
   const [invoiceItems, setInvoiceItems] = useState([
@@ -110,34 +137,67 @@ const CollectFeesPage = () => {
 
   return (
     <div className="payments-shell font-sans text-slate-900 selection:bg-indigo-100">
+      {/* Sentinel to detect sticky state */}
+      <div ref={sentinelRef} style={{ height: '1px', marginBottom: '-1px', pointerEvents: 'none' }} />
+
       {/* Top Utility Header */}
-      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
+      <header
+        className={`relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4 p-4 transition-all duration-200 border border-x-0 border-t-0 ${
+          isHeaderStuck
+            ? "bg-white border-b-slate-200/80 shadow-md"
+            : "bg-[#f6f8fb] border-b-transparent shadow-none"
+        }`}
+        style={{
+          position: 'sticky',
+          top: '-22px',
+          marginTop: '-38px',
+          marginInline: '-16px',
+          paddingTop: '38px',
+          marginBottom: '24px'
+        }}
+      >
         <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
           <span>Payments & Billing</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-900 font-bold">Collect Fees</span>
         </div>
 
-        <div className="flex-1 max-w-xl px-8 relative">
-          <Search className="absolute left-12 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+        <div className="flex-1 max-w-md relative">
+          <Search 
+            size={15} 
+            className="absolute left-4 text-slate-400 pointer-events-none" 
+            style={{ top: "50%", transform: "translateY(-50%)" }}
+          />
           <input
             type="text"
             placeholder="Search member, invoice, phone, membership ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 bg-slate-100/70 border border-slate-200 rounded-lg pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
+            className="w-full h-10 bg-slate-100/70 border border-slate-200 rounded-xl pl-11 pr-11 text-xs font-semibold outline-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
           />
-          <button className="absolute right-12 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-            <QrCode className="w-4 h-4" />
+          <button 
+            className="absolute right-4 text-slate-400 hover:text-slate-600 border-0 bg-transparent p-0 outline-none cursor-pointer flex items-center justify-center"
+            style={{ top: "50%", transform: "translateY(-50%)" }}
+          >
+            <QrCode size={15} />
           </button>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="w-10 h-10 rounded-lg border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-slate-50 relative">
+          <button 
+            onClick={() => setIsBellActive(!isBellActive)}
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center active:scale-95 transition-all shadow-sm relative ${
+              isBellActive 
+                ? "bg-slate-900 text-white border-slate-900 hover:bg-slate-800" 
+                : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
             <Bell className="w-4 h-4" />
             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
           </button>
-          <button className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
+          <button 
+            className="h-10 px-4 bg-slate-900 text-white border border-slate-900 rounded-xl text-sm font-semibold active:scale-95 transition-all shadow-sm flex items-center gap-2 hover:bg-slate-800"
+          >
             <Plus className="w-4 h-4" />
             Walk-In Billing
           </button>

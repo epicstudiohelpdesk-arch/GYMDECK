@@ -2445,9 +2445,9 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  margin-top: -14px;
+  margin-top: -36px;
   margin-inline: -14px;
-  padding-top: 14px;
+  padding-top: 36px;
   padding-inline: 14px;
   padding-bottom: 10px;
   border-bottom: 1px solid #edf2f7;
@@ -2515,9 +2515,9 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  margin-top: -14px;
+  margin-top: -36px;
   margin-inline: -14px;
-  padding-top: 14px;
+  padding-top: 36px;
   padding-inline: 14px;
   padding-bottom: 10px;
   border-bottom: 1px solid #edf2f7;
@@ -3875,18 +3875,18 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   padding-top: 14px;
   padding-inline: 14px;
   padding-bottom: 10px;
+  border: 1px solid transparent;
   border-bottom: 1px solid #edf2f7;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
-  transition: border-radius 200ms ease, border-color 200ms ease;
+  transition: border-radius 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .past-members-workspace-sticky-header.is-stuck {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-left: 1px solid #dfe6f0;
-  border-right: 1px solid #dfe6f0;
-  border-top: 1px solid #dfe6f0;
+  border-color: #dfe6f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .id-proofs-stage {
@@ -4187,22 +4187,22 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  margin-top: -14px;
+  margin-top: -36px;
   margin-inline: -14px;
-  padding-top: 14px;
+  padding-top: 36px;
   padding-inline: 14px;
+  border: 1px solid transparent;
   border-bottom: 1px solid #edf2f7;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
-  transition: border-radius 200ms ease, border-color 200ms ease;
+  transition: border-radius 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .members-workspace-sticky-header.is-stuck {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-left: 1px solid #dfe6f0;
-  border-right: 1px solid #dfe6f0;
-  border-top: 1px solid #dfe6f0;
+  border-color: #dfe6f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .members-toolbar {
@@ -4494,6 +4494,12 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   position: relative;
 }
 
+.members-table tbody tr:hover {
+  transform: translateY(-1px);
+  border-color: #b9c8db;
+  box-shadow: 0 10px 20px rgba(31, 41, 55, 0.08);
+}
+
 .member-more-btn {
   position: absolute;
   top: 10px;
@@ -4519,16 +4525,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 .member-more-btn svg {
   width: 18px;
   height: 18px;
-}
-
-.members-table tbody tr[hidden] {
-  display: none;
-}
-
-.members-table tbody tr:hover {
-  transform: translateY(-1px);
-  border-color: #b9c8db;
-  box-shadow: 0 10px 20px rgba(31, 41, 55, 0.08);
 }
 
 .members-table td {
@@ -4618,6 +4614,16 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: 0;
+}
+
+.member-name-cell .member-code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-top: 2px;
+  letter-spacing: 0.05em;
 }
 
 .member-name-cell span {
@@ -10075,7 +10081,7 @@ body.document-modal-open .document-modal-backdrop {
 
 .profile-sidebar .luxury-profile-card.minimal-card {
   width: 100%;
-  max-width: 280px;
+  max-width: 300px;
   box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.15);
 }
 
@@ -10551,11 +10557,10 @@ body.document-modal-open .document-modal-backdrop {
 .luxury-profile-card.minimal-card::after {
   display: none;
 }
-
 .luxury-profile-card.minimal-card {
   width: 100%;
-  max-width: 270px;
-  aspect-ratio: 0.95; /* Further increased to 0.95 to reduce height from the bottom side */
+  max-width: 300px;
+  aspect-ratio: 0.68; /* Taller aspect ratio for profile picture */
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -12266,10 +12271,6 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
 }
 
 /* Add safe top spacing to all sticky workspace headers when stuck */
-.members-workspace-sticky-header.is-stuck,
-.past-members-workspace-sticky-header.is-stuck,
-.expiring-memberships-workspace-sticky-header.is-stuck,
-.freeze-pause-workspace-sticky-header.is-stuck,
 .attendance-reports-workspace-sticky-header.is-stuck,
 .generate-receipt-workspace-sticky-header.is-stuck,
 .all-trainers-workspace-sticky-header.is-stuck,

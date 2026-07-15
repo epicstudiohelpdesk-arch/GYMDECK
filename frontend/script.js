@@ -1790,6 +1790,8 @@ const checkIfMemberFormChanged = () => {
 
 const createMemberSearchIndex = (member) =>
   [
+    member.id,
+    member.code,
     member.name,
     member.contactNumber,
     member.alternateContact,
@@ -2253,7 +2255,7 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
         }
       }
       
-      const memberId = row.querySelector(".member-metrics")?.parentElement?.querySelector("b")?.nextSibling?.textContent?.trim() || `#${Math.floor(1000 + Math.random() * 9000)}`;
+      const memberId = row.dataset.memberCode || row.dataset.memberId || "";
       const modalMemberId = document.getElementById("modalMemberId");
       if (modalMemberId) modalMemberId.textContent = memberId;
 
@@ -2269,6 +2271,8 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
       
       // Personal section
       document.getElementById("dashFullName").textContent = memberName;
+      const dashPanelMemberId = document.getElementById("dashPanelMemberId");
+      if (dashPanelMemberId) dashPanelMemberId.textContent = memberId;
       
       const dobEl = row.querySelector("[data-member-dob]");
       document.getElementById("dashDOB").textContent = dobEl?.textContent?.replace("DOB", "").trim() || "-";
@@ -2790,6 +2794,13 @@ document.getElementById("editMemberFromModal")?.addEventListener("click", () => 
 });
 
 const isNewRegistration = (member) => {
+  if (
+    (member.address && typeof member.address === 'string' && member.address.toLowerCase().includes("reactivated")) ||
+    (member.docsLabel && typeof member.docsLabel === 'string' && member.docsLabel.toLowerCase().includes("reactivated"))
+  ) {
+    return false;
+  }
+
   let joinedDate = null;
   if (member.joinedAt) {
     joinedDate = new Date(member.joinedAt);
@@ -2859,6 +2870,7 @@ const createMemberRow = (member) => {
   row.dataset.memberJoinedDateDisp = member.joiningDateDisplay || "";
   row.dataset.memberJoinedTimeDisp = member.joiningTimeDisplay || "";
   row.dataset.memberDocsLabel = member.docsLabel || "No Documents";
+  row.dataset.memberCode = member.code || "";
   row.dataset.search = createMemberSearchIndex(member);
   row.innerHTML = `
     <td data-label="Member">
@@ -2867,6 +2879,7 @@ const createMemberRow = (member) => {
       </button>
       <div class="member-name-cell">
         <strong>${escapeHtml(member.name)}</strong>
+        <small class="member-code">${escapeHtml(member.code || "")}</small>
         ${isNewRegistration(member) ? '<span>New registration</span>' : ''}
       </div>
       <button class="member-more-btn" type="button" aria-label="More options">
@@ -2948,6 +2961,7 @@ const updateMemberRowInPlace = (row, updatedMember) => {
   row.dataset.memberPhotoUrl = updatedMember.photoUrl || "";
   row.dataset.memberPhotoBase64 = updatedMember.photoBase64 || "";
   row.dataset.memberDocsLabel = updatedMember.docsLabel || "No Documents";
+  row.dataset.memberCode = updatedMember.code || "";
   row.dataset.search = createMemberSearchIndex(updatedMember);
   row.dataset.memberRecent = isNewRegistration(updatedMember) ? "true" : "false";
 
@@ -2958,6 +2972,7 @@ const updateMemberRowInPlace = (row, updatedMember) => {
       </button>
       <div class="member-name-cell">
         <strong>${escapeHtml(updatedMember.name)}</strong>
+        <small class="member-code">${escapeHtml(updatedMember.code || "")}</small>
         ${isNewRegistration(updatedMember) ? '<span>New registration</span>' : ''}
       </div>
       <button class="member-more-btn" type="button" aria-label="More options">
@@ -3625,6 +3640,8 @@ const hideDeletedMembersInAllViews = (resetPage = false) => {
 };
 
 const mapBackendMember = (m) => ({
+  id: m.id ? m.id.toString() : "",
+  code: m.member_code || "",
   name: m.full_name,
   contactNumber: m.phone,
   alternateContact: m.alternate_phone || "",
@@ -4285,6 +4302,7 @@ const saveUploadedDocuments = async (submitButton) => {
     const finalNotes = finalDocs ? `Joining Fee: ₹${joiningFeeVal} | ${finalDocs}` : `Joining Fee: ₹${joiningFeeVal}`;
 
     const updatedMember = {
+      code: activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberCode || "") : "",
       name: pendingMemberData.name,
       contactNumber: pendingMemberData.contactNumber,
       alternateContact: pendingMemberData.alternateContact || "",

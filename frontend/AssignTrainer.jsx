@@ -281,8 +281,8 @@ const AssignTrainer = () => {
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-50">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-indigo-50 overflow-hidden">
-                    <img src={selectedMember.image} alt={selectedMember.name} />
+                  <div className="w-20 h-28 rounded-2xl bg-indigo-50 overflow-hidden shrink-0">
+                    <img src={selectedMember.image} alt={selectedMember.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h3 className="font-black text-slate-900 tracking-tight">{selectedMember.name}</h3>

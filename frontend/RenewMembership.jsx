@@ -198,7 +198,7 @@ const RenewMembershipPage = () => {
               </div>
               
               <div className="flex items-center gap-4 mb-8">
-                <img src={mockMember.image} className="w-16 h-16 rounded-2xl bg-slate-100 shadow-inner" alt="" />
+                <img src={mockMember.image} className="w-20 h-28 rounded-2xl bg-slate-100 shadow-inner object-cover shrink-0" alt="" />
                 <div>
                   <div className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">{mockMember.name}</div>
                   <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none">{mockMember.id}</div>

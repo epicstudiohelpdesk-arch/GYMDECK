@@ -377,7 +377,8 @@ const MemberDocuments = () => {
     return DOCUMENTS_DATA.filter(doc => {
       const matchesSearch = doc.memberName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            doc.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           doc.id.toLowerCase().includes(searchQuery.toLowerCase());
+                           doc.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (doc.memberId && doc.memberId.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesCategory = activeCategory === "All Documents" || doc.category === activeCategory;
       const matchesStatus = activeStatus === "all" || doc.status === activeStatus;
       

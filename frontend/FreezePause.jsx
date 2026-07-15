@@ -197,9 +197,9 @@ const laneConfig = {
 // ─────────────────────────────────────────
 // SHARED UI COMPONENTS
 // ─────────────────────────────────────────
-function DashboardHeader({ title, description, stats }) {
+function DashboardHeader({ title, description, stats, onCreate }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between relative z-10">
         <div className="min-w-0">
           <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 font-sans">Retention Safeguard</p>
@@ -208,32 +208,95 @@ function DashboardHeader({ title, description, stats }) {
           </h1>
           <p className="mt-3 max-w-3xl text-xs font-semibold leading-relaxed text-slate-500">{description}</p>
         </div>
+        <div className="flex items-center gap-3 shrink-0 lg:mt-0 mt-4">
+          <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"><Bell size={18} /></button>
+          <button onClick={onCreate} className="h-10 px-6 rounded-xl bg-slate-950 text-white flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"><Plus size={18} /> Create Freeze Request</button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px] relative z-10">
-        <StatTile label="Total Active" value={stats.activeFreezes} tone="indigo" />
-        <StatTile label="Pending" value={stats.pendingRequests} tone="blue" />
-        <StatTile label="Revenue Paused" value={currencyFormatter.format(stats.revenuePaused / 1000) + "K"} tone="rose" />
-        <StatTile label="Due Back" value={stats.reactivations} tone="amber" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full relative z-10">
+        <StatTile 
+          label="Total Active" 
+          value={stats.activeFreezes} 
+          tone="indigo" 
+          icon={PauseCircle}
+          subtext="Members currently paused"
+        />
+        <StatTile 
+          label="Pending Approvals" 
+          value={stats.pendingRequests} 
+          tone="blue" 
+          icon={Timer}
+          subtext="Awaiting manager review"
+        />
+        <StatTile 
+          label="Revenue Paused" 
+          value={currencyFormatter.format(stats.revenuePaused)} 
+          tone="rose" 
+          icon={DollarSign}
+          subtext="Deferred subscription fee streams"
+        />
+        <StatTile 
+          label="Due Back Soon" 
+          value={stats.reactivations} 
+          tone="amber" 
+          icon={UserCheck}
+          subtext="Reactivating within 7 days"
+        />
       </div>
     </div>
   );
 }
 
-function StatTile({ label, value, tone = "slate" }) {
-  const toneClass = {
-    slate: "bg-slate-50 text-slate-950 border-slate-200",
-    amber: "bg-amber-50 text-amber-800 border-amber-200",
-    rose: "bg-rose-50 text-rose-800 border-rose-200",
-    blue: "bg-blue-50 text-blue-800 border-blue-200",
-    emerald: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    indigo: "bg-indigo-50 text-indigo-800 border-indigo-200",
+function StatTile({ label, value, tone = "slate", icon: Icon, subtext }) {
+  const config = {
+    rose: {
+      border: "border-t-rose-500",
+      iconColor: "text-rose-500 bg-rose-50 border-rose-100",
+    },
+    blue: {
+      border: "border-t-blue-500",
+      iconColor: "text-blue-500 bg-blue-50 border-blue-100",
+    },
+    amber: {
+      border: "border-t-amber-500",
+      iconColor: "text-amber-500 bg-amber-50 border-amber-100",
+    },
+    indigo: {
+      border: "border-t-indigo-500",
+      iconColor: "text-indigo-500 bg-indigo-50 border-indigo-100",
+    },
+    slate: {
+      border: "border-t-slate-500",
+      iconColor: "text-slate-500 bg-slate-50 border-slate-100",
+    },
   }[tone];
 
   return (
-    <div className={cn("min-w-0 rounded-lg border p-3", toneClass)}>
-      <span className="block text-[10px] font-black uppercase tracking-[0.14em] opacity-70">{label}</span>
-      <strong className="mt-2 block truncate text-xl font-black leading-none tracking-normal">{value}</strong>
+    <div className={cn(
+      "min-w-0 rounded-xl border border-t-4 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md flex flex-col justify-between h-32",
+      config.border
+    )}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="block truncate text-[10px] font-black uppercase tracking-[0.12em] text-slate-400 mb-1">
+            {label}
+          </span>
+          <strong className="block truncate text-2xl font-black tracking-tight text-slate-950 leading-none">
+            {value}
+          </strong>
+        </div>
+        {Icon && (
+          <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border", config.iconColor)}>
+            <Icon size={16} />
+          </span>
+        )}
+      </div>
+      {subtext && (
+        <p className="text-[10px] font-semibold text-slate-500 leading-tight">
+          {subtext}
+        </p>
+      )}
     </div>
   );
 }
@@ -247,33 +310,34 @@ function FilterTabs({ activeFilter, onChange, freezes }) {
   ];
 
   return (
-    <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-1" aria-label="Freeze filters">
-      <div className="flex min-h-9 flex-wrap gap-1">
-        <span className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
-          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-          Filter
-        </span>
-        {options.map((filter) => {
-          const isActive = activeFilter === filter.id;
-          const count = freezes.filter(filter.predicate).length;
-          return (
-            <button
-              key={filter.id}
-              className={cn(
-                "inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-black transition",
-                isActive
-                  ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200"
-                  : "text-slate-600 hover:bg-white hover:text-slate-950"
-              )}
-              type="button"
-              onClick={() => onChange(filter.id)}
-            >
-              {filter.label}
-              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">{count}</span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex flex-wrap items-center gap-1.5" aria-label="Freeze filters">
+      <span className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-450">
+        <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+        Filter
+      </span>
+      {options.map((filter) => {
+        const isActive = activeFilter === filter.id;
+        const count = freezes.filter(filter.predicate).length;
+        return (
+          <button
+            key={filter.id}
+            className={cn(
+              "inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-4 text-[10px] font-black uppercase tracking-wider transition-all",
+              isActive
+                ? "bg-slate-950 text-white shadow-md animate-fadeIn"
+                : "bg-slate-50 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+            )}
+            type="button"
+            onClick={() => onChange(filter.id)}
+          >
+            {filter.label}
+            <span className={cn(
+              "rounded px-1.5 py-0.5 text-[9px] font-black font-mono",
+              isActive ? "bg-white/20 text-white" : "bg-slate-200/60 text-slate-500"
+            )}>{count}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -282,10 +346,10 @@ function BulkActionBar({ selectedCount, onClearSelection, onCreate, viewMode, se
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
       <div className="flex items-center gap-3">
-        <div className="flex rounded-lg bg-slate-200/50 p-1">
-          <button onClick={() => setViewMode("grid")} className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "grid" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700")}><LayoutGrid size={16} /></button>
-          <button onClick={() => setViewMode("table")} className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "table" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700")}><List size={16} /></button>
-          <button onClick={() => setViewMode("analytics")} className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "analytics" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700")}><BarChart3 size={16} /></button>
+        <div className="flex rounded-lg bg-slate-100/40 p-1 border border-slate-200/30">
+          <button onClick={() => setViewMode("grid")} className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "grid" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700")}><LayoutGrid size={18} /></button>
+          <button onClick={() => setViewMode("table")} className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "table" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700")}><List size={18} /></button>
+          <button onClick={() => setViewMode("analytics")} className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "analytics" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700")}><BarChart3 size={18} /></button>
         </div>
         <div className="h-5 w-px bg-slate-300"></div>
         <span className="text-xs font-extrabold text-slate-800">{selectedCount > 0 ? `${selectedCount} selected` : "Operational Actions"}</span>
@@ -827,7 +891,7 @@ function FreezePipeline() {
 // MAIN PAGE COMPONENT
 // ─────────────────────────────────────────
 const FreezePausePage = () => {
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("table");
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedFreeze, setSelectedFreeze] = useState(null);
@@ -877,39 +941,93 @@ const FreezePausePage = () => {
 
   return (
     <div className="freeze-pause-shell font-sans text-slate-950">
-      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-6">
-          <button className="h-10 px-4 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center gap-3 hover:bg-white transition-all">
-            <Globe size={14} className="text-slate-400" />
-            Main Branch • Koramangala
-            <ChevronDown size={14} className="text-slate-400" />
-          </button>
-        </div>
-        <div className="flex-1 max-w-md mx-12">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Search member, freeze ID, plan..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 text-xs font-semibold outline-none focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-100 transition-all" />
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"><Bell size={18} /></button>
-          <button onClick={openModal} className="h-10 px-6 rounded-xl bg-slate-950 text-white flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"><Plus size={18} /> Create Freeze Request</button>
-        </div>
-      </header>
-
       <div className="freeze-pause-workspace">
         <DashboardHeader 
           title="Retention Safeguard" 
           description="Manage temporary membership suspensions, automate validity adjustments, and retain members without permanent cancellations."
           stats={stats}
+          onCreate={openModal}
         />
         <section className="freeze-pause-workspace-sticky-header">
           <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_max-content]">
-            <label className="relative block min-w-0" htmlFor="freeze-search-main"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" /><input id="freeze-search-main" value={query} onChange={(e) => setQuery(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100" placeholder="Quick search freeze records..." type="search" /></label>
+            <label className="relative block min-w-0" htmlFor="freeze-search-main">
+              <Search 
+                className="pointer-events-none absolute left-3.5 text-slate-400 h-4 w-4" 
+                style={{ top: "50%", transform: "translateY(-50%)" }} 
+                aria-hidden="true" 
+              />
+              <input id="freeze-search-main" value={query} onChange={(e) => setQuery(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100" placeholder="Quick search freeze records..." type="search" />
+            </label>
             <div className="flex gap-2"><button className="h-11 px-4 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider hover:bg-emerald-100 transition-colors flex items-center gap-2 border border-emerald-100"><Zap size={14} /> AI Insights</button><button className="h-11 px-4 rounded-lg bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-colors border border-slate-200">Configure Policies</button></div>
           </div>
-          <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} freezes={freezes} />
-          <BulkActionBar selectedCount={0} onClearSelection={() => {}} onCreate={openModal} viewMode={viewMode} setViewMode={setViewMode} />
+          <div className="flex flex-wrap items-center justify-between gap-4 w-full border-t border-slate-100/80 pt-1.5 mt-1.5">
+            {/* Left Side: View Mode switcher */}
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-[10px] font-black text-slate-450 uppercase tracking-[0.14em] leading-none font-sans">
+                View:
+              </span>
+              <div className="flex rounded-xl bg-slate-50/60 p-1 gap-1 border border-slate-200/30">
+                <button 
+                  onClick={() => setViewMode("grid")} 
+                  className={cn(
+                    "w-9 h-8 flex items-center justify-center rounded-lg transition-all", 
+                    viewMode === "grid" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
+                  )}
+                  title="Grid View"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button 
+                  onClick={() => setViewMode("table")} 
+                  className={cn(
+                    "w-9 h-8 flex items-center justify-center rounded-lg transition-all", 
+                    viewMode === "table" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
+                  )}
+                  title="List View"
+                >
+                  <List size={18} />
+                </button>
+                <button 
+                  onClick={() => setViewMode("analytics")} 
+                  className={cn(
+                    "w-9 h-8 flex items-center justify-center rounded-lg transition-all", 
+                    viewMode === "analytics" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
+                  )}
+                  title="Analytics"
+                >
+                  <BarChart3 size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Right Side: Filter Tabs Pills */}
+            <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} freezes={freezes} />
+          </div>
+
+          {/* Action Row containing + Request Freeze, Bulk Approve, Clear */}
+          <div className="flex flex-wrap items-center justify-end gap-2 mt-2.5 pt-2 border-t border-slate-100/60">
+            <span className="text-[10px] font-black text-slate-450 uppercase tracking-[0.14em] leading-none font-sans mr-1">
+              Operational Actions:
+            </span>
+            <button 
+              onClick={openModal} 
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:border-slate-305 hover:bg-slate-50 hover:text-slate-950 transition-all shadow-sm active:scale-[0.98]"
+            >
+              <Plus size={13} /> Request Freeze
+            </button>
+            <button 
+              disabled
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 text-[10px] font-black uppercase tracking-wider text-slate-350 cursor-not-allowed opacity-50"
+            >
+              <Edit size={13} /> Bulk Approve
+            </button>
+            <button 
+              disabled
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 text-[10px] font-black uppercase tracking-wider text-slate-350 cursor-not-allowed opacity-50"
+            >
+              <X size={13} /> Clear
+            </button>
+          </div>
         </section>
         <FreezePipeline />
         <section className="pt-2">

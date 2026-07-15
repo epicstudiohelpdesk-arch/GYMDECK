@@ -31,6 +31,7 @@ import {
   Phone,
   Plus,
   RotateCcw,
+  RotateCw,
   Search,
   Settings,
   ShieldCheck,
@@ -57,105 +58,7 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 // ─────────────────────────────────────────
-// MOCK DATA
-// ─────────────────────────────────────────
-const INITIAL_EXPIRING_MEMBERS = [
-  {
-    id: "MBR-0842",
-    name: "Vikram Malhotra",
-    initials: "VM",
-    plan: "Premium Annual Elite",
-    category: "Premium",
-    expiryDate: "2026-05-19",
-    daysRemaining: 3,
-    renewalProbability: 94,
-    churnRisk: "Low",
-    lastAttendance: "Today, 06:45 AM",
-    pendingDues: 0,
-    lifetimeValue: 48500,
-    assignedTrainer: "Ankit Kumar",
-    lastContacted: "Yesterday",
-    status: "Contacted",
-    color: "#3b82f6",
-    gender: "Male"
-  },
-  {
-    id: "MBR-0721",
-    name: "Ananya Iyer",
-    initials: "AI",
-    plan: "Monthly Starter",
-    category: "General Fitness",
-    expiryDate: "2026-05-17",
-    daysRemaining: 1,
-    renewalProbability: 42,
-    churnRisk: "High",
-    lastAttendance: "8 days ago",
-    pendingDues: 2499,
-    lifetimeValue: 7497,
-    assignedTrainer: "None",
-    lastContacted: "Never",
-    status: "Not Contacted",
-    color: "#f59e0b",
-    gender: "Female"
-  },
-  {
-    id: "MBR-0912",
-    name: "Siddharth Rao",
-    initials: "SR",
-    plan: "Quarterly Transformation",
-    category: "Weight Loss",
-    expiryDate: "2026-05-23",
-    daysRemaining: 7,
-    renewalProbability: 78,
-    churnRisk: "Medium",
-    lastAttendance: "Yesterday",
-    pendingDues: 0,
-    lifetimeValue: 21000,
-    assignedTrainer: "Sneha Patel",
-    lastContacted: "3 days ago",
-    status: "Interested",
-    color: "#10b981",
-    gender: "Male"
-  },
-  {
-    id: "MBR-0554",
-    name: "Pooja Hegde",
-    initials: "PH",
-    plan: "Student Basic",
-    category: "Student",
-    expiryDate: "2026-05-16",
-    daysRemaining: 0,
-    renewalProbability: 15,
-    churnRisk: "Extreme",
-    lastAttendance: "14 days ago",
-    pendingDues: 0,
-    lifetimeValue: 4497,
-    assignedTrainer: "None",
-    lastContacted: "5 days ago",
-    status: "Lost",
-    color: "#ef4444",
-    gender: "Female"
-  },
-  {
-    id: "MBR-1022",
-    name: "Kabir Singh",
-    initials: "KS",
-    plan: "Corporate Wellness",
-    category: "Corporate",
-    expiryDate: "2026-06-15",
-    daysRemaining: 30,
-    renewalProbability: 88,
-    churnRisk: "Low",
-    lastAttendance: "2 hours ago",
-    pendingDues: 0,
-    lifetimeValue: 36000,
-    assignedTrainer: "Manav Rao",
-    lastContacted: "None",
-    status: "Renewed",
-    color: "#6366f1",
-    gender: "Male"
-  },
-];
+
 
 const getMemberPriority = (member) => {
   if (member.churnRisk === "High" || member.churnRisk === "Extreme") return "danger";
@@ -403,27 +306,27 @@ function BulkActionBar({ selectedCount, onClearSelection, onRenew, viewMode, set
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
       <div className="flex items-center gap-3">
-        <div className="flex rounded-lg bg-slate-200/50 p-1">
+        <div className="flex rounded-lg bg-slate-100/40 p-1 border border-slate-200/30">
           <button 
             onClick={() => setViewMode("grid")}
-            className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "grid" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700")}
+            className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "grid" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700")}
             title="Grid View"
           >
-            <LayoutGrid size={16} />
+            <LayoutGrid size={18} />
           </button>
           <button 
             onClick={() => setViewMode("table")}
-            className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "table" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700")}
+            className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "table" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700")}
             title="Table View"
           >
-            <List size={16} />
+            <List size={18} />
           </button>
           <button 
             onClick={() => setViewMode("analytics")}
-            className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "analytics" ? "bg-white shadow-sm text-slate-950" : "text-slate-500 hover:text-slate-700")}
+            className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "analytics" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700")}
             title="Analytics"
           >
-            <BarChart3 size={16} />
+            <BarChart3 size={18} />
           </button>
         </div>
         <div className="h-5 w-px bg-slate-300"></div>
@@ -481,7 +384,7 @@ function PriorityLane({ config, members, onProfile, onAction }) {
         <strong className={cn("text-2xl font-black leading-none", config.count)}>{members.length}</strong>
       </header>
 
-      <div className="grid items-start gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid items-start gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {members.map((m) => (
           <MemberCard
             key={m.id}
@@ -497,12 +400,13 @@ function PriorityLane({ config, members, onProfile, onAction }) {
 
 function MemberCard({ member, onProfile, onAction }) {
   const priority = getMemberPriority(member);
+  
   const statusStyles = {
-    "Not Contacted": "border-slate-200 bg-slate-50 text-slate-700",
-    "Contacted": "border-blue-200 bg-blue-50 text-blue-700",
-    "Interested": "border-amber-200 bg-amber-50 text-amber-700",
-    "Renewed": "border-emerald-200 bg-emerald-50 text-emerald-700",
-    "Lost": "border-rose-200 bg-rose-50 text-rose-700",
+    "Not Contacted": "bg-slate-100 text-slate-600 border-slate-200/50",
+    "Contacted": "bg-blue-50 text-blue-700 border-blue-100/80",
+    "Interested": "bg-amber-50 text-amber-700 border-amber-100/80",
+    "Renewed": "bg-emerald-50 text-emerald-700 border-emerald-100/80",
+    "Lost": "bg-rose-50 text-rose-700 border-rose-100/80",
   };
 
   const priorityBorder = {
@@ -511,55 +415,114 @@ function MemberCard({ member, onProfile, onAction }) {
     healthy: "border-l-emerald-500",
   }[priority];
 
+  const daysDanger = member.daysRemaining <= 3;
+  const daysWarning = member.daysRemaining > 3 && member.daysRemaining <= 7;
+  const daysColorClass = daysDanger 
+    ? "text-rose-600 bg-rose-50/50 border-rose-100/70" 
+    : daysWarning 
+    ? "text-amber-600 bg-amber-50/50 border-amber-100/70" 
+    : "text-slate-900 bg-slate-50/70 border-slate-100";
+
+  const scoreSuccess = member.renewalProbability > 80;
+  const scoreDanger = member.renewalProbability < 40;
+  const scoreColorClass = scoreSuccess 
+    ? "text-emerald-600 bg-emerald-50/50 border-emerald-100/70" 
+    : scoreDanger 
+    ? "text-rose-600 bg-rose-50/50 border-rose-100/70" 
+    : "text-slate-900 bg-slate-50/70 border-slate-100";
+
   return (
-    <article className={cn("min-w-0 rounded-xl border border-l-4 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-enterprise", priorityBorder)}>
-      <div className="flex gap-4">
-        <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-           <img src={window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : ""} alt={member.name} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex justify-between items-start mb-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className="text-base font-black text-slate-950 truncate">{member.name}</h3>
+    <article className={cn(
+      "min-w-0 max-w-[340px] rounded-2xl border border-l-4 bg-white p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-[2px] duration-200 flex flex-col justify-between h-full border-slate-200/80", 
+      priorityBorder
+    )}>
+      <div>
+        {/* Header section */}
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full overflow-hidden shrink-0 border-2 border-slate-100 bg-slate-50">
+            <img 
+              src={member.profilePhoto || (window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : "")} 
+              alt={member.name} 
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-1.5">
+              <h3 className="text-sm font-extrabold text-slate-950 truncate leading-none mb-0.5">{member.name}</h3>
+              <button className="p-1 -mr-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors shrink-0">
+                <MoreVertical size={14} />
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[9px] font-mono font-bold text-slate-400 leading-none">{member.id}</span>
+              <span className="text-[10px] text-slate-300">•</span>
               <StatusBadge className={statusStyles[member.status]} label={member.status} />
             </div>
-            <button className="p-1.5 -mr-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-              <MoreVertical size={16} />
-            </button>
-          </div>
-          <p className="text-xs font-bold text-slate-500 mb-3">{member.plan} · {member.id}</p>
-          
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            <MetricPill 
-              label="Expires In" 
-              value={`${member.daysRemaining} Days`} 
-              detail={member.expiryDate}
-              danger={member.daysRemaining <= 3}
-              warning={member.daysRemaining > 3 && member.daysRemaining <= 7}
-            />
-            <MetricPill 
-              label="Renewal Score" 
-              value={`${member.renewalProbability}%`} 
-              success={member.renewalProbability > 80}
-              danger={member.renewalProbability < 40}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => onAction?.("renew", member)} className="h-8 px-3 rounded-lg bg-slate-950 text-white text-[10px] font-black uppercase tracking-wider hover:bg-slate-800 transition-colors">
-              Renew Now
-            </button>
-            <button onClick={() => onAction?.("whatsapp", member)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center text-emerald-600 hover:bg-emerald-50">
-              <MessageSquare size={14} />
-            </button>
-            <button onClick={() => onAction?.("call", member)} className="h-8 w-8 rounded-lg border border-slate-200 flex items-center justify-center text-blue-600 hover:bg-blue-50">
-              <Phone size={14} />
-            </button>
-            <button onClick={onProfile} className="h-8 px-3 rounded-lg border border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 ml-auto">
-              Profile
-            </button>
           </div>
         </div>
+
+        {/* Plan Information */}
+        <div className="mt-3 flex items-center gap-1.5 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100">
+          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Plan:</span>
+          <span className="text-[11px] font-extrabold text-slate-700 truncate">{member.plan}</span>
+        </div>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {/* Expires In */}
+          <div className={cn("rounded-xl border p-2 flex flex-col justify-between min-h-[52px]", daysColorClass)}>
+            <span className="block text-[8px] font-black uppercase tracking-wider text-slate-450">Expires In</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-xs font-black leading-none">{member.daysRemaining} Days</span>
+            </div>
+            <span className="block text-[8px] font-semibold text-slate-400 mt-0.5">{member.expiryDate}</span>
+          </div>
+
+          {/* Renewal Score */}
+          <div className={cn("rounded-xl border p-2 flex flex-col justify-between min-h-[52px]", scoreColorClass)}>
+            <span className="block text-[8px] font-black uppercase tracking-wider text-slate-450">Renewal Score</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-xs font-black leading-none">{member.renewalProbability}%</span>
+            </div>
+            <div className="w-full bg-slate-200/50 h-1 rounded-full overflow-hidden mt-1">
+              <div 
+                className={cn(
+                  "h-full rounded-full",
+                  scoreSuccess ? "bg-emerald-500" : scoreDanger ? "bg-rose-500" : "bg-amber-500"
+                )} 
+                style={{ width: `${member.renewalProbability}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Toolbar */}
+      <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-slate-100">
+        <button 
+          onClick={() => onAction?.("renew", member)} 
+          className="h-8 px-3 rounded-lg bg-slate-950 text-white text-[9px] font-black uppercase tracking-wider hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+        >
+          <RotateCw size={10} /> Renew
+        </button>
+        <button 
+          onClick={() => onAction?.("whatsapp", member)} 
+          className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white flex items-center justify-center text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+        >
+          <MessageSquare size={13} />
+        </button>
+        <button 
+          onClick={() => onAction?.("call", member)} 
+          className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white flex items-center justify-center text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all"
+        >
+          <Phone size={13} />
+        </button>
+        <button 
+          onClick={onProfile} 
+          className="h-8 px-2.5 rounded-lg border border-slate-200 text-slate-600 text-[9px] font-black uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-colors ml-auto"
+        >
+          Profile
+        </button>
       </div>
     </article>
   );
@@ -567,8 +530,8 @@ function MemberCard({ member, onProfile, onAction }) {
 
 function StatusBadge({ className, label }) {
   return (
-    <mark className={cn("inline-flex min-h-7 items-center gap-2 rounded-md border px-2.5 text-[11px] font-black not-italic", className)}>
-      <span className="h-2 w-2 rounded-full bg-current" aria-hidden="true" />
+    <mark className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider not-italic leading-none", className)}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
       {label}
     </mark>
   );
@@ -665,7 +628,7 @@ const MemberProfileDrawer = ({ isOpen, onClose, member, onAction }) => {
         <header className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-950 text-white">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden bg-slate-800">
-               <img src={window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : ""} alt="" />
+               <img src={member.profilePhoto || (window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : "")} alt="" />
             </div>
             <div>
               <h2 className="text-xl font-black">{member.name}</h2>
@@ -958,27 +921,27 @@ const RenewalModal = ({ isOpen, onClose, member }) => {
 // ─────────────────────────────────────────
 function RetentionFunnel() {
   const stages = [
-    { label: "Total Expiring", value: 42, color: "bg-slate-100 text-slate-700" },
-    { label: "Contacted", value: 28, color: "bg-blue-50 text-blue-700" },
-    { label: "Interested", value: 15, color: "bg-amber-50 text-amber-700" },
-    { label: "Renewed", value: 12, color: "bg-emerald-50 text-emerald-700" },
-    { label: "Lost Members", value: 4, color: "bg-rose-50 text-rose-700" },
+    { label: "Total Expiring", value: 42, color: "bg-slate-50 border-slate-200 text-slate-700" },
+    { label: "Contacted", value: 28, color: "bg-blue-50/60 border-blue-150 text-blue-700" },
+    { label: "Interested", value: 15, color: "bg-amber-50/60 border-amber-150 text-amber-700" },
+    { label: "Renewed", value: 12, color: "bg-emerald-50/60 border-emerald-150 text-emerald-700" },
+    { label: "Lost Members", value: 4, color: "bg-rose-50/60 border-rose-150 text-rose-700" },
   ];
 
   return (
-    <section className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm mb-6">
-      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Retention Pipeline</h3>
-      <div className="flex items-center gap-1 h-12">
+    <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-2.5 mb-4">
+      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Retention Pipeline</h3>
+      <div className="flex items-center gap-1.5 h-16">
         {stages.map((stage, i) => (
           <div 
             key={i} 
-            className={cn("relative flex-1 h-full flex flex-col items-center justify-center transition-all hover:scale-[1.02] border border-slate-100 rounded-md", stage.color)}
+            className={cn("relative flex-1 h-full flex flex-col items-center justify-center transition-all hover:scale-[1.01] border rounded-xl shadow-sm px-2 py-2.5", stage.color)}
             title={`${stage.label}: ${stage.value}`}
           >
-            <span className="text-[11px] font-black leading-none">{stage.value}</span>
-            <span className="text-[8px] font-bold uppercase tracking-tighter opacity-80 mt-1">{stage.label}</span>
+            <span className="text-lg font-black leading-tight">{stage.value}</span>
+            <span className="text-[9px] font-black uppercase tracking-wider opacity-75 mt-0.5">{stage.label}</span>
             {i < stages.length - 1 && (
-               <ChevronRight size={12} className="absolute -right-1.5 z-10 text-slate-300" />
+               <ChevronRight size={14} className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-350 bg-white rounded-full border border-slate-200 p-0.5 shadow-sm" />
             )}
           </div>
         ))}
@@ -997,7 +960,112 @@ const ExpiringMembershipsPage = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
-  const [members] = useState(INITIAL_EXPIRING_MEMBERS);
+  const [members, setMembers] = useState([]);
+
+  const fetchDBMembers = useCallback(async () => {
+    try {
+      const dbMembers = await window.__TAURI__.core.invoke("get_members_command", { limit: 10000, offset: 0 }).catch(() => []);
+      const dbPlans = await window.__TAURI__.core.invoke("get_plans_command").catch(() => []);
+      
+      const plansMap = {};
+      if (dbPlans) {
+        dbPlans.forEach(p => {
+          plansMap[p.id] = p;
+        });
+      }
+
+      const now = new Date();
+      const mappedMembers = (dbMembers || [])
+        .map(m => {
+          if (!m.expires_at) return null;
+          const expiry = new Date(m.expires_at);
+          const diffTime = expiry - now;
+          const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          // Only show those with <= 30 days remaining (or already expired)
+          if (daysRemaining > 30) return null;
+
+          const planObj = m.membership_plan_id ? plansMap[m.membership_plan_id] : null;
+          const planName = planObj ? planObj.name : "General Membership";
+          const planPrice = planObj ? planObj.price : 1500;
+          
+          // Try to extract category from plan description or notes
+          let category = "General Fitness";
+          if (planObj && planObj.description) {
+            if (planObj.description.includes("||")) {
+              const parts = planObj.description.split("||");
+              category = parts[0] || "General Fitness";
+            } else {
+              category = planObj.description;
+            }
+          }
+
+          // Calculate initials
+          const initials = m.full_name
+            ? m.full_name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)
+            : "M";
+
+          let churnRisk = "Low";
+          let status = "Renewed";
+          let renewalProbability = 85;
+          let color = "#10b981";
+
+          if (daysRemaining <= 3) {
+            churnRisk = "Extreme";
+            status = "Not Contacted";
+            renewalProbability = 15;
+            color = "#ef4444";
+          } else if (daysRemaining <= 10) {
+            churnRisk = "High";
+            status = "Contacted";
+            renewalProbability = 42;
+            color = "#f59e0b";
+          } else if (daysRemaining <= 20) {
+            churnRisk = "Medium";
+            status = "Interested";
+            renewalProbability = 78;
+            color = "#3b82f6";
+          }
+
+          // Extract trainer from notes or defaults
+          let assignedTrainer = "None";
+          if (m.notes && m.notes.includes("Trainer:")) {
+            const matches = m.notes.match(/Trainer:\s*([^|]+)/);
+            if (matches && matches[1]) assignedTrainer = matches[1].trim();
+          }
+
+          return {
+            id: m.member_code || `GD-${m.id.substring(0,4).toUpperCase()}`,
+            name: m.full_name,
+            initials,
+            plan: planName,
+            category,
+            expiryDate: expiry.toISOString().split("T")[0],
+            daysRemaining,
+            renewalProbability,
+            churnRisk,
+            lastAttendance: "Yesterday",
+            pendingDues: 0,
+            lifetimeValue: planPrice,
+            assignedTrainer,
+            lastContacted: "Never",
+            status,
+            color,
+            gender: m.gender || "Male",
+            profilePhoto: m.profile_photo_path || null
+          };
+        })
+        .filter(Boolean);
+
+      setMembers(mappedMembers);
+    } catch (err) {
+      console.error("GymDeck: Failed to load members from Tauri DB:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDBMembers();
+  }, [fetchDBMembers]);
 
   const stats = useMemo(() => ({
     totalExpiring: members.length,
@@ -1013,6 +1081,7 @@ const ExpiringMembershipsPage = () => {
       if (!matchesQuery) return false;
       if (activeFilter === "critical") return m.churnRisk === "High" || m.churnRisk === "Extreme";
       if (activeFilter === "today") return m.daysRemaining === 0;
+      if (activeFilter === "premium") return m.category === "Premium";
       return true;
     });
   }, [members, query, activeFilter]);
@@ -1059,28 +1128,107 @@ const ExpiringMembershipsPage = () => {
         <section className="expiring-memberships-workspace-sticky-header">
           <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_max-content]">
             <label className="relative block min-w-0" htmlFor="retention-search-main">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+              <Search 
+                size={16} 
+                className="pointer-events-none absolute left-4 text-slate-400" 
+                style={{ top: "50%", transform: "translateY(-50%)" }}
+              />
               <input
                 id="retention-search-main"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-xs font-semibold text-slate-900 outline-none transition focus:border-slate-450 focus:bg-white focus:ring-4 focus:ring-slate-100"
                 placeholder="Quick search expiring members..."
                 type="search"
               />
             </label>
             <div className="flex gap-2">
-              <button className="h-11 px-4 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider hover:bg-emerald-100 transition-colors flex items-center gap-2 border border-emerald-100">
+              <button className="h-11 px-4 rounded-xl bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center gap-2 border border-emerald-100 shadow-sm">
                 <Zap size={14} />
                 AI Insights
               </button>
-              <button className="h-11 px-4 rounded-lg bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-colors border border-slate-200">
+              <button className="h-11 px-4 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors border border-slate-200 shadow-sm">
                 Revenue Forecast
               </button>
             </div>
           </div>
-          <FilterTabs activeFilter={activeFilter} onChange={setActiveFilter} members={members} />
-          <BulkActionBar selectedCount={0} onClearSelection={() => {}} onRenew={() => {}} viewMode={viewMode} setViewMode={setViewMode} />
+
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-3.5 mt-3.5">
+            {/* Left Side: View Mode switcher */}
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-black text-slate-450 uppercase tracking-[0.14em] leading-none font-sans">
+                View
+              </span>
+              <div className="flex rounded-xl bg-slate-50/60 p-1 gap-1 border border-slate-200/30">
+                <button 
+                  onClick={() => setViewMode("grid")}
+                  className={cn(
+                    "w-9 h-8 flex items-center justify-center rounded-lg transition-all", 
+                    viewMode === "grid" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
+                  )}
+                  title="Grid View"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button 
+                  onClick={() => setViewMode("table")}
+                  className={cn(
+                    "w-9 h-8 flex items-center justify-center rounded-lg transition-all", 
+                    viewMode === "table" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
+                  )}
+                  title="Table View"
+                >
+                  <List size={18} />
+                </button>
+                <button 
+                  onClick={() => setViewMode("analytics")}
+                  className={cn(
+                    "w-9 h-8 flex items-center justify-center rounded-lg transition-all", 
+                    viewMode === "analytics" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
+                  )}
+                  title="Analytics"
+                >
+                  <BarChart3 size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Right Side: Filter Tabs Pills */}
+            <div className="flex flex-wrap items-center gap-1.5" aria-label="Retention filters">
+              <span className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-450">
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                Filter
+              </span>
+              {[
+                { id: "all", label: "All Members", predicate: () => true },
+                { id: "critical", label: "Critical Risk", predicate: (m) => m.churnRisk === "High" || m.churnRisk === "Extreme" },
+                { id: "today", label: "Expiring Today", predicate: (m) => m.daysRemaining === 0 },
+                { id: "premium", label: "High Value", predicate: (m) => m.category === "Premium" },
+              ].map((filter) => {
+                const isActive = activeFilter === filter.id;
+                const count = members.filter(filter.predicate).length;
+                return (
+                  <button
+                    key={filter.id}
+                    className={cn(
+                      "inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-4 text-[10px] font-black uppercase tracking-wider transition-all",
+                      isActive
+                        ? "bg-slate-950 text-white shadow-md animate-fadeIn"
+                        : "bg-slate-50 border border-slate-200/80 text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                    )}
+                    type="button"
+                    onClick={() => setActiveFilter(filter.id)}
+                  >
+                    {filter.label}
+                    <span className={cn(
+                      "rounded px-1.5 py-0.5 text-[9px] font-black font-mono",
+                      isActive ? "bg-white/20 text-white" : "bg-slate-200/60 text-slate-500"
+                    )}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
         <RetentionFunnel />

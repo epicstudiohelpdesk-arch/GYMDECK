@@ -1,6 +1,8 @@
 import "./styles.css";
 import { mountIntroScreen } from "./IntroScreen.jsx";
 
+let authErrorTimeout = null;
+
 // Fix macOS NSSpellServer timeout spam by disabling spellcheck globally
 const disableSpellcheck = (el) => {
   if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
@@ -276,7 +278,17 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
 
       // Utility to inject inline errors into placeholders and trigger shake
       const clearErrors = () => {
-        form.querySelectorAll('.form-error-message').forEach(el => el.remove());
+        if (authErrorTimeout) {
+          clearTimeout(authErrorTimeout);
+          authErrorTimeout = null;
+        }
+        form.querySelectorAll('.form-error-message').forEach(el => {
+          el.classList.remove('is-visible');
+          setTimeout(() => el.remove(), 250);
+        });
+        form.querySelectorAll('.remember-me-checkbox').forEach(el => {
+          el.classList.remove('is-hidden');
+        });
         form.querySelectorAll('.field.has-error').forEach(el => {
           el.classList.remove('has-error');
           const input = el.querySelector('input');
@@ -306,21 +318,56 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
         fieldWrap.classList.add('input-shake');
       };
 
+      const showLoginError = (errorMessage) => {
+        clearErrors();
+
+        // Highlight + shake email and password fields on auth failure
+        [emailInput, passwordInput].forEach(input => {
+          if (input) {
+            const fieldWrap = input.closest('.field');
+            if (fieldWrap) {
+              fieldWrap.classList.add('has-error');
+              fieldWrap.classList.remove('input-shake');
+              void fieldWrap.offsetWidth;
+              fieldWrap.classList.add('input-shake');
+            }
+          }
+        });
+
+        // Hide remember me checkbox
+        form.querySelectorAll('.remember-me-checkbox').forEach(el => {
+          el.classList.add('is-hidden');
+        });
+
+        // Display error inside remember-me-wrap
+        const wrap = form.querySelector('.remember-me-wrap');
+        if (wrap) {
+          const errorEl = document.createElement('div');
+          errorEl.className = 'form-error-message';
+          errorEl.textContent = errorMessage;
+          wrap.appendChild(errorEl);
+          
+          // Force reflow and add class for transition
+          void errorEl.offsetWidth;
+          errorEl.classList.add('is-visible');
+        }
+
+        if (submitButton) {
+          submitButton.removeAttribute("disabled");
+          submitButton.textContent = isSignup ? "Sign up" : "Sign in";
+        }
+
+        // Auto-clear after 1.3 seconds
+        authErrorTimeout = setTimeout(() => {
+          clearErrors();
+        }, 1300);
+      };
+
       // In Tauri v2, window.__TAURI_INTERNALS__ is sometimes the global.
       // The safest way is to check window.__TAURI__ existence.
       if (!window.__TAURI__) {
           console.warn("Tauri environment not detected. Native authentication requires the desktop app.");
-          
-          clearErrors();
-          if (submitButton && passwordInput) {
-            const metaRow = submitButton.form.querySelector('.meta-row');
-            const errorEl = document.createElement('div');
-            errorEl.className = 'form-error-message';
-            errorEl.textContent = 'Native backend disconnected.';
-            if (metaRow) {
-              metaRow.prepend(errorEl);
-            }
-          }
+          showLoginError("Native backend disconnected.");
           return;
       }
 
@@ -401,37 +448,8 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
         } catch (error) {
           // Backend returns a generic safe error string
           console.error("Native Auth Error:", error);
-          
-          clearErrors();
-          
-          // Highlight + shake email and password fields on auth failure
-          if (!isSignup) {
-            [emailInput, passwordInput].forEach(input => {
-              if (input) {
-                const fieldWrap = input.closest('.field');
-                if (fieldWrap) {
-                  fieldWrap.classList.add('has-error');
-                  fieldWrap.classList.remove('input-shake');
-                  void fieldWrap.offsetWidth;
-                  fieldWrap.classList.add('input-shake');
-                }
-              }
-            });
-          }
-          
-          // Display error alongside the forgot password link
-          const metaRow = submitButton.form.querySelector('.meta-row');
-          const errorEl = document.createElement('div');
-          errorEl.className = 'form-error-message';
-          errorEl.textContent = typeof error === 'string' ? error.replace(/^Authentication Error:\s*/i, '') : 'Sign in failed.';
-          if (metaRow) {
-            metaRow.prepend(errorEl);
-          }
-          
-          if (submitButton) {
-            submitButton.removeAttribute("disabled");
-            submitButton.textContent = isSignup ? "Sign up" : "Sign in";
-          }
+          const errMsg = typeof error === 'string' ? error.replace(/^Authentication Error:\s*/i, '') : 'Sign in failed.';
+          showLoginError(errMsg);
         }
         return;
       }
