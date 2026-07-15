@@ -897,91 +897,91 @@ body.is-transitioning .auth-page {
 /* Larger Screen Responsiveness (1440px and up) */
 @media (min-width: 1440px) {
   .auth-page {
-    width: min(1400px, 92vw);
-    height: min(880px, calc(100vh - 100px));
+    width: min(1560px, 94vw);
+    height: min(920px, calc(100vh - 80px));
     border-radius: 40px;
   }
 
   .auth-intro {
-    padding: 64px;
+    padding: 72px;
   }
 
   .intro-copy h1 {
-    font-size: 3.4rem;
+    font-size: 3.8rem;
   }
 
   .intro-text {
-    font-size: 0.98rem;
-    max-width: 480px;
+    font-size: 1.02rem;
+    max-width: 520px;
   }
 
   .features-grid {
-    gap: 28px 32px;
-    margin-top: 36px;
+    gap: 32px 40px;
+    margin-top: 40px;
   }
 
   .feature-icon {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
   }
 
   .feature-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
   }
 
   .feature-text strong {
-    font-size: 0.92rem;
+    font-size: 0.98rem;
   }
 
   .feature-text span {
-    font-size: 0.8rem;
-  }
-
-  .privacy-badge {
-    margin-top: 36px;
-  }
-
-  .auth-stage {
-    padding: 64px;
-  }
-
-  .phone-card {
-    max-width: 460px;
-    padding: 48px 40px;
-    border-radius: 28px;
-    gap: 24px;
-  }
-
-  .panel-header h2 {
-    font-size: 1.8rem;
-  }
-
-  .panel-header p {
-    font-size: 0.88rem;
-  }
-
-  .field-label {
     font-size: 0.84rem;
   }
 
+  .privacy-badge {
+    margin-top: 40px;
+  }
+
+  .auth-stage {
+    padding: 72px;
+  }
+
+  .phone-card {
+    max-width: 500px;
+    padding: 56px 48px;
+    border-radius: 32px;
+    gap: 28px;
+  }
+
+  .panel-header h2 {
+    font-size: 2.0rem;
+  }
+
+  .panel-header p {
+    font-size: 0.94rem;
+  }
+
+  .field-label {
+    font-size: 0.88rem;
+  }
+
   .input-wrap {
-    min-height: 52px;
+    min-height: 56px;
   }
 
   .input-wrap input {
-    font-size: 0.92rem;
-    height: 50px;
+    font-size: 0.98rem;
+    height: 54px;
   }
 
   .primary-btn {
-    min-height: 52px;
-    font-size: 0.94rem;
+    min-height: 56px;
+    font-size: 1.0rem;
   }
   
   .meta-row {
-    font-size: 0.82rem;
+    font-size: 0.86rem;
   }
 
   .auth-stage::before {
