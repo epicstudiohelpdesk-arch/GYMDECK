@@ -513,3 +513,103 @@ document.querySelectorAll("a[href]").forEach((link) => {
     navigateWithTransition(destination, link.getAttribute("data-enter-state"), link);
   });
 });
+
+// Handle Forgot Password Verification
+const forgotForm = document.querySelector(".auth-page-forgot .auth-form");
+if (forgotForm) {
+  const emailInput = forgotForm.querySelector('input[type="email"]');
+  const sendButton = forgotForm.querySelector(".primary-btn");
+
+  const clearForgotErrors = () => {
+    if (authErrorTimeout) {
+      clearTimeout(authErrorTimeout);
+      authErrorTimeout = null;
+    }
+    forgotForm.querySelectorAll('.form-error-message').forEach(el => {
+      el.classList.remove('is-visible');
+      setTimeout(() => {
+        el.remove();
+        const metaRow = forgotForm.querySelector('.meta-row');
+        if (metaRow && !metaRow.querySelector('.form-error-message')) {
+          metaRow.style.display = 'none';
+        }
+      }, 250);
+    });
+    const fieldWrap = emailInput?.closest('.field');
+    if (fieldWrap) {
+      fieldWrap.classList.remove('has-error');
+    }
+  };
+
+  const showForgotError = (message) => {
+    clearForgotErrors();
+
+    const fieldWrap = emailInput?.closest('.field');
+    if (fieldWrap) {
+      fieldWrap.classList.add('has-error');
+      fieldWrap.classList.remove('input-shake');
+      void fieldWrap.offsetWidth;
+      fieldWrap.classList.add('input-shake');
+    }
+
+    // Prepend error to meta-row
+    const metaRow = forgotForm.querySelector('.meta-row');
+    if (metaRow) {
+      metaRow.style.display = 'block'; // Make sure meta-row is visible
+      const errorEl = document.createElement('div');
+      errorEl.className = 'form-error-message';
+      errorEl.style.position = 'relative'; // static flow
+      errorEl.textContent = message;
+      metaRow.appendChild(errorEl);
+
+      void errorEl.offsetWidth;
+      errorEl.classList.add('is-visible');
+    }
+
+    if (sendButton) {
+      sendButton.removeAttribute("disabled");
+    }
+
+    authErrorTimeout = setTimeout(() => {
+      clearForgotErrors();
+    }, 1300);
+  };
+
+  sendButton?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    clearForgotErrors();
+
+    const email = emailInput?.value.trim();
+    if (!email) {
+      showForgotError("Email address is required");
+      return;
+    }
+
+    if (sendButton) {
+      sendButton.setAttribute("disabled", "true");
+    }
+
+    if (!window.__TAURI__) {
+      console.warn("Tauri backend not detected.");
+      showForgotError("Native backend disconnected.");
+      return;
+    }
+
+    try {
+      const exists = await window.__TAURI__.core.invoke("check_email_exists_command", { email });
+      if (!exists) {
+        showForgotError("Email does not exist");
+      } else {
+        // Email exists! Proceed to OTP page
+        if (sendButton) {
+          sendButton.removeAttribute("disabled");
+        }
+        const destination = forgotForm.getAttribute("action") || "./otp.html";
+        navigateWithTransition(destination, "auth", sendButton);
+      }
+    } catch (err) {
+      console.error("Check email error:", err);
+      showForgotError("Verification failed.");
+    }
+  });
+}

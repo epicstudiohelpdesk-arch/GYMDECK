@@ -214,3 +214,23 @@ pub async fn delete_account_command(
 
     delete_result.map_err(|e| AppError::Database(e.to_string()))
 }
+
+#[tauri::command]
+pub async fn check_email_exists_command(
+    state: State<'_, AppState>,
+    email: String,
+) -> Result<bool, AppError> {
+    let conn = state.db.pool.get()
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+    let exists: Result<i64, _> = conn.query_row(
+        "SELECT COUNT(*) FROM users WHERE email = ?;",
+        [&email],
+        |row| row.get(0)
+    );
+
+    match exists {
+        Ok(count) => Ok(count > 0),
+        Err(_) => Ok(false),
+    }
+}

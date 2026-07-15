@@ -22,7 +22,7 @@ use tauri::Manager;
 use commands::auth_commands::{
     login_command, logout_command, signup_command,
     sensitive_action_reauth_command, restore_session_command, lock_session_command,
-    delete_account_command, AppState
+    delete_account_command, check_email_exists_command, AppState
 };
 use commands::business_commands::{
     get_members_command, create_member_command, get_plans_command, create_plan_command, delete_plan_command, get_member_documents_command, soft_delete_member_command, permanent_delete_member_command, permanent_delete_members_command, get_past_members_command,
@@ -153,6 +153,7 @@ pub fn run() {
         sensitive_action_reauth_command,
         restore_session_command,
         lock_session_command,
+        check_email_exists_command,
         get_members_command,
         create_member_command,
         get_plans_command,
