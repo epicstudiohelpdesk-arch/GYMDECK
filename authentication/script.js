@@ -3,6 +3,22 @@ import { mountIntroScreen } from "./IntroScreen.jsx";
 
 let authErrorTimeout = null;
 
+// Helper to check for 3 consecutive ascending or descending digits (e.g. 123, 321)
+const hasSequentialDigits = (str) => {
+  for (let i = 0; i <= str.length - 3; i++) {
+    const c1 = str.charCodeAt(i);
+    const c2 = str.charCodeAt(i + 1);
+    const c3 = str.charCodeAt(i + 2);
+    
+    // Check if all three characters are digits (0-9)
+    if (c1 >= 48 && c1 <= 57 && c2 >= 48 && c2 <= 57 && c3 >= 48 && c3 <= 57) {
+      if (c2 === c1 + 1 && c3 === c2 + 1) return true; // ascending (123)
+      if (c2 === c1 - 1 && c3 === c2 - 1) return true; // descending (321)
+    }
+  }
+  return false;
+};
+
 // Fix macOS NSSpellServer timeout spam by disabling spellcheck globally
 const disableSpellcheck = (el) => {
   if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
@@ -402,6 +418,12 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
           }
           if (!passwordInput.value.trim()) {
             showError(passwordInput, "Password required");
+            hasErrors = true;
+          } else if (passwordInput.value.length < 6) {
+            showError(passwordInput, "Password must be at least 6 characters");
+            hasErrors = true;
+          } else if (hasSequentialDigits(passwordInput.value)) {
+            showError(passwordInput, "Sequential numbers (e.g. 123) not allowed");
             hasErrors = true;
           }
         } else {
