@@ -446,8 +446,24 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
         }
 
         try {
+          // Keep a temporary copy of the remember keys and stored accounts before purge
+          const tempStoredAccounts = localStorage.getItem('gymdeck_stored_accounts');
+          const tempRememberedEmail = localStorage.getItem('gymdeck_remembered_email');
+          const tempRememberExpires = localStorage.getItem('gymdeck_remember_expires');
+
           // Hard Purge of old business mock data on any login/signup transition
           window.localStorage.clear();
+
+          // Restore them immediately back to localStorage
+          if (tempStoredAccounts) {
+            localStorage.setItem('gymdeck_stored_accounts', tempStoredAccounts);
+          }
+          if (tempRememberedEmail) {
+            localStorage.setItem('gymdeck_remembered_email', tempRememberedEmail);
+          }
+          if (tempRememberExpires) {
+            localStorage.setItem('gymdeck_remember_expires', tempRememberExpires);
+          }
 
           let response;
           if (isSignup && nameInput) {
@@ -475,9 +491,32 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
           
           if (response.success) {
              if (isSignup) {
+                 // Save the signup account's credentials to device storage
+                 const accountsStr = localStorage.getItem('gymdeck_stored_accounts') || '{}';
+                 let accounts = {};
+                 try { accounts = JSON.parse(accountsStr); } catch (e) {}
+                 accounts[emailInput.value.trim().toLowerCase()] = passwordInput.value;
+                 localStorage.setItem('gymdeck_stored_accounts', JSON.stringify(accounts));
+
+                 // Deactivate remember me for the previous account
+                 localStorage.removeItem('gymdeck_remembered_email');
+                 localStorage.removeItem('gymdeck_remember_expires');
+
                  // For signup, we transition to login page
                  navigateWithTransition("./index.html", "auth", submitButton);
              } else {
+                 // Save the signin account's credentials to device storage (always keep it updated)
+                 const accountsStr = localStorage.getItem('gymdeck_stored_accounts') || '{}';
+                 let accounts = {};
+                 try { accounts = JSON.parse(accountsStr); } catch (e) {}
+                 accounts[emailInput.value.trim().toLowerCase()] = passwordInput.value;
+                 localStorage.setItem('gymdeck_stored_accounts', JSON.stringify(accounts));
+
+                 const rememberCheckbox = form.querySelector('#remember');
+                 if (rememberCheckbox && rememberCheckbox.checked) {
+                   localStorage.setItem('gymdeck_remembered_email', emailInput.value.trim().toLowerCase());
+                   localStorage.setItem('gymdeck_remember_expires', (Date.now() + 3 * 24 * 60 * 60 * 1000).toString());
+                 }
                  navigateWithTransition(destination, enterState, submitButton);
              }
           }
@@ -635,3 +674,176 @@ if (forgotForm) {
     }
   });
 }
+
+// --- Remember Me Auto-Fill & Disclaimer Modal ---
+
+// Global to track checkbox state before showing modal
+let previousCheckedState = false;
+
+const createRememberModal = () => {
+  if (document.getElementById('remember-me-modal')) return;
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'remember-me-modal';
+  backdrop.className = 'remember-modal-backdrop';
+
+  backdrop.innerHTML = `
+    <div class="remember-modal-card">
+      <div class="remember-modal-header">
+        <h3 class="remember-modal-title">Terms and Conditions</h3>
+        <p class="remember-modal-subtitle">Your Agreement</p>
+      </div>
+      <div class="remember-modal-content">
+        <p class="remember-modal-intro">Welcome to GymDeck. By using our Remember Me feature, you agree to the following terms and conditions:</p>
+        
+        <h4 class="remember-modal-section-title">1. Automated Detection</h4>
+        <p class="remember-modal-section-text">Once enabled and after a successful sign-in, your email and password credentials will be securely autodetected and autofilled inside the area for 3 days / 72 hours.</p>
+        
+        <h4 class="remember-modal-section-title">2. Direct Dashboard Entry</h4>
+        <p class="remember-modal-section-text">You won't need to re-enter your credentials. You can simply click the sign-in button and continue directly to your GymDeck dashboard.</p>
+        
+        <h4 class="remember-modal-section-title">3. Security Disclaimer</h4>
+        <p class="remember-modal-section-text">Any person with access to this device may be able to sign in to your account. Please use this feature only on trusted, secure, and private personal devices, be cautious.</p>
+      </div>
+      <div class="remember-modal-actions">
+        <button type="button" class="remember-modal-btn remember-modal-btn-cancel" id="remember-modal-cancel">Reject</button>
+        <button type="button" class="remember-modal-btn remember-modal-btn-confirm" id="remember-modal-accept">Agree</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(backdrop);
+
+  const checkbox = document.getElementById('remember');
+
+  const closeWithAccept = () => {
+    backdrop.classList.remove('is-active');
+    if (checkbox) checkbox.checked = true;
+  };
+
+  const closeWithCancel = () => {
+    backdrop.classList.remove('is-active');
+    if (checkbox) checkbox.checked = previousCheckedState;
+  };
+
+  document.getElementById('remember-modal-accept').addEventListener('click', closeWithAccept);
+  document.getElementById('remember-modal-cancel').addEventListener('click', closeWithCancel);
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) {
+      closeWithCancel();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && backdrop.classList.contains('is-active')) {
+      closeWithCancel();
+    }
+  });
+};
+
+const initRememberMeFeature = () => {
+  const checkbox = document.getElementById('remember');
+  const emailInput = document.querySelector('.auth-form input[type="email"]');
+  const passwordInput = document.querySelector('.auth-form input[type="password"]') || 
+                        document.querySelector('.auth-form input[placeholder*="password"]');
+  
+  if (!checkbox) return;
+
+  createRememberModal();
+
+  const backdrop = document.getElementById('remember-me-modal');
+
+  // Helper to autofill password if email exists in stored accounts
+  const checkAndAutofillPassword = () => {
+    if (!emailInput || !passwordInput) return;
+    const emailVal = emailInput.value.trim().toLowerCase();
+    if (!emailVal) return;
+
+    const accountsStr = localStorage.getItem('gymdeck_stored_accounts') || '{}';
+    let accounts = {};
+    try { accounts = JSON.parse(accountsStr); } catch (e) {}
+
+    if (accounts[emailVal]) {
+      passwordInput.value = accounts[emailVal];
+    }
+  };
+
+  checkbox.addEventListener('change', function() {
+    if (!this.checked) {
+      localStorage.removeItem('gymdeck_remembered_email');
+      localStorage.removeItem('gymdeck_remember_expires');
+    } else {
+      // If checked, autofill password if email is recognized on device
+      checkAndAutofillPassword();
+    }
+  });
+
+  // As the user types their email, check if it matches a stored account. If remember is checked, autofill password!
+  if (emailInput) {
+    const handleEmailInput = () => {
+      if (checkbox && checkbox.checked) {
+        checkAndAutofillPassword();
+      }
+    };
+    emailInput.addEventListener('input', handleEmailInput);
+    emailInput.addEventListener('change', handleEmailInput);
+    emailInput.addEventListener('blur', handleEmailInput);
+  }
+
+  // Trigger modal when clicking (T&C apply) link
+  const tcLink = document.getElementById('tc-link');
+  if (tcLink && backdrop) {
+    tcLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      previousCheckedState = checkbox.checked; // Capture current state
+      backdrop.classList.add('is-active');
+      const confirmBtn = document.getElementById('remember-modal-accept');
+      if (confirmBtn) {
+        setTimeout(() => confirmBtn.focus(), 100);
+      }
+    });
+  }
+};
+
+const autofillRememberedCredentials = () => {
+  const emailInput = document.querySelector('.auth-form input[type="email"]');
+  const passwordInput = document.querySelector('.auth-form input[type="password"]') || 
+                        document.querySelector('.auth-form input[placeholder*="password"]');
+  const checkbox = document.getElementById('remember');
+
+  if (!emailInput || !passwordInput || !checkbox) return;
+
+  const rememberedEmail = localStorage.getItem('gymdeck_remembered_email');
+  const expires = localStorage.getItem('gymdeck_remember_expires');
+
+  if (rememberedEmail && expires) {
+    if (Date.now() < Number(expires)) {
+      const accountsStr = localStorage.getItem('gymdeck_stored_accounts') || '{}';
+      let accounts = {};
+      try { accounts = JSON.parse(accountsStr); } catch (e) {}
+
+      if (accounts[rememberedEmail]) {
+        emailInput.value = rememberedEmail;
+        passwordInput.value = accounts[rememberedEmail];
+        checkbox.checked = false;
+      }
+    } else {
+      localStorage.removeItem('gymdeck_remembered_email');
+      localStorage.removeItem('gymdeck_remember_expires');
+    }
+  }
+};
+
+// Initialize on page load
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    autofillRememberedCredentials();
+    initRememberMeFeature();
+  });
+} else {
+  autofillRememberedCredentials();
+  initRememberMeFeature();
+}
+
+

@@ -1022,3 +1022,166 @@ body.is-transitioning .auth-page {
     width: 3px;
   }
 }
+
+/* Remember Me Disclaimer Modal */
+.remember-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.remember-modal-backdrop.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.remember-modal-card {
+  width: min(520px, 92%);
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  transform: translateY(20px) scale(0.96);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+}
+
+.remember-modal-backdrop.is-active .remember-modal-card {
+  transform: translateY(0) scale(1);
+}
+
+.remember-modal-header {
+  margin-bottom: 14px;
+}
+
+.remember-modal-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.remember-modal-subtitle {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.remember-modal-content {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px 20px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #f1f5f9;
+}
+
+/* Custom scrollbar matching macOS/iOS aesthetics in mockup */
+.remember-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.remember-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.remember-modal-content::-webkit-scrollbar-thumb {
+  background: #0f172a;
+  border-radius: 10px;
+}
+
+.remember-modal-intro {
+  font-size: 0.8rem;
+  color: #475569;
+  margin: 0 0 12px 0;
+  line-height: 1.45;
+}
+
+.remember-modal-section-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 12px 0 4px 0;
+}
+
+.remember-modal-section-text {
+  font-size: 0.8rem;
+  color: #475569;
+  margin: 0 0 12px 0;
+  line-height: 1.45;
+}
+
+.remember-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.remember-modal-btn {
+  padding: 10px 24px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.remember-modal-btn-cancel {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.remember-modal-btn-cancel:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.remember-modal-btn-confirm {
+  background: #000000;
+  color: #ffffff;
+  border: none;
+}
+
+.remember-modal-btn-confirm:hover {
+  background: #1e293b;
+}
+
+
+/* T&C Link beside checkbox */
+.tc-link {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 6px;
+  cursor: pointer;
+  transition: color 150ms ease;
+  background: none;
+  border: none;
+  padding: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.tc-link:hover {
+  color: var(--orange);
+  text-decoration: underline;
+}
+
+
