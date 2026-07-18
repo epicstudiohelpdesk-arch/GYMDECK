@@ -15,7 +15,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "GymDeck",
+        "title": "",
         "width": 1200,
         "height": 760,
         "minWidth": 960,
