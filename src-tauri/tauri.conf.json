@@ -17,9 +17,9 @@
         "label": "main",
         "title": "GymDeck",
         "width": 1200,
-        "height": 800,
-        "minWidth": 1200,
-        "minHeight": 800,
+        "height": 760,
+        "minWidth": 960,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
         "transparent": false,
@@ -55,7 +55,15 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi", "nsis"],
+    "windows": {
+      "wix": {
+        "upgradeCode": "35b210b2-1718-4061-9131-016147291b7a"
+      },
+      "nsis": {
+        "languages": ["English"]
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
