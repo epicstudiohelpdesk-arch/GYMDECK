@@ -278,8 +278,8 @@ body.is-transitioning .auth-page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  padding: 48px;
+  gap: 16px;
+  padding: 32px 28px;
   position: relative;
 }
 
@@ -300,11 +300,11 @@ body.is-transitioning .auth-page {
   border: 1px solid #e2e8f0;
   border-radius: 24px;
   box-shadow: var(--shadow-card);
-  padding: 40px 32px;
+  padding: 32px 28px;
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   animation: card-fade-in 450ms cubic-bezier(0.22, 1, 0.36, 1) 50ms both;
 }
 
@@ -978,40 +978,40 @@ body.is-transitioning .auth-page {
   }
 
   .auth-stage {
-    padding: 72px;
+    padding: 36px 32px;
   }
 
   .phone-card {
-    max-width: 500px;
-    padding: 56px 48px;
-    border-radius: 32px;
-    gap: 28px;
+    max-width: 460px;
+    padding: 36px 32px;
+    border-radius: 28px;
+    gap: 16px;
   }
 
   .panel-header h2 {
-    font-size: 2.0rem;
+    font-size: 1.75rem;
   }
 
   .panel-header p {
-    font-size: 0.94rem;
-  }
-
-  .field-label {
     font-size: 0.88rem;
   }
 
+  .field-label {
+    font-size: 0.82rem;
+  }
+
   .input-wrap {
-    min-height: 56px;
+    min-height: 48px;
   }
 
   .input-wrap input {
-    font-size: 0.98rem;
-    height: 54px;
+    font-size: 0.92rem;
+    height: 46px;
   }
 
   .primary-btn {
-    min-height: 56px;
-    font-size: 1.0rem;
+    min-height: 48px;
+    font-size: 0.94rem;
   }
   
   .meta-row {
