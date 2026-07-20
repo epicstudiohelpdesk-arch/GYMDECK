@@ -3,13 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --orange: #ea580c;
-  --orange-hover: #c2410c;
+  --purple: #2563eb;
+  --purple-hover: #1d4ed8;
+  --purple-soft: #eff6ff;
+  --purple-tint: #f8fafc;
+  --orange: var(--purple);
+  --orange-hover: var(--purple-hover);
   --text-dark: #0f172a;
   --text-muted: #64748b;
   --shadow-card: 0 20px 40px -8px rgba(15, 23, 42, 0.08);
-  --shadow-btn: 0 4px 12px rgba(15, 23, 42, 0.15);
-  --shadow-btn-hover: 0 6px 16px rgba(15, 23, 42, 0.2);
+  --shadow-btn: 0 4px 14px rgba(37, 99, 235, 0.28);
+  --shadow-btn-hover: 0 6px 20px rgba(37, 99, 235, 0.38);
 }
 
 * {
@@ -136,6 +140,9 @@ body.is-transitioning .auth-page {
   font-weight: 900;
   color: var(--text-dark);
   letter-spacing: -0.04em;
+  cursor: default;
+  user-select: none;
+  pointer-events: none;
 }
 
 .brand-mark-hex {
@@ -167,14 +174,18 @@ body.is-transitioning .auth-page {
   margin: 0;
 }
 
-.intro-copy h1 .text-orange {
-  color: var(--orange);
+.intro-copy h1 .text-orange,
+.intro-copy h1 .text-purple,
+.intro-copy h1 .text-accent {
+  color: var(--purple);
 }
 
-.orange-bar {
+.orange-bar,
+.purple-bar,
+.accent-bar {
   width: 42px;
   height: 3px;
-  background-color: var(--orange);
+  background-color: var(--purple);
   margin: 18px 0;
   border-radius: 99px;
 }
@@ -290,7 +301,7 @@ body.is-transitioning .auth-page {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: linear-gradient(to bottom, #e2e8f0 45%, var(--orange) 45%, var(--orange) 55%, #e2e8f0 55%);
+  background: linear-gradient(to bottom, #e2e8f0 40%, var(--purple) 45%, var(--purple) 55%, #e2e8f0 60%);
 }
 
 .phone-card {
@@ -328,13 +339,13 @@ body.is-transitioning .auth-page {
 .lock-circle {
   width: 52px;
   height: 52px;
-  background-color: #fff7ed;
-  border: 1px solid #ffedd5;
+  background-color: var(--purple-tint);
+  border: 1px solid var(--purple-soft);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--orange);
+  color: var(--purple);
 }
 
 .lock-circle svg {
@@ -471,7 +482,7 @@ body.is-transitioning .auth-page {
   position: absolute;
   width: 1.5px;
   height: 0;
-  background-color: var(--orange);
+  background-color: var(--purple);
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%) rotate(-45deg);
@@ -490,12 +501,12 @@ body.is-transitioning .auth-page {
 }
 
 .field-icon.toggle-password.is-active {
-  color: var(--orange);
-  background-color: #fff7ed;
+  color: var(--purple);
+  background-color: var(--purple-tint);
 }
 
 .field-icon.toggle-password.is-active:hover {
-  background-color: #ffedd5;
+  background-color: var(--purple-soft);
 }
 
 /* Remember & Forgot Password row */
@@ -561,7 +572,7 @@ body.is-transitioning .auth-page {
 .primary-btn {
   width: 100%;
   min-height: 48px;
-  background: var(--text-dark);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   border-radius: 12px;
   font-size: 0.88rem;
@@ -576,7 +587,7 @@ body.is-transitioning .auth-page {
 }
 
 .primary-btn:hover {
-  background: #1e293b;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
   transform: translateY(-1px);
   box-shadow: var(--shadow-btn-hover);
 }

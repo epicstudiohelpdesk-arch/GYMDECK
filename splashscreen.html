@@ -21,7 +21,7 @@
       -webkit-user-select: none;
     }
 
-    /* Floating splash collage image container */
+    /* Floating splash container - 100% transparent canvas */
     .splash-container {
       position: relative;
       width: 100%;
@@ -33,7 +33,7 @@
       opacity: 0;
     }
 
-    /* Inner content wrapper to keep layout relative and centered */
+    /* Inner content wrapper - transparent positioning canvas */
     .splash-content {
       position: relative;
       width: 100%;
@@ -43,17 +43,19 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      background: transparent !important;
     }
 
-    /* Vector white panel on the left side of the splash screen */
+    /* Framed main white panel on the left with wide translucent see-through glass border */
     .white-box {
       position: absolute;
-      left: 6%;
-      top: 28%;
-      width: 40%;
-      height: 44%;
+      left: 7%;
+      top: 25%;
+      width: 42%;
+      height: 48%;
       background-color: #ffffff;
-      border-radius: 24px;
+      background-clip: padding-box; /* Keeps solid white inside, making the wide border see-through */
+      border-radius: 32px;
       z-index: 1;
       box-sizing: border-box;
       padding: 28px;
@@ -61,8 +63,19 @@
       flex-direction: column;
       justify-content: space-between;
       align-items: flex-start;
+      
+      /* Wide translucent see-through glassmorphic border */
+      border: 12px solid rgba(255, 255, 255, 0.38);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      box-shadow: 
+        0 0 0 1px rgba(0, 0, 0, 0.16),
+        0 0 0 13px rgba(255, 255, 255, 0.15),
+        0 24px 50px -10px rgba(0, 0, 0, 0.32),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.6);
     }
 
+    /* Collage image floating and overlapping the right side of the main card */
     .splash-image {
       position: relative;
       z-index: 2;
@@ -75,6 +88,10 @@
       transform-origin: right center;
       image-rendering: -webkit-optimize-contrast;
       image-rendering: crisp-edges;
+      /* Soft drop shadow for floating cards */
+      filter: 
+        drop-shadow(0 0 1px rgba(0, 0, 0, 0.4))
+        drop-shadow(0 16px 36px rgba(0, 0, 0, 0.35));
     }
 
     /* Brand Section styling */

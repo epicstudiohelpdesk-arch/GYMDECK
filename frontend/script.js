@@ -3321,6 +3321,21 @@ const setDocumentModalContent = ({ memberName, title, imageSrc = "", imageAlt = 
 };
 
 const performLogout = async () => {
+  if (logoutDialog) {
+    logoutDialog.hidden = true;
+  }
+  if (logoutBackdrop) {
+    logoutBackdrop.hidden = true;
+  }
+  document.body.classList.remove("logout-dialog-open");
+
+  const logoutOverlay = document.getElementById("logout-loading-overlay");
+  if (logoutOverlay) {
+    logoutOverlay.hidden = false;
+    logoutOverlay.removeAttribute("hidden");
+    logoutOverlay.classList.add("is-active");
+  }
+
   if (window.__TAURI__) {
     try {
       await window.__TAURI__.core.invoke("logout_command");
@@ -3331,20 +3346,11 @@ const performLogout = async () => {
   sessionStorage.removeItem(authStorageKey);
   localStorage.removeItem(authStorageKey);
   sessionStorage.setItem("gymdeck-enter", "logout");
-  document.body.classList.remove("logout-dialog-open");
   document.body.classList.add("is-logging-out");
-
-  if (logoutDialog) {
-    logoutDialog.hidden = true;
-  }
-
-  if (logoutBackdrop) {
-    logoutBackdrop.hidden = true;
-  }
 
   window.setTimeout(() => {
     window.location.href = logoutDestination;
-  }, 100);
+  }, 900);
 };
 
 const stageAliases = {

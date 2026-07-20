@@ -1347,7 +1347,7 @@ export default function PastMembers() {
 
               {/* PAGINATION PANEL */}
               {viewMode !== "analytics" && (
-                <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="mt-auto pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
                     Ledger page {currentPage} of {totalPages || 1}
                   </span>

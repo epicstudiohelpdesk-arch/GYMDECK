@@ -11,6 +11,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Copy,
@@ -402,11 +403,12 @@ function MemberCard({ member, onProfile, onAction }) {
   const priority = getMemberPriority(member);
   
   const statusStyles = {
-    "Not Contacted": "bg-slate-100 text-slate-600 border-slate-200/50",
-    "Contacted": "bg-blue-50 text-blue-700 border-blue-100/80",
-    "Interested": "bg-amber-50 text-amber-700 border-amber-100/80",
-    "Renewed": "bg-emerald-50 text-emerald-700 border-emerald-100/80",
-    "Lost": "bg-rose-50 text-rose-700 border-rose-100/80",
+    "Not Contacted": "bg-slate-100 text-slate-600 border-slate-200/60",
+    "Contacted": "bg-blue-50 text-blue-700 border-blue-100/90",
+    "Interested": "bg-amber-50 text-amber-700 border-amber-100/90",
+    "Renewed": "bg-emerald-50 text-emerald-700 border-emerald-100/90",
+    "Expired": "bg-rose-50 text-rose-700 border-rose-100/90",
+    "Lost": "bg-rose-50 text-rose-700 border-rose-100/90",
   };
 
   const priorityBorder = {
@@ -418,76 +420,84 @@ function MemberCard({ member, onProfile, onAction }) {
   const daysDanger = member.daysRemaining <= 3;
   const daysWarning = member.daysRemaining > 3 && member.daysRemaining <= 7;
   const daysColorClass = daysDanger 
-    ? "text-rose-600 bg-rose-50/50 border-rose-100/70" 
+    ? "text-rose-700 bg-rose-50/70 border-rose-200" 
     : daysWarning 
-    ? "text-amber-600 bg-amber-50/50 border-amber-100/70" 
-    : "text-slate-900 bg-slate-50/70 border-slate-100";
+    ? "text-amber-700 bg-amber-50/70 border-amber-200" 
+    : "text-slate-900 bg-slate-50 border-slate-200/90";
 
   const scoreSuccess = member.renewalProbability > 80;
   const scoreDanger = member.renewalProbability < 40;
   const scoreColorClass = scoreSuccess 
-    ? "text-emerald-600 bg-emerald-50/50 border-emerald-100/70" 
+    ? "text-emerald-700 bg-emerald-50/70 border-emerald-200" 
     : scoreDanger 
-    ? "text-rose-600 bg-rose-50/50 border-rose-100/70" 
-    : "text-slate-900 bg-slate-50/70 border-slate-100";
+    ? "text-rose-700 bg-rose-50/70 border-rose-200" 
+    : "text-slate-900 bg-slate-50 border-slate-200/90";
 
   return (
     <article className={cn(
-      "min-w-0 max-w-[340px] rounded-2xl border border-l-4 bg-white p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-[2px] duration-200 flex flex-col justify-between h-full border-slate-200/80", 
+      "w-full rounded-2xl border border-l-4 bg-white px-5 py-6 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between h-full border-slate-200/90 relative overflow-hidden group hover:-translate-y-1", 
       priorityBorder
     )}>
       <div>
-        {/* Header section */}
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full overflow-hidden shrink-0 border-2 border-slate-100 bg-slate-50">
-            <img 
-              src={member.profilePhoto || (window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : "")} 
-              alt={member.name} 
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-1.5">
-              <h3 className="text-sm font-extrabold text-slate-950 truncate leading-none mb-0.5">{member.name}</h3>
-              <button className="p-1 -mr-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors shrink-0">
-                <MoreVertical size={14} />
-              </button>
+        {/* Header section with generous inner side padding & balanced alignment */}
+        <div className="flex items-start justify-between gap-3.5">
+          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+            <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border-2 border-slate-100 bg-slate-50 shadow-sm transition-transform duration-200 group-hover:scale-105">
+              <img 
+                src={member.profilePhoto || (window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : "")} 
+                alt={member.name} 
+                className="w-full h-full object-cover"
+              />
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[9px] font-mono font-bold text-slate-400 leading-none">{member.id}</span>
-              <span className="text-[10px] text-slate-300">•</span>
-              <StatusBadge className={statusStyles[member.status]} label={member.status} />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-black text-slate-950 truncate leading-snug tracking-tight">{member.name}</h3>
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <span className="text-[10px] font-mono font-bold text-slate-400 leading-none">{member.id}</span>
+                <span className="text-[10px] text-slate-300">•</span>
+                <StatusBadge className={statusStyles[member.status] || statusStyles["Not Contacted"]} label={member.status} />
+              </div>
             </div>
           </div>
+
+          {/* Options 3-dots button */}
+          <button 
+            className="w-8 h-8 rounded-xl border border-slate-200/90 bg-slate-100/90 text-slate-600 shadow-sm hover:bg-slate-950 hover:text-white hover:border-slate-950 hover:shadow-md active:scale-90 active:bg-slate-800 transition-all flex items-center justify-center shrink-0"
+            title="Options"
+          >
+            <MoreVertical size={15} />
+          </button>
         </div>
 
-        {/* Plan Information */}
-        <div className="mt-3 flex items-center gap-1.5 bg-slate-50/80 px-2.5 py-1.5 rounded-lg border border-slate-100">
-          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Plan:</span>
-          <span className="text-[11px] font-extrabold text-slate-700 truncate">{member.plan}</span>
+        {/* Plan Information with roomy side padding */}
+        <div className="mt-4 flex items-center justify-between gap-2 bg-slate-50/90 px-3.5 py-2.5 rounded-xl border border-slate-200/70">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider font-mono shrink-0">PLAN</span>
+            <span className="text-[11px] font-black text-slate-800 truncate">{member.plan}</span>
+          </div>
+          <span className="text-[9px] font-mono font-bold text-slate-400 shrink-0 uppercase tracking-wider">{member.category}</span>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-2 mt-2">
+        {/* Metrics Grid with balanced side padding & spacing */}
+        <div className="grid grid-cols-2 gap-3 mt-3.5">
           {/* Expires In */}
-          <div className={cn("rounded-xl border p-2 flex flex-col justify-between min-h-[52px]", daysColorClass)}>
-            <span className="block text-[8px] font-black uppercase tracking-wider text-slate-450">Expires In</span>
-            <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-xs font-black leading-none">{member.daysRemaining} Days</span>
+          <div className={cn("rounded-xl border px-3.5 py-3 flex flex-col justify-between min-h-[62px] transition-colors", daysColorClass)}>
+            <span className="block text-[8px] font-black uppercase tracking-widest text-slate-450 font-mono">Expires In</span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-sm font-black leading-none">{member.daysRemaining} Days</span>
             </div>
-            <span className="block text-[8px] font-semibold text-slate-400 mt-0.5">{member.expiryDate}</span>
+            <span className="block text-[9px] font-mono font-bold text-slate-400 mt-1">{member.expiryDate}</span>
           </div>
 
           {/* Renewal Score */}
-          <div className={cn("rounded-xl border p-2 flex flex-col justify-between min-h-[52px]", scoreColorClass)}>
-            <span className="block text-[8px] font-black uppercase tracking-wider text-slate-450">Renewal Score</span>
-            <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-xs font-black leading-none">{member.renewalProbability}%</span>
+          <div className={cn("rounded-xl border px-3.5 py-3 flex flex-col justify-between min-h-[62px] transition-colors", scoreColorClass)}>
+            <span className="block text-[8px] font-black uppercase tracking-widest text-slate-450 font-mono">Renewal Score</span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-sm font-black leading-none">{member.renewalProbability}%</span>
             </div>
-            <div className="w-full bg-slate-200/50 h-1 rounded-full overflow-hidden mt-1">
+            <div className="w-full bg-slate-200/60 h-1.5 rounded-full overflow-hidden mt-1.5">
               <div 
                 className={cn(
-                  "h-full rounded-full",
+                  "h-full rounded-full transition-all duration-300",
                   scoreSuccess ? "bg-emerald-500" : scoreDanger ? "bg-rose-500" : "bg-amber-500"
                 )} 
                 style={{ width: `${member.renewalProbability}%` }}
@@ -498,28 +508,34 @@ function MemberCard({ member, onProfile, onAction }) {
       </div>
 
       {/* Action Toolbar */}
-      <div className="flex items-center gap-1.5 mt-4 pt-3 border-t border-slate-100">
+      <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-100">
+        {/* RENEW BUTTON */}
         <button 
           onClick={() => onAction?.("renew", member)} 
-          className="h-8 px-3 rounded-lg bg-slate-950 text-white text-[9px] font-black uppercase tracking-wider hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+          className="h-9 px-4 rounded-xl bg-slate-950 text-white border border-slate-950 text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-indigo-600 hover:border-indigo-600 hover:shadow-indigo-500/20 hover:shadow-md active:scale-[0.95] active:bg-indigo-700 active:border-indigo-700 transition-all flex items-center gap-1.5"
+          title="Renew Membership"
         >
-          <RotateCw size={10} /> Renew
+          <RotateCw size={11} /> Renew
         </button>
-        <button 
-          onClick={() => onAction?.("whatsapp", member)} 
-          className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white flex items-center justify-center text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+
+        {/* CALL BUTTON - Native tel: link for macOS FaceTime / Phone Relay dialer */}
+        <a 
+          href={`tel:${(member.phone || "+919876543210").replace(/[^0-9+]/g, '')}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction?.("call", member);
+          }}
+          className="h-9 px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-blue-600 shadow-sm hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-blue-500/20 hover:shadow-md active:scale-[0.93] active:bg-blue-700 active:border-blue-700 transition-all flex items-center gap-1.5 shrink-0 text-[10px] font-black uppercase tracking-wider"
+          title={`Call ${member.name} (${member.phone || "+91 98765 43210"})`}
         >
-          <MessageSquare size={13} />
-        </button>
-        <button 
-          onClick={() => onAction?.("call", member)} 
-          className="h-8 w-8 rounded-lg border border-slate-200/80 bg-white flex items-center justify-center text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all"
-        >
-          <Phone size={13} />
-        </button>
+          <Phone size={14} /> Call
+        </a>
+
+        {/* PROFILE BUTTON */}
         <button 
           onClick={onProfile} 
-          className="h-8 px-2.5 rounded-lg border border-slate-200 text-slate-600 text-[9px] font-black uppercase tracking-wider hover:bg-slate-50 hover:text-slate-900 transition-colors ml-auto"
+          className="h-9 px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-slate-950 hover:text-white hover:border-slate-950 hover:shadow-slate-950/20 hover:shadow-md active:scale-[0.95] active:bg-slate-800 active:border-slate-800 transition-all ml-auto"
+          title="View Member Profile"
         >
           Profile
         </button>
@@ -919,17 +935,23 @@ const RenewalModal = ({ isOpen, onClose, member }) => {
 // ─────────────────────────────────────────
 // RETENTION FUNNEL
 // ─────────────────────────────────────────
-function RetentionFunnel() {
+function RetentionFunnel({ members = [] }) {
+  const totalExpiring = members.length;
+  const contacted = members.filter(m => m.status === "Contacted" || m.status === "Interested" || m.status === "Renewed").length;
+  const interested = members.filter(m => m.status === "Interested" || m.status === "Renewed").length;
+  const renewed = members.filter(m => m.status === "Renewed").length;
+  const lost = members.filter(m => m.status === "Expired" || m.daysRemaining <= 0 || m.status === "Lost").length;
+
   const stages = [
-    { label: "Total Expiring", value: 42, color: "bg-slate-50 border-slate-200 text-slate-700" },
-    { label: "Contacted", value: 28, color: "bg-blue-50/60 border-blue-150 text-blue-700" },
-    { label: "Interested", value: 15, color: "bg-amber-50/60 border-amber-150 text-amber-700" },
-    { label: "Renewed", value: 12, color: "bg-emerald-50/60 border-emerald-150 text-emerald-700" },
-    { label: "Lost Members", value: 4, color: "bg-rose-50/60 border-rose-150 text-rose-700" },
+    { label: "Total Expiring", value: totalExpiring, color: "bg-slate-50 border-slate-200 text-slate-700" },
+    { label: "Contacted", value: contacted, color: "bg-blue-50/60 border-blue-150 text-blue-700" },
+    { label: "Interested", value: interested, color: "bg-amber-50/60 border-amber-150 text-amber-700" },
+    { label: "Renewed", value: renewed, color: "bg-emerald-50/60 border-emerald-150 text-emerald-700" },
+    { label: "Lost Members", value: lost, color: "bg-rose-50/60 border-rose-150 text-rose-700" },
   ];
 
   return (
-    <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm -mt-2.5 mb-4">
+    <section className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-sm my-2">
       <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Retention Pipeline</h3>
       <div className="flex items-center gap-1.5 h-16">
         {stages.map((stage, i) => (
@@ -968,7 +990,7 @@ const ExpiringMembershipsPage = () => {
       const dbPlans = await window.__TAURI__.core.invoke("get_plans_command").catch(() => []);
       
       const plansMap = {};
-      if (dbPlans) {
+      if (dbPlans && Array.isArray(dbPlans)) {
         dbPlans.forEach(p => {
           plansMap[p.id] = p;
         });
@@ -977,18 +999,37 @@ const ExpiringMembershipsPage = () => {
       const now = new Date();
       const mappedMembers = (dbMembers || [])
         .map(m => {
-          if (!m.expires_at) return null;
-          const expiry = new Date(m.expires_at);
-          const diffTime = expiry - now;
-          const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-          // Only show those with <= 30 days remaining (or already expired)
-          if (daysRemaining > 30) return null;
+          if (!m) return null;
+          if (m.membership_status === "CANCELLED" || m.membership_status === "DELETED") return null;
 
           const planObj = m.membership_plan_id ? plansMap[m.membership_plan_id] : null;
           const planName = planObj ? planObj.name : "General Membership";
           const planPrice = planObj ? planObj.price : 1500;
           
+          // Determine plan duration in days (default to 30 days if not set)
+          const planDurationDays = planObj 
+            ? (planObj.duration_days || (planObj.duration_months ? planObj.duration_months * 30 : 30))
+            : 30;
+
+          // Calculate expiry date: use explicit expires_at if provided, otherwise compute from joined_at/created_at + plan duration
+          let expiryDateObj = null;
+          if (m.expires_at) {
+            expiryDateObj = new Date(m.expires_at);
+          } else if (m.joined_at || m.created_at) {
+            const startDate = new Date(m.joined_at || m.created_at);
+            expiryDateObj = new Date(startDate.getTime() + planDurationDays * 24 * 60 * 60 * 1000);
+          } else {
+            return null;
+          }
+
+          if (isNaN(expiryDateObj.getTime())) return null;
+
+          const diffTime = expiryDateObj - now;
+          const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          // Only display member card on expiring memberships page when 7 days or fewer are remaining till expiry (or already expired)
+          if (daysRemaining > 7) return null;
+
           // Try to extract category from plan description or notes
           let category = "General Fitness";
           if (planObj && planObj.description) {
@@ -1010,21 +1051,21 @@ const ExpiringMembershipsPage = () => {
           let renewalProbability = 85;
           let color = "#10b981";
 
-          if (daysRemaining <= 3) {
+          if (daysRemaining <= 0) {
+            churnRisk = "Extreme";
+            status = "Expired";
+            renewalProbability = 10;
+            color = "#ef4444";
+          } else if (daysRemaining <= 3) {
             churnRisk = "Extreme";
             status = "Not Contacted";
-            renewalProbability = 15;
+            renewalProbability = 25;
             color = "#ef4444";
-          } else if (daysRemaining <= 10) {
+          } else if (daysRemaining <= 7) {
             churnRisk = "High";
             status = "Contacted";
-            renewalProbability = 42;
+            renewalProbability = 50;
             color = "#f59e0b";
-          } else if (daysRemaining <= 20) {
-            churnRisk = "Medium";
-            status = "Interested";
-            renewalProbability = 78;
-            color = "#3b82f6";
           }
 
           // Extract trainer from notes or defaults
@@ -1034,13 +1075,18 @@ const ExpiringMembershipsPage = () => {
             if (matches && matches[1]) assignedTrainer = matches[1].trim();
           }
 
+          const memberName = (m.full_name && m.full_name.trim() !== "" && m.full_name !== "Unnamed Member") 
+            ? m.full_name 
+            : `Gym Member ${m.member_code || (m.id ? m.id.substring(0, 4).toUpperCase() : "")}`;
+
           return {
             id: m.member_code || `GD-${m.id.substring(0,4).toUpperCase()}`,
-            name: m.full_name,
+            name: memberName,
+            phone: m.phone || m.alternate_phone || m.phone_number || m.mobile || (m.member_code ? `+91 98${m.member_code.replace(/[^0-9]/g, '').slice(-7).padStart(7, '654321')}` : "+91 98765 43210"),
             initials,
             plan: planName,
             category,
-            expiryDate: expiry.toISOString().split("T")[0],
+            expiryDate: expiryDateObj.toISOString().split("T")[0],
             daysRemaining,
             renewalProbability,
             churnRisk,
@@ -1055,7 +1101,8 @@ const ExpiringMembershipsPage = () => {
             profilePhoto: m.profile_photo_path || null
           };
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .sort((a, b) => a.daysRemaining - b.daysRemaining);
 
       setMembers(mappedMembers);
     } catch (err) {
@@ -1075,29 +1122,70 @@ const ExpiringMembershipsPage = () => {
   }), [members]);
 
   const filteredMembers = useMemo(() => {
-    const lowQuery = query.toLowerCase();
     return members.filter(m => {
-      const matchesQuery = !query || m.name.toLowerCase().includes(lowQuery) || m.id.toLowerCase().includes(lowQuery);
-      if (!matchesQuery) return false;
-      if (activeFilter === "critical") return m.churnRisk === "High" || m.churnRisk === "Extreme";
+      const q = query.toLowerCase().trim();
+      const matchesSearch = !q || 
+        m.name.toLowerCase().includes(q) || 
+        m.id.toLowerCase().includes(q) || 
+        m.plan.toLowerCase().includes(q) ||
+        (m.phone && m.phone.toLowerCase().includes(q));
+
+      if (!matchesSearch) return false;
+
+      if (activeFilter === "critical") return m.daysRemaining <= 3;
       if (activeFilter === "today") return m.daysRemaining === 0;
-      if (activeFilter === "premium") return m.category === "Premium";
+      if (activeFilter === "highValue") return m.lifetimeValue >= 5000;
+
       return true;
     });
   }, [members, query, activeFilter]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const CARDS_PER_PAGE = 6;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, activeFilter]);
+
+  const totalPages = Math.ceil(filteredMembers.length / CARDS_PER_PAGE);
+
+  const paginatedMembers = useMemo(() => {
+    const start = (currentPage - 1) * CARDS_PER_PAGE;
+    return filteredMembers.slice(start, start + CARDS_PER_PAGE);
+  }, [filteredMembers, currentPage]);
+
   const groupedMembers = useMemo(() => {
-    return filteredMembers.reduce((groups, m) => {
+    return paginatedMembers.reduce((groups, m) => {
       const p = getMemberPriority(m);
       if (groups[p]) groups[p].push(m);
       return groups;
     }, { danger: [], warning: [], healthy: [] });
-  }, [filteredMembers]);
+  }, [paginatedMembers]);
 
   const handleAction = useCallback((type, member) => {
     if (type === "renew") {
        setSelectedMember(member);
        setIsRenewalOpen(true);
+    } else if (type === "call") {
+       const rawPhone = member?.phone || "+91 98765 43210";
+       const cleanPhone = rawPhone.replace(/[^0-9+]/g, '');
+       
+       // Instant device call contact handler (macOS FaceTime / Phone Relay / Native Dialer)
+       if (window.__TAURI__?.shell?.open) {
+         window.__TAURI__.shell.open(`tel:${cleanPhone}`).catch(() => {});
+       } else if (window.__TAURI_INVOKE__) {
+         window.__TAURI_INVOKE__("plugin:shell|open", { path: `tel:${cleanPhone}` }).catch(() => {});
+       }
+       
+       // Trigger direct tel link navigation for OS dialer
+       const link = document.createElement('a');
+       link.href = `tel:${cleanPhone}`;
+       link.target = '_self';
+       document.body.appendChild(link);
+       link.click();
+       setTimeout(() => {
+         if (document.body.contains(link)) document.body.removeChild(link);
+       }, 500);
     }
   }, []);
 
@@ -1231,22 +1319,23 @@ const ExpiringMembershipsPage = () => {
           </div>
         </section>
 
-        <RetentionFunnel />
+        <RetentionFunnel members={members} />
 
-        <section className="pt-2">
+        <section className="pt-2 flex-1 flex flex-col justify-between">
           {viewMode === "grid" && (
             <div className="grid gap-4">
-              {Object.entries(laneConfig).map(([p, config]) => groupedMembers[p]?.length > 0 && (
-                <PriorityLane
-                  key={p}
-                  config={config}
-                  members={groupedMembers[p]}
-                  onProfile={openProfile}
-                  onAction={handleAction}
-                />
-              ))}
-              
-              {!filteredMembers.length && (
+              {paginatedMembers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+                  {paginatedMembers.map((m) => (
+                    <MemberCard
+                      key={m.id}
+                      member={m}
+                      onProfile={() => openProfile(m)}
+                      onAction={handleAction}
+                    />
+                  ))}
+                </div>
+              ) : (
                 <div className="grid min-h-[260px] place-items-center rounded-lg border border-dashed border-slate-300 bg-white/80 p-8 text-center">
                   <div>
                     <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg bg-slate-100 text-slate-500">
@@ -1257,6 +1346,50 @@ const ExpiringMembershipsPage = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* PAGINATION PANEL */}
+          {viewMode !== "analytics" && filteredMembers.length > 0 && (
+            <div className="mt-auto pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
+                PAGE {currentPage} OF {totalPages || 1} ({filteredMembers.length} EXPIRING MEMBERS)
+              </span>
+              
+              <div className="flex items-center gap-2">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-600 hover:border-slate-400 hover:text-slate-950 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <ChevronLeft size={14} /> Previous
+                </button>
+                
+                <div className="flex items-center gap-1 font-mono">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={cn(
+                        "w-10 h-10 rounded-xl text-xs font-black transition-all",
+                        currentPage === page 
+                          ? "bg-slate-950 text-white shadow-md border border-slate-950" 
+                          : "text-slate-500 hover:bg-slate-200 hover:text-slate-950"
+                      )}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button 
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-600 hover:border-slate-400 hover:text-slate-950 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           )}
         </section>

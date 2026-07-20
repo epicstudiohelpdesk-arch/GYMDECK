@@ -138,6 +138,8 @@ pub fn run() {
           }
 
           if let Some(main_window) = app_handle.get_webview_window("main") {
+              let _ = main_window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 1200.0, height: 800.0 }));
+              let _ = main_window.center();
               let _ = main_window.show();
               let _ = main_window.set_focus();
           }
