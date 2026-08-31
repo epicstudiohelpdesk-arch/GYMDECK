@@ -41,6 +41,38 @@ export interface GymLinkResponseData {
   user: UserProfile;
 }
 
+export interface InviteVerificationData {
+  gym: { id: string; name: string; code: string };
+  member: {
+    id: string;
+    memberCode: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    maskedEmail: string;
+    maskedPhone: string;
+  };
+  activationTicket: string;
+}
+
+const DEV_INVITE_FIXTURE: InviteVerificationData = {
+  gym: {
+    id: 'gym_dev_nyc',
+    name: 'Iron Forge Fitness',
+    code: 'GD-IRON-001',
+  },
+  member: {
+    id: 'mem_dev_1001',
+    memberCode: 'GD-1001',
+    fullName: 'Alex Morgan',
+    email: 'alex.morgan@gymdeck.com',
+    phone: '+1 (555) 234-5678',
+    maskedEmail: 'al***@gymdeck.com',
+    maskedPhone: '+** ******5678',
+  },
+  activationTicket: 'dev_signed_activation_ticket_123',
+};
+
 const DEV_AUTH_FIXTURE: AuthResponseData = {
   user: {
     id: 'usr_dev_1001',
@@ -260,6 +292,46 @@ class AuthService {
             gymId: 'gym_dev_nyc',
           },
         };
+      }
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Verify admission QR token or 8-char activation code
+   */
+  public async verifyInvite(tokenOrCode: string): Promise<InviteVerificationData> {
+    const cleanToken = tokenOrCode.trim();
+    try {
+      Logger.info('[AuthService] Verifying admission invitation...', { tokenOrCode: cleanToken });
+      const response = await apiClient.post<ApiResponse<InviteVerificationData>>('/auth/invite/verify', {
+        tokenOrCode: cleanToken,
+      });
+      return response.data.data;
+    } catch (err) {
+      Logger.warn('[AuthService] Invite verification failed. Checking dev mode fallback.', { error: err });
+      if (__DEV__) {
+        return DEV_INVITE_FIXTURE;
+      }
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Complete member digital account setup from verified invitation
+   */
+  public async completeInvite(activationTicket: string, password: string): Promise<AuthResponseData> {
+    try {
+      Logger.info('[AuthService] Completing account creation from invitation ticket...');
+      const response = await apiClient.post<ApiResponse<AuthResponseData>>('/auth/invite/complete', {
+        activationTicket,
+        password,
+      });
+      return response.data.data;
+    } catch (err) {
+      Logger.warn('[AuthService] Invite completion failed. Checking dev mode fallback.', { error: err });
+      if (__DEV__) {
+        return DEV_AUTH_FIXTURE;
       }
       throw normalizeAxiosError(err);
     }

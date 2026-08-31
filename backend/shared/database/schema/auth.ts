@@ -99,8 +99,35 @@ export const memberRefreshTokens = pgTable(
   })
 );
 
+/**
+ * 5. Member One-Time Admission Activation Tokens (QR / Code Invites)
+ */
+export const memberActivationTokens = pgTable(
+  'member_activation_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gymId: uuid('gym_id')
+      .notNull()
+      .references(() => gyms.id, { onDelete: 'cascade' }),
+    gymMemberId: uuid('gym_member_id')
+      .notNull()
+      .references(() => gymMembers.id, { onDelete: 'cascade' }),
+    tokenHash: varchar('token_hash', { length: 64 }).notNull(), // SHA-256 hash of activation token/code
+    displayCode: varchar('display_code', { length: 32 }), // e.g. "7K9P-42XM"
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tokenHashIdx: index('idx_act_tokens_hash').on(table.tokenHash),
+    gymMemberIdx: index('idx_act_tokens_gym_member').on(table.gymId, table.gymMemberId),
+  })
+);
+
 export type MemberAccount = typeof memberAccounts.$inferSelect;
 export type NewMemberAccount = typeof memberAccounts.$inferInsert;
 export type EmailVerificationOtp = typeof emailVerificationOtps.$inferSelect;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type MemberRefreshToken = typeof memberRefreshTokens.$inferSelect;
+export type MemberActivationToken = typeof memberActivationTokens.$inferSelect;
+export type NewMemberActivationToken = typeof memberActivationTokens.$inferInsert;

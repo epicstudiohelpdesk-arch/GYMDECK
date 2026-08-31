@@ -83,6 +83,24 @@ const ResetPasswordSchema = z
     path: ['newPassword'],
   });
 
+const VerifyInviteSchema = z.object({
+  tokenOrCode: z.string().min(1, 'Invitation token or code is required'),
+});
+
+const CompleteInviteSchema = z.object({
+  activationTicket: z.string().min(1, 'Activation ticket is required'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+const GenerateInviteSchema = z.object({
+  gymId: z.string().uuid('Valid gym ID required'),
+  memberId: z.string().uuid('Valid member ID required'),
+});
+
 // ==============================================================================
 // Route Endpoints
 // ==============================================================================
@@ -240,6 +258,69 @@ router.post(
     try {
       const result = await authService.resetPassword(req.body);
       res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /v1/auth/invite/verify
+ * Validates a member QR code / 8-character invitation code
+ */
+router.post(
+  '/invite/verify',
+  validateBody(VerifyInviteSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await authService.validateActivationInvite(req.body.tokenOrCode);
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /v1/auth/invite/complete
+ * Activates digital account for existing gym member from verified invitation
+ */
+router.post(
+  '/invite/complete',
+  validateBody(CompleteInviteSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await authService.activateAndCreateAccount(req.body);
+      res.status(201).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /v1/auth/invite/generate
+ * Generates an invitation token & QR code for a gym member (Used by Desktop/Manager)
+ */
+router.post(
+  '/invite/generate',
+  validateBody(GenerateInviteSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await authService.createActivationInvite(req.body.gymId, req.body.memberId);
+      res.status(201).json({
         success: true,
         data: result,
         meta: { requestId: req.id, timestamp: new Date().toISOString() },
