@@ -4,12 +4,11 @@
 
 import { checkInPassService } from '../services/member/checkInPassService';
 import { DevStorageProvider } from '../services/documents/storageProvider';
-import { signJwt, verifyJwt, generateSecureToken, hashToken, constantTimeCompare } from '../shared/security';
+import { generateSecureToken, hashToken } from '../shared/security';
 
 async function runQASecurityAuditTests() {
   console.log('🛡️ Running GymDeck Phase 6: QA, Security & Release Readiness Audit Test Suite...\n');
 
-  const secret = 'gymdeck_qa_audit_master_secret_key_123456';
   const gymA = 'gym_tenant_alpha_111';
   const gymB = 'gym_tenant_beta_222';
   const memberA = 'mem_user_alice_aaa';

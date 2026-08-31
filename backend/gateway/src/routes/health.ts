@@ -6,7 +6,7 @@ import { Router, Request, Response } from 'express';
 import { checkDatabaseHealth } from '../../../shared/database';
 import { config } from '../../../shared/config';
 
-const router = Router();
+const router: Router = Router();
 const startTime = Date.now();
 
 /**

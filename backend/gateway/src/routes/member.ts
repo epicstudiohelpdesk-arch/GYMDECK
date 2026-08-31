@@ -5,6 +5,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/authMiddleware';
+import { authService } from '../../../services/auth';
 import { dashboardService, checkInPassService, attendanceService } from '../../../services/member';
 import { membershipService } from '../../../services/membership';
 import { workoutService } from '../../../services/workout';
@@ -14,11 +15,15 @@ import { notificationService } from '../../../services/notifications';
 import { progressService } from '../../../services/progress';
 import { validateQuery, validateBody } from '../../../shared/validation';
 
-const router = Router();
+const router: Router = Router();
 
 // ==============================================================================
 // Validation Schemas
 // ==============================================================================
+
+const GymLinkBodySchema = z.object({
+  gymCode: z.string().min(2, 'Gym code is required'),
+});
 
 const PaginationSchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -66,6 +71,24 @@ const MeasurementLogSchema = z.object({
 
 // All member domain routes require authenticated member context
 router.use(requireAuth);
+
+// ==============================================================================
+// 0. Gym Affiliation & Onboarding Linking
+// ==============================================================================
+
+router.post('/gym-link', validateBody(GymLinkBodySchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const result = await authService.linkGym(user.sub, req.body.gymCode);
+    res.status(200).json({
+      success: true,
+      data: result,
+      meta: { requestId: req.id, timestamp: new Date().toISOString() },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ==============================================================================
 // 1. Dashboard & Core Membership

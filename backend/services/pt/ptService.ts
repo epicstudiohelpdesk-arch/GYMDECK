@@ -1,11 +1,6 @@
-/**
- * GymDeck Cloud Backend - Personal Training Domain Service
- */
-
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import { trainers, ptPackages, ptSessions } from '../../shared/database/schema';
-import { AppError } from '../../shared/errors';
 
 export interface TrainerProfileResponse {
   id: string;
@@ -127,7 +122,7 @@ export class PtService {
       usedSessions: pkg.usedSessions,
       remainingSessions: pkg.remainingSessions,
       status: pkg.status as any,
-      expiresAt: pkg.expiresAt ? pkg.expiresAt.toISOString() : null,
+      expiresAt: pkg.expiryDate ? pkg.expiryDate.toISOString() : null,
     };
   }
 

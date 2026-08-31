@@ -2,7 +2,7 @@
  * GymDeck Cloud Backend - Configuration Validation Test
  */
 
-import { config, isDevelopment } from '../shared/config';
+import { config } from '../shared/config';
 
 async function runConfigTest() {
   console.log('🧪 Running Configuration Validation Test...');

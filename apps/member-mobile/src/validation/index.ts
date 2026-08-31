@@ -39,6 +39,7 @@ export const SignupSchema = z
     fullName: z.string().min(2, 'Full name must be at least 2 characters').trim(),
     email: EmailSchema,
     phone: PhoneSchema,
+    gymCode: z.string().optional(),
     password: PasswordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
     agreeToTerms: z.boolean().refine((val) => val === true, {

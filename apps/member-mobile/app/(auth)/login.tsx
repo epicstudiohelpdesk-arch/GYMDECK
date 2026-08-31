@@ -64,7 +64,11 @@ export default function LoginScreen() {
       });
 
       await setSession(user, tokens);
-      router.replace('/');
+      if (!user.emailVerified) {
+        router.replace('/(auth)/verify-email');
+      } else {
+        router.replace('/');
+      }
     } catch (err) {
       const appErr = AppError.fromUnknown(err);
       if (appErr.validationErrors) {
@@ -78,6 +82,13 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDemoFill = () => {
+    setEmail('alex.morgan@gymdeck.com');
+    setPassword('GymDeck@2026');
+    setErrors({});
+    setGeneralError(null);
   };
 
   return (
@@ -142,6 +153,22 @@ export default function LoginScreen() {
             loading={loading}
             disabled={loading}
           />
+
+          {__DEV__ && (
+            <TouchableOpacity
+              style={[
+                styles.demoButton,
+                { borderColor: colors.border, backgroundColor: colors.surfaceSubtle },
+              ]}
+              onPress={handleDemoFill}
+              accessibilityRole="button"
+              accessibilityLabel="Fill demo credentials"
+            >
+              <Text style={[styles.demoButtonText, { color: colors.textSecondary }]}>
+                ⚡ Fill Demo Credentials (Dev)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={[styles.footerRow, { marginTop: spacing.xxl }]}>
@@ -191,5 +218,18 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  demoButton: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -8,7 +8,7 @@ import { authService } from '../../../services/auth';
 import { validateBody } from '../../../shared/validation';
 import { authRateLimiter } from '../../../shared/security';
 
-const router = Router();
+const router: Router = Router();
 
 // ==============================================================================
 // Validation Schemas
@@ -24,6 +24,7 @@ const SignupSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().min(7, 'Phone number must be at least 7 digits').optional().default('0000000000'),
   gymId: z.string().uuid().optional(),
+  gymCode: z.string().optional(),
 });
 
 const VerifyEmailSchema = z

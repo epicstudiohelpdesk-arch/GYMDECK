@@ -3,7 +3,7 @@
  */
 
 import * as crypto from 'crypto';
-import { eq, and, gt, isNull, desc } from 'drizzle-orm';
+import { eq, and, gt, isNull, desc, sql } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import {
   gyms,
@@ -35,6 +35,7 @@ export interface SignupDto {
   fullName: string;
   phone: string;
   gymId?: string;
+  gymCode?: string;
 }
 
 export interface VerifyEmailDto {
@@ -113,8 +114,23 @@ export class AuthService {
       };
     }
 
-    // Determine target Gym (Default to HQ gym if none specified)
+    // Determine target Gym (By gymId, gymCode, or default to HQ gym)
     let targetGymId = dto.gymId;
+    if (!targetGymId && dto.gymCode) {
+      const cleanCode = dto.gymCode.trim().toUpperCase();
+      const matchedGym = (
+        await db
+          .select()
+          .from(gyms)
+          .where(sql`UPPER(${gyms.code}) = ${cleanCode}`)
+          .limit(1)
+      )[0];
+
+      if (matchedGym) {
+        targetGymId = matchedGym.id;
+      }
+    }
+
     if (!targetGymId) {
       const defaultGym = await db.select().from(gyms).limit(1);
       if (defaultGym.length > 0) {
@@ -576,6 +592,149 @@ export class AuthService {
       .where(eq(memberRefreshTokens.memberAccountId, account.id));
 
     return { message: 'Password has been reset successfully. Please log in with your new password.' };
+  }
+
+  /**
+   * 7. Link Member Account to a specific Gym Affiliation
+   */
+  public async linkGym(
+    memberAccountId: string,
+    gymCode: string
+  ): Promise<{ gym: any; user: any }> {
+    const cleanCode = gymCode.trim().toUpperCase();
+
+    // Find gym by code
+    let targetGym = (
+      await db
+        .select()
+        .from(gyms)
+        .where(sql`UPPER(${gyms.code}) = ${cleanCode}`)
+        .limit(1)
+    )[0];
+
+    if (!targetGym) {
+      if (cleanCode.startsWith('GD-')) {
+        const [bootstrapped] = await db
+          .insert(gyms)
+          .values({
+            name: `GymDeck Partner (${cleanCode})`,
+            code: cleanCode,
+            status: 'ACTIVE',
+          })
+          .returning();
+        targetGym = bootstrapped!;
+      } else {
+        throw AppError.notFound(`Gym with code ${cleanCode} not found. Please verify the code on your counter receipt.`);
+      }
+    }
+
+    // Get current account
+    const account = (
+      await db
+        .select()
+        .from(memberAccounts)
+        .where(eq(memberAccounts.id, memberAccountId))
+        .limit(1)
+    )[0];
+
+    if (!account) {
+      throw AppError.notFound('Member account not found');
+    }
+
+    // Check if an existing gym_members record exists for this gym and this member's email/phone
+    let memberRecord = (
+      await db
+        .select()
+        .from(gymMembers)
+        .where(and(eq(gymMembers.gymId, targetGym.id), eq(gymMembers.email, account.email)))
+        .limit(1)
+    )[0];
+
+    if (!memberRecord && account.phoneNumber) {
+      memberRecord = (
+        await db
+          .select()
+          .from(gymMembers)
+          .where(and(eq(gymMembers.gymId, targetGym.id), eq(gymMembers.phone, account.phoneNumber)))
+          .limit(1)
+      )[0];
+    }
+
+    if (memberRecord) {
+      // Link existing admission profile
+      await db
+        .update(memberAccounts)
+        .set({
+          gymId: targetGym.id,
+          gymMemberId: memberRecord.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(memberAccounts.id, account.id));
+    } else {
+      // Create new gym_members entry under this gym tenant
+      const currentMember = (
+        await db
+          .select()
+          .from(gymMembers)
+          .where(eq(gymMembers.id, account.gymMemberId))
+          .limit(1)
+      )[0];
+
+      const [newGymMember] = await db
+        .insert(gymMembers)
+        .values({
+          gymId: targetGym.id,
+          memberCode: `GD-${Math.floor(1000 + Math.random() * 9000)}`,
+          fullName: currentMember?.fullName || 'Member',
+          phone: account.phoneNumber || currentMember?.phone || '0000000000',
+          email: account.email,
+          membershipStatus: 'ACTIVE',
+        })
+        .returning();
+
+      await db
+        .update(memberAccounts)
+        .set({
+          gymId: targetGym.id,
+          gymMemberId: newGymMember!.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(memberAccounts.id, account.id));
+
+      memberRecord = newGymMember!;
+    }
+
+    // Audit log
+    await db.insert(auditLogs).values({
+      gymId: targetGym.id,
+      memberId: memberRecord.id,
+      actorType: 'MEMBER',
+      action: 'MEMBER_GYM_LINK',
+      resource: 'gym_members',
+      metadata: JSON.stringify({ gymCode: cleanCode, gymId: targetGym.id }),
+    });
+
+    return {
+      gym: {
+        id: targetGym.id,
+        name: targetGym.name,
+        code: targetGym.code,
+        address: targetGym.address,
+        phone: targetGym.contactPhone,
+        email: targetGym.contactEmail,
+      },
+      user: {
+        id: account.id,
+        memberId: memberRecord.id,
+        gymId: targetGym.id,
+        email: account.email,
+        fullName: memberRecord.fullName,
+        phone: memberRecord.phone,
+        memberCode: memberRecord.memberCode,
+        emailVerified: account.emailVerified,
+        role: 'MEMBER',
+      },
+    };
   }
 
   // ==============================================================================

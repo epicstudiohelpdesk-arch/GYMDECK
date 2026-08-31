@@ -9,7 +9,6 @@ import {
   workoutExercises,
   workoutSessions,
   workoutLoggedSets,
-  gymMembers,
   auditLogs,
 } from '../../shared/database/schema';
 import { AppError } from '../../shared/errors';

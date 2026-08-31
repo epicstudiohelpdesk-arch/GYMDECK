@@ -16,7 +16,7 @@ export class DevStorageProvider implements IObjectStorageProvider {
     return `https://vault.gymdeck.cloud/objects/${encodeURIComponent(objectKey)}?expires=${expiresAt}&sig=${signature}`;
   }
 
-  public async createSignedUploadUrl(objectKey: string, contentType: string, expiresInSeconds: number = 300): Promise<string> {
+  public async createSignedUploadUrl(objectKey: string, _contentType: string, expiresInSeconds: number = 300): Promise<string> {
     const expiresAt = Math.floor(Date.now() / 1000) + expiresInSeconds;
     const signature = crypto.randomBytes(16).toString('hex');
     return `https://vault.gymdeck.cloud/upload/${encodeURIComponent(objectKey)}?expires=${expiresAt}&sig=${signature}`;

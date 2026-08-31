@@ -35,7 +35,7 @@ export class ProgressService {
       id: l.id,
       weightKg: parseFloat(l.weightKg),
       bmi: l.bmi ? parseFloat(l.bmi) : null,
-      loggedDate: l.loggedDate.toISOString(),
+      loggedDate: typeof l.loggedDate === 'string' ? l.loggedDate : new Date(l.loggedDate).toISOString(),
       notes: l.notes,
     }));
   }
@@ -48,6 +48,8 @@ export class ProgressService {
       throw AppError.validation('Body weight must be between 30 kg and 300 kg.');
     }
 
+    const todayStr = new Date().toISOString().split('T')[0]!;
+
     const [inserted] = await db
       .insert(bodyWeightLogs)
       .values({
@@ -55,7 +57,7 @@ export class ProgressService {
         memberId,
         weightKg: dto.weightKg.toString(),
         notes: dto.notes,
-        loggedDate: new Date(),
+        loggedDate: todayStr,
       })
       .returning();
 
@@ -72,7 +74,7 @@ export class ProgressService {
     return {
       id: inserted!.id,
       weightKg: parseFloat(inserted!.weightKg),
-      loggedDate: inserted!.loggedDate.toISOString(),
+      loggedDate: typeof inserted!.loggedDate === 'string' ? inserted!.loggedDate : new Date(inserted!.loggedDate).toISOString(),
       notes: inserted!.notes,
     };
   }
@@ -94,7 +96,7 @@ export class ProgressService {
       armsCm: m.armsCm ? parseFloat(m.armsCm) : null,
       thighsCm: m.thighsCm ? parseFloat(m.thighsCm) : null,
       hipsCm: m.hipsCm ? parseFloat(m.hipsCm) : null,
-      measuredDate: m.measuredDate.toISOString(),
+      measuredDate: typeof m.measuredDate === 'string' ? m.measuredDate : new Date(m.measuredDate).toISOString(),
     }));
   }
 
@@ -102,6 +104,8 @@ export class ProgressService {
    * 4. Log body circumference measurements
    */
   public async logMeasurements(gymId: string, memberId: string, dto: MeasurementLogDto) {
+    const todayStr = new Date().toISOString().split('T')[0]!;
+
     const [inserted] = await db
       .insert(bodyMeasurements)
       .values({
@@ -112,7 +116,7 @@ export class ProgressService {
         armsCm: dto.armsCm ? dto.armsCm.toString() : null,
         thighsCm: dto.thighsCm ? dto.thighsCm.toString() : null,
         hipsCm: dto.hipsCm ? dto.hipsCm.toString() : null,
-        measuredDate: new Date(),
+        measuredDate: todayStr,
       })
       .returning();
 
@@ -123,7 +127,7 @@ export class ProgressService {
       armsCm: inserted!.armsCm ? parseFloat(inserted!.armsCm) : null,
       thighsCm: inserted!.thighsCm ? parseFloat(inserted!.thighsCm) : null,
       hipsCm: inserted!.hipsCm ? parseFloat(inserted!.hipsCm) : null,
-      measuredDate: inserted!.measuredDate.toISOString(),
+      measuredDate: typeof inserted!.measuredDate === 'string' ? inserted!.measuredDate : new Date(inserted!.measuredDate).toISOString(),
     };
   }
 
@@ -143,7 +147,7 @@ export class ProgressService {
       description: m.description,
       category: m.category,
       badgeIcon: m.badgeIcon,
-      achievedDate: m.achievedDate.toISOString(),
+      achievedDate: typeof m.achievedDate === 'string' ? m.achievedDate : new Date(m.achievedDate).toISOString(),
     }));
   }
 }

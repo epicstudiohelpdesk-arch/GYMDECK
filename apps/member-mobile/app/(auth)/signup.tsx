@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Mail, Phone, Lock, CheckSquare, Square } from 'lucide-react-native';
+import { User, Mail, Phone, Lock, Building2, CheckSquare, Square } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
 import { authService } from '../../src/services/api';
@@ -33,6 +33,7 @@ export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [gymCode, setGymCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -54,6 +55,7 @@ export default function SignupScreen() {
       fullName,
       email,
       phone,
+      gymCode: gymCode.trim() ? gymCode.trim().toUpperCase() : undefined,
       password,
       confirmPassword,
       agreeToTerms,
@@ -146,7 +148,19 @@ export default function SignupScreen() {
             keyboardType="phone-pad"
             error={errors.phone}
             leftIcon={<Phone size={18} color={colors.textMuted} />}
-            hint="Optional - Unverified account field"
+            hint="Optional - Contact phone number"
+          />
+
+          <TextInputField
+            label="Gym Affiliation Code (Optional)"
+            placeholder="e.g. GD-NYC-101"
+            value={gymCode}
+            onChangeText={(text) => {
+              setGymCode(text.toUpperCase());
+            }}
+            autoCapitalize="characters"
+            leftIcon={<Building2 size={18} color={colors.textMuted} />}
+            hint="From your counter admission receipt or leave blank"
           />
 
           <TextInputField

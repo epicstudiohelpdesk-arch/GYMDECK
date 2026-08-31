@@ -2,8 +2,7 @@
  * GymDeck Phase 8 - Production Infrastructure & Deployment Readiness Test Suite
  */
 
-import { generateSecureToken, hashToken } from '../shared/security';
-import { AppError } from '../shared/errors';
+import { generateSecureToken } from '../shared/security';
 
 async function runPhase8ProductionTests() {
   console.log('🚀 Running GymDeck Phase 8: Production Infrastructure & Deployment Readiness Suite...\n');

@@ -71,12 +71,21 @@ export default function VerifyEmailScreen() {
       );
 
       await setSession(user, tokens);
-      router.replace('/(onboarding)/welcome');
+      if (user.gymId) {
+        router.replace('/');
+      } else {
+        router.replace('/(onboarding)/welcome');
+      }
     } catch (err) {
       setGeneralError(AppError.fromUnknown(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDemoFillOtp = () => {
+    setOtp('123456');
+    setGeneralError(null);
   };
 
   const handleResendOtp = async () => {
@@ -157,6 +166,22 @@ export default function VerifyEmailScreen() {
             disabled={loading || otp.length < 6}
             style={{ marginTop: 16 }}
           />
+
+          {__DEV__ && (
+            <TouchableOpacity
+              style={[
+                styles.demoButton,
+                { borderColor: colors.border, backgroundColor: colors.surfaceSubtle },
+              ]}
+              onPress={handleDemoFillOtp}
+              accessibilityRole="button"
+              accessibilityLabel="Fill demo OTP"
+            >
+              <Text style={[styles.demoButtonText, { color: colors.textSecondary }]}>
+                ⚡ Auto-fill Demo Code: 123456 (Dev)
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <View style={styles.resendContainer}>
             {cooldown > 0 ? (
@@ -252,5 +277,19 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: 14,
+  },
+  demoButton: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  demoButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

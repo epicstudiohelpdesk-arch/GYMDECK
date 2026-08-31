@@ -7,7 +7,7 @@ import healthRouter from './health';
 import authRouter from './auth';
 import memberRouter from './member';
 
-const router = Router();
+const router: Router = Router();
 
 // Infrastructure & Health routes
 router.use('/', healthRouter);

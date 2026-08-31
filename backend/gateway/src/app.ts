@@ -5,7 +5,7 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import { config, isDevelopment } from '../../shared/config';
+import { config } from '../../shared/config';
 import { requestIdMiddleware } from './middleware/requestId';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import { errorHandler } from './middleware/errorHandler';

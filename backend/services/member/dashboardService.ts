@@ -2,7 +2,7 @@
  * GymDeck Cloud Backend - Member Dashboard Aggregator Service
  */
 
-import { eq, and, gt, desc, sql } from 'drizzle-orm';
+import { eq, and, gt, desc } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import { gymMembers, gyms, attendanceLogs, workoutRoutines, trainers } from '../../shared/database/schema';
 import { membershipService, MembershipDetailsResponse } from '../membership';

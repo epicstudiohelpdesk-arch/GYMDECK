@@ -56,9 +56,11 @@ export default function GymLinkingScreen() {
       const { gym, user: updatedUser } = await authService.linkGym(cleanCode);
       if (user) {
         setUser({ ...user, ...updatedUser, gymId: gym.id });
+      } else {
+        setUser({ ...updatedUser, gymId: gym.id });
       }
       setOnboarded(true);
-      router.replace('/');
+      router.replace('/(main)/(tabs)');
     } catch (err) {
       setGeneralError(AppError.fromUnknown(err));
     } finally {
@@ -68,7 +70,7 @@ export default function GymLinkingScreen() {
 
   const handleSkip = () => {
     setOnboarded(true);
-    router.replace('/');
+    router.replace('/(main)/(tabs)');
   };
 
   return (

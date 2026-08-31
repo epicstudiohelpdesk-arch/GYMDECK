@@ -2,8 +2,7 @@
  * GymDeck Phase 7 - Real-Device Performance, Offline, UX & Failure-Resilience Validation Suite
  */
 
-import { checkInPassService } from '../services/member/checkInPassService';
-import { generateSecureToken, hashToken } from '../shared/security';
+import { generateSecureToken } from '../shared/security';
 
 async function runPhase7ValidationTests() {
   console.log('📱 Running GymDeck Phase 7: Real-Device Performance, UX, Offline & Resilience Suite...\n');
@@ -144,7 +143,8 @@ async function runPhase7ValidationTests() {
 
   // Purge on logout
   queryCache.clear();
-  if (queryCache.size !== 0) {
+  const currentSize = queryCache.size as number;
+  if (currentSize !== 0) {
     throw new Error('❌ QueryCache purge failed on logout');
   }
   console.log('     ✅ QueryCache strictly managed with bounded RAM footprint and full logout eviction.');

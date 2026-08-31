@@ -3,10 +3,10 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { ZodSchema, ZodError } from 'zod';
+import { ZodType, ZodError } from 'zod';
 import { AppError } from '../errors';
 
-export function validateBody<T>(schema: ZodSchema<T>) {
+export function validateBody(schema: ZodType<any, any, any>) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       req.body = schema.parse(req.body);
@@ -30,7 +30,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
   };
 }
 
-export function validateQuery<T>(schema: ZodSchema<T>) {
+export function validateQuery(schema: ZodType<any, any, any>) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       req.query = schema.parse(req.query) as any;

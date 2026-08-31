@@ -46,7 +46,7 @@ export class DocumentService {
       id: d.id,
       documentType: d.documentType as any,
       displayName: d.displayName,
-      fileSizeBytes: d.fileSizeBytes,
+      fileSizeBytes: d.fileSizeBytes ?? 0,
       mimeType: d.mimeType,
       createdAt: d.createdAt.toISOString(),
     }));

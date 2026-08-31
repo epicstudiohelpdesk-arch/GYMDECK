@@ -40,24 +40,24 @@ export class AppError extends Error {
     return new AppError('VALIDATION_ERROR', message, 422, true, details);
   }
 
-  public static unauthorized(message: string = 'Authentication required or invalid credentials'): AppError {
-    return new AppError('UNAUTHORIZED', message, 401, true);
+  public static unauthorized(message: string = 'Authentication required or invalid credentials', details?: unknown): AppError {
+    return new AppError('UNAUTHORIZED', message, 401, true, details);
   }
 
-  public static forbidden(message: string = 'Access denied for this tenant or resource'): AppError {
-    return new AppError('FORBIDDEN', message, 403, true);
+  public static forbidden(message: string = 'Access denied for this tenant or resource', details?: unknown): AppError {
+    return new AppError('FORBIDDEN', message, 403, true, details);
   }
 
-  public static notFound(message: string = 'Requested resource not found'): AppError {
-    return new AppError('NOT_FOUND', message, 404, true);
+  public static notFound(message: string = 'Requested resource not found', details?: unknown): AppError {
+    return new AppError('NOT_FOUND', message, 404, true, details);
   }
 
-  public static conflict(message: string = 'Resource conflict or duplicate operation'): AppError {
-    return new AppError('CONFLICT', message, 409, true);
+  public static conflict(message: string = 'Resource conflict or duplicate operation', details?: unknown): AppError {
+    return new AppError('CONFLICT', message, 409, true, details);
   }
 
-  public static rateLimited(message: string = 'Too many requests. Please retry later.'): AppError {
-    return new AppError('RATE_LIMITED', message, 429, true);
+  public static rateLimited(message: string = 'Too many requests. Please retry later.', details?: unknown): AppError {
+    return new AppError('RATE_LIMITED', message, 429, true, details);
   }
 
   public static database(message: string = 'Database operation failed', details?: unknown): AppError {
