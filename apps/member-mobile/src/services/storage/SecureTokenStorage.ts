@@ -34,10 +34,11 @@ class SecureTokenStorageImpl implements ISecureTokenStorage {
     if (this.isNativeAvailable !== null) return this.isNativeAvailable;
 
     try {
-      if (!Keychain || typeof Keychain.setGenericPassword !== 'function') {
+      if (!Keychain || typeof Keychain.getGenericPassword !== 'function') {
         this.isNativeAvailable = false;
       } else {
-        // Quick native probe
+        // Quick native call probe to test if native bridge is linked
+        await Keychain.getGenericPassword({ service: '__probe_service__' });
         this.isNativeAvailable = true;
       }
     } catch {
@@ -48,7 +49,7 @@ class SecureTokenStorageImpl implements ISecureTokenStorage {
       if (Config.env === 'production') {
         throw AppError.storage('Native secure storage (Keychain) is required in production.');
       }
-      Logger.warn('[SecureTokenStorage] Native Keychain not available. Running in Dev-Fallback mode.');
+      Logger.warn('[SecureTokenStorage] Native Keychain not linked (Running in Expo Go). Using In-Memory Dev Storage.');
     }
 
     return this.isNativeAvailable;
@@ -70,8 +71,13 @@ class SecureTokenStorageImpl implements ISecureTokenStorage {
       });
       Logger.debug('[SecureTokenStorage] Tokens stored securely in OS Keychain.');
     } catch (err) {
-      Logger.error('[SecureTokenStorage] Failed to save tokens to Keychain', err);
-      throw AppError.storage('Failed to securely store authentication credentials.');
+      this.isNativeAvailable = false;
+      this.devFallbackTokens = { ...tokens };
+      if (Config.env === 'production') {
+        Logger.error('[SecureTokenStorage] Failed to save tokens to Keychain', err);
+        throw AppError.storage('Failed to securely store authentication credentials.');
+      }
+      Logger.warn('[SecureTokenStorage] Keychain write failed. Fallback to in-memory tokens.');
     }
   }
 
@@ -87,13 +93,13 @@ class SecureTokenStorageImpl implements ISecureTokenStorage {
       });
 
       if (!credentials || !credentials.password) {
-        return null;
+        return this.devFallbackTokens;
       }
 
       return JSON.parse(credentials.password) as AuthTokens;
-    } catch (err) {
-      Logger.error('[SecureTokenStorage] Failed to read tokens from Keychain', err);
-      return null;
+    } catch {
+      this.isNativeAvailable = false;
+      return this.devFallbackTokens;
     }
   }
 
@@ -108,20 +114,17 @@ class SecureTokenStorageImpl implements ISecureTokenStorage {
   }
 
   public async clearTokens(): Promise<void> {
+    this.devFallbackTokens = null;
     try {
       const isNative = await this.checkNativeSupport();
-      if (!isNative) {
-        this.devFallbackTokens = null;
-        return;
+      if (isNative) {
+        await Keychain.resetGenericPassword({
+          service: SERVICE_NAME,
+        });
+        Logger.debug('[SecureTokenStorage] Secure credentials cleared.');
       }
-
-      await Keychain.resetGenericPassword({
-        service: SERVICE_NAME,
-      });
-      Logger.debug('[SecureTokenStorage] Secure credentials cleared.');
-    } catch (err) {
-      Logger.error('[SecureTokenStorage] Failed to clear Keychain tokens', err);
-      throw AppError.storage('Failed to clear secure credentials.');
+    } catch {
+      this.isNativeAvailable = false;
     }
   }
 
@@ -137,8 +140,9 @@ class SecureTokenStorageImpl implements ISecureTokenStorage {
         service: DEVICE_SECRET_SERVICE,
         accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
       });
-    } catch (err) {
-      Logger.error('[SecureTokenStorage] Failed to save device secret', err);
+    } catch {
+      this.isNativeAvailable = false;
+      this.devFallbackDeviceSecret = secret;
     }
   }
 
@@ -153,10 +157,10 @@ class SecureTokenStorageImpl implements ISecureTokenStorage {
         service: DEVICE_SECRET_SERVICE,
       });
 
-      return credentials ? credentials.password : null;
-    } catch (err) {
-      Logger.error('[SecureTokenStorage] Failed to read device secret', err);
-      return null;
+      return credentials ? credentials.password : this.devFallbackDeviceSecret;
+    } catch {
+      this.isNativeAvailable = false;
+      return this.devFallbackDeviceSecret;
     }
   }
 }
