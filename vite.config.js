@@ -95,7 +95,6 @@ export default defineConfig({
             if (id.includes('PendingDues')) return 'module-payments-dues';
             if (id.includes('PaymentHistory')) return 'module-payments-history';
             if (id.includes('GenerateReceipt')) return 'module-payments-receipt';
-            if (id.includes('RenewMembership')) return 'module-payments-renew';
           }
         },
       },

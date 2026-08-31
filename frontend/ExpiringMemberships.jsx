@@ -41,6 +41,7 @@ import {
   Tag,
   Trash2,
   TrendingUp,
+  User,
   Users,
   X,
   Zap,
@@ -732,201 +733,1363 @@ const MemberProfileDrawer = ({ isOpen, onClose, member, onAction }) => {
 };
 
 // ─────────────────────────────────────────
-// RENEWAL MODAL
 // ─────────────────────────────────────────
-const RenewalModal = ({ isOpen, onClose, member }) => {
-  const [activeTab, setActiveTab] = useState(member ? "plan" : "member");
-  const [selectedPlan, setSelectedPlan] = useState("Annual Elite Premium");
+// RENEWAL MODAL (Redesigned matching Add Member Modal design system)
+// ─────────────────────────────────────────
+const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = [] }) => {
+  const [activeStep, setActiveStep] = useState(1);
+  const [activeMember, setActiveMember] = useState(initialMember || null);
+  const [searchMember, setSearchMember] = useState("");
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState("annual_elite");
+  const [startDate, setStartDate] = useState(
+    initialMember?.expiryDate || new Date().toISOString().split("T")[0]
+  );
+  const [selectedAddons, setSelectedAddons] = useState(["pt_pass"]);
+  const [customDiscount, setCustomDiscount] = useState(10); // percentage
+  const [applyLoyaltyBonus, setApplyLoyaltyBonus] = useState(true);
+  const [includeGst, setIncludeGst] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [txnRef, setTxnRef] = useState("UPI-88492019482");
+  const [sendWhatsapp, setSendWhatsapp] = useState(true);
+  const [sendSms, setSendSms] = useState(true);
+  const [notes, setNotes] = useState("Member requested annual renewal with loyalty retention offer.");
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  if (!isOpen) return null;
+  const [selectedCoach, setSelectedCoach] = useState(initialMember?.pt || "Unassigned");
+  const [isCoachDropdownOpen, setIsCoachDropdownOpen] = useState(false);
 
-  const tabs = [
-    { id: "member", label: "Select Member", icon: Users },
-    { id: "plan", label: "Select Plan", icon: Layers },
-    { id: "pricing", label: "Pricing & Offer", icon: DollarSign },
-    { id: "confirmation", label: "Finalize", icon: CheckCircle2 },
+  useEffect(() => {
+    setActiveMember(initialMember || null);
+    if (initialMember?.expiryDate) {
+      setStartDate(initialMember.expiryDate);
+    }
+    setSelectedCoach(initialMember?.pt || "Unassigned");
+  }, [initialMember]);
+
+  const coachesList = useMemo(
+    () => [
+      {
+        id: "c5",
+        name: "Unassigned",
+        role: "No Personal Trainer Assigned",
+        specialty: "Self Guided Workout Access",
+        exp: "-",
+        badge: "Default",
+        badgeColor: "bg-slate-100 text-slate-500 border-slate-200",
+      },
+      {
+        id: "c1",
+        name: "Rohan V.",
+        role: "Senior Fitness Trainer",
+        specialty: "Body Building & Retention",
+        exp: "6+ Yrs",
+        badge: "Available",
+        badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
+      },
+      {
+        id: "c2",
+        name: "Priya M.",
+        role: "Strength & Conditioning Specialist",
+        specialty: "Powerlifting & Nutrition",
+        exp: "4+ Yrs",
+        badge: "Top Rated",
+        badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      },
+      {
+        id: "c3",
+        name: "Vikram S.",
+        role: "Cardio & HIIT Coach",
+        specialty: "Fat Loss & Endurance",
+        exp: "5+ Yrs",
+        badge: "Popular",
+        badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
+      },
+      {
+        id: "c4",
+        name: "Ananya K.",
+        role: "Yoga & Recovery Specialist",
+        specialty: "Mobility & Rehab",
+        exp: "3+ Yrs",
+        badge: "Available",
+        badgeColor: "bg-slate-100 text-slate-700 border-slate-200",
+      },
+    ],
+    []
+  );
+
+  const activeCoachObj = useMemo(() => {
+    return (
+      coachesList.find(
+        (c) =>
+          c.name.toLowerCase() === selectedCoach.toLowerCase() ||
+          selectedCoach.toLowerCase().includes(c.name.toLowerCase())
+      ) || coachesList[0]
+    );
+  }, [coachesList, selectedCoach]);
+
+  const defaultSearchMembers = useMemo(
+    () => [
+      {
+        id: "MEM-9081",
+        name: "Aarav Sharma",
+        phone: "+91 98765 43210",
+        email: "aarav.sharma@example.com",
+        plan: "Quarterly Pro",
+        expiryDate: "2026-07-24",
+        daysRemaining: 4,
+        status: "Expiring Soon",
+        renewalProbability: 85,
+        branch: "Downtown Branch",
+        pt: "Rohan V.",
+      },
+      {
+        id: "MEM-9082",
+        name: "Rohan Verma",
+        phone: "+91 98765 43211",
+        email: "rohan.v@example.com",
+        plan: "Annual Elite",
+        expiryDate: "2026-07-28",
+        daysRemaining: 8,
+        status: "Expiring Soon",
+        renewalProbability: 92,
+        branch: "Downtown Branch",
+        pt: "Priya M.",
+      },
+      {
+        id: "MEM-9083",
+        name: "Ananya Roy",
+        phone: "+91 98765 43212",
+        email: "ananya.r@example.com",
+        plan: "Monthly Basic",
+        expiryDate: "2026-07-22",
+        daysRemaining: 2,
+        status: "Urgent Expiry",
+        renewalProbability: 45,
+        branch: "Downtown Branch",
+        pt: "Vikram S.",
+      },
+      {
+        id: "MEM-9084",
+        name: "Priya Patel",
+        phone: "+91 98765 43213",
+        email: "priya.p@example.com",
+        plan: "Half-Yearly Flex",
+        expiryDate: "2026-08-01",
+        daysRemaining: 12,
+        status: "Upcoming Expiry",
+        renewalProbability: 78,
+        branch: "Downtown Branch",
+        pt: "Rohan V.",
+      },
+      {
+        id: "MEM-9085",
+        name: "Vikram Singh",
+        phone: "+91 98765 43214",
+        email: "vikram.s@example.com",
+        plan: "Annual Elite",
+        expiryDate: "2026-07-20",
+        daysRemaining: 0,
+        status: "Expired",
+        renewalProbability: 60,
+        branch: "Downtown Branch",
+        pt: "Priya M.",
+      },
+    ],
+    []
+  );
+
+  const searchableMembers = useMemo(() => {
+    if (membersList && membersList.length > 0) return membersList;
+    return defaultSearchMembers;
+  }, [membersList, defaultSearchMembers]);
+
+  const searchResults = useMemo(() => {
+    if (!searchMember.trim()) return searchableMembers.slice(0, 5);
+    const q = searchMember.toLowerCase();
+    return searchableMembers
+      .filter(
+        (m) =>
+          m.name?.toLowerCase().includes(q) ||
+          m.id?.toLowerCase().includes(q) ||
+          m.phone?.toLowerCase().includes(q)
+      )
+      .slice(0, 6);
+  }, [searchMember, searchableMembers]);
+
+  const plans = [
+    {
+      id: "annual_elite",
+      name: "Annual Elite Premium",
+      durationMonths: 12,
+      price: 24999,
+      badge: "Best Value (AI Pick)",
+      badgeColor: "bg-emerald-500 text-white",
+      benefits: ["All Branch Access", "12 Free PT Sessions", "Unlimited Sauna & Steam", "Priority Locker Access"],
+    },
+    {
+      id: "quarterly_pro",
+      name: "Quarterly Transformation",
+      durationMonths: 3,
+      price: 8500,
+      badge: "Popular",
+      badgeColor: "bg-indigo-500 text-white",
+      benefits: ["Single Branch Access", "2 Free PT Sessions", "Standard Locker Access", "App Workout Tracker"],
+    },
+    {
+      id: "monthly_starter",
+      name: "Monthly Starter",
+      durationMonths: 1,
+      price: 3200,
+      badge: "Short Term",
+      badgeColor: "bg-slate-600 text-white",
+      benefits: ["Single Branch Access", "Standard Gym Access", "Basic Fitness Assessment"],
+    },
   ];
+
+  const currentPlanObj = plans.find((p) => p.id === selectedPlanId) || plans[0];
+
+  // Calculate Expiry Date based on duration
+  const calculateNewExpiry = (startStr, months) => {
+    try {
+      const d = new Date(startStr);
+      d.setMonth(d.getMonth() + months);
+      return d.toISOString().split("T")[0];
+    } catch {
+      return "2027-07-24";
+    }
+  };
+
+  const newExpiryDate = calculateNewExpiry(startDate, currentPlanObj.durationMonths);
+
+  // Addons list
+  const availableAddons = [
+    { id: "pt_pass", name: "10-Session PT Attachment Pass", price: 4000, icon: Users },
+    { id: "sauna_pass", name: "Recovery & Unlimited Sauna Pass", price: 1500, icon: Zap },
+    { id: "nutrition_pass", name: "Custom Nutrition Plan Consult", price: 999, icon: CheckCircle2 },
+  ];
+
+  const toggleAddon = (addonId) => {
+    setSelectedAddons((prev) =>
+      prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
+    );
+  };
+
+  // Pricing calculations
+  const basePrice = currentPlanObj.price;
+  const addonsTotal = selectedAddons.reduce((sum, id) => {
+    const addon = availableAddons.find((a) => a.id === id);
+    return sum + (addon ? addon.price : 0);
+  }, 0);
+
+  const subtotalBeforeDiscount = basePrice + addonsTotal;
+
+  // Discount
+  const discountRate = applyLoyaltyBonus ? Math.max(customDiscount, 10) : customDiscount;
+  const discountAmount = Math.round((subtotalBeforeDiscount * discountRate) / 100);
+  const netBeforeTax = subtotalBeforeDiscount - discountAmount;
+
+  // GST 18%
+  const gstAmount = includeGst ? Math.round(netBeforeTax * 0.18) : 0;
+  const grandTotal = netBeforeTax + gstAmount;
+
+  const steps = [
+    { num: 1, label: "Member Profile", kicker: "STEP 1", icon: Users },
+    { num: 2, label: "Renewal Plan", kicker: "STEP 2", icon: Layers },
+    { num: 3, label: "Pricing & Payment", kicker: "STEP 3", icon: CreditCard },
+    { num: 4, label: "Review & Issue", kicker: "STEP 4", icon: CheckCircle2 },
+  ];
+
+  const [isSearchError, setIsSearchError] = useState(false);
+
+  const handleNext = () => {
+    if (activeStep === 1 && !activeMember) {
+      setIsSearchError(true);
+      setTimeout(() => {
+        setIsSearchError(false);
+      }, 1000);
+      return;
+    }
+    if (activeStep < 4) {
+      setActiveStep((prev) => prev + 1);
+    } else {
+      setIsSuccess(true);
+    }
+  };
+
+  const handleBack = () => {
+    if (activeStep > 1) {
+      setActiveStep((prev) => prev - 1);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[10001] flex items-end justify-center">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        exit={{ opacity: 0, transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] } }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+        className="absolute inset-0"
+        style={{
+          background: "rgba(4, 6, 12, 0.72)",
+          backdropFilter: "blur(12px) saturate(1.2)",
+          WebkitBackdropFilter: "blur(12px) saturate(1.2)",
+        }}
       />
       <motion.div
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
-        className="relative w-full max-w-4xl bg-white h-[82vh] shadow-2xl flex flex-col rounded-t-[32px] border-t border-white/20 overflow-hidden"
+        exit={{ y: "100%", transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] } }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-5xl h-[92vh] sm:h-[88vh] max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-[28px] sm:rounded-t-[32px] rounded-b-none border-t border-white/90 overflow-hidden z-10"
+        style={{
+          background:
+            "radial-gradient(circle at top right, rgba(255, 255, 255, 0.56), transparent 24%), linear-gradient(160deg, rgba(255, 255, 255, 0.99), rgba(243, 247, 255, 0.97))",
+          boxShadow: "0 -20px 80px rgba(26, 36, 60, 0.18)",
+        }}
       >
         {/* Grabber Handle */}
-        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-200 rounded-full z-10" />
+        <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-200 rounded-full z-20" />
 
-        <header className="px-6 pt-8 pb-5 border-b border-slate-100 flex justify-between items-center bg-white">
-          <div>
-            <h2 className="text-xl font-black text-slate-950 uppercase tracking-tight">Process Renewal</h2>
-            <p className="text-xs font-bold text-slate-500 mt-0.5">
-              {member ? `Secure recurring revenue for ${member.name} (${member.id}).` : "Select a member to renew their membership."}
+        {/* Repositioned Cross Button at top-right corner */}
+        <button
+          onClick={onClose}
+          className="member-modal-close-btn !absolute !top-3.5 sm:!top-4 !right-3.5 sm:!right-5 z-30 hover:!bg-slate-950 hover:!text-white hover:!border-slate-900 shadow-sm"
+          type="button"
+          aria-label="Close modal"
+          title="Close Modal"
+        >
+          <X size={20} strokeWidth={2.5} />
+        </button>
+
+        {/* Modal Header with Premium Typography */}
+        <header className="px-4 sm:px-6 pt-2 sm:pt-2.5 pb-1.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50 flex justify-between items-center relative z-10 pr-14 sm:pr-16">
+          <div className="space-y-0.5">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              Process Member Renewal
+            </h2>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-500 leading-normal max-w-2xl">
+              Extend membership access, configure plan validity, apply AI retention discounts, and issue tax invoices.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-center transition-all"
-          >
-            <X size={20} />
-          </button>
         </header>
 
-        <div className="flex flex-1 overflow-hidden">
-          <aside className="w-56 border-r border-slate-50 bg-slate-50/30 p-5">
-            <nav className="space-y-1.5">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+        {/* Step Progress Bar Header - Balanced Non-Clickable Stepper Strip */}
+        <div className="px-6 py-1.5 sm:py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-start sm:justify-between gap-3 overflow-x-auto scrollbar-none select-none">
+          {steps.map((step) => {
+            const isActive = activeStep === step.num;
+            const isCompleted = activeStep > step.num;
+            return (
+              <div
+                key={step.num}
+                className={cn(
+                  "flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 min-w-max cursor-default",
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-black scale-[1.01]"
+                    : isCompleted
+                    ? "bg-slate-800 text-emerald-400"
+                    : "bg-slate-800/40 text-slate-400"
+                )}
+              >
+                <div
                   className={cn(
-                    "w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                    activeTab === tab.id
-                      ? "bg-slate-950 text-white shadow-xl shadow-slate-200 translate-x-1"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-0.5"
+                    "w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black",
+                    isActive
+                      ? "bg-white text-indigo-700 shadow-sm"
+                      : isCompleted
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      : "bg-slate-700 text-slate-400"
                   )}
                 >
-                  <tab.icon size={16} />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-            
-            <div className="mt-10 p-4 rounded-2xl bg-emerald-50 border border-emerald-100/50">
-               <Zap size={20} className="text-emerald-600 mb-2.5" />
-               <p className="text-[9px] font-black text-emerald-900 uppercase tracking-widest leading-relaxed">
-                  Loyalty Insight: {member ? `${member.name} has ${member.renewalProbability}% renewal probability.` : "Select a member to view insights."}
-               </p>
-            </div>
-          </aside>
-
-          <main className="flex-1 overflow-y-auto p-8">
-            <AnimatePresence mode="wait">
-              {activeTab === "member" && (
-                <motion.div
-                  key="member"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="max-w-2xl space-y-6"
-                >
-                  <label className="block">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Search Member</span>
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                      <input
-                        type="text"
-                        defaultValue={member ? member.name : ""}
-                        placeholder="Member Name, ID, or Phone"
-                        className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 pl-11 pr-4 text-sm font-bold outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all"
-                      />
-                    </div>
-                  </label>
-                </motion.div>
-              )}
-
-              {activeTab === "plan" && (
-                <motion.div
-                  key="plan"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="max-w-2xl space-y-6"
-                >
-                   <CustomSelect
-                      label="Select Membership Product"
-                      value={selectedPlan}
-                      options={["Annual Elite Premium", "Quarterly Transformation", "Monthly Starter", "Student Basic"]}
-                      onChange={setSelectedPlan}
-                   />
-                   
-                   <div className="p-6 rounded-[24px] bg-slate-50 border border-slate-200">
-                      <h4 className="text-[9px] font-black text-slate-950 uppercase tracking-widest mb-4 flex items-center gap-2">
-                         <Info size={14} /> Plan Benefits Preview
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                         {["All Branch Access", "24/7 Priority Entry", "12 PT Sessions", "Steam/Sauna Access"].map(b => (
-                            <div key={b} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-100">
-                               <CheckCircle2 size={12} className="text-emerald-500" />
-                               <span className="text-[10px] font-bold text-slate-600">{b}</span>
-                            </div>
-                         ))}
-                      </div>
-                   </div>
-                </motion.div>
-              )}
-
-              {activeTab === "pricing" && (
-                 <motion.div key="pricing" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
-                    <div className="p-6 rounded-[24px] bg-emerald-50 border border-emerald-100 flex items-center justify-between">
-                       <div>
-                          <span className="block text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1">Retention Bonus Applied</span>
-                          <span className="text-sm font-black text-emerald-900">Elite Loyalty Discount (10%)</span>
-                       </div>
-                       <div className="text-xl font-black text-emerald-700">-₹2,499</div>
-                    </div>
-                    
-                    <div className="p-6 rounded-[24px] bg-slate-900 text-white shadow-2xl relative overflow-hidden">
-                       <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full -mr-12 -mt-12 blur-2xl" />
-                       <h4 className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                          <DollarSign size={14} /> Renewal Calculation
-                       </h4>
-                       <div className="space-y-3">
-                          <div className="flex justify-between items-center text-xs">
-                             <span className="font-bold text-slate-400">Standard Rate</span>
-                             <span className="font-black text-white">₹24,999.00</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                             <span className="font-bold text-slate-400">GST (18%)</span>
-                             <span className="font-black text-white">₹4,499.82</span>
-                          </div>
-                          <div className="h-px bg-white/10 my-3" />
-                          <div className="flex justify-between items-center">
-                             <span className="text-xs font-black uppercase tracking-widest">Grand Total</span>
-                             <span className="text-2xl font-black text-indigo-400 tracking-tighter">₹26,999.82</span>
-                          </div>
-                       </div>
-                    </div>
-                 </motion.div>
-              )}
-
-              {activeTab === "confirmation" && (
-                 <motion.div key="confirmation" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
-                    <div className="text-center py-10">
-                       <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-6">
-                          <CheckCircle2 size={40} />
-                       </div>
-                       <h3 className="text-xl font-black text-slate-950 uppercase tracking-tight">Ready to Finalize</h3>
-                       <p className="text-sm font-bold text-slate-500 mt-2 max-w-sm mx-auto">
-                          Processing this renewal will extend the membership validity and generate a production invoice.
-                       </p>
-                    </div>
-                 </motion.div>
-              )}
-            </AnimatePresence>
-          </main>
+                  {isCompleted ? <Check size={13} /> : step.num}
+                </div>
+                <div className="text-left">
+                  <span className="block text-[8px] uppercase tracking-widest font-mono opacity-70 leading-none mb-0.5">
+                    {step.kicker}
+                  </span>
+                  <span className="text-xs font-bold leading-tight">{step.label}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        <footer className="px-8 py-6 border-t border-slate-100 bg-white flex justify-end gap-3.5 items-center">
-          <button
-            onClick={onClose}
-            className="px-6 h-12 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all"
-          >
-            Cancel
-          </button>
-          <button className="px-10 h-12 rounded-xl bg-slate-950 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-slate-200 transition-all hover:bg-slate-800">
-            Publish Renewal
-          </button>
-        </footer>
+        {/* Modal Main Content Container */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50/40">
+          {isSuccess ? (
+            /* SUCCESS CONFIRMATION STATE */
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="h-full flex flex-col items-center justify-center text-center py-8 max-w-lg mx-auto"
+            >
+              <div className="w-16 h-16 rounded-full bg-emerald-100 border-4 border-emerald-50 text-emerald-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-600/10">
+                <CheckCircle2 size={36} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">Renewal Successfully Published!</h3>
+              <p className="text-xs font-semibold text-slate-600 mt-1.5 leading-relaxed">
+                Membership for <strong className="text-slate-900">{activeMember?.name || "Member"}</strong> has been extended until{" "}
+                <strong className="text-indigo-600">{newExpiryDate}</strong>.
+              </p>
+
+              <div className="mt-4 p-3.5 rounded-xl bg-white border border-slate-200 w-full text-left space-y-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Plan:</span>
+                  <span className="font-bold text-slate-900">{currentPlanObj.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Grand Total:</span>
+                  <span className="font-black text-emerald-600">₹{grandTotal.toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Payment Mode:</span>
+                  <span className="font-bold uppercase text-slate-900">{paymentMethod}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="mt-6 px-8 h-10 rounded-xl bg-slate-950 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-all"
+              >
+                Close & Return to Dashboard
+              </button>
+            </motion.div>
+          ) : (
+            <AnimatePresence mode="popLayout" initial={false}>
+              {/* STEP 1: MEMBER PROFILE & STATUS (2-Column Layout) */}
+              {activeStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, scale: 0.99 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.1, ease: "easeOut" }}
+                  className="max-w-4xl mx-auto"
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                    {/* LEFT COLUMN: Fixed-Height Obsidian Member Profile & Metrics Card */}
+                    <div
+                      className="lg:col-span-5 p-4 sm:p-5 rounded-2xl text-white shadow-xl relative overflow-hidden flex flex-col justify-between h-[400px] min-h-[400px] max-h-[400px]"
+                      style={{
+                        background: "linear-gradient(155deg, #090d16 0%, #05070d 100%)",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        boxShadow: "0 16px 32px -8px rgba(4, 6, 12, 0.5)",
+                      }}
+                    >
+                      <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/15 rounded-full -mr-12 -mt-12 blur-2xl pointer-events-none" />
+                      <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full -ml-10 -mb-10 blur-2xl pointer-events-none" />
+
+                      {activeMember ? (
+                        <>
+                          {/* Close / Deselect Member Button Box on Top-Right Corner of Card */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveMember(null);
+                              setSearchMember("");
+                            }}
+                            className="absolute top-3 right-3 z-30 w-7 h-7 rounded-lg bg-white/10 hover:bg-rose-500/20 border border-white/15 hover:border-rose-500/40 text-slate-300 hover:text-rose-400 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group"
+                            title="Clear selected member"
+                            aria-label="Clear selected member"
+                          >
+                            <X size={14} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
+                          </button>
+
+                          <div className="relative z-10 space-y-2.5 pr-6">
+                            {/* Member Avatar & Status Header */}
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white flex items-center justify-center text-lg font-black shadow-md shadow-indigo-500/30 border border-white/20 shrink-0">
+                                {activeMember.name?.charAt(0)}
+                              </div>
+                              <div className="space-y-0.5 overflow-hidden">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[8.5px] font-black uppercase tracking-wider border border-emerald-500/30">
+                                    {activeMember.status || "Active Member"}
+                                  </span>
+                                </div>
+                                <h3 className="text-base font-black text-white tracking-tight truncate">{activeMember.name}</h3>
+                              </div>
+                            </div>
+
+                            {/* Structured Key-Value Metric Rows */}
+                            <div className="pt-2 border-t border-white/10 space-y-1.5 text-xs text-slate-300">
+                              <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                                <span className="text-slate-400 text-[10.5px] font-semibold">Member ID</span>
+                                <span className="px-2 py-0.5 rounded bg-white/10 text-white font-mono text-[9.5px] font-bold border border-white/10">
+                                  {activeMember.id}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                                <span className="text-slate-400 text-[10.5px] font-semibold">Primary Contact</span>
+                                <strong className="text-slate-200 text-[10.5px] font-bold">{activeMember.phone}</strong>
+                              </div>
+                              <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                                <span className="text-slate-400 text-[10.5px] font-semibold">Home Branch</span>
+                                <strong className="text-slate-200 text-[10.5px] font-bold">{activeMember.branch || "Downtown Branch"}</strong>
+                              </div>
+                              <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                                <span className="text-slate-400 text-[10.5px] font-semibold">Membership Tenure</span>
+                                <strong className="text-slate-200 text-[10.5px] font-bold">2.4 Years (Active)</strong>
+                              </div>
+                              <div className="flex justify-between items-center py-0.5">
+                                <span className="text-slate-400 text-[10.5px] font-semibold">Current Expiry</span>
+                                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[9.5px] border border-amber-500/30">
+                                  {activeMember.expiryDate || "N/A"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Renewal Conversion Index Box */}
+                          <div
+                            className="relative z-10 p-2.5 rounded-xl space-y-1.5"
+                            style={{
+                              background: "rgba(255, 255, 255, 0.04)",
+                              border: "1px solid rgba(255, 255, 255, 0.08)",
+                            }}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-[8.5px] font-black uppercase tracking-widest text-indigo-300 font-mono">
+                                Renewal Conversion Index
+                              </span>
+                              <div className="text-sm font-black text-emerald-400 flex items-center gap-1">
+                                <Zap size={13} className="fill-emerald-400" />
+                                <span>{activeMember.renewalProbability || 85}%</span>
+                              </div>
+                            </div>
+
+                            {/* Visual Progress Meter Bar */}
+                            <div className="w-full h-1.5 rounded-full bg-slate-950 overflow-hidden border border-white/10 p-0.5">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 transition-all duration-500 shadow-sm"
+                                style={{ width: `${activeMember.renewalProbability || 85}%` }}
+                              />
+                            </div>
+
+                            <div className="p-1.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-semibold text-emerald-300 leading-snug flex items-start gap-1.5">
+                              <ShieldCheck size={12} className="text-emerald-400 shrink-0 mt-0.5" />
+                              <span>High attendance logged. Recommended for 10% loyalty retention bonus upgrade.</span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        /* Blank / Empty State Card with Large Profile Icon */
+                        <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-4 space-y-3">
+                          <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 shadow-inner group">
+                            <User size={44} className="text-slate-400/90 stroke-[1.5]" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-sm sm:text-base font-black text-slate-200 tracking-tight">No Member Selected</h4>
+                            <p className="text-[11px] font-medium text-slate-400 max-w-[210px] mx-auto leading-relaxed">
+                              Search and select a member from the search bar on the right to view details.
+                            </p>
+                          </div>
+                          <div className="pt-1">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-bold">
+                              <Search size={12} /> Search Member Above
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* RIGHT COLUMN: Other Form Fields */}
+                    <div className="lg:col-span-7 space-y-3">
+                      {/* Search / Switch Member */}
+                      <motion.div
+                        animate={isSearchError ? { x: [0, -6, 6, -6, 6, -3, 3, 0] } : { x: 0 }}
+                        transition={{ duration: 0.35, ease: "easeInOut" }}
+                        className={cn(
+                          "p-3 rounded-xl bg-white border transition-all duration-300 shadow-sm space-y-1.5 relative z-40",
+                          isSearchError
+                            ? "border-rose-400/70 bg-rose-50/20 ring-2 ring-rose-500/10"
+                            : "border-slate-200/80"
+                        )}
+                      >
+                        <label className="block text-[10.5px] font-black text-slate-700 uppercase tracking-wider">
+                          Search & Select Member {!activeMember && <span className="text-rose-500 font-bold">*</span>}
+                        </label>
+
+                        <div className="relative">
+                          <div className="relative flex items-center">
+                            <Search className="absolute left-2.5 text-slate-400 pointer-events-none" size={13} />
+                            <input
+                              type="text"
+                              value={searchMember}
+                              onChange={(e) => {
+                                setSearchMember(e.target.value);
+                                setIsSearchDropdownOpen(true);
+                              }}
+                              onFocus={() => setIsSearchDropdownOpen(true)}
+                              placeholder="Search by Name, Member ID, or Phone..."
+                              className={cn(
+                                "w-full h-8 pl-8 pr-7 border bg-slate-50/50 text-xs font-bold outline-none transition-all duration-300",
+                                isSearchError
+                                  ? "border-rose-400/80 bg-rose-50/40 text-rose-900 rounded-lg placeholder:text-rose-400/70"
+                                  : isSearchDropdownOpen
+                                  ? "rounded-t-lg rounded-b-none border-indigo-500 bg-white ring-2 ring-indigo-500/10 text-slate-900"
+                                  : "rounded-lg border-slate-200 text-slate-900 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10"
+                              )}
+                            />
+                            {searchMember && (
+                              <button
+                                type="button"
+                                onClick={() => setSearchMember("")}
+                                className="absolute right-2 text-slate-400 hover:text-slate-600"
+                              >
+                                <X size={13} />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Compact Attached Search Dropdown Menu */}
+                          {isSearchDropdownOpen && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setIsSearchDropdownOpen(false)}
+                              />
+                              <div className="absolute left-0 right-0 top-full -mt-px bg-white rounded-b-xl border border-indigo-500 shadow-xl shadow-slate-950/15 z-50 max-h-52 overflow-y-auto p-1 space-y-0.5">
+                                {/* Header Strip */}
+                                <div className="px-2 py-1 flex items-center justify-between border-b border-slate-100 bg-slate-50/80 rounded-t-sm mb-0.5">
+                                  <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500">
+                                    Member Suggestions
+                                  </span>
+                                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-700 text-[8.5px] font-extrabold border border-indigo-100">
+                                    {searchResults.length} {searchResults.length === 1 ? "Result" : "Results"}
+                                  </span>
+                                </div>
+
+                                {searchResults.length > 0 ? (
+                                  searchResults.map((m) => {
+                                    const isSelected = activeMember?.id === m.id;
+                                    return (
+                                      <button
+                                        key={m.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveMember(m);
+                                          setSearchMember("");
+                                          setIsSearchDropdownOpen(false);
+                                        }}
+                                        className={cn(
+                                          "w-full flex items-center justify-between p-1.5 px-2 rounded-lg text-left transition-all group border cursor-pointer",
+                                          isSelected
+                                            ? "bg-indigo-50/90 border-indigo-200"
+                                            : "bg-white hover:bg-slate-50 border-transparent hover:border-slate-100"
+                                        )}
+                                      >
+                                        <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                                          <div
+                                            className={cn(
+                                              "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs text-white shrink-0 shadow-2xs",
+                                              isSelected ? "bg-indigo-600" : "bg-slate-900 group-hover:bg-indigo-600"
+                                            )}
+                                          >
+                                            {m.name?.charAt(0)}
+                                          </div>
+                                          <div className="min-w-0 flex-1 truncate leading-tight">
+                                            <div className="flex items-center gap-1.5">
+                                              <span className="text-[11px] font-black text-slate-900 truncate group-hover:text-indigo-600">
+                                                {m.name}
+                                              </span>
+                                              {m.status && (
+                                                <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-emerald-100 text-emerald-800 shrink-0">
+                                                  {m.status}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <p className="text-[9.5px] text-slate-500 font-semibold truncate">
+                                              <span className="font-mono text-slate-700 font-bold">{m.id}</span> • {m.phone}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <span
+                                          className={cn(
+                                            "inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded transition-all shrink-0 ml-1.5",
+                                            isSelected
+                                              ? "bg-indigo-600 text-white"
+                                              : "bg-slate-100 text-slate-700 group-hover:bg-indigo-600 group-hover:text-white"
+                                          )}
+                                        >
+                                          {isSelected ? "Selected" : "Select"}
+                                        </span>
+                                      </button>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="py-4 px-3 text-center text-xs font-semibold text-slate-500">
+                                    No members match query.
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {activeMember ? (
+                          <p className="text-[9.5px] font-semibold text-emerald-600 flex items-center gap-1">
+                            <CheckCircle2 size={11} className="text-emerald-500" />
+                            Selected: <strong className="text-slate-900 font-bold">{activeMember.name}</strong> ({activeMember.id})
+                          </p>
+                        ) : (
+                          <p
+                            className={cn(
+                              "text-[9.5px] font-semibold transition-colors duration-300",
+                              isSearchError ? "text-rose-600 font-black animate-pulse" : "text-amber-600"
+                            )}
+                          >
+                            * Search & select a member to proceed.
+                          </p>
+                        )}
+                      </motion.div>
+
+                      {/* Compact Primary Fitness Coach / PT Dropdown */}
+                      <div className="p-3 rounded-xl bg-white border border-slate-200/80 shadow-sm space-y-1.5 relative z-30">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[10.5px] font-black text-slate-700 uppercase tracking-wider">
+                            Primary Fitness Coach / PT
+                          </label>
+                          <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded-full border border-indigo-100/80">
+                            +34% Retention Boost
+                          </span>
+                        </div>
+
+                        <div className="relative">
+                          {/* Compact Trigger Button */}
+                          <button
+                            type="button"
+                            onClick={() => setIsCoachDropdownOpen((prev) => !prev)}
+                            className={cn(
+                              "w-full h-8 px-2.5 border flex items-center justify-between text-left transition-all cursor-pointer bg-slate-50/70 hover:bg-slate-50 focus:outline-none",
+                              isCoachDropdownOpen
+                                ? "rounded-t-lg rounded-b-none border-indigo-500 bg-white ring-2 ring-indigo-500/10"
+                                : "rounded-lg border-slate-200 hover:border-slate-300"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                              <div className="w-5 h-5 rounded bg-indigo-600 text-white flex items-center justify-center font-black text-[10px] shrink-0">
+                                {activeCoachObj.name.charAt(0)}
+                              </div>
+                              <span className="text-xs font-black text-slate-900 truncate">
+                                {activeCoachObj.name}
+                              </span>
+                              <span className="text-[10px] font-semibold text-slate-500 truncate hidden sm:inline">
+                                • {activeCoachObj.role}
+                              </span>
+                            </div>
+                            <ChevronDown
+                              size={14}
+                              className={cn(
+                                "text-slate-400 shrink-0 transition-transform duration-200",
+                                isCoachDropdownOpen && "rotate-180 text-indigo-600"
+                              )}
+                            />
+                          </button>
+
+                          {/* Compact Attached Popover Dropdown Menu */}
+                          {isCoachDropdownOpen && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-30"
+                                onClick={() => setIsCoachDropdownOpen(false)}
+                              />
+                              <div className="absolute left-0 right-0 top-full -mt-px bg-white rounded-b-xl border border-indigo-500 shadow-xl shadow-slate-950/15 z-40 max-h-52 overflow-y-auto p-1 space-y-0.5">
+                                {/* Header Strip */}
+                                <div className="px-2 py-1 flex items-center justify-between border-b border-slate-100 bg-slate-50/80 rounded-t-sm mb-0.5">
+                                  <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500">
+                                    Fitness Coaches
+                                  </span>
+                                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-700 text-[8.5px] font-bold border border-indigo-100">
+                                    {coachesList.length} Options
+                                  </span>
+                                </div>
+
+                                {coachesList.map((c) => {
+                                  const isSelected = activeCoachObj.id === c.id;
+                                  return (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedCoach(c.name);
+                                        setIsCoachDropdownOpen(false);
+                                      }}
+                                      className={cn(
+                                        "w-full flex items-center justify-between p-1.5 px-2 rounded-lg text-left transition-all group border cursor-pointer",
+                                        isSelected
+                                          ? "bg-indigo-50/90 border-indigo-200"
+                                          : "bg-white hover:bg-slate-50 border-transparent hover:border-slate-100"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                                        <div
+                                          className={cn(
+                                            "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs text-white shrink-0",
+                                            isSelected ? "bg-indigo-600" : "bg-slate-900 group-hover:bg-indigo-600"
+                                          )}
+                                        >
+                                          {c.name.charAt(0)}
+                                        </div>
+
+                                        <div className="min-w-0 flex-1 truncate leading-tight">
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="text-[11px] font-black text-slate-900 truncate group-hover:text-indigo-600">
+                                              {c.name}
+                                            </span>
+                                            <span className="px-1.5 py-0.2 rounded text-[8px] font-bold uppercase bg-slate-100 text-slate-700 shrink-0">
+                                              {c.badge}
+                                            </span>
+                                          </div>
+                                          <p className="text-[9.5px] text-slate-500 font-semibold truncate">
+                                            {c.role}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <span
+                                        className={cn(
+                                          "inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded transition-all shrink-0 ml-1.5",
+                                          isSelected
+                                            ? "bg-indigo-600 text-white"
+                                            : "bg-slate-100 text-slate-700 group-hover:bg-indigo-600 group-hover:text-white"
+                                        )}
+                                      >
+                                        {isSelected ? "Assigned" : "Assign"}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Renewal Notes */}
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm space-y-2">
+                        <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                          Renewal Special Instructions / Notes
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          placeholder="Add member notes, special requests, or discount justification..."
+                          className="w-full p-2.5 rounded-lg border border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 2: RENEWAL PLAN & DURATION */}
+              {activeStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, scale: 0.99 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.1, ease: "easeOut" }}
+                  className="space-y-4 max-w-4xl mx-auto"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 tracking-tight">Select Membership Plan</h3>
+                      <p className="text-[11px] font-semibold text-slate-500">Choose plan duration and add-on services for this renewal.</p>
+                    </div>
+                  </div>
+
+                  {/* Plan Cards Grid - Compact */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {plans.map((plan) => {
+                      const isSelected = selectedPlanId === plan.id;
+                      return (
+                        <div
+                          key={plan.id}
+                          onClick={() => setSelectedPlanId(plan.id)}
+                          className={cn(
+                            "p-3.5 rounded-xl border-2 transition-all cursor-pointer relative flex flex-col justify-between space-y-2 bg-white",
+                            isSelected
+                              ? "border-indigo-600 shadow-md shadow-indigo-600/10 ring-2 ring-indigo-500/10"
+                              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                          )}
+                        >
+                          {plan.badge && (
+                            <span className={cn("absolute -top-2.5 right-3 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shadow-sm", plan.badgeColor)}>
+                              {plan.badge}
+                            </span>
+                          )}
+                          <div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">
+                              {plan.durationMonths} Months Plan
+                            </span>
+                            <h4 className="text-sm font-black text-slate-900 tracking-tight">{plan.name}</h4>
+                            <div className="mt-1.5">
+                              <span className="text-xl font-black text-slate-900">₹{plan.price.toLocaleString("en-IN")}</span>
+                              <span className="text-[11px] text-slate-500 font-semibold"> / term</span>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 space-y-1">
+                            {plan.benefits.map((b) => (
+                              <div key={b} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600">
+                                <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                                <span>{b}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Dates Grid - Compact */}
+                  <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                        Effective Start Date <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-slate-50/50 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                        Calculated Expiry Date
+                      </label>
+                      <div className="h-9 px-3 rounded-lg bg-indigo-50/70 border border-indigo-100 flex items-center justify-between">
+                        <span className="text-xs font-black text-indigo-900">{newExpiryDate}</span>
+                        <span className="text-[9px] font-black uppercase text-indigo-600 tracking-wider bg-white px-2 py-0.5 rounded border border-indigo-200">
+                          +{currentPlanObj.durationMonths} Months
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Addons Selection - Compact */}
+                  <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm space-y-2">
+                    <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Recommended Renewal Add-ons</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      {availableAddons.map((addon) => {
+                        const isChecked = selectedAddons.includes(addon.id);
+                        return (
+                          <div
+                            key={addon.id}
+                            onClick={() => toggleAddon(addon.id)}
+                            className={cn(
+                              "p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-2",
+                              isChecked
+                                ? "bg-indigo-50/60 border-indigo-300 text-indigo-950 font-bold"
+                                : "bg-slate-50/50 border-slate-200 text-slate-600 hover:border-slate-300"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <addon.icon size={14} className={isChecked ? "text-indigo-600" : "text-slate-400"} />
+                              <div>
+                                <span className="block text-[11px] font-bold leading-tight">{addon.name}</span>
+                                <span className="text-[9px] font-bold text-emerald-600">+₹{addon.price}</span>
+                              </div>
+                            </div>
+                            <div className={cn("w-4 h-4 rounded border flex items-center justify-center transition-all", isChecked ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white")}>
+                              {isChecked && <Check size={10} />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 3: PRICING & PAYMENT */}
+              {activeStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, scale: 0.99 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.1, ease: "easeOut" }}
+                  className="space-y-4 max-w-4xl mx-auto"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Left: Discounts & Taxes */}
+                    <div className="space-y-3.5">
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+                        <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                          <DollarSign size={14} className="text-indigo-600" /> Retention Offer & Discounts
+                        </h4>
+
+                        {/* AI Bonus Alert */}
+                        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-start justify-between gap-2.5">
+                          <div>
+                            <span className="block text-[11px] font-black text-emerald-900">10% AI Loyalty Discount Recommended</span>
+                            <span className="text-[10px] font-semibold text-emerald-700 block mt-0.5">
+                              Applied based on member attendance & renewal score.
+                            </span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={applyLoyaltyBonus}
+                            onChange={(e) => setApplyLoyaltyBonus(e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Custom Discount Input */}
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Custom Discount (%)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="50"
+                            value={customDiscount}
+                            onChange={(e) => setCustomDiscount(Number(e.target.value))}
+                            className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-slate-50/50 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                          />
+                        </div>
+
+                        {/* Tax Toggle */}
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                          <div>
+                            <span className="block text-xs font-bold text-slate-800">Include 18% GST Invoice Tax</span>
+                            <span className="text-[9px] font-semibold text-slate-500">Generates GST-compliant tax receipt</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIncludeGst(!includeGst)}
+                            className={cn("w-10 h-5 rounded-full transition-all relative p-0.5", includeGst ? "bg-indigo-600" : "bg-slate-300")}
+                          >
+                            <div className={cn("w-4 h-4 rounded-full bg-white transition-all shadow-sm", includeGst ? "translate-x-5" : "translate-x-0")} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Communication Preferences */}
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm space-y-2">
+                        <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Receipt & Notifications</h4>
+                        <div className="space-y-1.5">
+                          <label className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/60 border border-slate-200/60 cursor-pointer">
+                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
+                              <Smartphone size={14} className="text-emerald-600" /> Send Instant WhatsApp Receipt
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={sendWhatsapp}
+                              onChange={(e) => setSendWhatsapp(e.target.checked)}
+                              className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                          </label>
+                          <label className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/60 border border-slate-200/60 cursor-pointer">
+                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
+                              <MessageSquare size={14} className="text-indigo-600" /> Send SMS Expiry Confirmation
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={sendSms}
+                              onChange={(e) => setSendSms(e.target.checked)}
+                              className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Payment Method & Live Calculation */}
+                    <div className="space-y-3.5">
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+                        <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Payment Method</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: "upi", label: "UPI / QR", icon: Smartphone },
+                            { id: "card", label: "Credit/Debit Card", icon: CreditCard },
+                            { id: "cash", label: "Cash Payment", icon: DollarSign },
+                            { id: "bank", label: "Bank Transfer", icon: Layers },
+                          ].map((mode) => (
+                            <button
+                              key={mode.id}
+                              type="button"
+                              onClick={() => setPaymentMethod(mode.id)}
+                              className={cn(
+                                "p-2.5 rounded-lg border text-xs font-bold flex items-center gap-2 transition-all text-left",
+                                paymentMethod === mode.id
+                                  ? "bg-slate-900 text-white border-slate-900 shadow-md"
+                                  : "bg-slate-50/50 text-slate-700 border-slate-200 hover:border-slate-300"
+                              )}
+                            >
+                              <mode.icon size={14} />
+                              <span>{mode.label}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Transaction Ref / Receipt No.</label>
+                          <input
+                            type="text"
+                            value={txnRef}
+                            onChange={(e) => setTxnRef(e.target.value)}
+                            placeholder="Enter UPI / Card transaction ID"
+                            className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-slate-50/50 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live Calculation Box - Compact */}
+                      <div className="p-4 rounded-2xl bg-slate-900 text-white shadow-lg relative overflow-hidden border border-slate-800 space-y-2">
+                        <h4 className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Financial Summary</h4>
+                        <div className="space-y-1.5 text-xs font-semibold">
+                          <div className="flex justify-between text-slate-400">
+                            <span>Base Plan Price</span>
+                            <span className="text-slate-200">₹{basePrice.toLocaleString("en-IN")}</span>
+                          </div>
+                          {addonsTotal > 0 && (
+                            <div className="flex justify-between text-slate-400">
+                              <span>Selected Add-ons</span>
+                              <span className="text-slate-200">+₹{addonsTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-emerald-400 font-bold">
+                            <span>Discount ({discountRate}%)</span>
+                            <span>-₹{discountAmount.toLocaleString("en-IN")}</span>
+                          </div>
+                          {includeGst && (
+                            <div className="flex justify-between text-slate-400">
+                              <span>GST Tax (18%)</span>
+                              <span className="text-slate-200">+₹{gstAmount.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                          <div className="h-px bg-slate-800 my-1.5" />
+                          <div className="flex justify-between items-center pt-0.5">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-white">Grand Total Payable</span>
+                            <span className="text-xl font-black text-indigo-400 tracking-tight">₹{grandTotal.toLocaleString("en-IN")}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 4: REVIEW & ISSUE (2-Column Redesign) */}
+              {activeStep === 4 && (
+                <motion.div
+                  key="step4"
+                  initial={{ opacity: 0, scale: 0.99 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.1, ease: "easeOut" }}
+                  className="max-w-4xl mx-auto"
+                >
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                    {/* LEFT COLUMN: Line Items & Invoice Summary */}
+                    <div className="lg:col-span-7 space-y-3">
+                      {/* Member & Renewal Header Pill */}
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-black text-sm shrink-0">
+                            {activeMember?.name ? activeMember.name.charAt(0) : "?"}
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Member Profile</span>
+                            <h4 className="text-sm font-black text-slate-900 leading-snug">{activeMember?.name || "No Member Selected"}</h4>
+                            <span className="text-[10px] text-slate-500 font-semibold">{activeMember?.id ? `${activeMember.id} • ${activeMember.phone || ""}` : "Please select a member"}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">New Validity</span>
+                          <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100 block mt-0.5">
+                            {startDate} → {newExpiryDate}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Line Items Breakdown Card */}
+                      <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Itemized Line Items</h4>
+                          <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                            TAX INVOICE #{Math.floor(100000 + Math.random() * 900000)}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs">
+                          {/* Main Plan */}
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100/80">
+                            <div>
+                              <span className="font-bold text-slate-900 block">{currentPlanObj.name}</span>
+                              <span className="text-[10px] text-slate-500 font-semibold">{currentPlanObj.durationMonths} Months Full Access Plan</span>
+                            </div>
+                            <span className="font-bold text-slate-900">₹{basePrice.toLocaleString("en-IN")}</span>
+                          </div>
+
+                          {/* Selected Addons */}
+                          {selectedAddons.map((addonId) => {
+                            const addon = availableAddons.find((a) => a.id === addonId);
+                            return addon ? (
+                              <div key={addonId} className="flex justify-between items-center py-1.5 border-b border-slate-100/80 text-slate-700">
+                                <div className="flex items-center gap-1.5">
+                                  <CheckCircle2 size={12} className="text-indigo-600 shrink-0" />
+                                  <span className="font-semibold">{addon.name}</span>
+                                </div>
+                                <span className="font-bold text-slate-900">+₹{addon.price.toLocaleString("en-IN")}</span>
+                              </div>
+                            ) : null;
+                          })}
+
+                          {/* Loyalty Discount */}
+                          {discountAmount > 0 && (
+                            <div className="flex justify-between items-center py-1.5 border-b border-slate-100/80 text-emerald-700">
+                              <div className="flex items-center gap-1.5">
+                                <Zap size={12} className="fill-emerald-600 shrink-0" />
+                                <span className="font-bold">Loyalty Retention Discount ({discountRate}%)</span>
+                              </div>
+                              <span className="font-extrabold">-₹{discountAmount.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+
+                          {/* GST Tax */}
+                          {includeGst && (
+                            <div className="flex justify-between items-center py-1.5 border-b border-slate-100/80 text-slate-600">
+                              <span className="font-semibold">GST Tax Invoice (18%)</span>
+                              <span className="font-bold text-slate-900">+₹{gstAmount.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Dispatch Preferences Summary */}
+                        <div className="pt-2 flex items-center justify-between text-[10px] font-semibold text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <span>Auto Digital Dispatch:</span>
+                          <div className="flex items-center gap-2">
+                            {sendWhatsapp && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+                                WhatsApp Receipt
+                              </span>
+                            )}
+                            {sendSms && (
+                              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold border border-blue-200">
+                                SMS Receipt
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT COLUMN: Grand Total & Final Issue Card */}
+                    <div className="lg:col-span-5 flex flex-col justify-between space-y-3">
+                      {/* Hero Dark Payment Breakdown Box */}
+                      <div
+                        className="p-5 rounded-2xl text-white shadow-xl relative overflow-hidden flex flex-col justify-between flex-1 space-y-4"
+                        style={{
+                          background: "linear-gradient(155deg, #090d16 0%, #05070d 100%)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          boxShadow: "0 20px 40px -10px rgba(4, 6, 12, 0.6)",
+                        }}
+                      >
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-2xl pointer-events-none" />
+
+                        <div className="relative z-10 space-y-3">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-indigo-300 font-mono block">
+                            Final Payable Summary
+                          </span>
+
+                          <div>
+                            <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-semibold">
+                              Net Payable Amount
+                            </span>
+                            <div className="text-3xl font-black text-emerald-400 tracking-tight mt-0.5">
+                              ₹{grandTotal.toLocaleString("en-IN")}
+                            </div>
+                          </div>
+
+                          <div className="pt-3 border-t border-white/10 space-y-2 text-xs text-slate-300">
+                            <div className="flex justify-between items-center py-1 border-b border-white/5">
+                              <span className="text-slate-400 font-semibold">Payment Mode</span>
+                              <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono font-bold text-[10px] uppercase border border-indigo-500/30">
+                                {paymentMethod}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center py-1 border-b border-white/5">
+                              <span className="text-slate-400 font-semibold">Txn Reference</span>
+                              <strong className="text-slate-200 font-mono text-[11px] font-bold">{txnRef || "N/A"}</strong>
+                            </div>
+                            <div className="flex justify-between items-center py-1">
+                              <span className="text-slate-400 font-semibold">Plan Period</span>
+                              <strong className="text-slate-200 font-bold">{currentPlanObj.durationMonths} Months</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* System Verification Lock Badge */}
+                        <div className="relative z-10 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-1">
+                          <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-black uppercase tracking-wider">
+                            <ShieldCheck size={16} />
+                            <span>Verification Complete</span>
+                          </div>
+                          <p className="text-[9.5px] text-emerald-300 font-semibold leading-normal">
+                            All plan terms and financial calculations verified. Clicking "Complete & Publish" will immediately update member status and issue invoice.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+        </div>
+
+        {/* Modal Bottom Footer Actions - Balanced Padding & Height */}
+        {!isSuccess && (
+          <footer className="px-6 py-2.5 sm:py-3 border-t border-slate-100 bg-white flex justify-between items-center rounded-b-none gap-2.5">
+            <button
+              onClick={handleBack}
+              disabled={activeStep === 1}
+              className={cn(
+                "px-4 sm:px-4.5 h-9 sm:h-9.5 rounded-xl text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition-all shrink-0 border shadow-2xs cursor-pointer active:scale-95 active:translate-y-0.5",
+                activeStep === 1
+                  ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed shadow-none active:scale-100 active:translate-y-0"
+                  : "bg-slate-100/80 border-slate-200/90 text-slate-700 hover:bg-slate-200/90 hover:text-slate-950 hover:border-slate-300 hover:shadow-xs"
+              )}
+            >
+              <ChevronLeft size={15} /> Back
+            </button>
+
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              <button
+                onClick={onClose}
+                className="px-4 sm:px-4.5 h-9 sm:h-9.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100/70 border border-slate-200/80 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200/90 hover:shadow-xs active:scale-95 active:bg-rose-100 active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleNext}
+                className="px-5 sm:px-6 h-9 sm:h-9.5 rounded-xl bg-slate-950 text-white text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-md shadow-slate-950/20 hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-950/30 active:scale-95 active:translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                {activeStep === 4 ? (
+                  <>
+                    <CheckCircle2 size={15} className="text-emerald-400" /> Complete & Publish Renewal
+                  </>
+                ) : (
+                  <>
+                    Next Step <ChevronRight size={15} />
+                  </>
+                )}
+              </button>
+            </div>
+          </footer>
+        )}
       </motion.div>
     </div>
   );
@@ -1199,7 +2362,10 @@ const ExpiringMembershipsPage = () => {
     setActiveFilter("all");
   }, []);
 
-  const openRenewalModal = useCallback(() => setIsRenewalOpen(true), []);
+  const openRenewalModal = useCallback(() => {
+    setSelectedMember(null);
+    setIsRenewalOpen(true);
+  }, []);
   const closeRenewalModal = useCallback(() => setIsRenewalOpen(false), []);
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
@@ -1397,7 +2563,7 @@ const ExpiringMembershipsPage = () => {
 
       <AnimatePresence>
         {isDrawerOpen && <MemberProfileDrawer isOpen={isDrawerOpen} onClose={closeDrawer} member={selectedMember} onAction={handleAction} />}
-        {isRenewalOpen && <RenewalModal isOpen={isRenewalOpen} onClose={closeRenewalModal} member={selectedMember} />}
+        {isRenewalOpen && <RenewalModal isOpen={isRenewalOpen} onClose={closeRenewalModal} member={selectedMember} membersList={members} />}
       </AnimatePresence>
     </div>
   );

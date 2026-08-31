@@ -55,7 +55,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis"],
+    "targets": ["dmg", "app", "msi", "nsis"],
     "windows": {
       "wix": {
         "upgradeCode": "35b210b2-1718-4061-9131-016147291b7a"

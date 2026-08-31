@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres_staging:
+    image: postgres:16-alpine
+    container_name: gymdeck-postgres-staging
+    restart: always
+    environment:
+      POSTGRES_DB: gymdeck_cloud_staging
+      POSTGRES_USER: gymdeck_staging_user
+      POSTGRES_PASSWORD: ${POSTGRES_STAGING_PASSWORD:-staging_secure_pass_123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymdeck_staging_user -d gymdeck_cloud_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gymdeck_staging_net
+
+  backend_staging:
+    build:
+      context: ../../backend
+      dockerfile: ../infrastructure/docker/Dockerfile.backend
+    container_name: gymdeck-api-staging
+    restart: always
+    depends_on:
+      postgres_staging:
+        condition: service_healthy
+    environment:
+      NODE_ENV: staging
+      PORT: 8080
+      DATABASE_URL: postgres://gymdeck_staging_user:${POSTGRES_STAGING_PASSWORD:-staging_secure_pass_123}@postgres_staging:5432/gymdeck_cloud_staging
+      JWT_SECRET: ${JWT_STAGING_SECRET:-staging_jwt_secret_must_be_rotated}
+      JWT_ACCESS_EXPIRATION_SECONDS: 900
+      JWT_REFRESH_EXPIRATION_SECONDS: 604800
+      RESEND_API_KEY: ${RESEND_STAGING_API_KEY:-}
+      RESEND_FROM_EMAIL: GymDeck Staging <no-reply@staging.gymdeck.com>
+      STORAGE_ENDPOINT: https://vault-staging.r2.cloudflarestorage.com
+      STORAGE_BUCKET: gymdeck-vault-staging
+    ports:
+      - "8080:8080"
+    networks:
+      - gymdeck_staging_net
+
+volumes:
+  postgres_staging_data:
+    driver: local
+
+networks:
+  gymdeck_staging_net:
+    driver: bridge

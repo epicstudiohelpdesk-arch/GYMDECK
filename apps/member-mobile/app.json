@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "GymDeck Member",
+    "slug": "gymdeck-member",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icons/icon.png",
+    "scheme": "gymdeck-member",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/icons/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#090A0F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gymdeck.member",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "GymDeck uses Face ID to securely authenticate your member account."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#090A0F"
+      },
+      "package": "com.gymdeck.member",
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "targetSdkVersion": 34
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "gymdeck-member-mobile"
+      }
+    }
+  }
+}

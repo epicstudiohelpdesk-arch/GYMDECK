@@ -609,9 +609,8 @@ Feature Modules:
   module-payments-dues            (PendingDues)
   module-payments-history         (PaymentHistory)
   module-payments-receipt         (GenerateReceipt)
-  module-payments-renew           (RenewMembership)
 
-36 Stage Components (lazy-loaded on demand):
+35 Stage Components (lazy-loaded on demand):
   DashboardWidgets, Agreements, AllTrainers, AppSettings, AssignTrainer,
   AttendanceTrends, BackupRestore, CollectFees, DailyCheckin, DeviceSync,
   ExpiringMemberships, GymProfile, IDProofs, ManualEntry, MemberDocuments,

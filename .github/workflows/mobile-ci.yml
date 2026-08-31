@@ -1,0 +1,40 @@
+name: GymDeck Member Mobile CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/member-mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/member-mobile/**'
+
+jobs:
+  mobile-verification:
+    name: Mobile TypeCheck & Static Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate Member Mobile TypeScript Compilation
+        run: ./node_modules/.bin/esbuild apps/member-mobile/src/**/*.ts apps/member-mobile/app/**/*.tsx --outdir=/tmp/mobile-build --format=esm --jsx=automatic
+
+      - name: Forensic Secret Leakage Audit
+        run: |
+          ! grep -rn "RESEND_API_KEY" apps/member-mobile/
+          ! grep -rn "DATABASE_URL" apps/member-mobile/
+          ! grep -rn "JWT_PRIVATE_KEY" apps/member-mobile/
+          ! grep -rn "AWS_SECRET_ACCESS_KEY" apps/member-mobile/

@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # PostgreSQL 16 Enterprise Production Database
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: gymdeck-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gymdeck_cloud_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-gymdeck_prod_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?FATAL: Database password must be set}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gymdeck_prod_user} -d ${POSTGRES_DB:-gymdeck_cloud_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gymdeck_internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4096M
+        reservations:
+          cpus: '0.5'
+          memory: 1024M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ----------------------------------------------------------------------------
+  # GymDeck Cloud Backend API Gateway
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: ../infrastructure/docker/Dockerfile.backend
+    container_name: gymdeck-api-prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgres://${POSTGRES_USER:-gymdeck_prod_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gymdeck_cloud_prod}
+      JWT_SECRET: ${JWT_SECRET:?FATAL: JWT_SECRET must be set}
+      JWT_ACCESS_EXPIRATION_SECONDS: 900
+      JWT_REFRESH_EXPIRATION_SECONDS: 604800
+      RESEND_API_KEY: ${RESEND_API_KEY:?FATAL: RESEND_API_KEY must be set}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-GymDeck <no-reply@gymdeck.com>}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-https://vault.r2.cloudflarestorage.com}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-gymdeck-vault-prod}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-}
+    networks:
+      - gymdeck_internal
+      - gymdeck_ingress
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2048M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  postgres_prod_data:
+    driver: local
+
+networks:
+  gymdeck_internal:
+    internal: true
+  gymdeck_ingress:
+    internal: false

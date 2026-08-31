@@ -2964,50 +2964,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   border-top-color: transparent;
 }
 
-.renew-membership-stage {
-  position: absolute;
-  inset: 0;
-  padding: 22px;
-  opacity: 0;
-  transform: translateY(18px) scale(0.99);
-  pointer-events: none;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-  transition: opacity 240ms ease, transform 240ms ease;
-  background-color: #f8fafc;
-}
-
-.renew-membership-stage.is-active {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
-
-.renew-membership-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 100%;
-  padding: 16px;
-  border-radius: 18px;
-  background: #f6f8fb;
-  border: 1px solid rgba(220, 226, 235, 0.96);
-  box-shadow: 0 24px 54px rgba(38, 47, 68, 0.12);
-}
-
-.renew-membership-workspace {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-  gap: 14px;
-  padding: 14px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid #dfe6f0;
-  box-shadow: 0 18px 34px rgba(31, 41, 55, 0.08);
-}
-
 .all-trainers-stage {
   position: absolute;
   inset: 0;
@@ -4906,7 +4862,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-stage,
   .expiring-memberships-stage,
   .freeze-pause-stage,
-  .renew-membership-stage,
   .daily-checkin-stage,
   .manual-entry-stage,
   .attendance-reports-stage,
@@ -4937,7 +4892,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-shell,
   .expiring-memberships-shell,
   .freeze-pause-shell,
-  .renew-membership-shell,
   .daily-checkin-shell,
   .manual-entry-shell,
   .attendance-reports-shell,
@@ -4987,7 +4941,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-workspace,
   .expiring-memberships-workspace,
   .freeze-pause-workspace,
-  .renew-membership-workspace,
   .daily-checkin-workspace,
   .manual-entry-workspace,
   .attendance-reports-workspace,
@@ -5059,7 +5012,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-stage,
   .expiring-memberships-stage,
   .freeze-pause-stage,
-  .renew-membership-stage,
   .daily-checkin-stage,
   .manual-entry-stage,
   .attendance-reports-stage,
@@ -5090,7 +5042,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-shell,
   .expiring-memberships-shell,
   .freeze-pause-shell,
-  .renew-membership-shell,
   .daily-checkin-shell,
   .manual-entry-shell,
   .attendance-reports-shell,
@@ -7829,7 +7780,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-stage:not(.is-active),
   .expiring-memberships-stage:not(.is-active),
   .freeze-pause-stage:not(.is-active),
-  .renew-membership-stage:not(.is-active),
   .daily-checkin-stage:not(.is-active),
   .manual-entry-stage:not(.is-active),
   .attendance-reports-stage:not(.is-active),
@@ -7860,7 +7810,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-stage,
   .expiring-memberships-stage,
   .freeze-pause-stage,
-  .renew-membership-stage,
   .daily-checkin-stage,
   .manual-entry-stage,
   .attendance-reports-stage,
@@ -7894,7 +7843,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-shell,
   .expiring-memberships-shell,
   .freeze-pause-shell,
-  .renew-membership-shell,
   .daily-checkin-shell,
   .manual-entry-shell,
   .attendance-reports-shell,
@@ -8203,7 +8151,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .past-members-shell,
   .expiring-memberships-shell,
   .freeze-pause-shell,
-  .renew-membership-shell,
   .daily-checkin-shell,
   .manual-entry-shell,
   .attendance-reports-shell,

@@ -1,0 +1,53 @@
+name: GymDeck Backend CI & Verification Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - 'infrastructure/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'infrastructure/**'
+
+jobs:
+  backend-verification:
+    name: Backend Lint, TypeCheck, Security & Integration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate TypeScript Compilation
+        run: ./node_modules/.bin/esbuild backend/**/*.ts --outdir=/tmp/backend-build --format=esm
+
+      - name: Run Backend Foundation & Auth Test Suites
+        run: |
+          ./node_modules/.bin/esbuild backend/test/health.test.ts --bundle --outfile=/tmp/test-health.js --platform=node --format=cjs && node /tmp/test-health.js
+          ./node_modules/.bin/esbuild backend/test/config.test.ts --bundle --outfile=/tmp/test-config.js --platform=node --format=cjs && node /tmp/test-config.js
+          ./node_modules/.bin/esbuild backend/test/auth.test.ts --bundle --outfile=/tmp/test-auth.js --platform=node --format=cjs && node /tmp/test-auth.js
+          ./node_modules/.bin/esbuild backend/test/member.test.ts --bundle --outfile=/tmp/test-member.js --platform=node --format=cjs && node /tmp/test-member.js
+          ./node_modules/.bin/esbuild backend/test/advancedDomains.test.ts --bundle --outfile=/tmp/test-adv.js --platform=node --format=cjs && node /tmp/test-adv.js
+
+      - name: Run E2E Integration & QA Security Matrix
+        run: |
+          ./node_modules/.bin/esbuild backend/test/integration.test.ts --bundle --outfile=/tmp/test-integration.js --platform=node --format=cjs && node /tmp/test-integration.js
+          ./node_modules/.bin/esbuild backend/test/qaSecurityAudit.test.ts --bundle --outfile=/tmp/test-qa.js --platform=node --format=cjs && node /tmp/test-qa.js
+          ./node_modules/.bin/esbuild backend/test/phase7DeviceValidation.test.ts --bundle --outfile=/tmp/test-p7.js --platform=node --format=cjs && node /tmp/test-p7.js
+
+      - name: Verify Multi-Stage Dockerfile
+        run: |
+          docker build -t gymdeck-backend:ci -f infrastructure/docker/Dockerfile.backend backend/
