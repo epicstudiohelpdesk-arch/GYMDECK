@@ -103,11 +103,11 @@ function base64UrlDecode(str: string): string {
 }
 
 export interface JwtPayload {
-  sub: string; // memberAccountId
+  sub: string; // accountId or deviceId
   memberId: string;
   gymId: string;
   email: string;
-  role: 'MEMBER';
+  role: 'MEMBER' | 'OWNER' | 'ADMIN' | 'RECEPTIONIST' | 'TRAINER' | 'DESKTOP_SYNC';
   jti: string;
   iat?: number;
   exp?: number;

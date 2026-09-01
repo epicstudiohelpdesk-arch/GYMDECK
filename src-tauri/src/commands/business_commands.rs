@@ -4,6 +4,7 @@ use crate::models::gym_business::{Member, MembershipPlan, MemberDocument};
 use crate::models::user::AuthenticatedContext;
 use crate::repositories::member_repo::MemberRepository;
 use crate::repositories::plan_repo::PlanRepository;
+use crate::repositories::sync_repo::SyncRepository;
 use crate::errors::AppError;
 use uuid::Uuid;
 use base64::Engine;
@@ -128,6 +129,10 @@ pub async fn create_member_command(
             MemberRepository::save_document(&tx, &ctx, &doc)?;
         }
         
+        // 3. Atomically Enqueue Outbox Event
+        let payload = serde_json::to_string(&member).unwrap_or_else(|_| "{}".to_string());
+        SyncRepository::enqueue_outbox_event(&tx, &ctx.gym_id, "gym_member", &member.id, "CREATE", &payload)?;
+
         tx.commit().map_err(|e| AppError::Database(e.to_string()))
     })).await
 }
@@ -145,6 +150,9 @@ pub async fn soft_delete_member_command(
         
         MemberRepository::soft_delete_member(&tx, &ctx, &member_id)?;
         
+        // Atomically Enqueue Outbox Event
+        SyncRepository::enqueue_outbox_event(&tx, &ctx.gym_id, "gym_member", &member_id, "DELETE", "{}")?;
+
         tx.commit().map_err(|e| AppError::Database(e.to_string()))
     })).await
 }
@@ -245,6 +253,9 @@ pub async fn create_plan_command(
         
         PlanRepository::create_plan(&tx, &ctx, &plan)?;
         
+        let payload = serde_json::to_string(&plan).unwrap_or_else(|_| "{}".to_string());
+        SyncRepository::enqueue_outbox_event(&tx, &ctx.gym_id, "membership_plan", &plan.id, "CREATE", &payload)?;
+
         tx.commit().map_err(|e| AppError::Database(e.to_string()))
     })).await
 }
@@ -255,12 +266,15 @@ pub async fn delete_plan_command(
     plan_id: String,
 ) -> Result<(), AppError> {
     let ctx = get_auth_context(&state).await?;
+    let plan_uuid = Uuid::parse_str(&plan_id).unwrap_or_default();
     
     state.async_db.dispatch_write(Box::new(move |conn| {
         let tx = conn.transaction().map_err(|e| AppError::Database(e.to_string()))?;
         
         PlanRepository::delete_plan(&tx, &ctx, &plan_id)?;
         
+        SyncRepository::enqueue_outbox_event(&tx, &ctx.gym_id, "membership_plan", &plan_uuid, "DELETE", "{}")?;
+
         tx.commit().map_err(|e| AppError::Database(e.to_string()))
     })).await
 }
@@ -333,6 +347,9 @@ pub async fn update_member_command(
         
         MemberRepository::update_member(&tx, &ctx, &member)?;
         
+        let payload = serde_json::to_string(&member).unwrap_or_else(|_| "{}".to_string());
+        SyncRepository::enqueue_outbox_event(&tx, &ctx.gym_id, "gym_member", &member.id, "UPDATE", &payload)?;
+
         tx.commit().map_err(|e| AppError::Database(e.to_string()))
     })).await
 }

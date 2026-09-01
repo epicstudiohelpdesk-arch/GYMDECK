@@ -13,3 +13,5 @@ export * from './documents';
 export * from './notifications';
 export * from './progress';
 export * from './audit';
+export * from './sync';
+export * from './payments';

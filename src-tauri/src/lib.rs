@@ -28,6 +28,10 @@ use commands::business_commands::{
     get_members_command, create_member_command, get_plans_command, create_plan_command, delete_plan_command, get_member_documents_command, soft_delete_member_command, permanent_delete_member_command, permanent_delete_members_command, get_past_members_command,
     download_document_command, save_member_documents_command, update_member_command, upload_photo_command, get_document_temp_path_command
 };
+use commands::sync_commands::{
+    get_sync_status_command, get_pending_sync_events_command, mark_sync_event_synced_command,
+    mark_sync_event_failed_command, update_sync_cursor_command
+};
 use auth::rate_limit::default_auth_limiter;
 use sessions::manager::SessionManager;
 use config::AppConfig;
@@ -170,7 +174,12 @@ pub fn run() {
         save_member_documents_command,
         update_member_command,
         upload_photo_command,
-        get_document_temp_path_command
+        get_document_temp_path_command,
+        get_sync_status_command,
+        get_pending_sync_events_command,
+        mark_sync_event_synced_command,
+        mark_sync_event_failed_command,
+        update_sync_cursor_command
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

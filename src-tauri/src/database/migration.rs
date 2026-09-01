@@ -22,6 +22,44 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "Add composite index on gym_members(gym_id, deleted_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_members_gym_deleted ON gym_members(gym_id, deleted_at DESC);",
     ),
+    (
+        3,
+        "Add transactional sync outbox, state, and inbox tables",
+        "CREATE TABLE IF NOT EXISTS sync_outbox (
+            id TEXT PRIMARY KEY,
+            event_id TEXT UNIQUE NOT NULL,
+            gym_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            attempt_count INTEGER NOT NULL DEFAULT 0,
+            last_attempt_at DATETIME,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            error_code TEXT,
+            error_message TEXT,
+            FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(gym_id, status, created_at ASC);
+        CREATE INDEX IF NOT EXISTS idx_sync_outbox_event ON sync_outbox(event_id);
+        CREATE TABLE IF NOT EXISTS sync_state (
+            key TEXT PRIMARY KEY,
+            gym_id TEXT NOT NULL,
+            value TEXT NOT NULL,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS sync_inbox (
+            server_sequence INTEGER PRIMARY KEY,
+            gym_id TEXT NOT NULL,
+            event_id TEXT UNIQUE NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );",
+    ),
 ];
 
 pub fn ensure_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {

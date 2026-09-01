@@ -235,3 +235,43 @@ CREATE TABLE IF NOT EXISTS encrypted_backups (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
 );
+
+-- 11. TRANSACTIONAL SYNC OUTBOX & STATE (Offline-First Subsystem)
+CREATE TABLE IF NOT EXISTS sync_outbox (
+    id TEXT PRIMARY KEY,               -- UUID v4
+    event_id TEXT UNIQUE NOT NULL,     -- Globally unique event ID (UUID v4)
+    gym_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,         -- gym_member, membership_plan, payment, attendance, trainer
+    entity_id TEXT NOT NULL,
+    operation TEXT NOT NULL,           -- CREATE, UPDATE, DELETE, VOID
+    payload TEXT NOT NULL,             -- JSON encoded payload
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at DATETIME,
+    status TEXT NOT NULL DEFAULT 'PENDING', -- PENDING, IN_FLIGHT, SYNCED, FAILED
+    error_code TEXT,
+    error_message TEXT,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(gym_id, status, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_event ON sync_outbox(event_id);
+
+CREATE TABLE IF NOT EXISTS sync_state (
+    key TEXT PRIMARY KEY,              -- e.g. "last_applied_server_sequence", "last_sync_at"
+    gym_id TEXT NOT NULL,
+    value TEXT NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sync_inbox (
+    server_sequence INTEGER PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    event_id TEXT UNIQUE NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
