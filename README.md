@@ -1,11 +1,16 @@
 # GymDeck
 
-Offline-first gym management desktop application with AES-256 encrypted local storage. Purpose-built for single-gym, single-machine, single-user production use.
+> **Unified Offline-First + Cloud-Synchronized Gym Management Ecosystem**
+> **Core Principle:** *"The gym creates the member. The member creates the digital account. GymDeck Cloud securely links the two."*
+> **Platform Invariant:** *"Local-first. Cloud-synchronized. Server-authorized."*
+>
+> 📄 **Official Specification:** [`docs/architecture/SYSTEM-SPECIFICATION.md`](docs/architecture/SYSTEM-SPECIFICATION.md)
 
 ---
 
 ## Table of Contents
 
+- [Official Architecture Specification](docs/architecture/SYSTEM-SPECIFICATION.md)
 - [Technology Stack](#technology-stack)
 - [Architecture](#architecture)
 - [Security Posture](#security-posture)
