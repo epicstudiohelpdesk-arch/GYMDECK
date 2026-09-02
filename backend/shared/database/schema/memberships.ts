@@ -46,12 +46,17 @@ export const memberMemberships = pgTable(
     endDate: timestamp('end_date', { withTimezone: true }).notNull(),
     priceAtPurchase: numeric('price_at_purchase', { precision: 10, scale: 2 }).notNull().default('0.00'),
     autoRenew: boolean('auto_renew').notNull().default(false),
+    frozenAt: timestamp('frozen_at', { withTimezone: true }),
+    freezeReason: text('freeze_reason'),
+    frozenDaysRemaining: integer('frozen_days_remaining'),
+    unfrozenAt: timestamp('unfrozen_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     memberMembershipIdx: index('idx_member_memberships_gym_mem').on(table.gymId, table.memberId),
     statusIdx: index('idx_member_memberships_status').on(table.memberId, table.status),
+    endDateIdx: index('idx_member_memberships_end_date').on(table.gymId, table.endDate),
   })
 );
 

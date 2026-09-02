@@ -171,14 +171,23 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       end_date TIMESTAMPTZ NOT NULL,
       price_at_purchase NUMERIC(10,2) NOT NULL DEFAULT 0.00,
       auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
+      frozen_at TIMESTAMPTZ,
+      freeze_reason TEXT,
+      frozen_days_remaining INTEGER,
+      unfrozen_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     ALTER TABLE member_memberships ADD COLUMN IF NOT EXISTS price_at_purchase NUMERIC(10,2) NOT NULL DEFAULT 0.00;
+    ALTER TABLE member_memberships ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMPTZ;
+    ALTER TABLE member_memberships ADD COLUMN IF NOT EXISTS freeze_reason TEXT;
+    ALTER TABLE member_memberships ADD COLUMN IF NOT EXISTS frozen_days_remaining INTEGER;
+    ALTER TABLE member_memberships ADD COLUMN IF NOT EXISTS unfrozen_at TIMESTAMPTZ;
 
     CREATE INDEX IF NOT EXISTS idx_member_memberships_gym_mem ON member_memberships(gym_id, member_id);
     CREATE INDEX IF NOT EXISTS idx_member_memberships_status ON member_memberships(member_id, status);
+    CREATE INDEX IF NOT EXISTS idx_member_memberships_end_date ON member_memberships(gym_id, end_date);
 
     CREATE TABLE IF NOT EXISTS payments (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

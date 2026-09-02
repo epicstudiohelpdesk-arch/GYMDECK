@@ -18,11 +18,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerMembersService } from '../../../src/services/api/ownerMembersService';
 import { OwnerBillingService } from '../../../src/services/api/ownerBillingService';
+import { OwnerMembershipService } from '../../../src/services/api/ownerMembershipService';
 import { StatusBadge } from '../../../src/components/StatusBadge';
 import { InviteModal } from '../../../src/components/InviteModal';
 import { ReceiptModal } from '../../../src/components/ReceiptModal';
 import { CollectPaymentModal } from '../../../src/components/CollectPaymentModal';
 import { RenewMembershipModal } from '../../../src/components/RenewMembershipModal';
+import { FreezeMembershipModal } from '../../../src/components/FreezeMembershipModal';
 import { MemberInvitationResult, ReceiptData, PaymentRecord } from '../../../src/types';
 import {
   ArrowLeft,
@@ -40,6 +42,8 @@ import {
   RefreshCw,
   Receipt,
   PlusCircle,
+  Snowflake,
+  Play,
 } from 'lucide-react-native';
 
 export default function MemberDetailsScreen() {
@@ -55,6 +59,7 @@ export default function MemberDetailsScreen() {
 
   const [collectPaymentVisible, setCollectPaymentVisible] = useState(false);
   const [renewMembershipVisible, setRenewMembershipVisible] = useState(false);
+  const [freezeModalVisible, setFreezeModalVisible] = useState(false);
 
   // 1. Fetch Profile Details
   const { data, isLoading, refetch, isRefetching, error } = useQuery({
@@ -67,6 +72,13 @@ export default function MemberDetailsScreen() {
   const { data: billingData } = useQuery({
     queryKey: ['owner-member-billing', id],
     queryFn: () => OwnerBillingService.getMemberBilling(id!),
+    enabled: !!id,
+  });
+
+  // 3. Fetch Current Membership Lifecycle
+  const { data: currentMembershipData } = useQuery({
+    queryKey: ['owner-member-current-membership', id],
+    queryFn: () => OwnerMembershipService.getCurrentMembership(id!),
     enabled: !!id,
   });
 
@@ -94,27 +106,38 @@ export default function MemberDetailsScreen() {
     },
   });
 
+  const unfreezeMutation = useMutation({
+    mutationFn: (membershipId: string) => OwnerMembershipService.unfreezeMembership(id!, membershipId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
+      queryClient.invalidateQueries({ queryKey: ['owner-member-current-membership', id] });
+      queryClient.invalidateQueries({ queryKey: ['owner-members'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-membership-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-daily-attendance'] });
+      Alert.alert('Membership Unfrozen', 'Subscription has been resumed and remaining duration restored.');
+    },
+    onError: (err: any) => {
+      Alert.alert('Unfreeze Failed', err?.message || 'Failed to unfreeze membership.');
+    },
+  });
+
   const handleOpenReceipt = async (paymentId: string) => {
     try {
       const receipt = await OwnerBillingService.getReceipt(paymentId);
       setSelectedReceipt(receipt);
       setReceiptModalVisible(true);
     } catch (err: any) {
-      Alert.alert('Receipt Error', err?.message || 'Unable to load payment receipt.');
+      Alert.alert('Receipt Error', err?.message || 'Unable to load receipt.');
     }
   };
 
-  const handleDeactivate = () => {
+  const confirmDeactivate = () => {
     Alert.alert(
       'Deactivate Member',
-      `Are you sure you want to deactivate ${data?.member.fullName}?`,
+      'Are you sure you want to deactivate this member profile? They will no longer have gym access.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(),
-        },
+        { text: 'Deactivate', style: 'destructive', onPress: () => deleteMutation.mutate() },
       ]
     );
   };
@@ -124,7 +147,7 @@ export default function MemberDetailsScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#EAB308" />
-          <Text style={styles.centerText}>Loading member profile...</Text>
+          <Text style={styles.loadingText}>Loading member profile...</Text>
         </View>
       </SafeAreaView>
     );
@@ -135,44 +158,44 @@ export default function MemberDetailsScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
           <ShieldAlert size={48} color="#EF4444" />
-          <Text style={styles.errorTitle}>Member Not Found</Text>
-          <Text style={styles.errorSubtitle}>This member may have been deleted or belongs to another gym.</Text>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.errorText}>Unable to load member profile</Text>
+          <TouchableOpacity style={styles.backBtnAlt} onPress={() => router.back()}>
+            <Text style={styles.backBtnAltText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const { member, membership, attendanceSummary, trainer, invite } = data;
+  const { member, membership: rawMembership, attendanceSummary, paymentSummary, trainer, invite } = data;
+  const membership = currentMembershipData || rawMembership;
   const outstandingDues = billingData?.outstandingBalance ?? 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Navigation Bar */}
-        <View style={styles.navBar}>
-          <TouchableOpacity style={styles.navBack} onPress={() => router.back()} activeOpacity={0.7}>
-            <ArrowLeft size={22} color="#F8FAFC" />
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>Member Profile</Text>
-          <TouchableOpacity
-            style={styles.navEdit}
-            onPress={() => router.push(`/(tabs)/members/edit?id=${id}` as any)}
-            activeOpacity={0.7}
-          >
-            <Edit size={18} color="#EAB308" />
+      {/* Top Navigation Bar */}
+      <View style={styles.navBar}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <ArrowLeft size={20} color="#F8FAFC" />
+        </TouchableOpacity>
+        <Text style={styles.navTitle} numberOfLines={1}>
+          {member.fullName}
+        </Text>
+        <View style={styles.navActions}>
+          <TouchableOpacity style={styles.navIconBtn} onPress={confirmDeactivate} activeOpacity={0.7}>
+            <Trash2 size={18} color="#EF4444" />
           </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Member Header Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{member.fullName.charAt(0).toUpperCase()}</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header Profile Card */}
+        <View style={styles.profileHeaderCard}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>{member.fullName.charAt(0).toUpperCase()}</Text>
           </View>
-          <Text style={styles.memberName}>{member.fullName}</Text>
-          <Text style={styles.memberCode}>{member.memberCode}</Text>
+          <Text style={styles.profileName}>{member.fullName}</Text>
+          <Text style={styles.profileCode}>{member.memberCode}</Text>
           <View style={{ marginTop: 8 }}>
             <StatusBadge status={member.membershipStatus} />
           </View>
@@ -225,18 +248,43 @@ export default function MemberDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Membership Details & Renewal */}
+        {/* Membership Details & Lifecycle Operations */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Current Membership</Text>
-            <TouchableOpacity
-              style={styles.renewActionBtn}
-              onPress={() => setRenewMembershipVisible(true)}
-              activeOpacity={0.8}
-            >
-              <RefreshCw size={14} color="#EAB308" style={{ marginRight: 4 }} />
-              <Text style={styles.renewActionText}>Renew Plan</Text>
-            </TouchableOpacity>
+            <View style={styles.membershipActionGroup}>
+              {membership && membership.status === 'ACTIVE' && (
+                <TouchableOpacity
+                  style={styles.freezeActionBtn}
+                  onPress={() => setFreezeModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Snowflake size={14} color="#38BDF8" style={{ marginRight: 4 }} />
+                  <Text style={styles.freezeActionText}>Freeze</Text>
+                </TouchableOpacity>
+              )}
+
+              {membership && membership.status === 'FROZEN' && (
+                <TouchableOpacity
+                  style={styles.unfreezeActionBtn}
+                  onPress={() => unfreezeMutation.mutate(membership.id)}
+                  disabled={unfreezeMutation.isPending}
+                  activeOpacity={0.8}
+                >
+                  <Play size={14} color="#10B981" style={{ marginRight: 4 }} />
+                  <Text style={styles.unfreezeActionText}>Unfreeze</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.renewActionBtn}
+                onPress={() => setRenewMembershipVisible(true)}
+                activeOpacity={0.8}
+              >
+                <RefreshCw size={14} color="#EAB308" style={{ marginRight: 4 }} />
+                <Text style={styles.renewActionText}>Renew</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {membership ? (
@@ -247,7 +295,10 @@ export default function MemberDetailsScreen() {
                 </View>
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={styles.planName}>{membership.planName}</Text>
-                  <Text style={styles.planPrice}>${membership.price} • {membership.durationDays} Days</Text>
+                  <Text style={styles.planPrice}>
+                    ${membership.price || membership.priceAtPurchase || '0.00'}
+                    {membership.durationDays ? ` • ${membership.durationDays} Days` : ''}
+                  </Text>
                 </View>
                 <StatusBadge status={membership.status} />
               </View>
@@ -267,7 +318,22 @@ export default function MemberDetailsScreen() {
                     {new Date(membership.endDate).toLocaleDateString()}
                   </Text>
                 </View>
+                <View style={styles.dateCol}>
+                  <Text style={styles.dateLabel}>DAYS REMAINING</Text>
+                  <Text style={[styles.dateVal, { color: membership.status === 'FROZEN' ? '#38BDF8' : '#EAB308' }]}>
+                    {membership.daysRemaining ?? 'N/A'} {membership.status === 'FROZEN' ? '(Saved)' : 'Days'}
+                  </Text>
+                </View>
               </View>
+
+              {membership.freezeReason && (
+                <View style={styles.freezeNotice}>
+                  <Snowflake size={14} color="#38BDF8" style={{ marginRight: 6 }} />
+                  <Text style={styles.freezeNoticeText}>
+                    Frozen: {membership.freezeReason}
+                  </Text>
+                </View>
+              )}
             </View>
           ) : (
             <View style={styles.emptyBox}>
@@ -318,37 +384,30 @@ export default function MemberDetailsScreen() {
             {(billingData?.recentPayments || []).length > 0 && (
               <>
                 <View style={styles.cardDivider} />
-                <Text style={styles.subsectionTitle}>Payment Transactions</Text>
-                {(billingData?.recentPayments || []).slice(0, 5).map((pay) => (
+                <Text style={styles.subheading}>Payment Ledger History</Text>
+                {billingData!.recentPayments.map((p: PaymentRecord) => (
                   <TouchableOpacity
-                    key={pay.id}
-                    style={styles.payRow}
-                    onPress={() => handleOpenReceipt(pay.id)}
+                    key={p.id}
+                    style={styles.paymentRow}
+                    onPress={() => handleOpenReceipt(p.id)}
                     activeOpacity={0.7}
                   >
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={styles.payMethod}>{pay.paymentMethod}</Text>
-                        {pay.type === 'REFUND' && (
-                          <View style={styles.refundTag}>
-                            <Text style={styles.refundTagText}>REFUND</Text>
-                          </View>
-                        )}
+                    <View style={styles.paymentLeft}>
+                      <DollarSign size={16} color="#10B981" />
+                      <View style={{ marginLeft: 8 }}>
+                        <Text style={styles.paymentMethod}>
+                          {p.paymentMethod} {p.receiptNumber ? `• ${p.receiptNumber}` : ''}
+                        </Text>
+                        <Text style={styles.paymentDate}>
+                          {new Date(p.paidAt).toLocaleDateString()} • {p.status}
+                        </Text>
                       </View>
-                      <Text style={styles.payDate}>
-                        {new Date(pay.paidAt).toLocaleDateString()} • {pay.receiptNumber || 'No receipt'}
-                      </Text>
                     </View>
-                    <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
-                      <Text
-                        style={[
-                          styles.payAmount,
-                          Number(pay.amount) < 0 && { color: '#EF4444' },
-                        ]}
-                      >
-                        ${Number(pay.amount).toFixed(2)}
+                    <View style={styles.paymentRight}>
+                      <Text style={[styles.paymentAmount, Number(p.amount) < 0 && { color: '#EF4444' }]}>
+                        ${Number(p.amount).toFixed(2)}
                       </Text>
-                      <Receipt size={16} color="#EAB308" />
+                      <Receipt size={14} color="#94A3B8" style={{ marginTop: 2 }} />
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -359,89 +418,118 @@ export default function MemberDetailsScreen() {
 
         {/* Attendance Summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Attendance Overview</Text>
+          <Text style={styles.sectionTitle}>Attendance Summary</Text>
           <View style={styles.card}>
-            <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Activity size={20} color="#10B981" />
-                <Text style={styles.statVal}>{attendanceSummary.totalCheckIns}</Text>
-                <Text style={styles.statLbl}>Total Check-ins</Text>
+            <View style={styles.statGrid}>
+              <View style={styles.statCol}>
+                <Text style={styles.statNumber}>{attendanceSummary.totalCheckIns}</Text>
+                <Text style={styles.statText}>Total Check-ins</Text>
               </View>
-              <View style={styles.statBox}>
-                <Clock size={20} color="#3B82F6" />
-                <Text style={styles.statVal}>
-                  {attendanceSummary.recentCheckIns.length > 0 ? 'Active' : 'Never'}
+              <View style={styles.statCol}>
+                <Text style={styles.statNumber}>
+                  {attendanceSummary.recentCheckIns[0]
+                    ? new Date(attendanceSummary.recentCheckIns[0].checkInTime).toLocaleDateString()
+                    : 'N/A'}
                 </Text>
-                <Text style={styles.statLbl}>Recent Activity</Text>
+                <Text style={styles.statText}>Latest Visit</Text>
               </View>
             </View>
+
+            {attendanceSummary.recentCheckIns.length > 0 && (
+              <>
+                <View style={styles.cardDivider} />
+                <Text style={styles.subheading}>Recent Check-Ins</Text>
+                {attendanceSummary.recentCheckIns.map((a, i) => (
+                  <View key={a.id || i} style={styles.attendanceRow}>
+                    <Clock size={14} color="#94A3B8" />
+                    <Text style={styles.attendanceTime}>
+                      {new Date(a.checkInTime).toLocaleString()} ({a.entryMethod})
+                    </Text>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
         </View>
 
-        {/* Trainer Assignment */}
+        {/* Assigned Trainer */}
         {trainer && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Assigned Trainer & PT</Text>
+            <Text style={styles.sectionTitle}>Personal Trainer</Text>
             <View style={styles.card}>
-              <View style={styles.trainerRow}>
-                <View style={[styles.cardIconBox, { backgroundColor: 'rgba(249, 115, 22, 0.15)' }]}>
-                  <Dumbbell size={20} color="#F97316" />
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                  <Dumbbell size={20} color="#3B82F6" />
                 </View>
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.trainerName}>{trainer.trainerName}</Text>
-                  <Text style={styles.trainerSpec}>{trainer.specialization || 'Personal Trainer'}</Text>
+                  <Text style={styles.planName}>{trainer.trainerName}</Text>
+                  <Text style={styles.planPrice}>{trainer.packageName}</Text>
                 </View>
               </View>
+              <View style={styles.cardDivider} />
+              <Text style={styles.trainerDetail}>
+                Remaining Sessions: {trainer.remainingSessions} / {trainer.totalSessions}
+              </Text>
             </View>
           </View>
         )}
+      </ScrollView>
 
-        {/* Deactivate Button */}
-        <View style={styles.dangerSection}>
-          <TouchableOpacity
-            style={styles.deactivateBtn}
-            onPress={handleDeactivate}
-            disabled={deleteMutation.isPending}
-            activeOpacity={0.8}
-          >
-            <Trash2 size={16} color="#EF4444" style={{ marginRight: 6 }} />
-            <Text style={styles.deactivateBtnText}>Deactivate Member</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Modals */}
+      <InviteModal
+        visible={inviteModalVisible}
+        invite={inviteResult}
+        onClose={() => setInviteModalVisible(false)}
+      />
 
-        {/* Activation Modal */}
-        <InviteModal
-          visible={inviteModalVisible}
-          invite={inviteResult}
-          onClose={() => setInviteModalVisible(false)}
-        />
-
-        {/* Formal Receipt Modal */}
+      {selectedReceipt && (
         <ReceiptModal
           visible={receiptModalVisible}
           receipt={selectedReceipt}
-          onClose={() => setReceiptModalVisible(false)}
-        />
-
-        {/* Collect Payment Modal */}
-        <CollectPaymentModal
-          visible={collectPaymentVisible}
-          memberId={id!}
-          defaultAmount={outstandingDues > 0 ? outstandingDues : undefined}
-          onClose={() => setCollectPaymentVisible(false)}
-          onSuccess={(pay) => handleOpenReceipt(pay.id)}
-        />
-
-        {/* Renew Membership Modal */}
-        <RenewMembershipModal
-          visible={renewMembershipVisible}
-          memberId={id!}
-          onClose={() => setRenewMembershipVisible(false)}
-          onSuccess={(res) => {
-            if (res.payment) handleOpenReceipt(res.payment.id);
+          onClose={() => {
+            setReceiptModalVisible(false);
+            setSelectedReceipt(null);
           }}
         />
-      </ScrollView>
+      )}
+
+      <CollectPaymentModal
+        visible={collectPaymentVisible}
+        memberId={member.id}
+        defaultAmount={outstandingDues}
+        onClose={() => setCollectPaymentVisible(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['owner-member-billing', id] });
+          queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
+        }}
+      />
+
+      <RenewMembershipModal
+        visible={renewMembershipVisible}
+        memberId={member.id}
+        onClose={() => setRenewMembershipVisible(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['owner-member-billing', id] });
+          queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
+          queryClient.invalidateQueries({ queryKey: ['owner-member-current-membership', id] });
+          queryClient.invalidateQueries({ queryKey: ['owner-members'] });
+        }}
+      />
+
+      {membership && (
+        <FreezeMembershipModal
+          visible={freezeModalVisible}
+          memberId={member.id}
+          membershipId={membership.id}
+          daysRemaining={membership.daysRemaining}
+          onClose={() => setFreezeModalVisible(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
+            queryClient.invalidateQueries({ queryKey: ['owner-member-current-membership', id] });
+            queryClient.invalidateQueries({ queryKey: ['owner-members'] });
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -451,77 +539,115 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0A0D14',
   },
-  scrollContent: {
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
-    paddingBottom: 40,
+  },
+  loadingText: {
+    color: '#94A3B8',
+    marginTop: 12,
+    fontSize: 14,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 12,
+  },
+  backBtnAlt: {
+    marginTop: 16,
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  backBtnAltText: {
+    color: '#F8FAFC',
+    fontWeight: '600',
   },
   navBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
   },
-  navBack: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: '#131823',
     alignItems: 'center',
     justifyContent: 'center',
   },
   navTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#F8FAFC',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10,
   },
-  navEdit: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  navActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  navIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: '#131823',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  profileCard: {
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  profileHeaderCard: {
     backgroundColor: '#131823',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#1E293B',
-    padding: 24,
     alignItems: 'center',
+    padding: 20,
     marginBottom: 20,
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+  profileAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     backgroundColor: '#1E293B',
-    borderWidth: 2,
-    borderColor: '#EAB308',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#EAB308',
   },
-  avatarText: {
-    fontSize: 24,
+  profileAvatarText: {
+    fontSize: 28,
     fontWeight: '800',
     color: '#EAB308',
   },
-  memberName: {
-    fontSize: 22,
+  profileName: {
+    fontSize: 20,
     fontWeight: '800',
     color: '#F8FAFC',
   },
-  memberCode: {
+  profileCode: {
     fontSize: 13,
     color: '#94A3B8',
     marginTop: 2,
   },
   contactRow: {
     flexDirection: 'row',
-    marginTop: 16,
-    gap: 8,
     flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 16,
     justifyContent: 'center',
   },
   contactChip: {
@@ -531,9 +657,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#334155',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    maxWidth: 180,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   contactChipText: {
     color: '#CBD5E1',
@@ -549,20 +674,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  sectionTitle: {
-    fontSize: 15,
+  membershipActionGroup: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  freezeActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    borderWidth: 1,
+    borderColor: '#38BDF8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  freezeActionText: {
+    color: '#38BDF8',
+    fontSize: 12,
     fontWeight: '700',
-    color: '#F8FAFC',
-    letterSpacing: 0.5,
+  },
+  unfreezeActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  unfreezeActionText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: '700',
   },
   renewActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(234, 179, 8, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(234, 179, 8, 0.3)',
+    borderColor: '#EAB308',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 8,
   },
   renewActionText: {
@@ -574,14 +727,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EAB308',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 8,
   },
   collectActionText: {
     color: '#0A0D14',
     fontSize: 12,
     fontWeight: '700',
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  inviteBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EAB308',
+    borderRadius: 16,
+    padding: 14,
+  },
+  inviteIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteTitle: {
+    color: '#0A0D14',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  inviteSubtitle: {
+    color: '#422006',
+    fontSize: 11,
+    marginTop: 2,
   },
   card: {
     backgroundColor: '#131823',
@@ -597,13 +780,13 @@ const styles = StyleSheet.create({
   cardIconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: 'rgba(234, 179, 8, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   planName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#F8FAFC',
   },
@@ -615,77 +798,91 @@ const styles = StyleSheet.create({
   cardDivider: {
     height: 1,
     backgroundColor: '#1E293B',
-    marginVertical: 14,
+    marginVertical: 12,
   },
   datesGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   dateCol: {
-    width: '48%',
+    flex: 1,
   },
   dateLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
     color: '#64748B',
-    letterSpacing: 0.5,
+    fontWeight: '700',
   },
   dateVal: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
     color: '#CBD5E1',
-    marginTop: 4,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  freezeNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 10,
+  },
+  freezeNoticeText: {
+    fontSize: 11,
+    color: '#38BDF8',
+    fontWeight: '600',
+    flex: 1,
   },
   financialRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
+    marginBottom: 8,
   },
   financialCard: {
     flex: 1,
     backgroundColor: '#0F141F',
-    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#1E293B',
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
   },
   financialLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#64748B',
-    letterSpacing: 0.5,
   },
   financialVal: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#F8FAFC',
-    marginTop: 4,
+    marginTop: 2,
   },
   duesAlert: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: '#EF4444',
     borderRadius: 10,
-    padding: 12,
-    marginTop: 12,
+    padding: 10,
+    marginTop: 6,
   },
   duesAlertTitle: {
-    color: '#EF4444',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
+    color: '#EF4444',
   },
   duesAlertSub: {
-    color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 11,
+    color: '#FCA5A5',
     marginTop: 2,
   },
-  subsectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+  subheading: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#94A3B8',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  payRow: {
+  paymentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -693,147 +890,70 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
   },
-  payMethod: {
-    fontSize: 14,
-    fontWeight: '700',
+  paymentLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paymentMethod: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#F8FAFC',
   },
-  payDate: {
+  paymentDate: {
     fontSize: 11,
     color: '#64748B',
     marginTop: 2,
   },
-  payAmount: {
-    fontSize: 15,
-    fontWeight: '800',
+  paymentRight: {
+    alignItems: 'flex-end',
+  },
+  paymentAmount: {
+    fontSize: 14,
+    fontWeight: '700',
     color: '#10B981',
   },
-  refundTag: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    marginLeft: 6,
+  statGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  refundTagText: {
-    color: '#EF4444',
-    fontSize: 10,
-    fontWeight: '700',
+  statCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#F8FAFC',
+  },
+  statText: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  attendanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  attendanceTime: {
+    fontSize: 12,
+    color: '#CBD5E1',
+    marginLeft: 8,
+  },
+  trainerDetail: {
+    fontSize: 13,
+    color: '#94A3B8',
   },
   emptyBox: {
     backgroundColor: '#131823',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#1E293B',
+    padding: 20,
+    alignItems: 'center',
   },
   emptyBoxText: {
     color: '#64748B',
     fontSize: 13,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statBox: {
-    alignItems: 'center',
-  },
-  statVal: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F8FAFC',
-    marginTop: 6,
-  },
-  statLbl: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  trainerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  trainerName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
-  trainerSpec: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  inviteBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EAB308',
-    borderRadius: 16,
-    padding: 16,
-  },
-  inviteIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inviteTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0A0D14',
-  },
-  inviteSubtitle: {
-    fontSize: 12,
-    color: 'rgba(10, 13, 20, 0.8)',
-    marginTop: 2,
-  },
-  dangerSection: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  deactivateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  deactivateBtnText: {
-    color: '#EF4444',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  centerText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginTop: 12,
-  },
-  errorTitle: {
-    color: '#EF4444',
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 12,
-  },
-  errorSubtitle: {
-    color: '#94A3B8',
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 16,
-  },
-  backButton: {
-    backgroundColor: '#EAB308',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  backButtonText: {
-    color: '#0A0D14',
-    fontWeight: '700',
   },
 });

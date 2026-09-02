@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { ownerService } from '../../../services/owner/ownerService';
 import { billingService } from '../../../services/billing/billingService';
 import { ownerAttendanceService } from '../../../services/owner/ownerAttendanceService';
+import { ownerMembershipService } from '../../../services/owner/ownerMembershipService';
 import { requireAuth } from '../middleware/authMiddleware';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware';
 import { validateQuery, validateBody } from '../../../shared/validation';
@@ -86,6 +87,16 @@ const PurchaseMembershipBodySchema = z.object({
   transactionReference: z.string().optional(),
   notes: z.string().optional(),
   idempotencyKey: z.string().optional(),
+});
+
+const FreezeMembershipBodySchema = z.object({
+  reason: z.string().min(3, 'A valid reason (minimum 3 characters) is required to freeze membership'),
+});
+
+const GetExpiringMembershipsQuerySchema = z.object({
+  daysAhead: z.coerce.number().int().min(1).max(90).default(7),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
 });
 
 const RecordPaymentBodySchema = z.object({
@@ -408,8 +419,81 @@ router.delete(
 );
 
 // ==============================================================================
-// 4. Membership Lifecycle (Purchase & Renew)
+// 4. Membership Lifecycle & Operations (Purchase, Renew, Freeze, Unfreeze, Stats)
 // ==============================================================================
+
+router.get(
+  '/memberships/stats',
+  requirePermission('reports.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await ownerMembershipService.getMembershipLifecycleStats(gymId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/memberships/expiring',
+  requirePermission('memberships.read'),
+  validateQuery(GetExpiringMembershipsQuerySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const { daysAhead, limit, offset } = req.query as any;
+      const result = await ownerMembershipService.getExpiringMemberships(
+        gymId,
+        Number(daysAhead) || 7,
+        Number(limit) || 50,
+        Number(offset) || 0
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/members/:id/memberships/current',
+  requirePermission('memberships.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId) throw AppError.validation('Member ID is required.');
+
+      const result = await ownerMembershipService.getCurrentMembership(gymId, memberId);
+
+      res.status(200).json({
+        success: true,
+        data: { membership: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.post(
   '/members/:id/memberships',
@@ -463,22 +547,82 @@ router.post(
   }
 );
 
-router.get(
-  '/members/:id/memberships',
-  requirePermission('memberships.read'),
+router.post(
+  '/members/:id/memberships/:membershipId/freeze',
+  requirePermission('memberships.write'),
+  validateBody(FreezeMembershipBodySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const gymId = req.user!.gymId;
       const memberId = req.params.id;
+      const membershipId = req.params.membershipId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId || !membershipId) throw AppError.validation('Member ID and Membership ID are required.');
+
+      const result = await ownerMembershipService.freezeMembership(gymId, memberId, membershipId, req.body, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/members/:id/memberships/:membershipId/unfreeze',
+  requirePermission('memberships.write'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+      const membershipId = req.params.membershipId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId || !membershipId) throw AppError.validation('Member ID and Membership ID are required.');
+
+      const result = await ownerMembershipService.unfreezeMembership(gymId, memberId, membershipId, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/members/:id/memberships',
+  requirePermission('memberships.read'),
+  validateQuery(PaginationQuerySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+      const { limit, offset } = req.query as any;
 
       if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
       if (!memberId) throw AppError.validation('Member ID is required.');
 
-      const result = await ownerService.getMemberMemberships(gymId, memberId);
+      const result = await ownerMembershipService.getMembershipHistory(
+        gymId,
+        memberId,
+        Number(limit) || 50,
+        Number(offset) || 0
+      );
 
       res.status(200).json({
         success: true,
-        data: { memberships: result },
+        data: result,
         meta: { requestId: req.id, timestamp: new Date().toISOString() },
       });
     } catch (err) {

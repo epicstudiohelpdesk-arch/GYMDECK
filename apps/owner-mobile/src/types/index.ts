@@ -84,6 +84,56 @@ export interface MemberActiveMembership {
   price: string;
   priceAtPurchase?: string;
   durationDays: number;
+  daysRemaining?: number;
+  frozenAt?: string | null;
+  freezeReason?: string | null;
+  frozenDaysRemaining?: number | null;
+  unfrozenAt?: string | null;
+}
+
+export interface MembershipLifecycleItem {
+  id: string;
+  gymId: string;
+  memberId: string;
+  planId: string;
+  planName: string;
+  price?: string;
+  durationDays?: number;
+  status: string;
+  startDate: string;
+  endDate: string;
+  priceAtPurchase: string;
+  daysRemaining: number;
+  isExpiringSoon: boolean;
+  frozenAt: string | null;
+  freezeReason: string | null;
+  frozenDaysRemaining: number | null;
+  unfrozenAt: string | null;
+  createdAt: string;
+}
+
+export interface ExpiringMembershipItem {
+  membershipId: string;
+  memberId: string;
+  memberCode: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  planName: string;
+  endDate: string;
+  daysRemaining: number;
+}
+
+export interface MembershipLifecycleStats {
+  activeCount: number;
+  frozenCount: number;
+  expiredCount: number;
+  expiringIn7DaysCount: number;
+  expiringIn30DaysCount: number;
+}
+
+export interface FreezeMembershipInput {
+  reason: string;
 }
 
 export interface AttendanceRecord {
