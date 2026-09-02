@@ -248,6 +248,9 @@ CREATE TABLE IF NOT EXISTS sync_outbox (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     attempt_count INTEGER NOT NULL DEFAULT 0,
     last_attempt_at DATETIME,
+    next_retry_at DATETIME,            -- Exponential backoff schedule with jitter
+    lease_expires_at DATETIME,         -- In-flight lease expiry timestamp for worker crash recovery
+    worker_id TEXT,                    -- Active in-flight worker ownership identifier
     status TEXT NOT NULL DEFAULT 'PENDING', -- PENDING, IN_FLIGHT, SYNCED, FAILED
     error_code TEXT,
     error_message TEXT,
@@ -255,6 +258,7 @@ CREATE TABLE IF NOT EXISTS sync_outbox (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(gym_id, status, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_sync_outbox_claiming ON sync_outbox(gym_id, status, next_retry_at, lease_expires_at, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_sync_outbox_event ON sync_outbox(event_id);
 
 CREATE TABLE IF NOT EXISTS sync_state (

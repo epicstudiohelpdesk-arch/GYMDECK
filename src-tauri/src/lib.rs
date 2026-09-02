@@ -12,11 +12,14 @@ pub mod errors;
 pub mod config;
 pub mod utils;
 pub mod diagnostics;
+pub mod sync;
 
 #[cfg(test)]
 pub mod chaos_tests;
 #[cfg(test)]
 pub mod security_tests;
+#[cfg(test)]
+pub mod sync_tests;
 
 use tauri::Manager;
 use commands::auth_commands::{
@@ -29,8 +32,9 @@ use commands::business_commands::{
     download_document_command, save_member_documents_command, update_member_command, upload_photo_command, get_document_temp_path_command
 };
 use commands::sync_commands::{
-    get_sync_status_command, get_pending_sync_events_command, mark_sync_event_synced_command,
-    mark_sync_event_failed_command, update_sync_cursor_command
+    get_sync_status_command, claim_pending_sync_events_command, get_pending_sync_events_command,
+    mark_sync_event_synced_command, mark_sync_event_failed_command, update_sync_cursor_command,
+    apply_pull_batch_command
 };
 use auth::rate_limit::default_auth_limiter;
 use sessions::manager::SessionManager;
@@ -176,10 +180,12 @@ pub fn run() {
         upload_photo_command,
         get_document_temp_path_command,
         get_sync_status_command,
+        claim_pending_sync_events_command,
         get_pending_sync_events_command,
         mark_sync_event_synced_command,
         mark_sync_event_failed_command,
-        update_sync_cursor_command
+        update_sync_cursor_command,
+        apply_pull_batch_command
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

@@ -939,6 +939,10 @@ export class AuthService {
 
     const { sub: tokenId, memberId, gymId, email } = decodedTicket;
 
+    if (!memberId) {
+      throw AppError.unauthorized('Invalid activation ticket: missing member ID.');
+    }
+
     // Validate password rules
     if (dto.password.length < 8) {
       throw AppError.validation('Password must be at least 8 characters long');

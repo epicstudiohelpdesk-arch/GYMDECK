@@ -36,6 +36,41 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      email VARCHAR(255) NOT NULL,
+      full_name VARCHAR(255) NOT NULL,
+      phone_number VARCHAR(32),
+      password_hash TEXT NOT NULL,
+      role VARCHAR(32) NOT NULL DEFAULT 'OWNER',
+      permissions TEXT[],
+      account_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+      last_login_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_users_gym_email ON users(gym_id, email);
+    CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+    CREATE TABLE IF NOT EXISTS user_refresh_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL,
+      family_id UUID NOT NULL,
+      device_fingerprint TEXT,
+      expires_at TIMESTAMPTZ NOT NULL,
+      revoked_at TIMESTAMPTZ,
+      last_used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_refresh_tokens_user ON user_refresh_tokens(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_refresh_tokens_hash ON user_refresh_tokens(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_user_refresh_tokens_family ON user_refresh_tokens(family_id);
+
     CREATE TABLE IF NOT EXISTS member_accounts (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       gym_member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
@@ -50,6 +85,51 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS email_verification_otps (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) NOT NULL,
+      otp_hash VARCHAR(64) NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      attempts_count INTEGER NOT NULL DEFAULT 0,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      member_account_id UUID NOT NULL REFERENCES member_accounts(id) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS member_refresh_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      member_account_id UUID NOT NULL REFERENCES member_accounts(id) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL,
+      family_id UUID NOT NULL,
+      device_fingerprint TEXT,
+      expires_at TIMESTAMPTZ NOT NULL,
+      revoked_at TIMESTAMPTZ,
+      last_used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS member_activation_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      gym_member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL,
+      display_code VARCHAR(32),
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_act_tokens_hash ON member_activation_tokens(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_act_tokens_gym_member ON member_activation_tokens(gym_id, gym_member_id);
 
     CREATE TABLE IF NOT EXISTS membership_plans (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -89,6 +169,22 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS member_memberships (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
+      plan_id UUID NOT NULL REFERENCES membership_plans(id) ON DELETE RESTRICT,
+      status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+      start_date TIMESTAMPTZ NOT NULL,
+      end_date TIMESTAMPTZ NOT NULL,
+      auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_member_memberships_gym_mem ON member_memberships(gym_id, member_id);
+    CREATE INDEX IF NOT EXISTS idx_member_memberships_status ON member_memberships(member_id, status);
+
     CREATE TABLE IF NOT EXISTS trainers (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
@@ -100,6 +196,40 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS pt_packages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
+      trainer_id UUID NOT NULL REFERENCES trainers(id) ON DELETE RESTRICT,
+      package_name VARCHAR(255) NOT NULL,
+      total_sessions INTEGER NOT NULL,
+      used_sessions INTEGER NOT NULL DEFAULT 0,
+      remaining_sessions INTEGER NOT NULL,
+      expiry_date TIMESTAMPTZ NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pt_packages_gym_member ON pt_packages(gym_id, member_id);
+
+    CREATE TABLE IF NOT EXISTS pt_sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      package_id UUID NOT NULL REFERENCES pt_packages(id) ON DELETE CASCADE,
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
+      trainer_id UUID NOT NULL REFERENCES trainers(id) ON DELETE RESTRICT,
+      session_date TIMESTAMPTZ NOT NULL,
+      duration_minutes INTEGER NOT NULL DEFAULT 60,
+      focus_area VARCHAR(255) NOT NULL,
+      trainer_notes TEXT,
+      status VARCHAR(32) NOT NULL DEFAULT 'COMPLETED',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pt_sessions_package ON pt_sessions(package_id);
+    CREATE INDEX IF NOT EXISTS idx_pt_sessions_gym_member ON pt_sessions(gym_id, member_id, session_date);
 
     CREATE TABLE IF NOT EXISTS audit_logs (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -129,6 +259,8 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS idx_sync_change_log_gym_seq ON sync_change_log(gym_id, server_sequence);
+    DELETE FROM sync_change_log a USING sync_change_log b WHERE a.server_sequence < b.server_sequence AND a.gym_id = b.gym_id AND a.event_id = b.event_id;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_change_log_event_id ON sync_change_log(gym_id, event_id);
 
     CREATE TABLE IF NOT EXISTS sync_idempotency_log (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -143,7 +275,9 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       response_summary TEXT
     );
 
-    CREATE INDEX IF NOT EXISTS idx_sync_idempotency_gym_event ON sync_idempotency_log(gym_id, event_id);
+    DELETE FROM sync_idempotency_log a USING sync_idempotency_log b WHERE a.processed_at < b.processed_at AND a.gym_id = b.gym_id AND a.event_id = b.event_id;
+    DROP INDEX IF EXISTS idx_sync_idempotency_gym_event;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_idempotency_gym_event ON sync_idempotency_log(gym_id, event_id);
 
     CREATE TABLE IF NOT EXISTS sync_device_cursors (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

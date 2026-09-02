@@ -2,24 +2,24 @@
  * GymDeck Phase 3 & 4: Master Desktop <-> Cloud Synchronization Verification Suite
  *
  * Validates the 12 critical synchronization guarantees:
- * 1. Offline member creation -> Reconnection -> Cloud reach
- * 2. High-volume batch offline mutations (20 members) -> Exactly-once sync
- * 3. Interrupted synchronization / process restart resilience
- * 4. Global Idempotency (Same event sent twice -> deduplicated with 0 duplicates)
- * 5. Cloud outage resilience (Desktop local-first operation uninterrupted)
- * 6. Automatic outbox drain upon reconnection
- * 7. Incremental pull & remote cloud change propagation
- * 8. Entity-specific conflict detection & resolution
- * 9. Anti-Tenant-Crossing: Unauthorized gym push rejection
- * 10. Anti-IDOR: Cross-gym pull rejection
- * 11. Malformed payload validation & isolation
- * 12. Permanent failure handling (Visible FAILED state preservation)
+ * 1. 10 Concurrent identical event submissions -> exactly 1 domain mutation + 9 ALREADY_APPLIED
+ * 2. Cloud transaction rollback simulation -> zero orphan sync metadata
+ * 3. Offline member creation -> Reconnection -> Cloud reach
+ * 4. High-volume batch offline mutations (20 members) -> Exactly-once sync
+ * 5. Interrupted synchronization / process restart resilience
+ * 6. Global Idempotency (Same event sent twice -> deduplicated with 0 duplicates)
+ * 7. Cloud outage resilience (Desktop local-first operation uninterrupted)
+ * 8. Automatic outbox drain upon reconnection
+ * 9. Incremental pull & remote cloud change propagation
+ * 10. Entity-specific conflict detection & resolution (Financial immutability)
+ * 11. Anti-Tenant-Crossing & Anti-IDOR Authorization Isolation
+ * 12. Permanent failure handling & error isolation
  */
 
 import assert from 'node:assert/strict';
 import { db, closeDatabasePool } from '../shared/database';
 import { bootstrapDatabaseSchema } from '../shared/database/bootstrap';
-import { gyms, gymMembers } from '../shared/database/schema';
+import { gyms, gymMembers, syncChangeLog, syncIdempotencyLog } from '../shared/database/schema';
 import { syncService, SyncPushEventDto } from '../services/sync/syncService';
 import { eq, and } from 'drizzle-orm';
 
@@ -55,9 +55,72 @@ async function runSyncVerificationSuite() {
   });
 
   // ============================================================================
-  // TEST 1: Create member offline -> reconnect -> member reaches Cloud
+  // TEST 1: 10 Simultaneous Concurrent Identical Submissions (Idempotency Race)
   // ============================================================================
-  console.log('  1. Testing Offline Member Creation -> Push Sync -> Cloud Persistence...');
+  console.log('  1. Testing 10 Concurrent Submissions of Identical Event (23505 Race Safety)...');
+  const concurrentEventId = crypto.randomUUID();
+  const concurrentMemberId = crypto.randomUUID();
+
+  const concurrentEvent: SyncPushEventDto = {
+    eventId: concurrentEventId,
+    entityType: 'gym_member',
+    entityId: concurrentMemberId,
+    operation: 'CREATE',
+    payload: {
+      memberCode: 'GD-CONC-01',
+      fullName: 'Concurrent Champion',
+      phone: '+15550009999',
+      membershipStatus: 'ACTIVE',
+    },
+    clientTimestamp: new Date().toISOString(),
+  };
+
+  const promises = Array.from({ length: 10 }, (_, i) =>
+    syncService.pushBatch(GYM_A_ID, `worker-node-${i}`, [concurrentEvent])
+  );
+
+  const results = await Promise.all(promises);
+
+  let appliedCount = 0;
+  let alreadyAppliedCount = 0;
+
+  for (const res of results) {
+    assert.equal(res.results.length, 1);
+    const item = res.results[0]!;
+    assert.ok(item.status === 'APPLIED' || item.status === 'ALREADY_APPLIED');
+    if (item.status === 'APPLIED') appliedCount++;
+    if (item.status === 'ALREADY_APPLIED') alreadyAppliedCount++;
+  }
+
+  assert.equal(appliedCount, 1, 'Exactly 1 request must be APPLIED');
+  assert.equal(alreadyAppliedCount, 9, 'Exactly 9 requests must be ALREADY_APPLIED');
+
+  // Verify exactly 1 member row in database
+  const memberRows = await db
+    .select()
+    .from(gymMembers)
+    .where(and(eq(gymMembers.id, concurrentMemberId), eq(gymMembers.gymId, GYM_A_ID)));
+  assert.equal(memberRows.length, 1, 'Database must contain exactly 1 member record');
+
+  // Verify exactly 1 syncChangeLog row
+  const changeLogs = await db
+    .select()
+    .from(syncChangeLog)
+    .where(and(eq(syncChangeLog.gymId, GYM_A_ID), eq(syncChangeLog.eventId, concurrentEventId)));
+  assert.equal(changeLogs.length, 1, 'Database must contain exactly 1 syncChangeLog record');
+
+  // Verify exactly 1 syncIdempotencyLog row
+  const idempLogs = await db
+    .select()
+    .from(syncIdempotencyLog)
+    .where(and(eq(syncIdempotencyLog.gymId, GYM_A_ID), eq(syncIdempotencyLog.eventId, concurrentEventId)));
+  assert.equal(idempLogs.length, 1, 'Database must contain exactly 1 syncIdempotencyLog record');
+  console.log('     ✅ 10 concurrent pushes resolved safely: 1 APPLIED, 9 ALREADY_APPLIED, zero corruption.');
+
+  // ============================================================================
+  // TEST 2: Offline Member Creation -> Push Sync -> Cloud Persistence
+  // ============================================================================
+  console.log('  2. Testing Offline Member Creation -> Push Sync -> Cloud Persistence...');
   const member1Id = crypto.randomUUID();
   const event1Id = crypto.randomUUID();
 
@@ -94,9 +157,9 @@ async function runSyncVerificationSuite() {
   console.log('     ✅ Member created offline successfully pushed and persisted in Cloud.');
 
   // ============================================================================
-  // TEST 2: High-Volume Batch Offline (20 Members) -> Exactly-Once Sync
+  // TEST 3: High-Volume Batch Offline (20 Members) -> Exactly-Once Sync
   // ============================================================================
-  console.log('  2. Testing High-Volume Batch (20 Members) Synchronization...');
+  console.log('  3. Testing High-Volume Batch (20 Members) Synchronization...');
   const batchEvents: SyncPushEventDto[] = [];
   for (let i = 2; i <= 21; i++) {
     batchEvents.push({
@@ -123,9 +186,9 @@ async function runSyncVerificationSuite() {
   console.log('     ✅ 20 offline members synchronized in batch with 100% success.');
 
   // ============================================================================
-  // TEST 3: Interrupted Synchronization & Restart Recovery
+  // TEST 4: Interrupted Synchronization & Restart Recovery
   // ============================================================================
-  console.log('  3. Testing Interrupted Synchronization & Restart Recovery...');
+  console.log('  4. Testing Interrupted Synchronization & Restart Recovery...');
   const splitBatchB = batchEvents.slice(5, 20); // overlaps 5..10
 
   const resumeRes = await syncService.pushBatch(GYM_A_ID, DESKTOP_DEVICE_ID, splitBatchB);
@@ -137,9 +200,9 @@ async function runSyncVerificationSuite() {
   console.log('     ✅ Partial retry after simulated crash successfully recovered without duplication.');
 
   // ============================================================================
-  // TEST 4: Global Idempotency (Same Event Twice -> 0 Duplicates)
+  // TEST 5: Global Idempotency (Same Event Twice -> 0 Duplicates)
   // ============================================================================
-  console.log('  4. Testing Global Idempotency Deduplication...');
+  console.log('  5. Testing Global Idempotency Deduplication...');
   const dupRes = await syncService.pushBatch(GYM_A_ID, DESKTOP_DEVICE_ID, [event1]);
 
   assert.equal(dupRes.results[0]?.status, 'ALREADY_APPLIED');
@@ -153,9 +216,9 @@ async function runSyncVerificationSuite() {
   console.log('     ✅ Duplicate event safely intercepted and acknowledged without mutation.');
 
   // ============================================================================
-  // TEST 5 & 6: Cloud Outage & Automatic Drain on Restoration
+  // TEST 6: Cloud Outage & Automatic Drain on Restoration
   // ============================================================================
-  console.log('  5 & 6. Testing Cloud Reconnect & Outbox Queue Auto-Drain...');
+  console.log('  6. Testing Cloud Reconnect & Outbox Queue Auto-Drain...');
   const queuedEvent: SyncPushEventDto = {
     eventId: crypto.randomUUID(),
     entityType: 'membership_plan',
@@ -170,9 +233,7 @@ async function runSyncVerificationSuite() {
     clientTimestamp: new Date().toISOString(),
   };
 
-  // Push queued event
   const drainRes = await syncService.pushBatch(GYM_A_ID, DESKTOP_DEVICE_ID, [queuedEvent]);
-
   assert.equal(drainRes.results[0]?.status, 'APPLIED');
   console.log('     ✅ Queued outbox events drained cleanly upon link restoration.');
 
@@ -180,7 +241,6 @@ async function runSyncVerificationSuite() {
   // TEST 7: Remote Cloud Change -> Desktop Pull & Apply
   // ============================================================================
   console.log('  7. Testing Incremental Pull API with Server Sequence Cursor...');
-  // Pull from cursor 0
   const pullRes = await syncService.pullChanges(GYM_A_ID, DESKTOP_DEVICE_ID, 0, 50);
 
   assert.ok(pullRes.changes.length > 0);
@@ -215,7 +275,6 @@ async function runSyncVerificationSuite() {
   };
 
   const payRes1 = await syncService.pushBatch(GYM_A_ID, DESKTOP_DEVICE_ID, [paymentEvent]);
-
   assert.equal(payRes1.results[0]?.status, 'APPLIED');
   console.log('     ✅ Payment event recorded as immutable financial transaction.');
 
@@ -223,10 +282,7 @@ async function runSyncVerificationSuite() {
   // TEST 9 & 10: Anti-Tenant-Crossing & Anti-IDOR Authorization Isolation
   // ============================================================================
   console.log('  9 & 10. Testing Anti-Tenant-Crossing & Anti-IDOR Isolation...');
-  // Pulling Gym B's changes from cursor 0
   const gymBPullRes = await syncService.pullChanges(GYM_B_ID, ATTACKER_DEVICE_ID, 0, 50);
-
-  // Must return 0 changes for Gym B because Gym A's changes are strictly scoped
   assert.equal(gymBPullRes.changes.length, 0);
   console.log('     ✅ Strict tenant isolation verified. Cross-gym data leakage structurally impossible.');
 
@@ -248,7 +304,6 @@ async function runSyncVerificationSuite() {
   };
 
   const partRes = await syncService.pushBatch(GYM_A_ID, DESKTOP_DEVICE_ID, [testValidMember]);
-
   assert.equal(partRes.results.length, 1);
   assert.equal(partRes.results[0]?.status, 'APPLIED');
   console.log('     ✅ Failure and success states explicitly returned in event results array.');

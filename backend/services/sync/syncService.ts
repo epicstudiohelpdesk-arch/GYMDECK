@@ -229,7 +229,7 @@ export class SyncService {
     event: SyncPushEventDto,
     actorUserId?: string
   ): Promise<SyncPushResult> {
-    // 1. Check Idempotency Log (Replay / Duplicate Defense)
+    // 1. Initial Idempotency Check (Fast Path)
     const existingLog = (
       await db
         .select()
@@ -257,64 +257,127 @@ export class SyncService {
       };
     }
 
-    // 2. Apply domain mutation to PostgreSQL tables
-    await this.applyDomainMutation(gymId, event);
+    try {
+      // 2. Execute ALL sync operations inside a single atomic PostgreSQL transaction
+      return await db.transaction(async (tx) => {
+        // Re-check idempotency inside transaction
+        const txExisting = (
+          await tx
+            .select()
+            .from(syncIdempotencyLog)
+            .where(
+              and(
+                eq(syncIdempotencyLog.gymId, gymId),
+                eq(syncIdempotencyLog.eventId, event.eventId)
+              )
+            )
+            .limit(1)
+        )[0];
 
-    // 3. Record in sync_change_log (Generates new serverSequence)
-    const [changeRecord] = await db
-      .insert(syncChangeLog)
-      .values({
-        gymId,
-        eventId: event.eventId,
-        entityType: event.entityType,
-        entityId: event.entityId,
-        operation: event.operation,
-        payload: event.payload,
-        sourceDevice: deviceId,
-        actorUserId: actorUserId || undefined,
-      })
-      .returning();
+        if (txExisting) {
+          return {
+            eventId: event.eventId,
+            entityId: event.entityId,
+            status: 'ALREADY_APPLIED',
+            serverSequence: txExisting.serverSequence,
+          };
+        }
 
-    const sequence = changeRecord!.serverSequence;
+        // Apply domain mutation using transactional client tx
+        await this.applyDomainMutationTx(tx, gymId, event);
 
-    // 4. Record in sync_idempotency_log
-    await db.insert(syncIdempotencyLog).values({
-      gymId,
-      eventId: event.eventId,
-      entityType: event.entityType,
-      entityId: event.entityId,
-      operation: event.operation,
-      serverSequence: sequence,
-      status: 'APPLIED',
-      responseSummary: `Applied ${event.operation} on ${event.entityType}`,
-    });
+        // Record in sync_change_log (Generates new serverSequence)
+        const [changeRecord] = await tx
+          .insert(syncChangeLog)
+          .values({
+            gymId,
+            eventId: event.eventId,
+            entityType: event.entityType,
+            entityId: event.entityId,
+            operation: event.operation,
+            payload: event.payload,
+            sourceDevice: deviceId,
+            actorUserId: actorUserId || undefined,
+          })
+          .returning();
 
-    // 5. Audit Log
-    await db.insert(auditLogs).values({
-      gymId,
-      actorType: 'DESKTOP_SYNC',
-      action: `SYNC_${event.operation}_${event.entityType.toUpperCase()}`,
-      resource: event.entityType,
-      resourceId: event.entityId,
-      metadata: JSON.stringify({ eventId: event.eventId, sequence }),
-    });
+        const sequence = changeRecord!.serverSequence;
 
-    return {
-      eventId: event.eventId,
-      entityId: event.entityId,
-      status: 'APPLIED',
-      serverSequence: sequence,
-    };
+        // Record in sync_idempotency_log
+        await tx.insert(syncIdempotencyLog).values({
+          gymId,
+          eventId: event.eventId,
+          entityType: event.entityType,
+          entityId: event.entityId,
+          operation: event.operation,
+          serverSequence: sequence,
+          status: 'APPLIED',
+          responseSummary: `Applied ${event.operation} on ${event.entityType}`,
+        });
+
+        // Record Audit Log inside the same atomic transaction
+        await tx.insert(auditLogs).values({
+          gymId,
+          actorType: 'DESKTOP_SYNC',
+          action: `SYNC_${event.operation}_${event.entityType.toUpperCase()}`,
+          resource: event.entityType,
+          resourceId: event.entityId,
+          metadata: JSON.stringify({ eventId: event.eventId, sequence }),
+        });
+
+        return {
+          eventId: event.eventId,
+          entityId: event.entityId,
+          status: 'APPLIED',
+          serverSequence: sequence,
+        };
+      });
+    } catch (err: any) {
+      // Handle Postgres error 23505 (unique_violation on (gym_id, event_id)) during concurrent race
+      if (err.code === '23505' || err.message?.includes('duplicate key') || err.message?.includes('23505')) {
+        logger.info('[SyncService] Concurrent duplicate event intercepted via unique constraint 23505', {
+          gymId,
+          eventId: event.eventId,
+        });
+
+        const racedLog = (
+          await db
+            .select()
+            .from(syncIdempotencyLog)
+            .where(
+              and(
+                eq(syncIdempotencyLog.gymId, gymId),
+                eq(syncIdempotencyLog.eventId, event.eventId)
+              )
+            )
+            .limit(1)
+        )[0];
+
+        if (racedLog) {
+          return {
+            eventId: event.eventId,
+            entityId: event.entityId,
+            status: 'ALREADY_APPLIED',
+            serverSequence: racedLog.serverSequence,
+          };
+        }
+      }
+      throw err;
+    }
   }
 
-  private async applyDomainMutation(gymId: string, event: SyncPushEventDto): Promise<void> {
+  private async applyDomainMutationTx(
+    tx: any,
+    gymId: string,
+    event: SyncPushEventDto
+  ): Promise<void> {
     const { entityType, entityId, operation, payload } = event;
 
     switch (entityType) {
       case 'gym_member': {
         if (operation === 'CREATE' || operation === 'UPDATE') {
           const existing = (
-            await db
+            await tx
               .select()
               .from(gymMembers)
               .where(and(eq(gymMembers.id, entityId), eq(gymMembers.gymId, gymId)))
@@ -322,7 +385,7 @@ export class SyncService {
           )[0];
 
           if (existing) {
-            await db
+            await tx
               .update(gymMembers)
               .set({
                 memberCode: payload.memberCode || payload.member_code || existing.memberCode,
@@ -335,7 +398,7 @@ export class SyncService {
               })
               .where(eq(gymMembers.id, entityId));
           } else {
-            await db.insert(gymMembers).values({
+            await tx.insert(gymMembers).values({
               id: entityId,
               gymId,
               memberCode: payload.memberCode || payload.member_code || `GD-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -348,7 +411,7 @@ export class SyncService {
             });
           }
         } else if (operation === 'DELETE') {
-          await db
+          await tx
             .update(gymMembers)
             .set({ membershipStatus: 'INACTIVE', updatedAt: new Date() })
             .where(and(eq(gymMembers.id, entityId), eq(gymMembers.gymId, gymId)));
@@ -359,7 +422,7 @@ export class SyncService {
       case 'membership_plan': {
         if (operation === 'CREATE' || operation === 'UPDATE') {
           const existing = (
-            await db
+            await tx
               .select()
               .from(membershipPlans)
               .where(and(eq(membershipPlans.id, entityId), eq(membershipPlans.gymId, gymId)))
@@ -367,7 +430,7 @@ export class SyncService {
           )[0];
 
           if (existing) {
-            await db
+            await tx
               .update(membershipPlans)
               .set({
                 planName: payload.planName || payload.name || payload.plan_name || existing.planName,
@@ -378,7 +441,7 @@ export class SyncService {
               })
               .where(eq(membershipPlans.id, entityId));
           } else {
-            await db.insert(membershipPlans).values({
+            await tx.insert(membershipPlans).values({
               id: entityId,
               gymId,
               planName: payload.planName || payload.name || payload.plan_name || 'Standard Plan',
@@ -394,7 +457,7 @@ export class SyncService {
       case 'payment': {
         // Financial records are IMMUTABLE append-only events
         const existing = (
-          await db
+          await tx
             .select()
             .from(payments)
             .where(and(eq(payments.id, entityId), eq(payments.gymId, gymId)))
@@ -402,7 +465,7 @@ export class SyncService {
         )[0];
 
         if (!existing) {
-          await db.insert(payments).values({
+          await tx.insert(payments).values({
             id: entityId,
             gymId,
             memberId: payload.memberId || payload.member_id,
@@ -418,7 +481,7 @@ export class SyncService {
       case 'attendance': {
         // Attendance logs are append-only events
         const existing = (
-          await db
+          await tx
             .select()
             .from(attendanceLogs)
             .where(and(eq(attendanceLogs.id, entityId), eq(attendanceLogs.gymId, gymId)))
@@ -426,7 +489,7 @@ export class SyncService {
         )[0];
 
         if (!existing) {
-          await db.insert(attendanceLogs).values({
+          await tx.insert(attendanceLogs).values({
             id: entityId,
             gymId,
             memberId: payload.memberId || payload.member_id,
@@ -439,7 +502,7 @@ export class SyncService {
 
       case 'trainer': {
         const existing = (
-          await db
+          await tx
             .select()
             .from(trainers)
             .where(and(eq(trainers.id, entityId), eq(trainers.gymId, gymId)))
@@ -447,7 +510,7 @@ export class SyncService {
         )[0];
 
         if (existing) {
-          await db
+          await tx
             .update(trainers)
             .set({
               fullName: payload.fullName || payload.full_name || existing.fullName,
@@ -458,7 +521,7 @@ export class SyncService {
             })
             .where(eq(trainers.id, entityId));
         } else {
-          await db.insert(trainers).values({
+          await tx.insert(trainers).values({
             id: entityId,
             gymId,
             fullName: payload.fullName || payload.full_name || 'Trainer',

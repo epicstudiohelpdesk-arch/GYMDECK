@@ -97,7 +97,7 @@ router.post('/gym-link', validateBody(GymLinkBodySchema), async (req: Request, r
 router.get('/dashboard', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await dashboardService.getDashboardData(user.gymId, user.memberId);
+    const result = await dashboardService.getDashboardData(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -111,7 +111,7 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
 router.get('/membership', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await membershipService.getMemberMembership(user.gymId, user.memberId);
+    const result = await membershipService.getMemberMembership(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -125,7 +125,7 @@ router.get('/membership', async (req: Request, res: Response, next: NextFunction
 router.get('/check-in-pass', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = checkInPassService.generateCheckInPass(user.gymId, user.memberId, user.sub);
+    const result = checkInPassService.generateCheckInPass(user.gymId, user.memberId!, user.sub);
     res.status(200).json({
       success: true,
       data: result,
@@ -143,7 +143,7 @@ router.post('/check-in', validateBody(CheckInBodySchema), async (req: Request, r
 
     const result = await attendanceService.submitCheckIn({
       gymId: user.gymId,
-      memberId: user.memberId,
+      memberId: user.memberId!,
       idempotencyKey,
       passToken: req.body.passToken,
       entryMethod: req.body.entryMethod,
@@ -167,7 +167,7 @@ router.get('/attendance', validateQuery(PaginationSchema), async (req: Request, 
 
     const result = await attendanceService.getAttendanceHistory(
       user.gymId,
-      user.memberId,
+      user.memberId!,
       parseInt(page, 10) || 1,
       parseInt(limit, 10) || 20
     );
@@ -189,7 +189,7 @@ router.get('/attendance', validateQuery(PaginationSchema), async (req: Request, 
 router.get('/workouts', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await workoutService.getRoutines(user.gymId, user.memberId);
+    const result = await workoutService.getRoutines(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -206,7 +206,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = req.user!;
-      const result = await workoutService.startSession(user.gymId, user.memberId, req.body);
+      const result = await workoutService.startSession(user.gymId, user.memberId!, req.body);
       res.status(201).json({
         success: true,
         data: result,
@@ -224,7 +224,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = req.user!;
-      const result = await workoutService.logSet(user.gymId, user.memberId, req.params.sessionId!, req.body);
+      const result = await workoutService.logSet(user.gymId, user.memberId!, req.params.sessionId!, req.body);
       res.status(200).json({
         success: true,
         data: result,
@@ -245,7 +245,7 @@ router.post(
       const idempotencyKey = req.header('Idempotency-Key') || req.header('idempotency-key');
       const result = await workoutService.completeSession(
         user.gymId,
-        user.memberId,
+        user.memberId!,
         req.params.sessionId!,
         req.body,
         idempotencyKey
@@ -267,7 +267,7 @@ router.get('/workout-history', validateQuery(PaginationSchema), async (req: Requ
     const { page, limit } = req.query as any;
     const result = await workoutService.getWorkoutHistory(
       user.gymId,
-      user.memberId,
+      user.memberId!,
       parseInt(page, 10) || 1,
       parseInt(limit, 10) || 20
     );
@@ -288,7 +288,7 @@ router.get('/workout-history', validateQuery(PaginationSchema), async (req: Requ
 router.get('/trainer', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await ptService.getTrainerProfile(user.gymId, user.memberId);
+    const result = await ptService.getTrainerProfile(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -302,7 +302,7 @@ router.get('/trainer', async (req: Request, res: Response, next: NextFunction) =
 router.get('/pt-package', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await ptService.getPtPackage(user.gymId, user.memberId);
+    const result = await ptService.getPtPackage(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -316,7 +316,7 @@ router.get('/pt-package', async (req: Request, res: Response, next: NextFunction
 router.get('/pt-sessions', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await ptService.getPtSessions(user.gymId, user.memberId);
+    const result = await ptService.getPtSessions(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -334,7 +334,7 @@ router.get('/pt-sessions', async (req: Request, res: Response, next: NextFunctio
 router.get('/documents', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await documentService.getMemberDocuments(user.gymId, user.memberId);
+    const result = await documentService.getMemberDocuments(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -348,7 +348,7 @@ router.get('/documents', async (req: Request, res: Response, next: NextFunction)
 router.get('/documents/:id/secure-url', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await documentService.getDocumentSecureUrl(user.gymId, user.memberId, req.params.id!);
+    const result = await documentService.getDocumentSecureUrl(user.gymId, user.memberId!, req.params.id!);
     res.status(200).json({
       success: true,
       data: result,
@@ -369,7 +369,7 @@ router.get('/notifications', validateQuery(PaginationSchema), async (req: Reques
     const { page, limit } = req.query as any;
     const result = await notificationService.getNotifications(
       user.gymId,
-      user.memberId,
+      user.memberId!,
       parseInt(page, 10) || 1,
       parseInt(limit, 10) || 20
     );
@@ -386,7 +386,7 @@ router.get('/notifications', validateQuery(PaginationSchema), async (req: Reques
 router.post('/notifications/:id/read', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await notificationService.markAsRead(user.gymId, user.memberId, req.params.id!);
+    const result = await notificationService.markAsRead(user.gymId, user.memberId!, req.params.id!);
     res.status(200).json({
       success: true,
       data: result,
@@ -400,7 +400,7 @@ router.post('/notifications/:id/read', async (req: Request, res: Response, next:
 router.post('/notifications/read-all', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await notificationService.markAllAsRead(user.gymId, user.memberId);
+    const result = await notificationService.markAllAsRead(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -418,7 +418,7 @@ router.post('/notifications/read-all', async (req: Request, res: Response, next:
 router.get('/progress/weight', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await progressService.getWeightHistory(user.gymId, user.memberId);
+    const result = await progressService.getWeightHistory(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -432,7 +432,7 @@ router.get('/progress/weight', async (req: Request, res: Response, next: NextFun
 router.post('/progress/weight', validateBody(WeightLogSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await progressService.logWeight(user.gymId, user.memberId, req.body);
+    const result = await progressService.logWeight(user.gymId, user.memberId!, req.body);
     res.status(201).json({
       success: true,
       data: result,
@@ -446,7 +446,7 @@ router.post('/progress/weight', validateBody(WeightLogSchema), async (req: Reque
 router.get('/progress/measurements', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await progressService.getMeasurements(user.gymId, user.memberId);
+    const result = await progressService.getMeasurements(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,
@@ -463,7 +463,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = req.user!;
-      const result = await progressService.logMeasurements(user.gymId, user.memberId, req.body);
+      const result = await progressService.logMeasurements(user.gymId, user.memberId!, req.body);
       res.status(201).json({
         success: true,
         data: result,
@@ -478,7 +478,7 @@ router.post(
 router.get('/progress/milestones', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const result = await progressService.getMilestones(user.gymId, user.memberId);
+    const result = await progressService.getMilestones(user.gymId, user.memberId!);
     res.status(200).json({
       success: true,
       data: result,

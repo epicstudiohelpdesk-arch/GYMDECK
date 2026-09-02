@@ -124,6 +124,61 @@ export const memberActivationTokens = pgTable(
   })
 );
 
+/**
+ * 6. Users / Staff / Owner Accounts (Desktop & Owner Mobile Login Credentials)
+ */
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gymId: uuid('gym_id')
+      .notNull()
+      .references(() => gyms.id, { onDelete: 'cascade' }),
+    email: varchar('email', { length: 255 }).notNull(),
+    fullName: varchar('full_name', { length: 255 }).notNull(),
+    phoneNumber: varchar('phone_number', { length: 32 }),
+    passwordHash: text('password_hash').notNull(), // Argon2id hash
+    role: varchar('role', { length: 32 }).notNull().default('OWNER'), // OWNER, MANAGER, STAFF, RECEPTIONIST, TRAINER
+    permissions: text('permissions').array(), // Granular permissions: ['members.read', 'members.write', ...]
+    accountStatus: varchar('account_status', { length: 32 }).notNull().default('ACTIVE'), // ACTIVE, LOCKED, SUSPENDED
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    gymEmailIdx: index('idx_users_gym_email').on(table.gymId, table.email),
+    roleIdx: index('idx_users_role').on(table.role),
+  })
+);
+
+/**
+ * 7. User / Owner Refresh Tokens (Rotating Sessions)
+ */
+export const userRefreshTokens = pgTable(
+  'user_refresh_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    gymId: uuid('gym_id')
+      .notNull()
+      .references(() => gyms.id, { onDelete: 'cascade' }),
+    tokenHash: varchar('token_hash', { length: 64 }).notNull(), // SHA-256 hash
+    familyId: uuid('family_id').notNull(), // Family UUID for reuse detection
+    deviceFingerprint: text('device_fingerprint'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index('idx_user_refresh_tokens_user').on(table.userId),
+    tokenHashIdx: index('idx_user_refresh_tokens_hash').on(table.tokenHash),
+    familyIdx: index('idx_user_refresh_tokens_family').on(table.familyId),
+  })
+);
+
 export type MemberAccount = typeof memberAccounts.$inferSelect;
 export type NewMemberAccount = typeof memberAccounts.$inferInsert;
 export type EmailVerificationOtp = typeof emailVerificationOtps.$inferSelect;
@@ -131,3 +186,7 @@ export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type MemberRefreshToken = typeof memberRefreshTokens.$inferSelect;
 export type MemberActivationToken = typeof memberActivationTokens.$inferSelect;
 export type NewMemberActivationToken = typeof memberActivationTokens.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type UserRefreshToken = typeof userRefreshTokens.$inferSelect;
+export type NewUserRefreshToken = typeof userRefreshTokens.$inferInsert;

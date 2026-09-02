@@ -36,12 +36,16 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             attempt_count INTEGER NOT NULL DEFAULT 0,
             last_attempt_at DATETIME,
+            next_retry_at DATETIME,
+            lease_expires_at DATETIME,
+            worker_id TEXT,
             status TEXT NOT NULL DEFAULT 'PENDING',
             error_code TEXT,
             error_message TEXT,
             FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(gym_id, status, created_at ASC);
+        CREATE INDEX IF NOT EXISTS idx_sync_outbox_claiming ON sync_outbox(gym_id, status, next_retry_at, lease_expires_at, created_at ASC);
         CREATE INDEX IF NOT EXISTS idx_sync_outbox_event ON sync_outbox(event_id);
         CREATE TABLE IF NOT EXISTS sync_state (
             key TEXT PRIMARY KEY,
@@ -59,6 +63,14 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
             payload TEXT NOT NULL,
             applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         );",
+    ),
+    (
+        4,
+        "Add lease and exponential backoff columns to sync_outbox",
+        "ALTER TABLE sync_outbox ADD COLUMN next_retry_at DATETIME;
+        ALTER TABLE sync_outbox ADD COLUMN lease_expires_at DATETIME;
+        ALTER TABLE sync_outbox ADD COLUMN worker_id TEXT;
+        CREATE INDEX IF NOT EXISTS idx_sync_outbox_claiming ON sync_outbox(gym_id, status, next_retry_at, lease_expires_at, created_at ASC);",
     ),
 ];
 
