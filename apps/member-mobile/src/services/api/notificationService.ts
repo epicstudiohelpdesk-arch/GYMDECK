@@ -100,6 +100,41 @@ class NotificationService {
       }
     }
   }
+
+  /**
+   * Get notification preferences.
+   */
+  public async getPreferences(): Promise<any[]> {
+    try {
+      const response = await apiClient.get<ApiResponse<{ preferences: any[] }>>('/member/notifications/preferences');
+      return response.data.data.preferences;
+    } catch (err) {
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Update notification preferences.
+   */
+  public async updatePreferences(preferences: Array<{ category: string; channel: string; isEnabled: boolean }>): Promise<any[]> {
+    try {
+      const response = await apiClient.patch<ApiResponse<{ preferences: any[] }>>('/member/notifications/preferences', { preferences });
+      return response.data.data.preferences;
+    } catch (err) {
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Register device push token.
+   */
+  public async registerPushToken(tokenData: { pushToken: string; platform: 'IOS' | 'ANDROID' | 'WEB'; deviceModel?: string; appVersion?: string }): Promise<void> {
+    try {
+      await apiClient.post('/member/notifications/push-token', tokenData);
+    } catch (err) {
+      throw normalizeAxiosError(err);
+    }
+  }
 }
 
 export const notificationService = new NotificationService();

@@ -359,6 +359,23 @@ router.get('/documents/:id/secure-url', async (req: Request, res: Response, next
   }
 });
 
+const NotificationPreferencesSchema = z.object({
+  preferences: z.array(
+    z.object({
+      category: z.enum(['ALL', 'MEMBERSHIP', 'BILLING', 'ATTENDANCE', 'TRAINING', 'ANNOUNCEMENT', 'SECURITY', 'SYSTEM']),
+      channel: z.enum(['IN_APP', 'PUSH', 'WHATSAPP', 'EMAIL', 'SMS']),
+      isEnabled: z.boolean(),
+    })
+  ),
+});
+
+const RegisterPushTokenSchema = z.object({
+  pushToken: z.string().min(10, 'Valid push notification token is required'),
+  platform: z.enum(['IOS', 'ANDROID', 'WEB']).default('ANDROID'),
+  deviceModel: z.string().optional(),
+  appVersion: z.string().optional(),
+});
+
 // ==============================================================================
 // 5. Notification Center Domain
 // ==============================================================================
@@ -366,13 +383,43 @@ router.get('/documents/:id/secure-url', async (req: Request, res: Response, next
 router.get('/notifications', validateQuery(PaginationSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
-    const { page, limit } = req.query as any;
-    const result = await notificationService.getNotifications(
+    const { page, limit, unreadOnly } = req.query as any;
+    const result = await notificationService.getRecipientNotifications(
       user.gymId,
+      'MEMBER',
       user.memberId!,
       parseInt(page, 10) || 1,
-      parseInt(limit, 10) || 20
+      parseInt(limit, 10) || 20,
+      unreadOnly === 'true'
     );
+    res.status(200).json({
+      success: true,
+      data: result,
+      meta: { requestId: req.id, timestamp: new Date().toISOString() },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/notifications/unread-count', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const result = await notificationService.getUnreadCount(user.gymId, user.memberId!);
+    res.status(200).json({
+      success: true,
+      data: result,
+      meta: { requestId: req.id, timestamp: new Date().toISOString() },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/notifications/:id/read', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const result = await notificationService.markAsRead(user.gymId, user.memberId!, req.params.id!);
     res.status(200).json({
       success: true,
       data: result,
@@ -397,6 +444,20 @@ router.post('/notifications/:id/read', async (req: Request, res: Response, next:
   }
 });
 
+router.patch('/notifications/read-all', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const result = await notificationService.markAllAsRead(user.gymId, user.memberId!);
+    res.status(200).json({
+      success: true,
+      data: result,
+      meta: { requestId: req.id, timestamp: new Date().toISOString() },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/notifications/read-all', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = req.user!;
@@ -410,6 +471,66 @@ router.post('/notifications/read-all', async (req: Request, res: Response, next:
     next(err);
   }
 });
+
+router.get('/notifications/preferences', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const result = await notificationService.getPreferences(user.gymId, 'MEMBER', user.memberId!);
+    res.status(200).json({
+      success: true,
+      data: { preferences: result },
+      meta: { requestId: req.id, timestamp: new Date().toISOString() },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch(
+  '/notifications/preferences',
+  validateBody(NotificationPreferencesSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user!;
+      const result = await notificationService.updatePreferences(
+        user.gymId,
+        'MEMBER',
+        user.memberId!,
+        req.body.preferences
+      );
+      res.status(200).json({
+        success: true,
+        data: { preferences: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/notifications/push-token',
+  validateBody(RegisterPushTokenSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user!;
+      const result = await notificationService.registerPushToken(
+        user.gymId,
+        'MEMBER',
+        user.memberId!,
+        req.body
+      );
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // ==============================================================================
 // 6. Fitness Progress Domain

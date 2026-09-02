@@ -396,6 +396,114 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS idx_sync_cursors_gym_device ON sync_device_cursors(gym_id, device_id);
+
+    -- Phase 12A: Notification Core & Communication Hub
+    CREATE TABLE IF NOT EXISTS domain_events (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      event_id UUID NOT NULL UNIQUE,
+      event_type VARCHAR(64) NOT NULL,
+      aggregate_type VARCHAR(64) NOT NULL,
+      aggregate_id VARCHAR(128) NOT NULL,
+      payload TEXT NOT NULL,
+      actor_user_id UUID,
+      status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+      processed_at TIMESTAMPTZ,
+      occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_domain_events_gym_status ON domain_events(gym_id, status, occurred_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_domain_events_event_id ON domain_events(event_id);
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      event_id UUID,
+      recipient_type VARCHAR(32) NOT NULL,
+      recipient_id UUID NOT NULL,
+      type VARCHAR(64) NOT NULL,
+      category VARCHAR(64) NOT NULL DEFAULT 'SYSTEM',
+      title VARCHAR(255) NOT NULL,
+      body TEXT NOT NULL,
+      payload TEXT,
+      priority VARCHAR(32) NOT NULL DEFAULT 'NORMAL',
+      is_read BOOLEAN NOT NULL DEFAULT FALSE,
+      read_at TIMESTAMPTZ,
+      is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+      archived_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id UUID;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS recipient_type VARCHAR(32) NOT NULL DEFAULT 'MEMBER';
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS recipient_id UUID;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(64) NOT NULL DEFAULT 'SYSTEM_ALERT';
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS body TEXT;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS message TEXT;
+    ALTER TABLE notifications ALTER COLUMN message DROP NOT NULL;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS payload TEXT;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS priority VARCHAR(32) NOT NULL DEFAULT 'NORMAL';
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_gym_recipient_unread ON notifications(gym_id, recipient_id, is_read, created_at);
+    CREATE INDEX IF NOT EXISTS idx_notifications_gym_recipient_type ON notifications(gym_id, recipient_type, recipient_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_notifications_dedup_event ON notifications(gym_id, event_id, recipient_id);
+
+    CREATE TABLE IF NOT EXISTS notification_preferences (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      recipient_type VARCHAR(32) NOT NULL,
+      recipient_id UUID NOT NULL,
+      channel VARCHAR(32) NOT NULL DEFAULT 'IN_APP',
+      category VARCHAR(64) NOT NULL DEFAULT 'ALL',
+      is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_notif_pref_recipient ON notification_preferences(gym_id, recipient_type, recipient_id, channel, category);
+
+    CREATE TABLE IF NOT EXISTS notification_deliveries (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      notification_id UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+      channel VARCHAR(32) NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+      attempt_count INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 3,
+      next_attempt_at TIMESTAMPTZ,
+      last_attempt_at TIMESTAMPTZ,
+      delivered_at TIMESTAMPTZ,
+      failure_reason TEXT,
+      provider_message_id VARCHAR(255),
+      metadata TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notif_deliveries_queue ON notification_deliveries(gym_id, channel, status, next_attempt_at);
+    CREATE INDEX IF NOT EXISTS idx_notif_deliveries_notif ON notification_deliveries(notification_id);
+
+    CREATE TABLE IF NOT EXISTS device_push_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      recipient_type VARCHAR(32) NOT NULL,
+      recipient_id UUID NOT NULL,
+      push_token VARCHAR(512) NOT NULL,
+      platform VARCHAR(32) NOT NULL DEFAULT 'ANDROID',
+      device_model VARCHAR(128),
+      app_version VARCHAR(64),
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      last_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_push_tokens_unique ON device_push_tokens(gym_id, recipient_id, push_token);
+    CREATE INDEX IF NOT EXISTS idx_push_tokens_recipient ON device_push_tokens(gym_id, recipient_type, recipient_id, is_active);
   `;
 
   await pool.query(ddl);

@@ -415,6 +415,37 @@ export interface ReceiptData {
   notes: string | null;
 }
 
+export interface NotificationItem {
+  id: string;
+  gymId: string;
+  recipientType: 'MEMBER' | 'USER' | 'STAFF' | 'OWNER';
+  recipientId: string;
+  type: string;
+  category: 'ALL' | 'MEMBERSHIP' | 'BILLING' | 'ATTENDANCE' | 'TRAINING' | 'ANNOUNCEMENT' | 'SECURITY' | 'SYSTEM';
+  title: string;
+  body: string;
+  payload?: Record<string, any> | null;
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationPageResponse {
+  items: NotificationItem[];
+  unreadCount: number;
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export interface NotificationPreferenceItem {
+  category: string;
+  channel: string;
+  isEnabled: boolean;
+  updatedAt: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;

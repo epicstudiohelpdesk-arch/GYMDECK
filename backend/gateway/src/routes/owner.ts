@@ -9,6 +9,7 @@ import { billingService } from '../../../services/billing/billingService';
 import { ownerAttendanceService } from '../../../services/owner/ownerAttendanceService';
 import { ownerMembershipService } from '../../../services/owner/ownerMembershipService';
 import { ownerTrainerService } from '../../../services/owner/ownerTrainerService';
+import { notificationService } from '../../../services/notifications/notificationService';
 import { requireAuth } from '../middleware/authMiddleware';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware';
 import { validateQuery, validateBody } from '../../../shared/validation';
@@ -194,6 +195,23 @@ const CompletePTSessionBodySchema = z.object({
 
 const CancelPTSessionBodySchema = z.object({
   reason: z.string().min(3, 'A reason is required to cancel a PT session'),
+});
+
+const NotificationPreferencesSchema = z.object({
+  preferences: z.array(
+    z.object({
+      category: z.enum(['ALL', 'MEMBERSHIP', 'BILLING', 'ATTENDANCE', 'TRAINING', 'ANNOUNCEMENT', 'SECURITY', 'SYSTEM']),
+      channel: z.enum(['IN_APP', 'PUSH', 'WHATSAPP', 'EMAIL', 'SMS']),
+      isEnabled: z.boolean(),
+    })
+  ),
+});
+
+const RegisterPushTokenSchema = z.object({
+  pushToken: z.string().min(10, 'Valid push notification token is required'),
+  platform: z.enum(['IOS', 'ANDROID', 'WEB']).default('ANDROID'),
+  deviceModel: z.string().optional(),
+  appVersion: z.string().optional(),
 });
 
 // ==============================================================================
@@ -1309,24 +1327,178 @@ router.get(
 );
 
 // ==============================================================================
-// 8. Digital Invitations
+// ==============================================================================
+// 9. Notification Center & Communication Hub
 // ==============================================================================
 
-router.post(
-  '/members/:id/invite',
-  requirePermission('members.write'),
+router.get(
+  '/notifications',
+  validateQuery(PaginationQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const gymId = req.user!.gymId;
-      const memberId = req.params.id;
-      const actorUserId = req.user!.userId || req.user!.sub;
+      const userId = req.user!.userId || req.user!.sub;
+      const { limit, offset } = req.query as any;
 
       if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
-      if (!memberId) throw AppError.validation('Member ID is required.');
 
-      const result = await ownerService.createMemberInvite(gymId, memberId, actorUserId);
+      const result = await notificationService.getRecipientNotifications(
+        gymId,
+        'USER',
+        userId,
+        Math.floor((Number(offset) || 0) / (Number(limit) || 20)) + 1,
+        Number(limit) || 20,
+        req.query.unreadOnly === 'true'
+      );
 
-      res.status(201).json({
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/notifications/unread-count',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const userId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await notificationService.getUnreadCount(gymId, userId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/notifications/:id/read',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const userId = req.user!.userId || req.user!.sub;
+      const notificationId = req.params.id;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!notificationId) throw AppError.validation('Notification ID is required.');
+
+      const result = await notificationService.markAsRead(gymId, userId, notificationId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/notifications/read-all',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const userId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await notificationService.markAllAsRead(gymId, userId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/notifications/preferences',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const userId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await notificationService.getPreferences(gymId, 'USER', userId);
+
+      res.status(200).json({
+        success: true,
+        data: { preferences: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/notifications/preferences',
+  validateBody(NotificationPreferencesSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const userId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await notificationService.updatePreferences(
+        gymId,
+        'USER',
+        userId,
+        req.body.preferences,
+        userId
+      );
+
+      res.status(200).json({
+        success: true,
+        data: { preferences: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/notifications/push-token',
+  validateBody(RegisterPushTokenSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const userId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await notificationService.registerPushToken(
+        gymId,
+        'USER',
+        userId,
+        req.body
+      );
+
+      res.status(200).json({
         success: true,
         data: result,
         meta: { requestId: req.id, timestamp: new Date().toISOString() },

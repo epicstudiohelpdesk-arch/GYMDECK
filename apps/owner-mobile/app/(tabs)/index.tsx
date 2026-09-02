@@ -13,9 +13,11 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../src/store/authStore';
 import { OwnerDashboardService } from '../../src/services/api/ownerDashboardService';
+import { ownerNotificationService } from '../../src/services/api/ownerNotificationService';
 import {
   Users,
   Activity,
@@ -25,14 +27,22 @@ import {
   Dumbbell,
   ShieldCheck,
   RefreshCw,
+  Bell,
 } from 'lucide-react-native';
 
 export default function OwnerDashboardScreen() {
+  const router = useRouter();
   const { user, logout } = useAuthStore();
 
   const { data, isLoading, isRefetching, refetch, error } = useQuery({
     queryKey: ['owner-dashboard'],
     queryFn: () => OwnerDashboardService.getDashboard(),
+  });
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['owner-unread-notifications'],
+    queryFn: () => ownerNotificationService.getUnreadCount(),
+    refetchInterval: 30000,
   });
 
   return (
@@ -51,7 +61,7 @@ export default function OwnerDashboardScreen() {
       >
         {/* Top Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.ownerName}>{user?.fullName || 'Gym Owner'}</Text>
             <View style={styles.gymBadgeRow}>
@@ -65,9 +75,28 @@ export default function OwnerDashboardScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.7}>
-            <LogOut size={20} color="#94A3B8" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerActionBtn}
+              onPress={() => router.push('/notifications')}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+            >
+              <Bell size={20} color="#F8FAFC" />
+              {unreadCount > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.7}>
+              <LogOut size={20} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Cloud Status Pill */}
@@ -207,6 +236,41 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     color: '#EAB308',
     fontSize: 11,
+    fontWeight: '700',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerActionBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#0F172A',
+  },
+  notifBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
     fontWeight: '700',
   },
   logoutBtn: {

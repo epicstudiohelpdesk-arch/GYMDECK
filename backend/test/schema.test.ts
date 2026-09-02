@@ -45,7 +45,10 @@ async function runSchemaVerification() {
   if (
     !schema.memberDocuments ||
     !schema.notifications ||
-    !schema.memberNotificationRecipients ||
+    !schema.notificationPreferences ||
+    !schema.notificationDeliveries ||
+    !schema.devicePushTokens ||
+    !schema.domainEvents ||
     !schema.bodyWeightLogs ||
     !schema.bodyMeasurements ||
     !schema.fitnessMilestones ||
@@ -54,7 +57,7 @@ async function runSchemaVerification() {
     throw new Error('❌ Missing documents, notifications, or progress tables');
   }
 
-  console.log('✅ All 20 PostgreSQL domain tables verified with correct Drizzle ORM mappings.');
+  console.log('✅ All PostgreSQL domain tables verified with correct Drizzle ORM mappings.');
   console.log('✅ Multi-tenant foreign keys, composite indexes, and unique constraints validated.');
 }
 
