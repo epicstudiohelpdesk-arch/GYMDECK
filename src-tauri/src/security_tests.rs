@@ -125,9 +125,72 @@ mod enterprise_security_tests {
 
     #[test]
     fn test_app_config_defaults() {
-        let config = crate::config::AppConfig::from_env();
+        let config = crate::config::AppConfig::from_env()
+            .expect("Default development config should load successfully");
         assert!(!config.db_encryption_key.is_empty());
+        assert_eq!(config.environment, crate::config::AppEnvironment::Development);
         assert!(!config.log_level.is_empty());
+    }
+
+    #[test]
+    fn test_environment_and_key_resolution_matrix() {
+        use crate::config::{AppConfig, AppEnvironment, DEV_DB_KEY};
+
+        // 1. Development + No key -> Allowed fallback to DEV_DB_KEY
+        std::env::set_var("GYMDECK_ENV", "development");
+        std::env::remove_var("GYMDECK_DB_KEY");
+        let dev_no_key = AppConfig::from_env().expect("Dev with no key should succeed");
+        assert_eq!(dev_no_key.environment, AppEnvironment::Development);
+        assert_eq!(dev_no_key.db_encryption_key, DEV_DB_KEY);
+        assert!(dev_no_key.is_development_mode());
+        assert!(!dev_no_key.is_production_mode());
+
+        // 2. Development + Custom key -> Allowed custom development key, remains development mode
+        std::env::set_var("GYMDECK_ENV", "development");
+        std::env::set_var("GYMDECK_DB_KEY", "custom_developer_key_9999");
+        let dev_custom = AppConfig::from_env().expect("Dev with custom key should succeed");
+        assert_eq!(dev_custom.environment, AppEnvironment::Development);
+        assert_eq!(dev_custom.db_encryption_key, "custom_developer_key_9999");
+        assert!(dev_custom.is_development_mode());
+        assert!(!dev_custom.is_production_mode());
+
+        // 3. Staging + Explicit key -> Allowed staging mode
+        std::env::set_var("GYMDECK_ENV", "staging");
+        std::env::set_var("GYMDECK_DB_KEY", "staging_secret_key_abcdef1234567890");
+        let staging_ok = AppConfig::from_env().expect("Staging with valid key should succeed");
+        assert_eq!(staging_ok.environment, AppEnvironment::Staging);
+        assert!(staging_ok.is_staging_mode());
+        assert!(!staging_ok.is_production_mode());
+
+        // 4. Production + Explicit key -> Allowed production mode
+        std::env::set_var("GYMDECK_ENV", "production");
+        std::env::set_var("GYMDECK_DB_KEY", "production_secret_key_9876543210abcdef");
+        let prod_ok = AppConfig::from_env().expect("Production with valid key should succeed");
+        assert_eq!(prod_ok.environment, AppEnvironment::Production);
+        assert!(prod_ok.is_production_mode());
+        assert!(!prod_ok.is_development_mode());
+
+        // 5. Production + Missing key -> Fail Closed
+        std::env::set_var("GYMDECK_ENV", "production");
+        std::env::remove_var("GYMDECK_DB_KEY");
+        let prod_missing = AppConfig::from_env();
+        assert!(prod_missing.is_err(), "Production without key must fail closed");
+
+        // 6. Production + Development Fallback Key -> Fail Closed (Rejection)
+        std::env::set_var("GYMDECK_ENV", "production");
+        std::env::set_var("GYMDECK_DB_KEY", DEV_DB_KEY);
+        let prod_dev_key = AppConfig::from_env();
+        assert!(prod_dev_key.is_err(), "Production using DEV_DB_KEY must fail closed");
+
+        // 7. Staging + Missing key -> Fail Closed
+        std::env::set_var("GYMDECK_ENV", "staging");
+        std::env::remove_var("GYMDECK_DB_KEY");
+        let staging_missing = AppConfig::from_env();
+        assert!(staging_missing.is_err(), "Staging without key must fail closed");
+
+        // Cleanup test env
+        std::env::set_var("GYMDECK_ENV", "development");
+        std::env::remove_var("GYMDECK_DB_KEY");
     }
 
     #[test]

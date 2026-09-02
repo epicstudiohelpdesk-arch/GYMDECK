@@ -22,6 +22,11 @@ export const ALL_PERMISSIONS = [
   'settings.write',
   'staff.read',
   'staff.write',
+  'backup.read',
+  'backup.create',
+  'backup.verify',
+  'restore.verify',
+  'system.diagnostics',
 ] as const;
 
 export type Permission = typeof ALL_PERMISSIONS[number];

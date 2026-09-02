@@ -16,6 +16,12 @@ pub enum AppError {
     Unauthorized,
     #[error("Session expired or invalid")]
     SessionInvalid,
+    #[error("Configuration error: {0}")]
+    Configuration(String),
+    #[error("Backup operation failed: {0}")]
+    Backup(String),
+    #[error("Restore operation failed: {0}")]
+    Restore(String),
 }
 
 // Implement Serialize to safely pass errors to the React frontend
@@ -33,6 +39,9 @@ impl serde::Serialize for AppError {
             AppError::Authentication => "Authentication Error: Invalid email or password.".to_string(),
             AppError::Unauthorized => "Access Denied: Unauthorized action.".to_string(),
             AppError::SessionInvalid => "Session Error: Your session has expired or is invalid. Please log in again.".to_string(),
+            AppError::Configuration(_) => "System Error: Invalid application configuration.".to_string(),
+            AppError::Backup(_) => "System Error: Backup operation failed.".to_string(),
+            AppError::Restore(_) => "System Error: Restore validation failed.".to_string(),
         };
         serializer.serialize_str(&safe_message)
     }

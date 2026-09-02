@@ -11,6 +11,7 @@ import { ownerMembershipService } from '../../../services/owner/ownerMembershipS
 import { ownerTrainerService } from '../../../services/owner/ownerTrainerService';
 import { notificationService } from '../../../services/notifications/notificationService';
 import analyticsRouter from './analytics';
+import { backupRouter } from './backup';
 import { requireAuth } from '../middleware/authMiddleware';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware';
 import { validateQuery, validateBody } from '../../../shared/validation';
@@ -24,6 +25,9 @@ router.use(requireRole(['OWNER', 'MANAGER', 'STAFF', 'ADMIN', 'RECEPTIONIST', 'T
 
 // Sub-router for analytics & reporting (/v1/owner/analytics)
 router.use('/analytics', analyticsRouter);
+
+// Sub-router for backup & recovery (/v1/owner/backup)
+router.use('/backup', backupRouter);
 
 // ==============================================================================
 // Validation Schemas

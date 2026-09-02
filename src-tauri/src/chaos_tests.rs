@@ -157,20 +157,26 @@ mod elite_chaos_tests {
 
     #[test]
     fn test_config_production_mode_detection() {
+        use crate::config::AppEnvironment;
+
         let dev_config = crate::config::AppConfig {
+            environment: AppEnvironment::Development,
             db_encryption_key: "static_dev_key_x0000000000000000000000000".to_string(),
             updater_pubkey: String::new(),
             log_level: "info".to_string(),
         };
 
-        assert!(!dev_config.is_production_mode(), "Dev key must not be detected as production");
+        assert!(!dev_config.is_production_mode(), "Dev environment must not be detected as production");
+        assert!(dev_config.is_development_mode(), "Dev environment must be detected as development");
 
         let prod_config = crate::config::AppConfig {
+            environment: AppEnvironment::Production,
             db_encryption_key: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2".to_string(),
             updater_pubkey: String::new(),
             log_level: "info".to_string(),
         };
 
-        assert!(prod_config.is_production_mode(), "Custom key must be detected as production");
+        assert!(prod_config.is_production_mode(), "Prod environment must be detected as production");
+        assert!(!prod_config.is_development_mode(), "Prod environment must not be detected as development");
     }
 }

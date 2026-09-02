@@ -13,6 +13,7 @@ pub mod config;
 pub mod utils;
 pub mod diagnostics;
 pub mod sync;
+pub mod backup;
 
 #[cfg(test)]
 pub mod chaos_tests;
@@ -20,6 +21,8 @@ pub mod chaos_tests;
 pub mod security_tests;
 #[cfg(test)]
 pub mod sync_tests;
+#[cfg(test)]
+pub mod backup_tests;
 
 use tauri::Manager;
 use commands::auth_commands::{
@@ -35,6 +38,9 @@ use commands::sync_commands::{
     get_sync_status_command, claim_pending_sync_events_command, get_pending_sync_events_command,
     mark_sync_event_synced_command, mark_sync_event_failed_command, update_sync_cursor_command,
     apply_pull_batch_command
+};
+use commands::backup_commands::{
+    create_backup_command, list_backups_command, verify_backup_command, verify_restore_command
 };
 use auth::rate_limit::default_auth_limiter;
 use sessions::manager::SessionManager;
@@ -84,7 +90,7 @@ fn schedule_daily_backup(db_path: std::path::PathBuf) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  let app_config = AppConfig::from_env();
+  let app_config = AppConfig::from_env().expect("Failed to load application configuration");
 
   tauri::Builder::default()
     .plugin(tauri_plugin_updater::Builder::new().build())
@@ -185,7 +191,11 @@ pub fn run() {
         mark_sync_event_synced_command,
         mark_sync_event_failed_command,
         update_sync_cursor_command,
-        apply_pull_batch_command
+        apply_pull_batch_command,
+        create_backup_command,
+        list_backups_command,
+        verify_backup_command,
+        verify_restore_command
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
