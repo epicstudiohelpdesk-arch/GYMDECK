@@ -102,7 +102,13 @@ apiClient.interceptors.response.use(
       ) {
         // Refresh or login itself failed - cannot refresh
         await SecureTokenStorage.clearTokens();
-        return Promise.reject(AppError.unauthorized());
+        const responseData = error.response?.data as { error?: { message?: string } } | undefined;
+        const message =
+          responseData?.error?.message ||
+          (originalRequest.url?.includes('/auth/owner/login')
+            ? 'Invalid email or password.'
+            : 'Session expired. Please log in again.');
+        return Promise.reject(AppError.unauthorized(message));
       }
 
       if (isRefreshing) {
@@ -127,7 +133,7 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = await SecureTokenStorage.getRefreshToken();
         if (!refreshToken) {
-          throw AppError.unauthorized();
+          throw AppError.unauthorized('Session has expired. Please log in again.');
         }
 
         const refreshResponse = await axios.post<ApiResponse<AuthTokens>>(
