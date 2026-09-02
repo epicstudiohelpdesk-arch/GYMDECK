@@ -1,5 +1,5 @@
 /**
- * GymDeck Owner Mobile - Comprehensive Member Profile & Operations Screen
+ * GymDeck Owner Mobile - Comprehensive Member Profile, Billing & Membership Operations Screen
  */
 
 import React, { useState } from 'react';
@@ -17,14 +17,17 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerMembersService } from '../../../src/services/api/ownerMembersService';
+import { OwnerBillingService } from '../../../src/services/api/ownerBillingService';
 import { StatusBadge } from '../../../src/components/StatusBadge';
 import { InviteModal } from '../../../src/components/InviteModal';
-import { MemberInvitationResult } from '../../../src/types';
+import { ReceiptModal } from '../../../src/components/ReceiptModal';
+import { CollectPaymentModal } from '../../../src/components/CollectPaymentModal';
+import { RenewMembershipModal } from '../../../src/components/RenewMembershipModal';
+import { MemberInvitationResult, ReceiptData, PaymentRecord } from '../../../src/types';
 import {
   ArrowLeft,
   Phone,
   Mail,
-  Calendar,
   Award,
   Activity,
   DollarSign,
@@ -34,6 +37,9 @@ import {
   Trash2,
   Clock,
   ShieldAlert,
+  RefreshCw,
+  Receipt,
+  PlusCircle,
 } from 'lucide-react-native';
 
 export default function MemberDetailsScreen() {
@@ -44,9 +50,23 @@ export default function MemberDetailsScreen() {
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [inviteResult, setInviteResult] = useState<MemberInvitationResult | null>(null);
 
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
+
+  const [collectPaymentVisible, setCollectPaymentVisible] = useState(false);
+  const [renewMembershipVisible, setRenewMembershipVisible] = useState(false);
+
+  // 1. Fetch Profile Details
   const { data, isLoading, refetch, isRefetching, error } = useQuery({
     queryKey: ['owner-member-detail', id],
     queryFn: () => OwnerMembersService.getMemberById(id!),
+    enabled: !!id,
+  });
+
+  // 2. Fetch Derived Billing Summary
+  const { data: billingData } = useQuery({
+    queryKey: ['owner-member-billing', id],
+    queryFn: () => OwnerBillingService.getMemberBilling(id!),
     enabled: !!id,
   });
 
@@ -73,6 +93,16 @@ export default function MemberDetailsScreen() {
       Alert.alert('Error', err?.message || 'Failed to deactivate member.');
     },
   });
+
+  const handleOpenReceipt = async (paymentId: string) => {
+    try {
+      const receipt = await OwnerBillingService.getReceipt(paymentId);
+      setSelectedReceipt(receipt);
+      setReceiptModalVisible(true);
+    } catch (err: any) {
+      Alert.alert('Receipt Error', err?.message || 'Unable to load payment receipt.');
+    }
+  };
 
   const handleDeactivate = () => {
     Alert.alert(
@@ -115,7 +145,8 @@ export default function MemberDetailsScreen() {
     );
   }
 
-  const { member, membership, attendanceSummary, paymentSummary, trainer, invite } = data;
+  const { member, membership, attendanceSummary, trainer, invite } = data;
+  const outstandingDues = billingData?.outstandingBalance ?? 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -194,9 +225,20 @@ export default function MemberDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Membership Details */}
+        {/* Membership Details & Renewal */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Current Membership</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Current Membership</Text>
+            <TouchableOpacity
+              style={styles.renewActionBtn}
+              onPress={() => setRenewMembershipVisible(true)}
+              activeOpacity={0.8}
+            >
+              <RefreshCw size={14} color="#EAB308" style={{ marginRight: 4 }} />
+              <Text style={styles.renewActionText}>Renew Plan</Text>
+            </TouchableOpacity>
+          </View>
+
           {membership ? (
             <View style={styles.card}>
               <View style={styles.cardHeader}>
@@ -234,6 +276,87 @@ export default function MemberDetailsScreen() {
           )}
         </View>
 
+        {/* Billing & Financial Ledger */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Billing & Payments</Text>
+            <TouchableOpacity
+              style={styles.collectActionBtn}
+              onPress={() => setCollectPaymentVisible(true)}
+              activeOpacity={0.8}
+            >
+              <PlusCircle size={14} color="#0A0D14" style={{ marginRight: 4 }} />
+              <Text style={styles.collectActionText}>Collect Payment</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.card}>
+            {/* Financial Ledger Summary Cards */}
+            <View style={styles.financialRow}>
+              <View style={styles.financialCard}>
+                <Text style={styles.financialLabel}>TOTAL BILLED</Text>
+                <Text style={styles.financialVal}>
+                  ${Number(billingData?.totalBilled ?? 0).toFixed(2)}
+                </Text>
+              </View>
+              <View style={styles.financialCard}>
+                <Text style={styles.financialLabel}>TOTAL PAID</Text>
+                <Text style={[styles.financialVal, { color: '#10B981' }]}>
+                  ${Number(billingData?.totalPaid ?? 0).toFixed(2)}
+                </Text>
+              </View>
+            </View>
+
+            {outstandingDues > 0 && (
+              <View style={styles.duesAlert}>
+                <Text style={styles.duesAlertTitle}>Outstanding Dues: ${outstandingDues.toFixed(2)}</Text>
+                <Text style={styles.duesAlertSub}>Tap 'Collect Payment' to record a payment towards this balance.</Text>
+              </View>
+            )}
+
+            {/* Payment History Items */}
+            {(billingData?.recentPayments || []).length > 0 && (
+              <>
+                <View style={styles.cardDivider} />
+                <Text style={styles.subsectionTitle}>Payment Transactions</Text>
+                {(billingData?.recentPayments || []).slice(0, 5).map((pay) => (
+                  <TouchableOpacity
+                    key={pay.id}
+                    style={styles.payRow}
+                    onPress={() => handleOpenReceipt(pay.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.payMethod}>{pay.paymentMethod}</Text>
+                        {pay.type === 'REFUND' && (
+                          <View style={styles.refundTag}>
+                            <Text style={styles.refundTagText}>REFUND</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.payDate}>
+                        {new Date(pay.paidAt).toLocaleDateString()} • {pay.receiptNumber || 'No receipt'}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
+                      <Text
+                        style={[
+                          styles.payAmount,
+                          Number(pay.amount) < 0 && { color: '#EF4444' },
+                        ]}
+                      >
+                        ${Number(pay.amount).toFixed(2)}
+                      </Text>
+                      <Receipt size={16} color="#EAB308" />
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+          </View>
+        </View>
+
         {/* Attendance Summary */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Attendance Overview</Text>
@@ -252,52 +375,6 @@ export default function MemberDetailsScreen() {
                 <Text style={styles.statLbl}>Recent Activity</Text>
               </View>
             </View>
-
-            {attendanceSummary.recentCheckIns.length > 0 && (
-              <>
-                <View style={styles.cardDivider} />
-                <Text style={styles.subsectionTitle}>Recent Check-in Logs</Text>
-                {attendanceSummary.recentCheckIns.slice(0, 5).map((log) => (
-                  <View key={log.id} style={styles.logRow}>
-                    <View style={styles.dot} />
-                    <Text style={styles.logTime}>
-                      {new Date(log.checkInTime).toLocaleString()}
-                    </Text>
-                    <Text style={styles.logMethod}>{log.entryMethod}</Text>
-                  </View>
-                ))}
-              </>
-            )}
-          </View>
-        </View>
-
-        {/* Payments Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payments & Transactions</Text>
-          <View style={styles.card}>
-            <View style={styles.paymentTotalRow}>
-              <Text style={styles.paymentTotalLbl}>Total Paid to Date</Text>
-              <Text style={styles.paymentTotalVal}>
-                ${Number(paymentSummary.totalPaid).toFixed(2)}
-              </Text>
-            </View>
-
-            {paymentSummary.recentPayments.length > 0 && (
-              <>
-                <View style={styles.cardDivider} />
-                {paymentSummary.recentPayments.slice(0, 5).map((pay) => (
-                  <View key={pay.id} style={styles.payRow}>
-                    <View>
-                      <Text style={styles.payMethod}>{pay.paymentMethod}</Text>
-                      <Text style={styles.payDate}>
-                        {new Date(pay.paidAt).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <Text style={styles.payAmount}>${Number(pay.amount).toFixed(2)}</Text>
-                  </View>
-                ))}
-              </>
-            )}
           </View>
         </View>
 
@@ -314,13 +391,6 @@ export default function MemberDetailsScreen() {
                   <Text style={styles.trainerName}>{trainer.trainerName}</Text>
                   <Text style={styles.trainerSpec}>{trainer.specialization || 'Personal Trainer'}</Text>
                 </View>
-              </View>
-              <View style={styles.cardDivider} />
-              <View style={styles.ptSessionsRow}>
-                <Text style={styles.ptSessionsText}>{trainer.packageName}</Text>
-                <Text style={styles.ptRemaining}>
-                  {trainer.remainingSessions} of {trainer.totalSessions} sessions left
-                </Text>
               </View>
             </View>
           </View>
@@ -344,6 +414,32 @@ export default function MemberDetailsScreen() {
           visible={inviteModalVisible}
           invite={inviteResult}
           onClose={() => setInviteModalVisible(false)}
+        />
+
+        {/* Formal Receipt Modal */}
+        <ReceiptModal
+          visible={receiptModalVisible}
+          receipt={selectedReceipt}
+          onClose={() => setReceiptModalVisible(false)}
+        />
+
+        {/* Collect Payment Modal */}
+        <CollectPaymentModal
+          visible={collectPaymentVisible}
+          memberId={id!}
+          defaultAmount={outstandingDues > 0 ? outstandingDues : undefined}
+          onClose={() => setCollectPaymentVisible(false)}
+          onSuccess={(pay) => handleOpenReceipt(pay.id)}
+        />
+
+        {/* Renew Membership Modal */}
+        <RenewMembershipModal
+          visible={renewMembershipVisible}
+          memberId={id!}
+          onClose={() => setRenewMembershipVisible(false)}
+          onSuccess={(res) => {
+            if (res.payment) handleOpenReceipt(res.payment.id);
+          }}
         />
       </ScrollView>
     </SafeAreaView>
@@ -447,12 +543,45 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: '#F8FAFC',
-    marginBottom: 10,
     letterSpacing: 0.5,
+  },
+  renewActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  renewActionText: {
+    color: '#EAB308',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  collectActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EAB308',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  collectActionText: {
+    color: '#0A0D14',
+    fontSize: 12,
+    fontWeight: '700',
   },
   card: {
     backgroundColor: '#131823',
@@ -507,6 +636,90 @@ const styles = StyleSheet.create({
     color: '#CBD5E1',
     marginTop: 4,
   },
+  financialRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  financialCard: {
+    flex: 1,
+    backgroundColor: '#0F141F',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    padding: 12,
+  },
+  financialLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.5,
+  },
+  financialVal: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    marginTop: 4,
+  },
+  duesAlert: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+  },
+  duesAlertTitle: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  duesAlertSub: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  subsectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginBottom: 10,
+  },
+  payRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+  },
+  payMethod: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  payDate: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  payAmount: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#10B981',
+  },
+  refundTag: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    marginLeft: 6,
+  },
+  refundTagText: {
+    color: '#EF4444',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   emptyBox: {
     backgroundColor: '#131823',
     borderRadius: 12,
@@ -536,69 +749,6 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginTop: 2,
   },
-  subsectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94A3B8',
-    marginBottom: 10,
-  },
-  logRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-    marginRight: 8,
-  },
-  logTime: {
-    flex: 1,
-    fontSize: 12,
-    color: '#CBD5E1',
-  },
-  logMethod: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '600',
-  },
-  paymentTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  paymentTotalLbl: {
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  paymentTotalVal: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#10B981',
-  },
-  payRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  payMethod: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#F8FAFC',
-  },
-  payDate: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  payAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
   trainerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -612,20 +762,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
     marginTop: 2,
-  },
-  ptSessionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ptSessionsText: {
-    fontSize: 13,
-    color: '#CBD5E1',
-  },
-  ptRemaining: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#F97316',
   },
   inviteBanner: {
     flexDirection: 'row',

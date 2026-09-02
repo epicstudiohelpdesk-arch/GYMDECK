@@ -44,6 +44,7 @@ export const memberMemberships = pgTable(
     status: varchar('status', { length: 32 }).notNull().default('ACTIVE'), // ACTIVE, EXPIRED, FROZEN, CANCELLED
     startDate: timestamp('start_date', { withTimezone: true }).notNull(),
     endDate: timestamp('end_date', { withTimezone: true }).notNull(),
+    priceAtPurchase: numeric('price_at_purchase', { precision: 10, scale: 2 }).notNull().default('0.00'),
     autoRenew: boolean('auto_renew').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

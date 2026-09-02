@@ -156,19 +156,6 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    CREATE TABLE IF NOT EXISTS payments (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
-      member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
-      amount NUMERIC(10,2) NOT NULL,
-      payment_method VARCHAR(32) NOT NULL DEFAULT 'CASH',
-      transaction_reference VARCHAR(128),
-      status VARCHAR(32) NOT NULL DEFAULT 'COMPLETED',
-      notes TEXT,
-      paid_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-
     CREATE TABLE IF NOT EXISTS member_memberships (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
@@ -177,13 +164,44 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
       start_date TIMESTAMPTZ NOT NULL,
       end_date TIMESTAMPTZ NOT NULL,
+      price_at_purchase NUMERIC(10,2) NOT NULL DEFAULT 0.00,
       auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE member_memberships ADD COLUMN IF NOT EXISTS price_at_purchase NUMERIC(10,2) NOT NULL DEFAULT 0.00;
+
     CREATE INDEX IF NOT EXISTS idx_member_memberships_gym_mem ON member_memberships(gym_id, member_id);
     CREATE INDEX IF NOT EXISTS idx_member_memberships_status ON member_memberships(member_id, status);
+
+    CREATE TABLE IF NOT EXISTS payments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
+      membership_id UUID REFERENCES member_memberships(id) ON DELETE SET NULL,
+      amount NUMERIC(10,2) NOT NULL,
+      payment_method VARCHAR(32) NOT NULL DEFAULT 'CASH',
+      transaction_reference VARCHAR(128),
+      receipt_number VARCHAR(64),
+      idempotency_key VARCHAR(128),
+      type VARCHAR(32) NOT NULL DEFAULT 'PAYMENT',
+      status VARCHAR(32) NOT NULL DEFAULT 'COMPLETED',
+      notes TEXT,
+      paid_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    ALTER TABLE payments ADD COLUMN IF NOT EXISTS membership_id UUID REFERENCES member_memberships(id) ON DELETE SET NULL;
+    ALTER TABLE payments ADD COLUMN IF NOT EXISTS receipt_number VARCHAR(64);
+    ALTER TABLE payments ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128);
+    ALTER TABLE payments ADD COLUMN IF NOT EXISTS type VARCHAR(32) NOT NULL DEFAULT 'PAYMENT';
+
+    CREATE INDEX IF NOT EXISTS idx_payments_gym_member ON payments(gym_id, member_id);
+    CREATE INDEX IF NOT EXISTS idx_payments_gym_date ON payments(gym_id, paid_at);
+    CREATE INDEX IF NOT EXISTS idx_payments_membership ON payments(gym_id, membership_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_gym_idempotency ON payments(gym_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_payments_gym_receipt ON payments(gym_id, receipt_number);
 
     CREATE TABLE IF NOT EXISTS trainers (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -69,6 +69,7 @@ export interface MembershipPlanSummary {
   durationDays: number;
   price: string;
   description?: string | null;
+  benefits?: string | null;
   isActive: boolean;
 }
 
@@ -81,6 +82,7 @@ export interface MemberActiveMembership {
   endDate: string;
   autoRenew: boolean;
   price: string;
+  priceAtPurchase?: string;
   durationDays: number;
 }
 
@@ -93,10 +95,14 @@ export interface AttendanceRecord {
 
 export interface PaymentRecord {
   id: string;
+  membershipId?: string | null;
   amount: string;
   paymentMethod: string;
   transactionReference?: string | null;
+  receiptNumber?: string | null;
+  type?: string;
   status: string;
+  notes?: string | null;
   paidAt: string;
 }
 
@@ -163,6 +169,65 @@ export interface MemberInvitationResult {
   memberId: string;
   gymId: string;
   expiresAt: string;
+}
+
+export interface PurchaseMembershipInput {
+  planId: string;
+  startDate?: string;
+  paymentAmount?: number;
+  paymentMethod?: 'CASH' | 'CARD' | 'UPI' | 'BANK_TRANSFER' | 'OTHER';
+  transactionReference?: string;
+  notes?: string;
+  idempotencyKey?: string;
+}
+
+export interface RecordPaymentInput {
+  membershipId?: string;
+  amount: number;
+  paymentMethod: 'CASH' | 'CARD' | 'UPI' | 'BANK_TRANSFER' | 'OTHER';
+  transactionReference?: string;
+  notes?: string;
+  idempotencyKey?: string;
+}
+
+export interface MemberBillingSummary {
+  totalBilled: number;
+  totalPaid: number;
+  outstandingBalance: number;
+  activeMembership: MemberActiveMembership | null;
+  recentPayments: PaymentRecord[];
+}
+
+export interface ReceiptData {
+  receiptNumber: string;
+  issuedAt: string;
+  gym: {
+    name: string;
+    code: string;
+  };
+  member: {
+    id: string;
+    fullName: string;
+    memberCode: string;
+    phone: string;
+    email: string | null;
+  };
+  membership: {
+    planName: string;
+    durationDays: number;
+    startDate: string;
+    endDate: string;
+  } | null;
+  payment: {
+    id: string;
+    amount: string;
+    paymentMethod: string;
+    transactionReference: string | null;
+    status: string;
+    type: string;
+    paidAt: string;
+  };
+  notes: string | null;
 }
 
 export interface ApiResponse<T> {
