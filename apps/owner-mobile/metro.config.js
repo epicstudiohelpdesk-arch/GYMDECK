@@ -2,18 +2,23 @@ const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
 const projectRoot = __dirname;
-const workspaceRoot = path.resolve(projectRoot, '../..');
+const monorepoRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Ensure Metro watches the workspace root if needed, but ignores Tauri and build artifacts
-config.watchFolders = [projectRoot];
+// 1. Watch both project and workspace root for monorepo pnpm symlinks
+config.watchFolders = [monorepoRoot];
 
-// Block watching src-tauri, target, and backend build directories
+// 2. Resolve modules from both local and monorepo node_modules
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(monorepoRoot, 'node_modules'),
+];
+
+// 3. Block non-mobile directories like src-tauri and target
 config.resolver.blockList = [
   /.*\/src-tauri\/.*/,
   /.*\/target\/.*/,
-  /.*\/dist\/.*/,
 ];
 
 module.exports = config;
