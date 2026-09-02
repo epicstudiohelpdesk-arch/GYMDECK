@@ -51,7 +51,7 @@ export default function OwnerDashboardScreen() {
     refetch,
     error,
   } = useQuery({
-    queryKey: ['owner-analytics-overview', selectedRange],
+    queryKey: ['owner-analytics-overview', user?.gymId, selectedRange],
     queryFn: () => OwnerAnalyticsService.getOverview(selectedRange),
   });
 

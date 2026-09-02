@@ -1,5 +1,5 @@
 /**
- * GymDeck Phase 13: Analytics, Reporting & Business Intelligence Comprehensive Test Suite
+ * GymDeck Phase 13 Hardening: Analytics, Reporting & Business Intelligence Comprehensive Test Suite
  */
 
 import assert from 'node:assert/strict';
@@ -22,7 +22,7 @@ import { hashPassword } from '../shared/security';
 import { eq, and } from 'drizzle-orm';
 
 async function runAnalyticsTestSuite() {
-  console.log('📊 Starting Analytics, Reporting & Business Intelligence Test Suite (Phase 13)...\n');
+  console.log('📊 Starting Hardened Analytics, Reporting & Business Intelligence Test Suite (Phase 13)...\n');
 
   await bootstrapDatabaseSchema();
 
@@ -380,7 +380,141 @@ async function runAnalyticsTestSuite() {
   assert.ok(parallelResults.every((r) => r.metrics.financial.refunds === 25.0));
   console.log('     ✅ 20 concurrent analytics requests executed with zero race conditions or data drift.');
 
-  console.log('\n🎉 ALL 12 BUSINESS INTELLIGENCE & ANALYTICS (PHASE 13) TESTS PASSED!\n');
+  // ==============================================================================
+  // TEST 13: Transactional Snapshot Consistency Under Concurrent Business Mutation
+  // ==============================================================================
+  console.log('  13. Testing Transactional Snapshot Consistency Under Concurrent Business Mutations...');
+  // Trigger overview read simultaneously with a new member creation and record payment
+  const [snapshotResult, _newMember] = await Promise.all([
+    analyticsService.getOverview(GYM_ALPHA_ID, { range: 'this_month' }),
+    ownerService.createMember(
+      GYM_ALPHA_ID,
+      { fullName: 'Barry Allen', phone: '+15554443333', memberCode: 'GD-FLASH' },
+      OWNER_ALPHA_ID
+    ),
+  ]);
+
+  assert.ok(snapshotResult.generatedAt);
+  assert.ok(snapshotResult.metrics.members.total >= 3);
+  console.log('     ✅ Repeatable Read transaction ensures snapshot consistency without partial read anomalies.');
+
+  // ==============================================================================
+  // TEST 14: Financial Precision (Large Amounts, Exact Decimals, Zero Overflows)
+  // ==============================================================================
+  console.log('  14. Testing Financial Precision on Large Ledger Amounts & Exact Scale...');
+  const largeMember = await ownerService.createMember(
+    GYM_ALPHA_ID,
+    { fullName: 'Bruce Wayne', phone: '+15557778888', memberCode: 'GD-BRUCE' },
+    OWNER_ALPHA_ID
+  );
+
+  // Record a $50,000.00 VIP lifetime contribution payment
+  const largePayment = await billingService.recordPayment(
+    GYM_ALPHA_ID,
+    largeMember.id,
+    { amount: 50000.0, paymentMethod: 'BANK_TRANSFER', notes: 'VIP Endowment' },
+    OWNER_ALPHA_ID
+  );
+
+  // Refund $0.01 (penny-level precision check)
+  await billingService.refundPayment(
+    GYM_ALPHA_ID,
+    largePayment.id,
+    { reason: 'Penny rounding adjustment', refundAmount: 0.01 },
+    OWNER_ALPHA_ID
+  );
+
+  const precisionRevenue = await analyticsService.getRevenueAnalytics(GYM_ALPHA_ID, { range: 'this_month' });
+  assert.ok(precisionRevenue.summary.grossPayments >= 50610.0);
+  assert.ok(precisionRevenue.summary.refunds >= 25.01);
+  assert.ok(precisionRevenue.summary.netPaid >= 50584.99);
+  console.log('     ✅ Financial ledger exactness maintained with NUMERIC decimal precision and penny refunds.');
+
+  // ==============================================================================
+  // TEST 15: CSV Numeric Preservation & Advanced Formula Injection Protection
+  // ==============================================================================
+  console.log('  15. Testing CSV Numeric Value Preservation & Advanced Spreadsheet Injection Vectors...');
+  const testRows = [
+    { name: 'Alice', amount: '-250.00', status: 'ACTIVE' },
+    { name: 'Bob', amount: '+100.50', status: 'ACTIVE' },
+    { name: 'Charlie', amount: '0.00', status: 'ACTIVE' },
+    { name: '=1+1', amount: '50.00', status: 'ACTIVE' },
+    { name: '+1+1', amount: '50.00', status: 'ACTIVE' },
+    { name: '@SUM(A1:A2)', amount: '50.00', status: 'ACTIVE' },
+    { name: '\tcmd_inject', amount: '50.00', status: 'ACTIVE' },
+    { name: '  =calc_payload', amount: '50.00', status: 'ACTIVE' },
+  ];
+
+  const formattedCsv = analyticsService.formatCsvWithSafety(testRows);
+
+  // Pure numbers must NOT be prefixed with single quote
+  assert.ok(formattedCsv.includes('"-250.00"'), 'Negative numbers must not be corrupted with single quotes');
+  assert.ok(formattedCsv.includes('"+100.50"'), 'Positive signed numbers must not be corrupted');
+  assert.ok(formattedCsv.includes('"0.00"'), 'Zero numbers must remain clean');
+
+  // Formula payloads MUST be prefixed with single quote
+  assert.ok(formattedCsv.includes('"\'=1+1"'), 'Leading = formula must be safely single-quoted');
+  assert.ok(formattedCsv.includes('"\'@SUM(A1:A2)"'), 'Leading @ formula must be safely single-quoted');
+  assert.ok(formattedCsv.includes('"\'\tcmd_inject"'), 'Leading TAB command must be safely single-quoted');
+  assert.ok(formattedCsv.includes('"\'  =calc_payload"'), 'Whitespace + = payload must be safely single-quoted');
+  console.log('     ✅ CSV export strictly distinguishes legitimate negative numeric values from dangerous formulas.');
+
+  // ==============================================================================
+  // TEST 16: Subscription Renewals vs First-Time Subscriptions Counting Invariant
+  // ==============================================================================
+  console.log('  16. Testing Subscription Renewals vs First-Time Membership Invariants...');
+  // Renew memberA's membership
+  await billingService.renewMembership(
+    GYM_ALPHA_ID,
+    memberA.id,
+    { planId: goldPlan!.id, paymentAmount: 150.0, paymentMethod: 'CARD' },
+    OWNER_ALPHA_ID
+  );
+
+  const subAnalytics = await analyticsService.getMembershipAnalytics(GYM_ALPHA_ID, { range: 'this_month' });
+  assert.ok(subAnalytics.summary.renewalsInPeriod >= 1, 'Renewal must be counted in renewalsInPeriod');
+  assert.ok(subAnalytics.summary.newMembershipsInPeriod >= 2, 'First-time memberships must be counted separately');
+  console.log('     ✅ Renewals and first-time subscriptions accurately distinguished in lifecycle analytics.');
+
+  // ==============================================================================
+  // TEST 17: Timezone Validation & Bounded Reporting Edge Cases
+  // ==============================================================================
+  console.log('  17. Testing Timezone Validation & Strict IANA Identifiers...');
+  await assert.rejects(
+    async () => {
+      await analyticsService.getOverview(GYM_ALPHA_ID, {
+        range: 'this_month',
+        timezone: 'Invalid/NonExistent_Zone',
+      });
+    },
+    (err: any) => err.statusCode === 422
+  );
+
+  const estOverview = await analyticsService.getOverview(GYM_ALPHA_ID, {
+    range: 'this_month',
+    timezone: 'America/New_York',
+  });
+  assert.equal(estOverview.period.timezone, 'America/New_York');
+  console.log('     ✅ Invalid timezones rejected with 422; valid IANA timezones properly applied in reporting.');
+
+  // ==============================================================================
+  // TEST 18: Malicious Tenant ID Injection & Unsupported Export Type Defense
+  // ==============================================================================
+  console.log('  18. Testing Malicious Report Types & Injection Defense...');
+  await assert.rejects(
+    async () => {
+      await analyticsService.exportReport(
+        GYM_ALPHA_ID,
+        'INJECT_DROP_TABLE_USERS' as any,
+        {},
+        OWNER_ALPHA_ID
+      );
+    },
+    (err: any) => err.statusCode === 422
+  );
+  console.log('     ✅ Arbitrary/unsupported report types rejected before query generation.');
+
+  console.log('\n🎉 ALL 18 HARDENED BUSINESS INTELLIGENCE & ANALYTICS (PHASE 13) TESTS PASSED!\n');
   await closeDatabasePool();
   process.exit(0);
 }

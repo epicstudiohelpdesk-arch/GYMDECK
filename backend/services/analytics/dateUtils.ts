@@ -16,6 +16,15 @@ export function resolveDateRange(
   toStr?: string,
   timezone: string = 'UTC'
 ): ResolvedDateRange {
+  // Validate IANA timezone string
+  if (timezone && timezone !== 'UTC') {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    } catch {
+      throw AppError.validation(`Invalid IANA timezone identifier: "${timezone}".`);
+    }
+  }
+
   const now = new Date();
   let startDate: Date;
   let endDate: Date;

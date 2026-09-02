@@ -1,5 +1,5 @@
 /**
- * GymDeck Business Intelligence & Analytics - Authoritative Analytics Service
+ * GymDeck Business Intelligence & Analytics - Authoritative Analytics Service (Hardened Snapshot-Consistent Edition)
  */
 
 import { eq, sql } from 'drizzle-orm';
@@ -19,7 +19,7 @@ import {
 
 export class AnalyticsService {
   /**
-   * 1. High-Level Executive Dashboard Overview (Single-Flight Aggregated Metrics)
+   * 1. High-Level Executive Dashboard Overview (Single-Flight Transactional Snapshot)
    */
   public async getOverview(gymId: string, options: AnalyticsQueryOptions = {}): Promise<OverviewDashboardResponse> {
     const range = resolveDateRange(options.range, options.from, options.to, options.timezone);
@@ -35,293 +35,315 @@ export class AnalyticsService {
     in7Days.setUTCDate(in7Days.getUTCDate() + 7);
     const in7DaysIso = in7Days.toISOString();
 
-    // A. Verify Tenant
-    const gym = (
-      await db.select().from(gyms).where(eq(gyms.id, gymId)).limit(1)
-    )[0];
-    if (!gym) {
-      throw AppError.notFound('Gym tenant record not found.');
-    }
+    // Execute inside a single read-only transaction with REPEATABLE READ for strict snapshot consistency
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`);
 
-    // B. Members Aggregation
-    const memberCountsQuery = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE deleted_at IS NULL) AS total_count,
-        COUNT(*) FILTER (WHERE membership_status = 'ACTIVE' AND deleted_at IS NULL) AS active_count,
-        COUNT(*) FILTER (WHERE membership_status = 'FROZEN' AND deleted_at IS NULL) AS frozen_count,
-        COUNT(*) FILTER (WHERE membership_status = 'EXPIRED' AND deleted_at IS NULL) AS expired_count,
-        COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND deleted_at IS NULL) AS new_count
-      FROM gym_members
-      WHERE gym_id = ${gymId}::uuid;
-    `);
-    const mRow = memberCountsQuery.rows[0] as any || {};
+      // A. Verify Tenant
+      const gym = (
+        await tx.select().from(gyms).where(eq(gyms.id, gymId)).limit(1)
+      )[0];
+      if (!gym) {
+        throw AppError.notFound('Gym tenant record not found.');
+      }
 
-    // C. Financial Aggregation
-    const financialQuery = await db.execute(sql`
-      SELECT
-        COALESCE(SUM(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) AS gross_paid,
-        COALESCE(SUM(CASE WHEN type = 'REFUND' AND status = 'COMPLETED' THEN ABS(amount::numeric) ELSE 0 END), 0) AS total_refunds,
-        COUNT(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN 1 END) AS tx_count
-      FROM payments
-      WHERE gym_id = ${gymId}::uuid
-        AND paid_at >= ${startIso}::timestamptz
-        AND paid_at <= ${endIso}::timestamptz;
-    `);
-    const fRow = financialQuery.rows[0] as any || {};
-    const grossPaid = Number(fRow.gross_paid || 0);
-    const refunds = Number(fRow.total_refunds || 0);
-    const netPaid = Number((grossPaid - refunds).toFixed(2));
-    const txCount = Number(fRow.tx_count || 0);
-    const avgTx = txCount > 0 ? Number((grossPaid / txCount).toFixed(2)) : 0;
+      // B. Members Aggregation
+      const memberCountsQuery = await tx.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE deleted_at IS NULL) AS total_count,
+          COUNT(*) FILTER (WHERE membership_status = 'ACTIVE' AND deleted_at IS NULL) AS active_count,
+          COUNT(*) FILTER (WHERE membership_status = 'FROZEN' AND deleted_at IS NULL) AS frozen_count,
+          COUNT(*) FILTER (WHERE membership_status = 'EXPIRED' AND deleted_at IS NULL) AS expired_count,
+          COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND deleted_at IS NULL) AS new_count
+        FROM gym_members
+        WHERE gym_id = ${gymId}::uuid;
+      `);
+      const mRow = memberCountsQuery.rows[0] as any || {};
 
-    // D. Attendance Aggregation
-    const attendanceQuery = await db.execute(sql`
-      SELECT
-        COUNT(*) AS total_checkins,
-        COUNT(DISTINCT member_id) AS unique_attendees,
-        COUNT(*) FILTER (WHERE check_in_time >= ${todayStartIso}::timestamptz) AS today_checkins
-      FROM attendance_logs
-      WHERE gym_id = ${gymId}::uuid
-        AND check_in_time >= ${startIso}::timestamptz
-        AND check_in_time <= ${endIso}::timestamptz;
-    `);
-    const aRow = attendanceQuery.rows[0] as any || {};
-    const totalCheckins = Number(aRow.total_checkins || 0);
-    const uniqueAttendees = Number(aRow.unique_attendees || 0);
-    const todayCheckins = Number(aRow.today_checkins || 0);
-    const dailyAverage = Number((totalCheckins / range.daysCount).toFixed(1));
+      // C. Financial Aggregation
+      const financialQuery = await tx.execute(sql`
+        SELECT
+          COALESCE(SUM(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) AS gross_paid,
+          COALESCE(SUM(CASE WHEN type = 'REFUND' AND status = 'COMPLETED' THEN ABS(amount::numeric) ELSE 0 END), 0) AS total_refunds,
+          COUNT(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN 1 END) AS tx_count
+        FROM payments
+        WHERE gym_id = ${gymId}::uuid
+          AND paid_at >= ${startIso}::timestamptz
+          AND paid_at <= ${endIso}::timestamptz;
+      `);
+      const fRow = financialQuery.rows[0] as any || {};
+      const grossPaid = Number(fRow.gross_paid || 0);
+      const refunds = Number(fRow.total_refunds || 0);
+      const netPaid = Number((grossPaid - refunds).toFixed(2));
+      const txCount = Number(fRow.tx_count || 0);
+      const avgTx = txCount > 0 ? Number((grossPaid / txCount).toFixed(2)) : 0;
 
-    // E. Memberships Aggregation
-    const membershipQuery = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz) AS active_subs,
-        COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz AND end_date <= ${in7DaysIso}::timestamptz) AS expiring_soon,
-        COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz) AS new_subs
-      FROM member_memberships
-      WHERE gym_id = ${gymId}::uuid;
-    `);
-    const msRow = membershipQuery.rows[0] as any || {};
+      // D. Attendance Aggregation
+      const attendanceQuery = await tx.execute(sql`
+        SELECT
+          COUNT(*) AS total_checkins,
+          COUNT(DISTINCT member_id) AS unique_attendees,
+          COUNT(*) FILTER (WHERE check_in_time >= ${todayStartIso}::timestamptz) AS today_checkins
+        FROM attendance_logs
+        WHERE gym_id = ${gymId}::uuid
+          AND check_in_time >= ${startIso}::timestamptz
+          AND check_in_time <= ${endIso}::timestamptz;
+      `);
+      const aRow = attendanceQuery.rows[0] as any || {};
+      const totalCheckins = Number(aRow.total_checkins || 0);
+      const uniqueAttendees = Number(aRow.unique_attendees || 0);
+      const todayCheckins = Number(aRow.today_checkins || 0);
+      const dailyAverage = Number((totalCheckins / range.daysCount).toFixed(1));
 
-    // F. Trainers & PT Aggregation
-    const trainerQuery = await db.execute(sql`
-      SELECT
-        (SELECT COUNT(*) FROM trainers WHERE gym_id = ${gymId}::uuid AND is_active = true AND deleted_at IS NULL) AS active_trainers,
-        (SELECT COUNT(*) FROM pt_packages WHERE gym_id = ${gymId}::uuid AND status = 'ACTIVE' AND remaining_sessions > 0) AS active_packages,
-        (SELECT COUNT(*) FROM pt_sessions WHERE gym_id = ${gymId}::uuid AND status = 'COMPLETED' AND session_date >= ${startIso}::timestamptz AND session_date <= ${endIso}::timestamptz) AS completed_sessions,
-        (SELECT COALESCE(SUM(amount::numeric), 0) FROM trainer_earnings WHERE gym_id = ${gymId}::uuid AND created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz) AS accrued_earnings;
-    `);
-    const tRow = trainerQuery.rows[0] as any || {};
+      // E. Memberships Aggregation (Precise First-Time vs Renewal Counting)
+      const membershipQuery = await tx.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz) AS active_subs,
+          COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz AND end_date <= ${in7DaysIso}::timestamptz) AS expiring_soon,
+          COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND EXISTS (
+            SELECT 1 FROM member_memberships prior
+            WHERE prior.gym_id = member_memberships.gym_id
+              AND prior.member_id = member_memberships.member_id
+              AND prior.created_at < member_memberships.created_at
+          )) AS renewals_count,
+          COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND NOT EXISTS (
+            SELECT 1 FROM member_memberships prior
+            WHERE prior.gym_id = member_memberships.gym_id
+              AND prior.member_id = member_memberships.member_id
+              AND prior.created_at < member_memberships.created_at
+          )) AS new_subs_count
+        FROM member_memberships
+        WHERE gym_id = ${gymId}::uuid;
+      `);
+      const msRow = membershipQuery.rows[0] as any || {};
 
-    // G. Trends Generation
-    const buckets = generateDateBuckets(range.startDate, range.endDate);
+      // F. Trainers & PT Aggregation
+      const trainerQuery = await tx.execute(sql`
+        SELECT
+          (SELECT COUNT(*) FROM trainers WHERE gym_id = ${gymId}::uuid AND is_active = true AND deleted_at IS NULL) AS active_trainers,
+          (SELECT COUNT(*) FROM pt_packages WHERE gym_id = ${gymId}::uuid AND status = 'ACTIVE' AND remaining_sessions > 0) AS active_packages,
+          (SELECT COUNT(*) FROM pt_sessions WHERE gym_id = ${gymId}::uuid AND status = 'COMPLETED' AND session_date >= ${startIso}::timestamptz AND session_date <= ${endIso}::timestamptz) AS completed_sessions,
+          (SELECT COALESCE(SUM(amount::numeric), 0) FROM trainer_earnings WHERE gym_id = ${gymId}::uuid AND created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND status != 'VOIDED') AS accrued_earnings;
+      `);
+      const tRow = trainerQuery.rows[0] as any || {};
 
-    const revenueTrendQuery = await db.execute(sql`
-      SELECT
-        TO_CHAR(paid_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
-        COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) AS value
-      FROM payments
-      WHERE gym_id = ${gymId}::uuid
-        AND paid_at >= ${startIso}::timestamptz
-        AND paid_at <= ${endIso}::timestamptz
-      GROUP BY 1
-      ORDER BY 1;
-    `);
+      // G. Trends Generation
+      const buckets = generateDateBuckets(range.startDate, range.endDate);
 
-    const attendanceTrendQuery = await db.execute(sql`
-      SELECT
-        TO_CHAR(check_in_time AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
-        COUNT(*) AS value
-      FROM attendance_logs
-      WHERE gym_id = ${gymId}::uuid
-        AND check_in_time >= ${startIso}::timestamptz
-        AND check_in_time <= ${endIso}::timestamptz
-      GROUP BY 1
-      ORDER BY 1;
-    `);
+      const revenueTrendQuery = await tx.execute(sql`
+        SELECT
+          TO_CHAR(paid_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
+          COALESCE(SUM(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN type = 'REFUND' AND status = 'COMPLETED' THEN ABS(amount::numeric) ELSE 0 END), 0) AS value
+        FROM payments
+        WHERE gym_id = ${gymId}::uuid
+          AND paid_at >= ${startIso}::timestamptz
+          AND paid_at <= ${endIso}::timestamptz
+        GROUP BY 1
+        ORDER BY 1;
+      `);
 
-    const registrationTrendQuery = await db.execute(sql`
-      SELECT
-        TO_CHAR(created_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
-        COUNT(*) AS value
-      FROM gym_members
-      WHERE gym_id = ${gymId}::uuid
-        AND created_at >= ${startIso}::timestamptz
-        AND created_at <= ${endIso}::timestamptz
-        AND deleted_at IS NULL
-      GROUP BY 1
-      ORDER BY 1;
-    `);
+      const attendanceTrendQuery = await tx.execute(sql`
+        SELECT
+          TO_CHAR(check_in_time AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
+          COUNT(*) AS value
+        FROM attendance_logs
+        WHERE gym_id = ${gymId}::uuid
+          AND check_in_time >= ${startIso}::timestamptz
+          AND check_in_time <= ${endIso}::timestamptz
+        GROUP BY 1
+        ORDER BY 1;
+      `);
 
-    const revenueTrend = fillTrendGaps(buckets, revenueTrendQuery.rows as any[]);
-    const attendanceTrend = fillTrendGaps(buckets, attendanceTrendQuery.rows as any[]);
-    const memberRegistrationsTrend = fillTrendGaps(buckets, registrationTrendQuery.rows as any[]);
+      const registrationTrendQuery = await tx.execute(sql`
+        SELECT
+          TO_CHAR(created_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
+          COUNT(*) AS value
+        FROM gym_members
+        WHERE gym_id = ${gymId}::uuid
+          AND created_at >= ${startIso}::timestamptz
+          AND created_at <= ${endIso}::timestamptz
+          AND deleted_at IS NULL
+        GROUP BY 1
+        ORDER BY 1;
+      `);
 
-    return {
-      period: {
-        from: range.startDate.toISOString(),
-        to: range.endDate.toISOString(),
-        preset: range.preset,
-        timezone: range.timezone,
-        daysCount: range.daysCount,
-      },
-      generatedAt: new Date().toISOString(),
-      gym: {
-        id: gym.id,
-        name: gym.name,
-        code: gym.code,
-      },
-      metrics: {
-        members: {
-          total: Number(mRow.total_count || 0),
-          active: Number(mRow.active_count || 0),
-          frozen: Number(mRow.frozen_count || 0),
-          expired: Number(mRow.expired_count || 0),
-          newInPeriod: Number(mRow.new_count || 0),
+      const revenueTrend = fillTrendGaps(buckets, revenueTrendQuery.rows as any[]);
+      const attendanceTrend = fillTrendGaps(buckets, attendanceTrendQuery.rows as any[]);
+      const memberRegistrationsTrend = fillTrendGaps(buckets, registrationTrendQuery.rows as any[]);
+
+      return {
+        period: {
+          from: range.startDate.toISOString(),
+          to: range.endDate.toISOString(),
+          preset: range.preset,
+          timezone: range.timezone,
+          daysCount: range.daysCount,
         },
-        financial: {
-          grossPaid,
-          refunds,
-          netPaid,
-          transactionCount: txCount,
-          averageTransaction: avgTx,
+        generatedAt: new Date().toISOString(),
+        gym: {
+          id: gym.id,
+          name: gym.name,
+          code: gym.code,
         },
-        attendance: {
-          totalCheckins,
-          uniqueAttendees,
-          dailyAverage,
-          todayCheckins,
+        metrics: {
+          members: {
+            total: Number(mRow.total_count || 0),
+            active: Number(mRow.active_count || 0),
+            frozen: Number(mRow.frozen_count || 0),
+            expired: Number(mRow.expired_count || 0),
+            newInPeriod: Number(mRow.new_count || 0),
+          },
+          financial: {
+            grossPaid,
+            refunds,
+            netPaid,
+            transactionCount: txCount,
+            averageTransaction: avgTx,
+          },
+          attendance: {
+            totalCheckins,
+            uniqueAttendees,
+            dailyAverage,
+            todayCheckins,
+          },
+          memberships: {
+            activeSubscriptions: Number(msRow.active_subs || 0),
+            expiringSoon: Number(msRow.expiring_soon || 0),
+            renewalsInPeriod: Number(msRow.renewals_count || 0),
+          },
+          trainers: {
+            activeTrainers: Number(tRow.active_trainers || 0),
+            activePtPackages: Number(tRow.active_packages || 0),
+            completedSessions: Number(tRow.completed_sessions || 0),
+            accruedEarnings: Number(Number(tRow.accrued_earnings || 0).toFixed(2)),
+          },
         },
-        memberships: {
-          activeSubscriptions: Number(msRow.active_subs || 0),
-          expiringSoon: Number(msRow.expiring_soon || 0),
-          renewalsInPeriod: Number(msRow.new_subs || 0),
+        trends: {
+          revenue: revenueTrend,
+          attendance: attendanceTrend,
+          memberRegistrations: memberRegistrationsTrend,
         },
-        trainers: {
-          activeTrainers: Number(tRow.active_trainers || 0),
-          activePtPackages: Number(tRow.active_packages || 0),
-          completedSessions: Number(tRow.completed_sessions || 0),
-          accruedEarnings: Number(Number(tRow.accrued_earnings || 0).toFixed(2)),
-        },
-      },
-      trends: {
-        revenue: revenueTrend,
-        attendance: attendanceTrend,
-        memberRegistrations: memberRegistrationsTrend,
-      },
-    };
+      };
+    });
   }
 
   /**
-   * 2. Authoritative Revenue & Payment Ledger Analytics
+   * 2. Authoritative Revenue & Payment Ledger Analytics (Transactional Snapshot)
    */
   public async getRevenueAnalytics(gymId: string, options: AnalyticsQueryOptions = {}): Promise<RevenueAnalyticsResponse> {
     const range = resolveDateRange(options.range, options.from, options.to, options.timezone);
     const startIso = range.startDate.toISOString();
     const endIso = range.endDate.toISOString();
 
-    const summaryQuery = await db.execute(sql`
-      SELECT
-        COALESCE(SUM(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) AS gross_payments,
-        COALESCE(SUM(CASE WHEN type = 'REFUND' AND status = 'COMPLETED' THEN ABS(amount::numeric) ELSE 0 END), 0) AS total_refunds,
-        COUNT(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN 1 END) AS payment_count
-      FROM payments
-      WHERE gym_id = ${gymId}::uuid
-        AND paid_at >= ${startIso}::timestamptz
-        AND paid_at <= ${endIso}::timestamptz;
-    `);
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`);
 
-    const sRow = summaryQuery.rows[0] as any || {};
-    const grossPayments = Number(sRow.gross_payments || 0);
-    const refunds = Number(sRow.total_refunds || 0);
-    const netPaid = Number((grossPayments - refunds).toFixed(2));
-    const paymentCount = Number(sRow.payment_count || 0);
-    const averagePayment = paymentCount > 0 ? Number((grossPayments / paymentCount).toFixed(2)) : 0;
+      const summaryQuery = await tx.execute(sql`
+        SELECT
+          COALESCE(SUM(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) AS gross_payments,
+          COALESCE(SUM(CASE WHEN type = 'REFUND' AND status = 'COMPLETED' THEN ABS(amount::numeric) ELSE 0 END), 0) AS total_refunds,
+          COUNT(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN 1 END) AS payment_count
+        FROM payments
+        WHERE gym_id = ${gymId}::uuid
+          AND paid_at >= ${startIso}::timestamptz
+          AND paid_at <= ${endIso}::timestamptz;
+      `);
 
-    // By Payment Method
-    const methodQuery = await db.execute(sql`
-      SELECT
-        payment_method AS category,
-        COUNT(*) AS count,
-        COALESCE(SUM(amount::numeric), 0) AS amount
-      FROM payments
-      WHERE gym_id = ${gymId}::uuid
-        AND type != 'REFUND'
-        AND status = 'COMPLETED'
-        AND paid_at >= ${startIso}::timestamptz
-        AND paid_at <= ${endIso}::timestamptz
-      GROUP BY payment_method
-      ORDER BY amount DESC;
-    `);
+      const sRow = summaryQuery.rows[0] as any || {};
+      const grossPayments = Number(sRow.gross_payments || 0);
+      const refunds = Number(sRow.total_refunds || 0);
+      const netPaid = Number((grossPayments - refunds).toFixed(2));
+      const paymentCount = Number(sRow.payment_count || 0);
+      const averagePayment = paymentCount > 0 ? Number((grossPayments / paymentCount).toFixed(2)) : 0;
 
-    const byPaymentMethod = (methodQuery.rows as any[]).map((r) => ({
-      category: r.category || 'OTHER',
-      count: Number(r.count || 0),
-      amount: Number(Number(r.amount || 0).toFixed(2)),
-      percentage: grossPayments > 0 ? Number(((Number(r.amount || 0) / grossPayments) * 100).toFixed(1)) : 0,
-    }));
+      // By Payment Method
+      const methodQuery = await tx.execute(sql`
+        SELECT
+          payment_method AS category,
+          COUNT(*) AS count,
+          COALESCE(SUM(amount::numeric), 0) AS amount
+        FROM payments
+        WHERE gym_id = ${gymId}::uuid
+          AND type != 'REFUND'
+          AND status = 'COMPLETED'
+          AND paid_at >= ${startIso}::timestamptz
+          AND paid_at <= ${endIso}::timestamptz
+        GROUP BY payment_method
+        ORDER BY amount DESC;
+      `);
 
-    // By Payment Type
-    const typeQuery = await db.execute(sql`
-      SELECT
-        type AS category,
-        COUNT(*) AS count,
-        COALESCE(SUM(amount::numeric), 0) AS amount
-      FROM payments
-      WHERE gym_id = ${gymId}::uuid
-        AND type != 'REFUND'
-        AND status = 'COMPLETED'
-        AND paid_at >= ${startIso}::timestamptz
-        AND paid_at <= ${endIso}::timestamptz
-      GROUP BY type
-      ORDER BY amount DESC;
-    `);
+      const byPaymentMethod = (methodQuery.rows as any[]).map((r) => ({
+        category: r.category || 'OTHER',
+        count: Number(r.count || 0),
+        amount: Number(Number(r.amount || 0).toFixed(2)),
+        percentage: grossPayments > 0 ? Number(((Number(r.amount || 0) / grossPayments) * 100).toFixed(1)) : 0,
+      }));
 
-    const byPaymentType = (typeQuery.rows as any[]).map((r) => ({
-      category: r.category || 'MEMBERSHIP_FEE',
-      count: Number(r.count || 0),
-      amount: Number(Number(r.amount || 0).toFixed(2)),
-      percentage: grossPayments > 0 ? Number(((Number(r.amount || 0) / grossPayments) * 100).toFixed(1)) : 0,
-    }));
+      // By Payment Type
+      const typeQuery = await tx.execute(sql`
+        SELECT
+          type AS category,
+          COUNT(*) AS count,
+          COALESCE(SUM(amount::numeric), 0) AS amount
+        FROM payments
+        WHERE gym_id = ${gymId}::uuid
+          AND type != 'REFUND'
+          AND status = 'COMPLETED'
+          AND paid_at >= ${startIso}::timestamptz
+          AND paid_at <= ${endIso}::timestamptz
+        GROUP BY type
+        ORDER BY amount DESC;
+      `);
 
-    // Trend Series
-    const buckets = generateDateBuckets(range.startDate, range.endDate);
-    const trendQuery = await db.execute(sql`
-      SELECT
-        TO_CHAR(paid_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
-        COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) AS value
-      FROM payments
-      WHERE gym_id = ${gymId}::uuid
-        AND paid_at >= ${startIso}::timestamptz
-        AND paid_at <= ${endIso}::timestamptz
-      GROUP BY 1
-      ORDER BY 1;
-    `);
-    const trend = fillTrendGaps(buckets, trendQuery.rows as any[]);
+      const byPaymentType = (typeQuery.rows as any[]).map((r) => ({
+        category: r.category || 'MEMBERSHIP_FEE',
+        count: Number(r.count || 0),
+        amount: Number(Number(r.amount || 0).toFixed(2)),
+        percentage: grossPayments > 0 ? Number(((Number(r.amount || 0) / grossPayments) * 100).toFixed(1)) : 0,
+      }));
 
-    return {
-      period: {
-        from: range.startDate.toISOString(),
-        to: range.endDate.toISOString(),
-        preset: range.preset,
-        timezone: range.timezone,
-        daysCount: range.daysCount,
-      },
-      generatedAt: new Date().toISOString(),
-      summary: {
-        grossPayments,
-        refunds,
-        netPaid,
-        paymentCount,
-        averagePayment,
-      },
-      byPaymentMethod,
-      byPaymentType,
-      trend,
-    };
+      // Trend Series
+      const buckets = generateDateBuckets(range.startDate, range.endDate);
+      const trendQuery = await tx.execute(sql`
+        SELECT
+          TO_CHAR(paid_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
+          COALESCE(SUM(CASE WHEN type != 'REFUND' AND status = 'COMPLETED' THEN amount::numeric ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN type = 'REFUND' AND status = 'COMPLETED' THEN ABS(amount::numeric) ELSE 0 END), 0) AS value
+        FROM payments
+        WHERE gym_id = ${gymId}::uuid
+          AND paid_at >= ${startIso}::timestamptz
+          AND paid_at <= ${endIso}::timestamptz
+        GROUP BY 1
+        ORDER BY 1;
+      `);
+      const trend = fillTrendGaps(buckets, trendQuery.rows as any[]);
+
+      return {
+        period: {
+          from: range.startDate.toISOString(),
+          to: range.endDate.toISOString(),
+          preset: range.preset,
+          timezone: range.timezone,
+          daysCount: range.daysCount,
+        },
+        generatedAt: new Date().toISOString(),
+        summary: {
+          grossPayments,
+          refunds,
+          netPaid,
+          paymentCount,
+          averagePayment,
+        },
+        byPaymentMethod,
+        byPaymentType,
+        trend,
+      };
+    });
   }
 
   /**
-   * 3. Authoritative Membership & Subscription Lifecycle Analytics
+   * 3. Authoritative Membership & Subscription Lifecycle Analytics (Transactional Snapshot)
    */
   public async getMembershipAnalytics(gymId: string, options: AnalyticsQueryOptions = {}): Promise<MembershipAnalyticsResponse> {
     const range = resolveDateRange(options.range, options.from, options.to, options.timezone);
@@ -333,295 +355,318 @@ export class AnalyticsService {
     in7Days.setUTCDate(in7Days.getUTCDate() + 7);
     const in7DaysIso = in7Days.toISOString();
 
-    const summaryQuery = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz) AS active_count,
-        COUNT(*) FILTER (WHERE status = 'FROZEN') AS frozen_count,
-        COUNT(*) FILTER (WHERE status = 'EXPIRED' OR (status = 'ACTIVE' AND end_date < ${nowIso}::timestamptz)) AS expired_count,
-        COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz AND end_date <= ${in7DaysIso}::timestamptz) AS expiring_soon,
-        COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz) AS new_in_period
-      FROM member_memberships
-      WHERE gym_id = ${gymId}::uuid;
-    `);
-    const sRow = summaryQuery.rows[0] as any || {};
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`);
 
-    // By Plan Distribution
-    const planQuery = await db.execute(sql`
-      SELECT
-        COALESCE(p.plan_name, 'Unknown Plan') AS category,
-        COUNT(m.id) AS count
-      FROM member_memberships m
-      LEFT JOIN membership_plans p ON m.plan_id = p.id
-      WHERE m.gym_id = ${gymId}::uuid
-      GROUP BY p.plan_name
-      ORDER BY count DESC;
-    `);
+      const summaryQuery = await tx.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz) AS active_count,
+          COUNT(*) FILTER (WHERE status = 'FROZEN') AS frozen_count,
+          COUNT(*) FILTER (WHERE status = 'EXPIRED' OR (status = 'ACTIVE' AND end_date < ${nowIso}::timestamptz)) AS expired_count,
+          COUNT(*) FILTER (WHERE status = 'ACTIVE' AND end_date >= ${nowIso}::timestamptz AND end_date <= ${in7DaysIso}::timestamptz) AS expiring_soon,
+          COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND NOT EXISTS (
+            SELECT 1 FROM member_memberships prior
+            WHERE prior.gym_id = member_memberships.gym_id
+              AND prior.member_id = member_memberships.member_id
+              AND prior.created_at < member_memberships.created_at
+          )) AS new_in_period,
+          COUNT(*) FILTER (WHERE created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND EXISTS (
+            SELECT 1 FROM member_memberships prior
+            WHERE prior.gym_id = member_memberships.gym_id
+              AND prior.member_id = member_memberships.member_id
+              AND prior.created_at < member_memberships.created_at
+          )) AS renewals_in_period
+        FROM member_memberships
+        WHERE gym_id = ${gymId}::uuid;
+      `);
+      const sRow = summaryQuery.rows[0] as any || {};
 
-    const totalMemberships = (planQuery.rows as any[]).reduce((sum, r) => sum + Number(r.count || 0), 0);
-    const byPlanDistribution = (planQuery.rows as any[]).map((r) => ({
-      category: r.category,
-      count: Number(r.count || 0),
-      percentage: totalMemberships > 0 ? Number(((Number(r.count || 0) / totalMemberships) * 100).toFixed(1)) : 0,
-    }));
+      // By Plan Distribution (Scoped to tenant on all joins)
+      const planQuery = await tx.execute(sql`
+        SELECT
+          COALESCE(p.plan_name, 'Unknown Plan') AS category,
+          COUNT(m.id) AS count
+        FROM member_memberships m
+        LEFT JOIN membership_plans p ON m.plan_id = p.id AND p.gym_id = ${gymId}::uuid
+        WHERE m.gym_id = ${gymId}::uuid
+        GROUP BY p.plan_name
+        ORDER BY count DESC;
+      `);
 
-    // By Status Distribution
-    const statusQuery = await db.execute(sql`
-      SELECT
-        status AS category,
-        COUNT(*) AS count
-      FROM member_memberships
-      WHERE gym_id = ${gymId}::uuid
-      GROUP BY status
-      ORDER BY count DESC;
-    `);
+      const totalMemberships = (planQuery.rows as any[]).reduce((sum, r) => sum + Number(r.count || 0), 0);
+      const byPlanDistribution = (planQuery.rows as any[]).map((r) => ({
+        category: r.category,
+        count: Number(r.count || 0),
+        percentage: totalMemberships > 0 ? Number(((Number(r.count || 0) / totalMemberships) * 100).toFixed(1)) : 0,
+      }));
 
-    const byStatusDistribution = (statusQuery.rows as any[]).map((r) => ({
-      category: r.category,
-      count: Number(r.count || 0),
-      percentage: totalMemberships > 0 ? Number(((Number(r.count || 0) / totalMemberships) * 100).toFixed(1)) : 0,
-    }));
+      // By Status Distribution
+      const statusQuery = await tx.execute(sql`
+        SELECT
+          status AS category,
+          COUNT(*) AS count
+        FROM member_memberships
+        WHERE gym_id = ${gymId}::uuid
+        GROUP BY status
+        ORDER BY count DESC;
+      `);
 
-    // New Subscriptions Trend
-    const buckets = generateDateBuckets(range.startDate, range.endDate);
-    const trendQuery = await db.execute(sql`
-      SELECT
-        TO_CHAR(created_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
-        COUNT(*) AS value
-      FROM member_memberships
-      WHERE gym_id = ${gymId}::uuid
-        AND created_at >= ${startIso}::timestamptz
-        AND created_at <= ${endIso}::timestamptz
-      GROUP BY 1
-      ORDER BY 1;
-    `);
-    const newSubscriptionsTrend = fillTrendGaps(buckets, trendQuery.rows as any[]);
+      const byStatusDistribution = (statusQuery.rows as any[]).map((r) => ({
+        category: r.category,
+        count: Number(r.count || 0),
+        percentage: totalMemberships > 0 ? Number(((Number(r.count || 0) / totalMemberships) * 100).toFixed(1)) : 0,
+      }));
 
-    return {
-      period: {
-        from: range.startDate.toISOString(),
-        to: range.endDate.toISOString(),
-        preset: range.preset,
-        timezone: range.timezone,
-        daysCount: range.daysCount,
-      },
-      generatedAt: new Date().toISOString(),
-      summary: {
-        activeMemberships: Number(sRow.active_count || 0),
-        frozenMemberships: Number(sRow.frozen_count || 0),
-        expiredMemberships: Number(sRow.expired_count || 0),
-        expiringIn7Days: Number(sRow.expiring_soon || 0),
-        newMembershipsInPeriod: Number(sRow.new_in_period || 0),
-        renewalsInPeriod: Number(sRow.new_in_period || 0),
-      },
-      byPlanDistribution,
-      byStatusDistribution,
-      newSubscriptionsTrend,
-    };
+      // New Subscriptions Trend
+      const buckets = generateDateBuckets(range.startDate, range.endDate);
+      const trendQuery = await tx.execute(sql`
+        SELECT
+          TO_CHAR(created_at AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
+          COUNT(*) AS value
+        FROM member_memberships
+        WHERE gym_id = ${gymId}::uuid
+          AND created_at >= ${startIso}::timestamptz
+          AND created_at <= ${endIso}::timestamptz
+        GROUP BY 1
+        ORDER BY 1;
+      `);
+      const newSubscriptionsTrend = fillTrendGaps(buckets, trendQuery.rows as any[]);
+
+      return {
+        period: {
+          from: range.startDate.toISOString(),
+          to: range.endDate.toISOString(),
+          preset: range.preset,
+          timezone: range.timezone,
+          daysCount: range.daysCount,
+        },
+        generatedAt: new Date().toISOString(),
+        summary: {
+          activeMemberships: Number(sRow.active_count || 0),
+          frozenMemberships: Number(sRow.frozen_count || 0),
+          expiredMemberships: Number(sRow.expired_count || 0),
+          expiringIn7Days: Number(sRow.expiring_soon || 0),
+          newMembershipsInPeriod: Number(sRow.new_in_period || 0),
+          renewalsInPeriod: Number(sRow.renewals_in_period || 0),
+        },
+        byPlanDistribution,
+        byStatusDistribution,
+        newSubscriptionsTrend,
+      };
+    });
   }
 
   /**
-   * 4. Authoritative Attendance Analytics & Foot-Traffic Patterns
+   * 4. Authoritative Attendance Analytics & Foot-Traffic Patterns (Transactional Snapshot)
    */
   public async getAttendanceAnalytics(gymId: string, options: AnalyticsQueryOptions = {}): Promise<AttendanceAnalyticsResponse> {
     const range = resolveDateRange(options.range, options.from, options.to, options.timezone);
     const startIso = range.startDate.toISOString();
     const endIso = range.endDate.toISOString();
 
-    const summaryQuery = await db.execute(sql`
-      SELECT
-        COUNT(*) AS total_checkins,
-        COUNT(DISTINCT member_id) AS unique_members,
-        MODE() WITHIN GROUP (ORDER BY EXTRACT(HOUR FROM check_in_time AT TIME ZONE ${range.timezone})) AS peak_hour
-      FROM attendance_logs
-      WHERE gym_id = ${gymId}::uuid
-        AND check_in_time >= ${startIso}::timestamptz
-        AND check_in_time <= ${endIso}::timestamptz;
-    `);
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`);
 
-    const sRow = summaryQuery.rows[0] as any || {};
-    const totalCheckIns = Number(sRow.total_checkins || 0);
-    const uniqueMembersAttended = Number(sRow.unique_members || 0);
-    const averageDailyAttendance = Number((totalCheckIns / range.daysCount).toFixed(1));
-    const peakCheckInHour = sRow.peak_hour !== null && sRow.peak_hour !== undefined ? Number(sRow.peak_hour) : null;
+      const summaryQuery = await tx.execute(sql`
+        SELECT
+          COUNT(*) AS total_checkins,
+          COUNT(DISTINCT member_id) AS unique_members,
+          MODE() WITHIN GROUP (ORDER BY EXTRACT(HOUR FROM check_in_time AT TIME ZONE ${range.timezone})) AS peak_hour
+        FROM attendance_logs
+        WHERE gym_id = ${gymId}::uuid
+          AND check_in_time >= ${startIso}::timestamptz
+          AND check_in_time <= ${endIso}::timestamptz;
+      `);
 
-    // By Day of Week (0=Sun, 1=Mon, ..., 6=Sat)
-    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const weekdayQuery = await db.execute(sql`
-      SELECT
-        EXTRACT(DOW FROM check_in_time AT TIME ZONE ${range.timezone})::int AS dow,
-        COUNT(*) AS count
-      FROM attendance_logs
-      WHERE gym_id = ${gymId}::uuid
-        AND check_in_time >= ${startIso}::timestamptz
-        AND check_in_time <= ${endIso}::timestamptz
-      GROUP BY dow
-      ORDER BY dow;
-    `);
+      const sRow = summaryQuery.rows[0] as any || {};
+      const totalCheckIns = Number(sRow.total_checkins || 0);
+      const uniqueMembersAttended = Number(sRow.unique_members || 0);
+      const averageDailyAttendance = Number((totalCheckIns / range.daysCount).toFixed(1));
+      const peakCheckInHour = sRow.peak_hour !== null && sRow.peak_hour !== undefined ? Number(sRow.peak_hour) : null;
 
-    const byWeekday = weekdayNames.map((name, index) => {
-      const match = (weekdayQuery.rows as any[]).find((r) => r.dow === index);
-      const count = Number(match?.count || 0);
+      // By Day of Week (0=Sun, 1=Mon, ..., 6=Sat in gym-local time)
+      const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const weekdayQuery = await tx.execute(sql`
+        SELECT
+          EXTRACT(DOW FROM check_in_time AT TIME ZONE ${range.timezone})::int AS dow,
+          COUNT(*) AS count
+        FROM attendance_logs
+        WHERE gym_id = ${gymId}::uuid
+          AND check_in_time >= ${startIso}::timestamptz
+          AND check_in_time <= ${endIso}::timestamptz
+        GROUP BY dow
+        ORDER BY dow;
+      `);
+
+      const byWeekday = weekdayNames.map((name, index) => {
+        const match = (weekdayQuery.rows as any[]).find((r) => r.dow === index);
+        const count = Number(match?.count || 0);
+        return {
+          category: name,
+          count,
+          percentage: totalCheckIns > 0 ? Number(((count / totalCheckIns) * 100).toFixed(1)) : 0,
+        };
+      });
+
+      // By Entry Method
+      const methodQuery = await tx.execute(sql`
+        SELECT
+          entry_method AS category,
+          COUNT(*) AS count
+        FROM attendance_logs
+        WHERE gym_id = ${gymId}::uuid
+          AND check_in_time >= ${startIso}::timestamptz
+          AND check_in_time <= ${endIso}::timestamptz
+        GROUP BY entry_method
+        ORDER BY count DESC;
+      `);
+
+      const byEntryMethod = (methodQuery.rows as any[]).map((r) => ({
+        category: r.category || 'QR_DYNAMIC',
+        count: Number(r.count || 0),
+        percentage: totalCheckIns > 0 ? Number(((Number(r.count || 0) / totalCheckIns) * 100).toFixed(1)) : 0,
+      }));
+
+      // Daily Trend
+      const buckets = generateDateBuckets(range.startDate, range.endDate);
+      const trendQuery = await tx.execute(sql`
+        SELECT
+          TO_CHAR(check_in_time AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
+          COUNT(*) AS value
+        FROM attendance_logs
+        WHERE gym_id = ${gymId}::uuid
+          AND check_in_time >= ${startIso}::timestamptz
+          AND check_in_time <= ${endIso}::timestamptz
+        GROUP BY 1
+        ORDER BY 1;
+      `);
+      const dailyTrend = fillTrendGaps(buckets, trendQuery.rows as any[]);
+
       return {
-        category: name,
-        count,
-        percentage: totalCheckIns > 0 ? Number(((count / totalCheckIns) * 100).toFixed(1)) : 0,
+        period: {
+          from: range.startDate.toISOString(),
+          to: range.endDate.toISOString(),
+          preset: range.preset,
+          timezone: range.timezone,
+          daysCount: range.daysCount,
+        },
+        generatedAt: new Date().toISOString(),
+        summary: {
+          totalCheckIns,
+          uniqueMembersAttended,
+          averageDailyAttendance,
+          peakCheckInHour,
+        },
+        byWeekday,
+        byEntryMethod,
+        dailyTrend,
       };
     });
-
-    // By Entry Method
-    const methodQuery = await db.execute(sql`
-      SELECT
-        entry_method AS category,
-        COUNT(*) AS count
-      FROM attendance_logs
-      WHERE gym_id = ${gymId}::uuid
-        AND check_in_time >= ${startIso}::timestamptz
-        AND check_in_time <= ${endIso}::timestamptz
-      GROUP BY entry_method
-      ORDER BY count DESC;
-    `);
-
-    const byEntryMethod = (methodQuery.rows as any[]).map((r) => ({
-      category: r.category || 'QR_DYNAMIC',
-      count: Number(r.count || 0),
-      percentage: totalCheckIns > 0 ? Number(((Number(r.count || 0) / totalCheckIns) * 100).toFixed(1)) : 0,
-    }));
-
-    // Daily Trend
-    const buckets = generateDateBuckets(range.startDate, range.endDate);
-    const trendQuery = await db.execute(sql`
-      SELECT
-        TO_CHAR(check_in_time AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
-        COUNT(*) AS value
-      FROM attendance_logs
-      WHERE gym_id = ${gymId}::uuid
-        AND check_in_time >= ${startIso}::timestamptz
-        AND check_in_time <= ${endIso}::timestamptz
-      GROUP BY 1
-      ORDER BY 1;
-    `);
-    const dailyTrend = fillTrendGaps(buckets, trendQuery.rows as any[]);
-
-    return {
-      period: {
-        from: range.startDate.toISOString(),
-        to: range.endDate.toISOString(),
-        preset: range.preset,
-        timezone: range.timezone,
-        daysCount: range.daysCount,
-      },
-      generatedAt: new Date().toISOString(),
-      summary: {
-        totalCheckIns,
-        uniqueMembersAttended,
-        averageDailyAttendance,
-        peakCheckInHour,
-      },
-      byWeekday,
-      byEntryMethod,
-      dailyTrend,
-    };
   }
 
   /**
-   * 5. Authoritative Trainer & PT Analytics
+   * 5. Authoritative Trainer & PT Analytics (Transactional Snapshot)
    */
   public async getTrainerAnalytics(gymId: string, options: AnalyticsQueryOptions = {}): Promise<TrainerAnalyticsResponse> {
     const range = resolveDateRange(options.range, options.from, options.to, options.timezone);
     const startIso = range.startDate.toISOString();
     const endIso = range.endDate.toISOString();
 
-    const summaryQuery = await db.execute(sql`
-      SELECT
-        (SELECT COUNT(*) FROM trainers WHERE gym_id = ${gymId}::uuid AND is_active = true AND deleted_at IS NULL) AS active_trainers,
-        (SELECT COUNT(*) FROM trainer_assignments WHERE gym_id = ${gymId}::uuid AND status = 'ACTIVE') AS total_assignments,
-        (SELECT COUNT(*) FROM pt_packages WHERE gym_id = ${gymId}::uuid AND status = 'ACTIVE' AND remaining_sessions > 0) AS active_packages,
-        (SELECT COUNT(*) FROM pt_sessions WHERE gym_id = ${gymId}::uuid AND status = 'COMPLETED' AND session_date >= ${startIso}::timestamptz AND session_date <= ${endIso}::timestamptz) AS completed_sessions,
-        (SELECT COUNT(*) FROM pt_sessions WHERE gym_id = ${gymId}::uuid AND status = 'CANCELLED' AND session_date >= ${startIso}::timestamptz AND session_date <= ${endIso}::timestamptz) AS cancelled_sessions,
-        (SELECT COALESCE(SUM(amount::numeric), 0) FROM trainer_earnings WHERE gym_id = ${gymId}::uuid AND created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz) AS total_earnings;
-    `);
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`);
 
-    const sRow = summaryQuery.rows[0] as any || {};
-    const activeTrainersCount = Number(sRow.active_trainers || 0);
-    const totalClientAssignments = Number(sRow.total_assignments || 0);
-    const activePtPackages = Number(sRow.active_packages || 0);
-    const completedSessions = Number(sRow.completed_sessions || 0);
-    const cancelledSessions = Number(sRow.cancelled_sessions || 0);
-    const totalAccruedEarnings = Number(Number(sRow.total_earnings || 0).toFixed(2));
-    const totalSessionsScheduled = completedSessions + cancelledSessions;
-    const sessionCompletionRate = totalSessionsScheduled > 0 ? Number(((completedSessions / totalSessionsScheduled) * 100).toFixed(1)) : 100;
+      const summaryQuery = await tx.execute(sql`
+        SELECT
+          (SELECT COUNT(*) FROM trainers WHERE gym_id = ${gymId}::uuid AND is_active = true AND deleted_at IS NULL) AS active_trainers,
+          (SELECT COUNT(*) FROM trainer_assignments WHERE gym_id = ${gymId}::uuid AND status = 'ACTIVE') AS total_assignments,
+          (SELECT COUNT(*) FROM pt_packages WHERE gym_id = ${gymId}::uuid AND status = 'ACTIVE' AND remaining_sessions > 0) AS active_packages,
+          (SELECT COUNT(*) FROM pt_sessions WHERE gym_id = ${gymId}::uuid AND status = 'COMPLETED' AND session_date >= ${startIso}::timestamptz AND session_date <= ${endIso}::timestamptz) AS completed_sessions,
+          (SELECT COUNT(*) FROM pt_sessions WHERE gym_id = ${gymId}::uuid AND status = 'CANCELLED' AND session_date >= ${startIso}::timestamptz AND session_date <= ${endIso}::timestamptz) AS cancelled_sessions,
+          (SELECT COALESCE(SUM(amount::numeric), 0) FROM trainer_earnings WHERE gym_id = ${gymId}::uuid AND created_at >= ${startIso}::timestamptz AND created_at <= ${endIso}::timestamptz AND status != 'VOIDED') AS total_earnings;
+      `);
 
-    // Per Trainer Performance
-    const performanceQuery = await db.execute(sql`
-      SELECT
-        t.id AS trainer_id,
-        t.full_name,
-        t.specialization,
-        COUNT(DISTINCT a.member_id) FILTER (WHERE a.status = 'ACTIVE') AS active_clients,
-        COUNT(DISTINCT s.id) FILTER (WHERE s.status = 'COMPLETED' AND s.session_date >= ${startIso}::timestamptz AND s.session_date <= ${endIso}::timestamptz) AS completed_sessions,
-        COUNT(DISTINCT s.id) FILTER (WHERE s.status = 'CANCELLED' AND s.session_date >= ${startIso}::timestamptz AND s.session_date <= ${endIso}::timestamptz) AS cancelled_sessions,
-        COALESCE(SUM(e.amount::numeric) FILTER (WHERE e.created_at >= ${startIso}::timestamptz AND e.created_at <= ${endIso}::timestamptz), 0) AS total_earnings
-      FROM trainers t
-      LEFT JOIN trainer_assignments a ON a.trainer_id = t.id AND a.gym_id = ${gymId}::uuid
-      LEFT JOIN pt_sessions s ON s.trainer_id = t.id AND s.gym_id = ${gymId}::uuid
-      LEFT JOIN trainer_earnings e ON e.trainer_id = t.id AND e.gym_id = ${gymId}::uuid
-      WHERE t.gym_id = ${gymId}::uuid
-        AND t.deleted_at IS NULL
-      GROUP BY t.id, t.full_name, t.specialization
-      ORDER BY completed_sessions DESC;
-    `);
+      const sRow = summaryQuery.rows[0] as any || {};
+      const activeTrainersCount = Number(sRow.active_trainers || 0);
+      const totalClientAssignments = Number(sRow.total_assignments || 0);
+      const activePtPackages = Number(sRow.active_packages || 0);
+      const completedSessions = Number(sRow.completed_sessions || 0);
+      const cancelledSessions = Number(sRow.cancelled_sessions || 0);
+      const totalAccruedEarnings = Number(Number(sRow.total_earnings || 0).toFixed(2));
+      const totalSessionsScheduled = completedSessions + cancelledSessions;
+      const sessionCompletionRate = totalSessionsScheduled > 0 ? Number(((completedSessions / totalSessionsScheduled) * 100).toFixed(1)) : 0;
 
-    const trainerPerformance = (performanceQuery.rows as any[]).map((r) => ({
-      trainerId: r.trainer_id,
-      fullName: r.full_name,
-      specialization: r.specialization || null,
-      activeClients: Number(r.active_clients || 0),
-      completedSessions: Number(r.completed_sessions || 0),
-      cancelledSessions: Number(r.cancelled_sessions || 0),
-      totalEarnings: Number(Number(r.total_earnings || 0).toFixed(2)),
-    }));
+      // Per Trainer Performance (Strictly compound tenant filtered on all joins)
+      const performanceQuery = await tx.execute(sql`
+        SELECT
+          t.id AS trainer_id,
+          t.full_name,
+          t.specialization,
+          COUNT(DISTINCT a.member_id) FILTER (WHERE a.status = 'ACTIVE') AS active_clients,
+          COUNT(DISTINCT s.id) FILTER (WHERE s.status = 'COMPLETED' AND s.session_date >= ${startIso}::timestamptz AND s.session_date <= ${endIso}::timestamptz) AS completed_sessions,
+          COUNT(DISTINCT s.id) FILTER (WHERE s.status = 'CANCELLED' AND s.session_date >= ${startIso}::timestamptz AND s.session_date <= ${endIso}::timestamptz) AS cancelled_sessions,
+          COALESCE(SUM(e.amount::numeric) FILTER (WHERE e.created_at >= ${startIso}::timestamptz AND e.created_at <= ${endIso}::timestamptz AND e.status != 'VOIDED'), 0) AS total_earnings
+        FROM trainers t
+        LEFT JOIN trainer_assignments a ON a.trainer_id = t.id AND a.gym_id = ${gymId}::uuid
+        LEFT JOIN pt_sessions s ON s.trainer_id = t.id AND s.gym_id = ${gymId}::uuid
+        LEFT JOIN trainer_earnings e ON e.trainer_id = t.id AND e.gym_id = ${gymId}::uuid
+        WHERE t.gym_id = ${gymId}::uuid
+          AND t.deleted_at IS NULL
+        GROUP BY t.id, t.full_name, t.specialization
+        ORDER BY completed_sessions DESC;
+      `);
 
-    // Daily Sessions Trend
-    const buckets = generateDateBuckets(range.startDate, range.endDate);
-    const trendQuery = await db.execute(sql`
-      SELECT
-        TO_CHAR(session_date AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
-        COUNT(*) AS value
-      FROM pt_sessions
-      WHERE gym_id = ${gymId}::uuid
-        AND status = 'COMPLETED'
-        AND session_date >= ${startIso}::timestamptz
-        AND session_date <= ${endIso}::timestamptz
-      GROUP BY 1
-      ORDER BY 1;
-    `);
-    const dailySessionsTrend = fillTrendGaps(buckets, trendQuery.rows as any[]);
+      const trainerPerformance = (performanceQuery.rows as any[]).map((r) => ({
+        trainerId: r.trainer_id,
+        fullName: r.full_name,
+        specialization: r.specialization || null,
+        activeClients: Number(r.active_clients || 0),
+        completedSessions: Number(r.completed_sessions || 0),
+        cancelledSessions: Number(r.cancelled_sessions || 0),
+        totalEarnings: Number(Number(r.total_earnings || 0).toFixed(2)),
+      }));
 
-    return {
-      period: {
-        from: range.startDate.toISOString(),
-        to: range.endDate.toISOString(),
-        preset: range.preset,
-        timezone: range.timezone,
-        daysCount: range.daysCount,
-      },
-      generatedAt: new Date().toISOString(),
-      summary: {
-        activeTrainersCount,
-        totalClientAssignments,
-        activePtPackages,
-        completedSessions,
-        cancelledSessions,
-        totalAccruedEarnings,
-        sessionCompletionRate,
-      },
-      trainerPerformance,
-      dailySessionsTrend,
-    };
+      // Daily Sessions Trend
+      const buckets = generateDateBuckets(range.startDate, range.endDate);
+      const trendQuery = await tx.execute(sql`
+        SELECT
+          TO_CHAR(session_date AT TIME ZONE ${range.timezone}, 'YYYY-MM-DD') AS date,
+          COUNT(*) AS value
+        FROM pt_sessions
+        WHERE gym_id = ${gymId}::uuid
+          AND status = 'COMPLETED'
+          AND session_date >= ${startIso}::timestamptz
+          AND session_date <= ${endIso}::timestamptz
+        GROUP BY 1
+        ORDER BY 1;
+      `);
+      const dailySessionsTrend = fillTrendGaps(buckets, trendQuery.rows as any[]);
+
+      return {
+        period: {
+          from: range.startDate.toISOString(),
+          to: range.endDate.toISOString(),
+          preset: range.preset,
+          timezone: range.timezone,
+          daysCount: range.daysCount,
+        },
+        generatedAt: new Date().toISOString(),
+        summary: {
+          activeTrainersCount,
+          totalClientAssignments,
+          activePtPackages,
+          completedSessions,
+          cancelledSessions,
+          totalAccruedEarnings,
+          sessionCompletionRate,
+        },
+        trainerPerformance,
+        dailySessionsTrend,
+      };
+    });
   }
 
   /**
-   * 6. Secure Bounded CSV Report Export (With Spreadsheet Injection Defense)
+   * 6. Secure Bounded CSV Report Export (With Spreadsheet Injection Defense & Numeric Preservation)
    */
   public async exportReport(
     gymId: string,
@@ -664,7 +709,7 @@ export class AnalyticsService {
             m.full_name,
             a.entry_method
           FROM attendance_logs a
-          JOIN gym_members m ON a.member_id = m.id
+          JOIN gym_members m ON a.member_id = m.id AND m.gym_id = ${gymId}::uuid
           WHERE a.gym_id = ${gymId}::uuid
             AND a.check_in_time >= ${startIso}::timestamptz
             AND a.check_in_time <= ${endIso}::timestamptz
@@ -685,7 +730,7 @@ export class AnalyticsService {
             p.status,
             p.type
           FROM payments p
-          JOIN gym_members m ON p.member_id = m.id
+          JOIN gym_members m ON p.member_id = m.id AND m.gym_id = ${gymId}::uuid
           WHERE p.gym_id = ${gymId}::uuid
             AND p.paid_at >= ${startIso}::timestamptz
             AND p.paid_at <= ${endIso}::timestamptz
@@ -705,8 +750,8 @@ export class AnalyticsService {
             ms.end_date,
             ms.price_at_purchase
           FROM member_memberships ms
-          JOIN gym_members m ON ms.member_id = m.id
-          JOIN membership_plans p ON ms.plan_id = p.id
+          JOIN gym_members m ON ms.member_id = m.id AND m.gym_id = ${gymId}::uuid
+          JOIN membership_plans p ON ms.plan_id = p.id AND p.gym_id = ${gymId}::uuid
           WHERE ms.gym_id = ${gymId}::uuid
           ORDER BY ms.created_at DESC
           LIMIT 5000;
@@ -736,7 +781,7 @@ export class AnalyticsService {
         throw AppError.validation(`Unsupported export report type: ${reportType}`);
     }
 
-    // Format to CSV with Spreadsheet Formula Injection Defense
+    // Format to CSV with Spreadsheet Formula Injection Defense & Numeric Preservation
     const csvContent = this.formatCsvWithSafety(rows);
 
     // Audit Log the Export Event
@@ -762,9 +807,9 @@ export class AnalyticsService {
   }
 
   /**
-   * Escape and format JSON rows into standard CSV with Formula Injection Prevention
+   * Escape and format JSON rows into standard CSV with Formula Injection Prevention & Numeric Preservation
    */
-  private formatCsvWithSafety(rows: Array<Record<string, any>>): string {
+  public formatCsvWithSafety(rows: Array<Record<string, any>>): string {
     if (rows.length === 0) {
       return 'No data available for the selected criteria\n';
     }
@@ -785,8 +830,16 @@ export class AnalyticsService {
             val = String(val);
           }
 
-          // Formula injection defense: prefix dangerous leading characters with single quote
-          if (/^[=+\-@\t\r]/.test(val)) {
+          // Check if value is a pure number (integers, negative amounts like -250.00, floats)
+          const trimmed = val.trim();
+          const isPureNumber =
+            trimmed.length > 0 &&
+            !isNaN(Number(trimmed)) &&
+            !trimmed.includes(' ') &&
+            !/^[=+\-@]{2,}/.test(trimmed);
+
+          // Formula injection defense: prefix dangerous leading characters with single quote IF NOT pure number
+          if (!isPureNumber && /^\s*[=+\-@\t\r]/.test(val)) {
             val = `'${val}`;
           }
 
