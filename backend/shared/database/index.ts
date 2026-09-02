@@ -13,13 +13,16 @@ let dbInstance: NodePgDatabase<typeof schema> | null = null;
 
 export function getDatabasePool(): Pool {
   if (!poolInstance) {
+    const isProductionEnv = config.NODE_ENV === 'production';
     const poolConfig: PoolConfig = {
       connectionString: config.DATABASE_URL,
       min: config.DATABASE_POOL_MIN,
       max: config.DATABASE_POOL_MAX,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
-      ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      statement_timeout: 10000, // 10-second statement timeout prevents runaway queries
+      query_timeout: 10000,
+      ssl: isProductionEnv ? { rejectUnauthorized: false } : false,
     };
 
     poolInstance = new Pool(poolConfig);

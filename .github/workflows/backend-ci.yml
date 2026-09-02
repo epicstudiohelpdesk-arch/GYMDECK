@@ -15,8 +15,23 @@ on:
 
 jobs:
   backend-verification:
-    name: Backend Lint, TypeCheck, Security & Integration
+    name: Backend TypeCheck, Security, Full Test Matrix & Container Build
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gymdeck_user
+          POSTGRES_PASSWORD: gymdeck_password
+          POSTGRES_DB: gymdeck_cloud
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout Code Repository
@@ -31,23 +46,28 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Validate TypeScript Compilation
-        run: ./node_modules/.bin/esbuild backend/**/*.ts --outdir=/tmp/backend-build --format=esm
+      - name: Validate Backend TypeScript Compilation (No Emit)
+        working-directory: backend
+        run: npm run typecheck
 
-      - name: Run Backend Foundation & Auth Test Suites
+      - name: Forensic Secret Leakage Audit
         run: |
-          ./node_modules/.bin/esbuild backend/test/health.test.ts --bundle --outfile=/tmp/test-health.js --platform=node --format=cjs && node /tmp/test-health.js
-          ./node_modules/.bin/esbuild backend/test/config.test.ts --bundle --outfile=/tmp/test-config.js --platform=node --format=cjs && node /tmp/test-config.js
-          ./node_modules/.bin/esbuild backend/test/auth.test.ts --bundle --outfile=/tmp/test-auth.js --platform=node --format=cjs && node /tmp/test-auth.js
-          ./node_modules/.bin/esbuild backend/test/member.test.ts --bundle --outfile=/tmp/test-member.js --platform=node --format=cjs && node /tmp/test-member.js
-          ./node_modules/.bin/esbuild backend/test/advancedDomains.test.ts --bundle --outfile=/tmp/test-adv.js --platform=node --format=cjs && node /tmp/test-adv.js
+          ! grep -rn "DEV_DB_KEY" backend/shared/config/
+          ! grep -rn "AWS_SECRET_ACCESS_KEY" backend/
+          ! grep -rn "PRIVATE_KEY_MATERIAL" backend/
 
-      - name: Run E2E Integration & QA Security Matrix
+      - name: Run Full Backend Test Regression Matrix
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://gymdeck_user:gymdeck_password@localhost:5432/gymdeck_cloud?schema=public
+          JWT_SECRET: gymdeck_default_dev_jwt_secret_must_be_overridden_in_prod
         run: |
-          ./node_modules/.bin/esbuild backend/test/integration.test.ts --bundle --outfile=/tmp/test-integration.js --platform=node --format=cjs && node /tmp/test-integration.js
-          ./node_modules/.bin/esbuild backend/test/qaSecurityAudit.test.ts --bundle --outfile=/tmp/test-qa.js --platform=node --format=cjs && node /tmp/test-qa.js
-          ./node_modules/.bin/esbuild backend/test/phase7DeviceValidation.test.ts --bundle --outfile=/tmp/test-p7.js --platform=node --format=cjs && node /tmp/test-p7.js
+          for f in test/*.test.ts; do
+            echo "Running $f..."
+            npx tsx "$f" || exit 1
+          done
 
-      - name: Verify Multi-Stage Dockerfile
+      - name: Verify Production Multi-Stage Dockerfile
         run: |
           docker build -t gymdeck-backend:ci -f infrastructure/docker/Dockerfile.backend backend/

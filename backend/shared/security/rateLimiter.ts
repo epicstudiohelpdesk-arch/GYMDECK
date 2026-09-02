@@ -115,3 +115,35 @@ export const authRateLimiter = {
     errorMessage: 'Too many token refresh requests. Please re-authenticate.',
   }),
 };
+
+// Rate limiters for Desktop Sync endpoints (accommodates high-throughput offline batch drainage)
+export const syncRateLimiter = {
+  push: createRateLimiter({
+    windowSeconds: 60, // 1 min
+    maxRequests: 120, // 2 req/sec per gym
+    keyGenerator: (req) => `sync_push_${req.params.gymId || req.body?.gymId || req.ip}`,
+    errorMessage: 'Sync push throughput limit exceeded. Please back off and retry.',
+  }),
+  pull: createRateLimiter({
+    windowSeconds: 60, // 1 min
+    maxRequests: 120, // 2 req/sec per gym
+    keyGenerator: (req) => `sync_pull_${req.params.gymId || req.query.gymId || req.ip}`,
+    errorMessage: 'Sync pull throughput limit exceeded. Please back off and retry.',
+  }),
+};
+
+// Rate limiters for resource-heavy operations
+export const resourceRateLimiter = {
+  analyticsExport: createRateLimiter({
+    windowSeconds: 60, // 1 min
+    maxRequests: 10,
+    keyGenerator: (req) => `analytics_export_${req.params.gymId || req.ip}`,
+    errorMessage: 'Export rate limit exceeded. Please wait a minute before requesting another report.',
+  }),
+  webhookIngress: createRateLimiter({
+    windowSeconds: 60, // 1 min
+    maxRequests: 300, // 5 req/sec from external providers
+    keyGenerator: (req) => `webhook_${req.ip}`,
+    errorMessage: 'Webhook rate limit exceeded.',
+  }),
+};

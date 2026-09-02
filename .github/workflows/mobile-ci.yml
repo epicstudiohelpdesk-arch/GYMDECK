@@ -1,14 +1,16 @@
-name: GymDeck Member Mobile CI Pipeline
+name: GymDeck Mobile CI Pipeline (Owner & Member)
 
 on:
   push:
     branches: [main, develop]
     paths:
+      - 'apps/owner-mobile/**'
       - 'apps/member-mobile/**'
       - '.github/workflows/mobile-ci.yml'
   pull_request:
     branches: [main]
     paths:
+      - 'apps/owner-mobile/**'
       - 'apps/member-mobile/**'
 
 jobs:
@@ -29,12 +31,18 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Validate Member Mobile TypeScript Compilation
-        run: ./node_modules/.bin/esbuild apps/member-mobile/src/**/*.ts apps/member-mobile/app/**/*.tsx --outdir=/tmp/mobile-build --format=esm --jsx=automatic
+      - name: Validate Owner Mobile TypeScript Compilation (No Emit)
+        working-directory: apps/owner-mobile
+        run: npm run typecheck
+
+      - name: Validate Member Mobile TypeScript Compilation (No Emit)
+        working-directory: apps/member-mobile
+        run: npm run typecheck
 
       - name: Forensic Secret Leakage Audit
         run: |
-          ! grep -rn "RESEND_API_KEY" apps/member-mobile/
-          ! grep -rn "DATABASE_URL" apps/member-mobile/
-          ! grep -rn "JWT_PRIVATE_KEY" apps/member-mobile/
-          ! grep -rn "AWS_SECRET_ACCESS_KEY" apps/member-mobile/
+          ! grep -rn "RESEND_API_KEY" apps/owner-mobile/ apps/member-mobile/
+          ! grep -rn "DATABASE_URL" apps/owner-mobile/ apps/member-mobile/
+          ! grep -rn "JWT_SECRET" apps/owner-mobile/ apps/member-mobile/
+          ! grep -rn "AWS_SECRET_ACCESS_KEY" apps/owner-mobile/ apps/member-mobile/
+          ! grep -rn "WHATSAPP_ACCESS_TOKEN" apps/owner-mobile/ apps/member-mobile/
