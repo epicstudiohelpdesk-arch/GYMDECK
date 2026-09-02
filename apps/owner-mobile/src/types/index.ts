@@ -46,6 +46,66 @@ export interface OwnerDashboardData {
   metrics: DashboardMetrics;
 }
 
+export interface TrendDataPoint {
+  date: string;
+  value: number;
+  label?: string;
+}
+
+export interface AnalyticsOverviewData {
+  period: {
+    from: string;
+    to: string;
+    preset: string;
+    timezone: string;
+    daysCount: number;
+  };
+  generatedAt: string;
+  gym: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  metrics: {
+    members: {
+      total: number;
+      active: number;
+      frozen: number;
+      expired: number;
+      newInPeriod: number;
+    };
+    financial: {
+      grossPaid: number;
+      refunds: number;
+      netPaid: number;
+      transactionCount: number;
+      averageTransaction: number;
+    };
+    attendance: {
+      totalCheckins: number;
+      uniqueAttendees: number;
+      dailyAverage: number;
+      todayCheckins: number;
+    };
+    memberships: {
+      activeSubscriptions: number;
+      expiringSoon: number;
+      renewalsInPeriod: number;
+    };
+    trainers: {
+      activeTrainers: number;
+      activePtPackages: number;
+      completedSessions: number;
+      accruedEarnings: number;
+    };
+  };
+  trends: {
+    revenue: TrendDataPoint[];
+    attendance: TrendDataPoint[];
+    memberRegistrations: TrendDataPoint[];
+  };
+}
+
 export interface GymMemberSummary {
   id: string;
   memberCode: string;

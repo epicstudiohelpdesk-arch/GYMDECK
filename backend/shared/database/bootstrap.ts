@@ -547,6 +547,12 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_events_dedup ON provider_webhook_events(provider, provider_event_id);
     CREATE INDEX IF NOT EXISTS idx_webhook_events_provider_msg ON provider_webhook_events(provider_message_id);
+
+    -- Analytics & Reporting Composite Performance Indexes
+    CREATE INDEX IF NOT EXISTS idx_payments_gym_status_date ON payments(gym_id, status, paid_at);
+    CREATE INDEX IF NOT EXISTS idx_member_memberships_gym_status_end ON member_memberships(gym_id, status, end_date);
+    CREATE INDEX IF NOT EXISTS idx_pt_sessions_gym_status_date ON pt_sessions(gym_id, status, session_date);
+    CREATE INDEX IF NOT EXISTS idx_trainer_earnings_gym_date ON trainer_earnings(gym_id, created_at);
   `;
 
   await pool.query(ddl);

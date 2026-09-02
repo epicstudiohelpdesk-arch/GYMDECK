@@ -10,6 +10,7 @@ import { ownerAttendanceService } from '../../../services/owner/ownerAttendanceS
 import { ownerMembershipService } from '../../../services/owner/ownerMembershipService';
 import { ownerTrainerService } from '../../../services/owner/ownerTrainerService';
 import { notificationService } from '../../../services/notifications/notificationService';
+import analyticsRouter from './analytics';
 import { requireAuth } from '../middleware/authMiddleware';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware';
 import { validateQuery, validateBody } from '../../../shared/validation';
@@ -20,6 +21,9 @@ const router: Router = Router();
 // All owner routes require authenticated owner/staff token
 router.use(requireAuth);
 router.use(requireRole(['OWNER', 'MANAGER', 'STAFF', 'ADMIN', 'RECEPTIONIST', 'TRAINER']));
+
+// Sub-router for analytics & reporting (/v1/owner/analytics)
+router.use('/analytics', analyticsRouter);
 
 // ==============================================================================
 // Validation Schemas
