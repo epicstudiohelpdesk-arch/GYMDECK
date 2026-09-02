@@ -1,5 +1,5 @@
 /**
- * GymDeck Cloud Backend - Notification Core Domain Service
+ * GymDeck Cloud Backend - Notification Core Domain Service (Hardened)
  */
 
 import { eq, and, desc, sql } from 'drizzle-orm';
@@ -7,6 +7,7 @@ import { db } from '../../shared/database';
 import {
   notifications,
   notificationPreferences,
+  notificationDeliveries,
   devicePushTokens,
   auditLogs,
 } from '../../shared/database/schema';
@@ -68,6 +69,7 @@ export class NotificationService {
       .where(
         and(
           eq(notifications.gymId, gymId),
+          eq(notifications.recipientType, recipientType),
           eq(notifications.recipientId, recipientId),
           eq(notifications.isRead, false),
           eq(notifications.isArchived, false)
@@ -114,19 +116,24 @@ export class NotificationService {
    */
   public async getUnreadCount(
     gymId: string,
-    recipientId: string
+    recipientId: string,
+    recipientType?: RecipientType
   ): Promise<{ unreadCount: number }> {
+    const conditions = [
+      eq(notifications.gymId, gymId),
+      eq(notifications.recipientId, recipientId),
+      eq(notifications.isRead, false),
+      eq(notifications.isArchived, false),
+    ];
+
+    if (recipientType) {
+      conditions.push(eq(notifications.recipientType, recipientType));
+    }
+
     const [result] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(notifications)
-      .where(
-        and(
-          eq(notifications.gymId, gymId),
-          eq(notifications.recipientId, recipientId),
-          eq(notifications.isRead, false),
-          eq(notifications.isArchived, false)
-        )
-      );
+      .where(and(...conditions));
 
     return { unreadCount: result?.count ?? 0 };
   }
@@ -137,19 +144,24 @@ export class NotificationService {
   public async markAsRead(
     gymId: string,
     recipientId: string,
-    notificationId: string
+    notificationId: string,
+    recipientType?: RecipientType
   ): Promise<{ success: boolean; id: string; readAt: string }> {
+    const conditions = [
+      eq(notifications.id, notificationId),
+      eq(notifications.gymId, gymId),
+      eq(notifications.recipientId, recipientId),
+    ];
+
+    if (recipientType) {
+      conditions.push(eq(notifications.recipientType, recipientType));
+    }
+
     const existing = (
       await db
         .select()
         .from(notifications)
-        .where(
-          and(
-            eq(notifications.id, notificationId),
-            eq(notifications.gymId, gymId),
-            eq(notifications.recipientId, recipientId)
-          )
-        )
+        .where(and(...conditions))
         .limit(1)
     )[0];
 
@@ -186,22 +198,27 @@ export class NotificationService {
    */
   public async markAllAsRead(
     gymId: string,
-    recipientId: string
+    recipientId: string,
+    recipientType?: RecipientType
   ): Promise<{ success: boolean; count: number }> {
     const now = new Date();
+    const conditions = [
+      eq(notifications.gymId, gymId),
+      eq(notifications.recipientId, recipientId),
+      eq(notifications.isRead, false),
+    ];
+
+    if (recipientType) {
+      conditions.push(eq(notifications.recipientType, recipientType));
+    }
+
     const updated = await db
       .update(notifications)
       .set({
         isRead: true,
         readAt: now,
       })
-      .where(
-        and(
-          eq(notifications.gymId, gymId),
-          eq(notifications.recipientId, recipientId),
-          eq(notifications.isRead, false)
-        )
-      )
+      .where(and(...conditions))
       .returning({ id: notifications.id });
 
     return {
@@ -331,6 +348,7 @@ export class NotificationService {
         .where(
           and(
             eq(devicePushTokens.gymId, gymId),
+            eq(devicePushTokens.recipientType, recipientType),
             eq(devicePushTokens.recipientId, recipientId),
             eq(devicePushTokens.pushToken, cleanToken)
           )
@@ -370,6 +388,85 @@ export class NotificationService {
       .returning();
 
     return { success: true, tokenId: created!.id };
+  }
+
+  /**
+   * 8. Claim Pending Deliveries (Queue Worker Foundation for Phase 12B)
+   */
+  public async claimPendingDeliveries(
+    gymId?: string,
+    channel?: string,
+    batchSize: number = 20,
+    leaseTimeoutMinutes: number = 5
+  ): Promise<any[]> {
+    const claimQuery = sql`
+      UPDATE notification_deliveries
+      SET status = 'PROCESSING',
+          processing_started_at = NOW(),
+          processing_lease_expires_at = NOW() + (${sql.raw(`${leaseTimeoutMinutes}`)} || ' minutes')::INTERVAL,
+          attempt_count = attempt_count + 1
+      WHERE id IN (
+        SELECT id
+        FROM notification_deliveries
+        WHERE (
+          status = 'PENDING'
+          OR (status = 'PROCESSING' AND processing_lease_expires_at < NOW())
+        )
+        ${gymId ? sql`AND gym_id = ${gymId}::uuid` : sql``}
+        ${channel ? sql`AND channel = ${channel}` : sql``}
+        ORDER BY created_at ASC
+        FOR UPDATE SKIP LOCKED
+        LIMIT ${batchSize}
+      )
+      RETURNING *;
+    `;
+
+    const result = await db.execute(claimQuery);
+    return result.rows || [];
+  }
+
+  /**
+   * 9. Update Delivery Status (State Machine Enforcement)
+   */
+  public async recordDeliveryResult(
+    deliveryId: string,
+    status: 'DELIVERED' | 'FAILED' | 'RETRYING',
+    options?: {
+      providerMessageId?: string;
+      failureReason?: string;
+      nextAttemptAt?: Date;
+    }
+  ): Promise<void> {
+    const existing = (
+      await db
+        .select()
+        .from(notificationDeliveries)
+        .where(eq(notificationDeliveries.id, deliveryId))
+        .limit(1)
+    )[0];
+
+    if (!existing) {
+      throw AppError.notFound('Delivery record not found.');
+    }
+
+    // Guard: DELIVERED is terminal
+    if (existing.status === 'DELIVERED') {
+      throw AppError.conflict('Cannot alter delivery state: Delivery is already terminal DELIVERED.');
+    }
+
+    const now = new Date();
+    await db
+      .update(notificationDeliveries)
+      .set({
+        status,
+        deliveredAt: status === 'DELIVERED' ? now : existing.deliveredAt,
+        lastAttemptAt: now,
+        failureReason: options?.failureReason || null,
+        providerMessageId: options?.providerMessageId || existing.providerMessageId,
+        nextAttemptAt: options?.nextAttemptAt || null,
+        updatedAt: now,
+      })
+      .where(eq(notificationDeliveries.id, deliveryId));
   }
 }
 

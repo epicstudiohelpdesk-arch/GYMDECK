@@ -14,7 +14,11 @@ export const domainEvents = pgTable(
     aggregateId: varchar('aggregate_id', { length: 128 }).notNull(),
     payload: text('payload').notNull(), // JSON string
     actorUserId: uuid('actor_user_id'),
-    status: varchar('status', { length: 32 }).notNull().default('PENDING'), // PENDING, PROCESSED, FAILED
+    status: varchar('status', { length: 32 }).notNull().default('PENDING'), // PENDING, PROCESSING, PROCESSED, FAILED
+    processingStartedAt: timestamp('processing_started_at', { withTimezone: true }),
+    processingLeaseExpiresAt: timestamp('processing_lease_expires_at', { withTimezone: true }),
+    retryCount: integer('retry_count').notNull().default(0),
+    lastError: text('last_error'),
     processedAt: timestamp('processed_at', { withTimezone: true }),
     occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -22,6 +26,10 @@ export const domainEvents = pgTable(
   (table) => ({
     gymStatusIdx: index('idx_domain_events_gym_status').on(table.gymId, table.status, table.occurredAt),
     eventIdIdx: uniqueIndex('idx_domain_events_event_id').on(table.eventId),
+    leaseRecoveryIdx: index('idx_domain_events_lease_recovery').on(
+      table.status,
+      table.processingLeaseExpiresAt
+    ),
   })
 );
 
@@ -61,7 +69,12 @@ export const notifications = pgTable(
       table.recipientId,
       table.createdAt
     ),
-    dedupEventIdx: index('idx_notifications_dedup_event').on(table.gymId, table.eventId, table.recipientId),
+    dedupEventRecipientIdx: uniqueIndex('idx_notifications_dedup_recipient_event').on(
+      table.gymId,
+      table.eventId,
+      table.recipientType,
+      table.recipientId
+    ),
   })
 );
 
@@ -104,6 +117,8 @@ export const notificationDeliveries = pgTable(
     status: varchar('status', { length: 32 }).notNull().default('PENDING'), // PENDING, PROCESSING, DELIVERED, FAILED, RETRYING
     attemptCount: integer('attempt_count').notNull().default(0),
     maxAttempts: integer('max_attempts').notNull().default(3),
+    processingStartedAt: timestamp('processing_started_at', { withTimezone: true }),
+    processingLeaseExpiresAt: timestamp('processing_lease_expires_at', { withTimezone: true }),
     nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }),
     lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
@@ -121,6 +136,14 @@ export const notificationDeliveries = pgTable(
       table.nextAttemptAt
     ),
     notifDeliveryIdx: index('idx_notif_deliveries_notif').on(table.notificationId),
+    uniqueDeliveryChannelIdx: uniqueIndex('idx_notif_deliveries_unique_channel').on(
+      table.notificationId,
+      table.channel
+    ),
+    deliveryLeaseRecoveryIdx: index('idx_notif_deliveries_lease_recovery').on(
+      table.status,
+      table.processingLeaseExpiresAt
+    ),
   })
 );
 
@@ -145,6 +168,7 @@ export const devicePushTokens = pgTable(
   (table) => ({
     pushTokenRecipientIdx: uniqueIndex('idx_push_tokens_unique').on(
       table.gymId,
+      table.recipientType,
       table.recipientId,
       table.pushToken
     ),

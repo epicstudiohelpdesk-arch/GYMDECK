@@ -397,7 +397,7 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_sync_cursors_gym_device ON sync_device_cursors(gym_id, device_id);
 
-    -- Phase 12A: Notification Core & Communication Hub
+    -- Phase 12A: Notification Core & Communication Hub (Hardened)
     CREATE TABLE IF NOT EXISTS domain_events (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
@@ -408,13 +408,23 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       payload TEXT NOT NULL,
       actor_user_id UUID,
       status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+      processing_started_at TIMESTAMPTZ,
+      processing_lease_expires_at TIMESTAMPTZ,
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
       processed_at TIMESTAMPTZ,
       occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE domain_events ADD COLUMN IF NOT EXISTS processing_started_at TIMESTAMPTZ;
+    ALTER TABLE domain_events ADD COLUMN IF NOT EXISTS processing_lease_expires_at TIMESTAMPTZ;
+    ALTER TABLE domain_events ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE domain_events ADD COLUMN IF NOT EXISTS last_error TEXT;
+
     CREATE INDEX IF NOT EXISTS idx_domain_events_gym_status ON domain_events(gym_id, status, occurred_at);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_domain_events_event_id ON domain_events(event_id);
+    CREATE INDEX IF NOT EXISTS idx_domain_events_lease_recovery ON domain_events(status, processing_lease_expires_at);
 
     CREATE TABLE IF NOT EXISTS notifications (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -451,7 +461,9 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_notifications_gym_recipient_unread ON notifications(gym_id, recipient_id, is_read, created_at);
     CREATE INDEX IF NOT EXISTS idx_notifications_gym_recipient_type ON notifications(gym_id, recipient_type, recipient_id, created_at);
-    CREATE INDEX IF NOT EXISTS idx_notifications_dedup_event ON notifications(gym_id, event_id, recipient_id);
+    DROP INDEX IF EXISTS idx_notifications_dedup_event;
+    DELETE FROM notifications a USING notifications b WHERE a.created_at < b.created_at AND a.gym_id = b.gym_id AND a.event_id IS NOT NULL AND a.event_id = b.event_id AND a.recipient_type = b.recipient_type AND a.recipient_id = b.recipient_id;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_dedup_recipient_event ON notifications(gym_id, event_id, recipient_type, recipient_id) WHERE event_id IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS notification_preferences (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -474,6 +486,8 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
       attempt_count INTEGER NOT NULL DEFAULT 0,
       max_attempts INTEGER NOT NULL DEFAULT 3,
+      processing_started_at TIMESTAMPTZ,
+      processing_lease_expires_at TIMESTAMPTZ,
       next_attempt_at TIMESTAMPTZ,
       last_attempt_at TIMESTAMPTZ,
       delivered_at TIMESTAMPTZ,
@@ -484,8 +498,14 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS processing_started_at TIMESTAMPTZ;
+    ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS processing_lease_expires_at TIMESTAMPTZ;
+
     CREATE INDEX IF NOT EXISTS idx_notif_deliveries_queue ON notification_deliveries(gym_id, channel, status, next_attempt_at);
     CREATE INDEX IF NOT EXISTS idx_notif_deliveries_notif ON notification_deliveries(notification_id);
+    DELETE FROM notification_deliveries a USING notification_deliveries b WHERE a.created_at < b.created_at AND a.notification_id = b.notification_id AND a.channel = b.channel;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_notif_deliveries_unique_channel ON notification_deliveries(notification_id, channel);
+    CREATE INDEX IF NOT EXISTS idx_notif_deliveries_lease_recovery ON notification_deliveries(status, processing_lease_expires_at);
 
     CREATE TABLE IF NOT EXISTS device_push_tokens (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -502,7 +522,9 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_push_tokens_unique ON device_push_tokens(gym_id, recipient_id, push_token);
+    DROP INDEX IF EXISTS idx_push_tokens_unique;
+    DELETE FROM device_push_tokens a USING device_push_tokens b WHERE a.created_at < b.created_at AND a.gym_id = b.gym_id AND a.recipient_type = b.recipient_type AND a.recipient_id = b.recipient_id AND a.push_token = b.push_token;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_push_tokens_unique ON device_push_tokens(gym_id, recipient_type, recipient_id, push_token);
     CREATE INDEX IF NOT EXISTS idx_push_tokens_recipient ON device_push_tokens(gym_id, recipient_type, recipient_id, is_active);
   `;
 

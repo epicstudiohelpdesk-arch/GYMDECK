@@ -13,6 +13,7 @@ import {
   syncChangeLog,
   syncIdempotencyLog,
 } from '../../shared/database/schema';
+import { domainEventBus } from '../notifications/domainEventBus';
 import { AppError } from '../../shared/errors';
 
 export interface FreezeMembershipDto {
@@ -334,6 +335,21 @@ export class OwnerMembershipService {
         responseSummary: 'Mobile-originated membership freeze',
       });
 
+      // Phase 12A: Atomically emit domain event
+      await domainEventBus.publishDomainEvent(tx, {
+        gymId,
+        eventType: 'membership.frozen',
+        aggregateType: 'member_membership',
+        aggregateId: membershipId,
+        payload: {
+          memberId,
+          reason: dto.reason.trim(),
+          frozenDaysRemaining,
+        },
+        actorUserId,
+        occurredAt: now,
+      });
+
       return {
         membership: updatedMembership,
         frozenDaysRemaining,
@@ -451,6 +467,21 @@ export class OwnerMembershipService {
         serverSequence: change!.serverSequence,
         status: 'APPLIED',
         responseSummary: 'Mobile-originated membership unfreeze',
+      });
+
+      // Phase 12A: Atomically emit domain event
+      await domainEventBus.publishDomainEvent(tx, {
+        gymId,
+        eventType: 'membership.unfrozen',
+        aggregateType: 'member_membership',
+        aggregateId: membershipId,
+        payload: {
+          memberId,
+          newEndDate: newEndDate.toISOString(),
+          restoredDays: daysToRestore,
+        },
+        actorUserId,
+        occurredAt: now,
       });
 
       return {

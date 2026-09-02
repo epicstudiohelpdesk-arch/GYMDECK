@@ -1,9 +1,9 @@
 /**
- * GymDeck Notification Core - Durable Domain Event Bus & Publisher
+ * GymDeck Notification Core - Durable Domain Event Bus & Publisher (Hardened)
  */
 
 import * as crypto from 'crypto';
-import { eq, and } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import { domainEvents } from '../../shared/database/schema';
 import { PublishDomainEventInput, DomainEventType } from './types';
@@ -50,66 +50,105 @@ export class DomainEventBus {
   }
 
   /**
-   * 3. Process Pending Domain Events (Durable Event Processor)
+   * 3. Process Pending Domain Events with Concurrency Locks & Lease-Based Crash Recovery
    */
   public async processPendingEvents(
     gymId?: string,
-    batchSize: number = 50
-  ): Promise<{ processed: number; errors: number }> {
-    const conditions = [eq(domainEvents.status, 'PENDING')];
-    if (gymId) {
-      conditions.push(eq(domainEvents.gymId, gymId));
-    }
+    batchSize: number = 50,
+    leaseTimeoutMinutes: number = 5
+  ): Promise<{ processed: number; errors: number; claimed: number }> {
+    // A. Atomically claim PENDING events OR stale PROCESSING events whose lease expired
+    const claimQuery = sql`
+      UPDATE domain_events
+      SET status = 'PROCESSING',
+          processing_started_at = NOW(),
+          processing_lease_expires_at = NOW() + (${sql.raw(`${leaseTimeoutMinutes}`)} || ' minutes')::INTERVAL,
+          retry_count = retry_count + 1
+      WHERE id IN (
+        SELECT id
+        FROM domain_events
+        WHERE (
+          status = 'PENDING'
+          OR (status = 'PROCESSING' AND processing_lease_expires_at < NOW())
+        )
+        ${gymId ? sql`AND gym_id = ${gymId}::uuid` : sql``}
+        ORDER BY occurred_at ASC
+        FOR UPDATE SKIP LOCKED
+        LIMIT ${batchSize}
+      )
+      RETURNING *;
+    `;
 
-    const pending = await db
-      .select()
-      .from(domainEvents)
-      .where(and(...conditions))
-      .orderBy(domainEvents.occurredAt)
-      .limit(batchSize);
+    const claimResult = await db.execute(claimQuery);
+    const claimedRows: any[] = claimResult.rows || [];
 
     let processedCount = 0;
     let errorCount = 0;
 
-    for (const evt of pending) {
+    for (const rawEvt of claimedRows) {
+      const evtId = rawEvt.id;
+      const retryCount = Number(rawEvt.retry_count || 1);
+
       try {
+        const parsedPayload =
+          typeof rawEvt.payload === 'string' ? JSON.parse(rawEvt.payload) : rawEvt.payload;
+
+        const evt = {
+          id: rawEvt.id,
+          gymId: rawEvt.gym_id,
+          eventId: rawEvt.event_id,
+          eventType: rawEvt.event_type as DomainEventType,
+          aggregateType: rawEvt.aggregate_type,
+          aggregateId: rawEvt.aggregate_id,
+          payload: parsedPayload,
+          actorUserId: rawEvt.actor_user_id || undefined,
+          retryCount,
+          occurredAt: new Date(rawEvt.occurred_at),
+        };
+
         await db.transaction(async (tx) => {
-          // A. Process event through notification engine
+          // Process event through notification engine
           await notificationEngine.handleDomainEvent(tx, {
             eventId: evt.eventId,
             gymId: evt.gymId,
-            eventType: evt.eventType as DomainEventType,
+            eventType: evt.eventType,
             aggregateType: evt.aggregateType,
             aggregateId: evt.aggregateId,
-            payload: JSON.parse(evt.payload),
-            actorUserId: evt.actorUserId || undefined,
+            payload: evt.payload,
+            actorUserId: evt.actorUserId,
             occurredAt: evt.occurredAt,
           });
 
-          // B. Mark event as PROCESSED
+          // Mark event as PROCESSED atomically
           await tx
             .update(domainEvents)
             .set({
               status: 'PROCESSED',
               processedAt: new Date(),
+              lastError: null,
             })
             .where(eq(domainEvents.id, evt.id));
         });
 
         processedCount++;
-      } catch (err) {
+      } catch (err: any) {
         errorCount++;
+        const maxRetries = 3;
+        const isMaxExceeded = retryCount >= maxRetries;
+        const errorMessage = err?.message || String(err);
+
         await db
           .update(domainEvents)
           .set({
-            status: 'FAILED',
-            processedAt: new Date(),
+            status: isMaxExceeded ? 'FAILED' : 'PENDING',
+            processedAt: isMaxExceeded ? new Date() : null,
+            lastError: errorMessage.substring(0, 1000),
           })
-          .where(eq(domainEvents.id, evt.id));
+          .where(eq(domainEvents.id, evtId));
       }
     }
 
-    return { processed: processedCount, errors: errorCount };
+    return { processed: processedCount, errors: errorCount, claimed: claimedRows.length };
   }
 }
 

@@ -1,5 +1,5 @@
 /**
- * GymDeck Notification Core - Notification Resolution & Processing Engine
+ * GymDeck Notification Core - Notification Resolution & Processing Engine (Hardened)
  */
 
 import { eq, and } from 'drizzle-orm';
@@ -29,14 +29,14 @@ export interface DomainEventContext {
 
 export class NotificationEngine {
   /**
-   * Handle domain event and generate appropriate notifications & deliveries
+   * Handle domain event and generate appropriate notifications & channel deliveries
    */
   public async handleDomainEvent(tx: any, event: DomainEventContext): Promise<void> {
     const notificationsToCreate = this.resolveNotificationsForEvent(event);
 
     for (const notif of notificationsToCreate) {
-      // 1. Check Recipient Preferences
-      const isEnabled = await this.isNotificationEnabled(
+      // 1. Resolve Channel Preferences Independently
+      const inAppEnabled = await this.isNotificationEnabled(
         tx,
         event.gymId,
         notif.recipientType,
@@ -45,12 +45,22 @@ export class NotificationEngine {
         'IN_APP'
       );
 
-      if (!isEnabled) {
-        // Suppressed by recipient preference
+      const pushEnabled = await this.isNotificationEnabled(
+        tx,
+        event.gymId,
+        notif.recipientType,
+        notif.recipientId,
+        notif.category,
+        'PUSH'
+      );
+
+      // If all channels are disabled, we don't need to persist this notification
+      if (!inAppEnabled && !pushEnabled) {
         continue;
       }
 
-      // 2. Idempotency Check: (gymId, eventId, recipientId)
+      // 2. Canonical Idempotency Check: (gymId, eventId, recipientType, recipientId)
+      let notificationId: string;
       const existing = (
         await tx
           .select()
@@ -59,6 +69,7 @@ export class NotificationEngine {
             and(
               eq(notifications.gymId, event.gymId),
               eq(notifications.eventId, event.eventId),
+              eq(notifications.recipientType, notif.recipientType),
               eq(notifications.recipientId, notif.recipientId)
             )
           )
@@ -66,47 +77,93 @@ export class NotificationEngine {
       )[0];
 
       if (existing) {
-        // Already created; skip to preserve idempotency
-        continue;
+        notificationId = existing.id;
+      } else {
+        // 3. Insert In-App Notification Record
+        const [createdNotif] = await tx
+          .insert(notifications)
+          .values({
+            gymId: event.gymId,
+            eventId: event.eventId,
+            recipientType: notif.recipientType,
+            recipientId: notif.recipientId,
+            type: notif.type,
+            category: notif.category,
+            title: notif.title,
+            body: notif.body,
+            message: notif.body,
+            payload: notif.payload ? JSON.stringify(notif.payload) : null,
+            priority: notif.priority || 'NORMAL',
+            isRead: false,
+            createdAt: event.occurredAt,
+          })
+          .returning();
+
+        notificationId = createdNotif!.id;
       }
 
-      // 3. Insert In-App Notification Record
-      const [createdNotif] = await tx
-        .insert(notifications)
-        .values({
-          gymId: event.gymId,
-          eventId: event.eventId,
-          recipientType: notif.recipientType,
-          recipientId: notif.recipientId,
-          type: notif.type,
-          category: notif.category,
-          title: notif.title,
-          body: notif.body,
-          message: notif.body,
-          payload: notif.payload ? JSON.stringify(notif.payload) : null,
-          priority: notif.priority || 'NORMAL',
-          isRead: false,
-          createdAt: event.occurredAt,
-        })
-        .returning();
+      // 4. Create IN_APP Delivery Record (Idempotent per notificationId + channel)
+      if (inAppEnabled) {
+        const existingInAppDelivery = (
+          await tx
+            .select()
+            .from(notificationDeliveries)
+            .where(
+              and(
+                eq(notificationDeliveries.notificationId, notificationId),
+                eq(notificationDeliveries.channel, 'IN_APP')
+              )
+            )
+            .limit(1)
+        )[0];
 
-      // 4. Create In-App Delivery Record
-      await tx.insert(notificationDeliveries).values({
-        gymId: event.gymId,
-        notificationId: createdNotif!.id,
-        channel: 'IN_APP',
-        status: 'DELIVERED',
-        attemptCount: 1,
-        deliveredAt: event.occurredAt,
-        metadata: JSON.stringify({ sourceEventId: event.eventId }),
-      });
+        if (!existingInAppDelivery) {
+          await tx.insert(notificationDeliveries).values({
+            gymId: event.gymId,
+            notificationId,
+            channel: 'IN_APP',
+            status: 'DELIVERED',
+            attemptCount: 1,
+            deliveredAt: event.occurredAt,
+            metadata: JSON.stringify({ sourceEventId: event.eventId }),
+          });
+        }
+      }
+
+      // 5. Stage PUSH Delivery Record for future Phase 12B provider execution (if enabled)
+      if (pushEnabled) {
+        const existingPushDelivery = (
+          await tx
+            .select()
+            .from(notificationDeliveries)
+            .where(
+              and(
+                eq(notificationDeliveries.notificationId, notificationId),
+                eq(notificationDeliveries.channel, 'PUSH')
+              )
+            )
+            .limit(1)
+        )[0];
+
+        if (!existingPushDelivery) {
+          await tx.insert(notificationDeliveries).values({
+            gymId: event.gymId,
+            notificationId,
+            channel: 'PUSH',
+            status: 'PENDING',
+            attemptCount: 0,
+            metadata: JSON.stringify({ sourceEventId: event.eventId }),
+          });
+        }
+      }
     }
   }
 
   /**
-   * Check if recipient has enabled notifications for a specific category and channel
+   * Check if recipient has enabled notifications for a specific category and channel.
+   * Default is true if no explicit row is configured.
    */
-  private async isNotificationEnabled(
+  public async isNotificationEnabled(
     tx: any,
     gymId: string,
     recipientType: RecipientType,
@@ -156,14 +213,14 @@ export class NotificationEngine {
       return allPref.isEnabled;
     }
 
-    // Default: Enabled
+    // Default: Deterministically Enabled
     return true;
   }
 
   /**
    * Map domain events to structured notification templates & recipients
    */
-  private resolveNotificationsForEvent(event: DomainEventContext): Array<{
+  public resolveNotificationsForEvent(event: DomainEventContext): Array<{
     recipientType: RecipientType;
     recipientId: string;
     type: NotificationType;
