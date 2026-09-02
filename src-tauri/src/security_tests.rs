@@ -173,4 +173,65 @@ mod enterprise_security_tests {
             assert!(result.is_ok(), "Concurrent access should be safe");
         }
     }
+
+    #[test]
+    fn test_database_key_mismatch_fails_safely_and_preserves_file() {
+        let temp_dir = std::env::temp_dir().join(format!("gymdeck_test_vault_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).expect("Should create temp dir");
+        let db_path = temp_dir.join("test_vault.sqlite");
+
+        let original_key = "original_super_secret_key_1234567890";
+        let wrong_key = "wrong_attacker_secret_key_9876543210";
+
+        // 1. Initialize database with original key
+        {
+            let db_mgr = crate::database::manager::DatabaseManager::new(db_path.clone(), original_key)
+                .expect("Should initialize database with original key");
+            assert!(db_path.exists(), "Database file must exist");
+            drop(db_mgr);
+        }
+
+        let original_size = std::fs::metadata(&db_path).expect("Should read metadata").len();
+        let original_bytes = std::fs::read(&db_path).expect("Should read bytes");
+        assert!(original_size > 0, "Database file must not be empty");
+
+        // 2. Attempt to open with wrong key
+        let mismatch_result = crate::database::manager::DatabaseManager::new(db_path.clone(), wrong_key);
+
+        // 3. Verify failure is KeyMismatch
+        assert!(mismatch_result.is_err(), "Wrong key must fail");
+        let err = mismatch_result.err().unwrap();
+        assert!(
+            matches!(err, crate::errors::AppError::KeyMismatch(_)),
+            "Error must be KeyMismatch variant, got: {:?}",
+            err
+        );
+
+        // 4. Verify database preservation invariants:
+        // File MUST still exist, size must not be truncated to 0, and bytes must remain identical
+        assert!(db_path.exists(), "Database file must NOT be deleted after KeyMismatch");
+        let current_size = std::fs::metadata(&db_path).expect("Should read metadata").len();
+        let current_bytes = std::fs::read(&db_path).expect("Should read bytes");
+        assert_eq!(current_size, original_size, "Database file must NOT be truncated");
+        assert_eq!(current_bytes, original_bytes, "Database bytes must NOT be modified");
+
+        // 5. Verify database can still be opened successfully with the ORIGINAL key
+        let recover_result = crate::database::manager::DatabaseManager::new(db_path.clone(), original_key);
+        assert!(recover_result.is_ok(), "Database must still open with original key after failed attempt");
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_key_mismatch_error_does_not_leak_key_material() {
+        let secret_key = "SuperConfidentialEncryptionKeyXYZ999";
+        let err = crate::errors::AppError::KeyMismatch(format!("Key mismatch for path /test/path"));
+
+        let display_str = err.to_string();
+        let serialized = serde_json::to_string(&err).expect("Should serialize error");
+
+        assert!(!display_str.contains(secret_key), "Display string must never leak key");
+        assert!(!serialized.contains(secret_key), "Serialized JSON must never leak key");
+    }
 }

@@ -114,12 +114,22 @@ pub fn ensure_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {
                     info!("Migration v{} applied successfully", version);
                 }
                 Err(e) => {
-                    error!("Migration v{} failed: {}. Rolling back.", version, e);
-                    conn.execute_batch("ROLLBACK")
-                        .map_err(|_| crate::errors::AppError::Database("Migration rollback failed".to_string()))?;
-                    return Err(crate::errors::AppError::Database(format!(
-                        "Migration v{} failed: {}", version, e
-                    )));
+                    let err_msg = e.to_string();
+                    if err_msg.contains("duplicate column name") {
+                        info!("Migration v{} columns already present, recording version", version);
+                        let _ = conn.execute(
+                            "INSERT INTO schema_version (version, description) VALUES (?1, ?2)",
+                            rusqlite::params![version, description],
+                        );
+                        let _ = conn.execute_batch("COMMIT");
+                    } else {
+                        error!("Migration v{} failed: {}. Rolling back.", version, e);
+                        conn.execute_batch("ROLLBACK")
+                            .map_err(|_| crate::errors::AppError::Database("Migration rollback failed".to_string()))?;
+                        return Err(crate::errors::AppError::Database(format!(
+                            "Migration v{} failed: {}", version, e
+                        )));
+                    }
                 }
             }
         }
@@ -129,7 +139,8 @@ pub fn ensure_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {
 }
 
 fn apply_full_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {
-    info!("Applying base schema (v{})", BASE_SCHEMA_VERSION);
+    let latest_version = MIGRATIONS.iter().map(|(v, _, _)| *v).max().unwrap_or(BASE_SCHEMA_VERSION);
+    info!("Applying base schema (latest v{})", latest_version);
     conn.execute_batch("BEGIN IMMEDIATE")
         .map_err(|e| crate::errors::AppError::Database(format!("Transaction start failed: {}", e)))?;
 
@@ -138,7 +149,7 @@ fn apply_full_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {
         Ok(_) => {
             conn.execute(
                 "INSERT INTO schema_version (version, description) VALUES (?1, ?2)",
-                rusqlite::params![BASE_SCHEMA_VERSION, "Base schema"],
+                rusqlite::params![latest_version, "Base schema with latest migrations"],
             )
             .map_err(|e| {
                 error!("Failed to record base schema version: {}", e);
