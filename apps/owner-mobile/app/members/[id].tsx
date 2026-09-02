@@ -16,25 +16,25 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { OwnerMembersService } from '../../../src/services/api/ownerMembersService';
-import { OwnerBillingService } from '../../../src/services/api/ownerBillingService';
-import { OwnerMembershipService } from '../../../src/services/api/ownerMembershipService';
-import { OwnerTrainersService } from '../../../src/services/api/ownerTrainersService';
-import { StatusBadge } from '../../../src/components/StatusBadge';
-import { InviteModal } from '../../../src/components/InviteModal';
-import { ReceiptModal } from '../../../src/components/ReceiptModal';
-import { CollectPaymentModal } from '../../../src/components/CollectPaymentModal';
-import { RenewMembershipModal } from '../../../src/components/RenewMembershipModal';
-import { FreezeMembershipModal } from '../../../src/components/FreezeMembershipModal';
-import { AssignTrainerModal } from '../../../src/components/AssignTrainerModal';
-import { PurchasePTPackageModal } from '../../../src/components/PurchasePTPackageModal';
-import { CompletePTSessionModal } from '../../../src/components/CompletePTSessionModal';
+import { OwnerMembersService } from '../../src/services/api/ownerMembersService';
+import { OwnerBillingService } from '../../src/services/api/ownerBillingService';
+import { OwnerMembershipService } from '../../src/services/api/ownerMembershipService';
+import { OwnerTrainersService } from '../../src/services/api/ownerTrainersService';
+import { StatusBadge } from '../../src/components/StatusBadge';
+import { InviteModal } from '../../src/components/InviteModal';
+import { ReceiptModal } from '../../src/components/ReceiptModal';
+import { CollectPaymentModal } from '../../src/components/CollectPaymentModal';
+import { RenewMembershipModal } from '../../src/components/RenewMembershipModal';
+import { FreezeMembershipModal } from '../../src/components/FreezeMembershipModal';
+import { AssignTrainerModal } from '../../src/components/AssignTrainerModal';
+import { PurchasePTPackageModal } from '../../src/components/PurchasePTPackageModal';
+import { CompletePTSessionModal } from '../../src/components/CompletePTSessionModal';
 import {
   MemberInvitationResult,
   ReceiptData,
   PaymentRecord,
   PTPackageSummary,
-} from '../../../src/types';
+} from '../../src/types';
 import {
   ArrowLeft,
   Phone,
@@ -79,7 +79,7 @@ export default function MemberDetailScreen() {
   const [selectedPTPackage, setSelectedPTPackage] = useState<PTPackageSummary | null>(null);
 
   // 1. Fetch Profile Details
-  const { data, isLoading, refetch, isRefetching, error } = useQuery({
+  const { data, isLoading, isPending, refetch, isRefetching, error } = useQuery({
     queryKey: ['owner-member-detail', id],
     queryFn: () => OwnerMembersService.getMemberById(id!),
     enabled: !!id,
@@ -167,7 +167,7 @@ export default function MemberDetailScreen() {
     setCompleteSessionModalVisible(true);
   };
 
-  if (isLoading) {
+  if (!id || isLoading || isPending || (!data && !error)) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
@@ -187,9 +187,15 @@ export default function MemberDetailScreen() {
           <Text style={styles.errorSubtitle}>
             {error instanceof Error ? error.message : 'Member not found or access denied.'}
           </Text>
-          <TouchableOpacity style={styles.backButtonCenter} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
+          <View style={styles.errorActionsRow}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()} activeOpacity={0.8}>
+              <RefreshCw size={16} color="#0A0D14" style={{ marginRight: 6 }} />
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.backButtonCenter} onPress={() => router.back()} activeOpacity={0.8}>
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -744,6 +750,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 16,
+  },
+  errorActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#EAB308',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#0A0D14',
+    fontWeight: '700',
+    fontSize: 14,
   },
   backButtonCenter: {
     paddingHorizontal: 20,

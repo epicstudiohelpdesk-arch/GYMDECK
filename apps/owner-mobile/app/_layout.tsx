@@ -4,19 +4,11 @@
 
 import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../src/store/authStore';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 2, // 2 minutes
-      retry: 2,
-    },
-  },
-});
+import { queryClient } from '../src/services/api/queryClient';
 
 function RootNavigation() {
   const { isAuthenticated, isLoading, bootstrapSession } = useAuthStore();
@@ -53,6 +45,10 @@ function RootNavigation() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0D14' } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="members/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="members/add" options={{ headerShown: false }} />
+        <Stack.Screen name="members/edit" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
       </Stack>
     </>
   );

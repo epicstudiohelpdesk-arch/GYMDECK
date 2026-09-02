@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { OwnerMembersService } from '../../../src/services/api/ownerMembersService';
+import { OwnerMembersService } from '../../src/services/api/ownerMembersService';
 import { ArrowLeft, Save } from 'lucide-react-native';
 
 export default function EditMemberScreen() {
@@ -26,7 +26,7 @@ export default function EditMemberScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isPending } = useQuery({
     queryKey: ['owner-member-detail', id],
     queryFn: () => OwnerMembersService.getMemberById(id!),
     enabled: !!id,
@@ -81,7 +81,7 @@ export default function EditMemberScreen() {
     },
   });
 
-  if (isLoading) {
+  if (!id || isLoading || isPending || !data) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>

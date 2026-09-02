@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { OwnerUser } from '../types';
 import { SecureTokenStorage } from '../services/storage/SecureTokenStorage';
 import { OwnerAuthApiService } from '../services/api/ownerAuthService';
+import { queryClient } from '../services/api/queryClient';
 import { Logger } from '../observability';
 
 interface AuthState {
@@ -51,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await OwnerAuthApiService.login(credentials);
       await SecureTokenStorage.saveTokens(response.tokens);
+      queryClient.clear();
       set({
         user: response.user,
         isAuthenticated: true,
@@ -74,6 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       Logger.warn('[AuthStore] Remote logout call error', { error: err });
     } finally {
       await SecureTokenStorage.clearTokens();
+      queryClient.clear();
       set({
         user: null,
         isAuthenticated: false,

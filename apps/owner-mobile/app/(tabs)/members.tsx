@@ -43,7 +43,7 @@ export default function OwnerMembersScreen() {
           </View>
           <TouchableOpacity
             style={styles.addBtn}
-            onPress={() => router.push('/(tabs)/members/add' as any)}
+            onPress={() => router.push('/members/add' as any)}
             activeOpacity={0.8}
           >
             <UserPlus size={18} color="#0A0D14" style={{ marginRight: 6 }} />
@@ -89,7 +89,7 @@ export default function OwnerMembersScreen() {
             renderItem={({ item }) => (
               <MemberCard
                 member={item}
-                onPress={() => router.push(`/(tabs)/members/${item.id}` as any)}
+                onPress={() => router.push(`/members/${item.id}` as any)}
               />
             )}
             contentContainerStyle={styles.listContent}

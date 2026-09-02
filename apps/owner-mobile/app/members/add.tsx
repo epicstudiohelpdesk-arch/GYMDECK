@@ -18,8 +18,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { OwnerMembersService } from '../../../src/services/api/ownerMembersService';
-import { ArrowLeft, UserPlus, Check, AlertCircle } from 'lucide-react-native';
+import { OwnerMembersService } from '../../src/services/api/ownerMembersService';
+import { ArrowLeft, UserPlus, Check } from 'lucide-react-native';
 
 export default function AddMemberScreen() {
   const router = useRouter();
@@ -36,6 +36,20 @@ export default function AddMemberScreen() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [initialPaymentAmount, setInitialPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'UPI' | 'BANK_TRANSFER'>('CASH');
+
+  const resetForm = () => {
+    setFullName('');
+    setPhone('');
+    setAlternatePhone('');
+    setEmail('');
+    setGender('MALE');
+    setDob('');
+    setAddress('');
+    setNotes('');
+    setSelectedPlanId(undefined);
+    setInitialPaymentAmount('');
+    setPaymentMethod('CASH');
+  };
 
   // Load available plans
   const { data: plansData, isLoading: plansLoading } = useQuery({
@@ -61,8 +75,9 @@ export default function AddMemberScreen() {
     onSuccess: (newMember) => {
       queryClient.invalidateQueries({ queryKey: ['owner-members'] });
       queryClient.invalidateQueries({ queryKey: ['owner-dashboard'] });
+      resetForm();
       Alert.alert('Member Admitted', `${newMember.fullName} was successfully registered.`);
-      router.replace(`/(tabs)/members/${newMember.id}` as any);
+      router.replace(`/members/${newMember.id}` as any);
     },
     onError: (err: any) => {
       Alert.alert('Admission Error', err?.message || 'Failed to create member record.');
