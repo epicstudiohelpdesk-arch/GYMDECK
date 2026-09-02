@@ -86,6 +86,27 @@ async function runPhase15Verification() {
   });
   assert.equal(stagingWithDevSecret.success, false, 'Staging must reject default dev secrets');
 
+  // Case 1F: Production with live notification mode but missing Resend API key MUST fail
+  const prodLiveWithoutResend = validateEnvironmentConfig({
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://prod_user:strong_prod_pass@db.prod.internal:5432/gymdeck_prod',
+    JWT_SECRET: 'a_very_strong_production_secret_key_32_bytes_long!!',
+    CORS_ORIGINS: 'https://app.gymdeck.com',
+    NOTIFICATION_PROVIDER_MODE: 'live',
+    RESEND_API_KEY: 're_dev_placeholder_key',
+  });
+  assert.equal(prodLiveWithoutResend.success, false, 'Production live mode must reject placeholder Resend key');
+
+  // Case 1G: Production with JWT secret < 32 characters MUST fail
+  const prodWithShortJwt = validateEnvironmentConfig({
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://prod_user:strong_prod_pass@db.prod.internal:5432/gymdeck_prod',
+    JWT_SECRET: 'too_short_key_123',
+    CORS_ORIGINS: 'https://app.gymdeck.com',
+  });
+  assert.equal(prodWithShortJwt.success, false, 'Production must reject short JWT secrets');
+
+
   console.log('     ✅ Environment model proven: Production strictly fails closed on missing/dev credentials.');
 
   // ===========================================================================

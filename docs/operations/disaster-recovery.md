@@ -1,15 +1,16 @@
 # GymDeck Disaster Recovery & Data Protection Protocol
 
-## 1. Recovery Objectives (RPO & RTO)
+## 1. Recovery Objectives (Target RPO & RTO)
 
 ```mermaid
 graph LR
-    Incident["💥 Incident Occurs"] --> RTO["⏱️ RTO: < 30 Minutes to Restore Service"]
-    RPO["💾 RPO: < 15 Minutes Data Loss Window (WAL Archiving)"] --> Incident
+    Incident["💥 Incident Occurs"] --> RTO["⏱️ Target RTO: < 30 Minutes to Restore Service"]
+    RPO["💾 Target RPO: < 15 Minutes Data Loss Window (WAL Archiving)"] --> Incident
 ```
 
-* **Recovery Point Objective (RPO)**: **$< 15\text{ minutes}$** (Achieved via Continuous WAL Archiving + Automated Daily Snapshots).
-* **Recovery Time Objective (RTO)**: **$< 30\text{ minutes}$** (Achieved via Containerized Infrastructure and Automated Migration Rollforward).
+* **Target Recovery Point Objective (RPO)**: **$< 15\text{ minutes}$** (Architectural target via Continuous WAL Archiving + Automated Daily Snapshots).
+* **Target Recovery Time Objective (RTO)**: **$< 30\text{ minutes}$** (Architectural target via Containerized Infrastructure and Automated Migration Rollforward).
+* **Validation Status**: **`NOT YET PROVEN`** (Desktop staging restore is verified; cloud multi-tenant failover has not yet been empirically timed in a production cluster).
 
 ---
 

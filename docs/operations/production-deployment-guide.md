@@ -69,7 +69,10 @@ curl -f https://api.gymdeck.com/ready
 
 ---
 
-## 4. Zero-Downtime Rollback Procedure
+## 4. Low-Downtime Rollback Procedure
+
+> [!NOTE]
+> Containerized rolling deployment and rollback runbooks are configured; continuous zero-downtime execution has not yet been empirically measured under live production traffic.
 
 If unexpected defects or database anomalies occur post-deployment:
 1. **Revert Container Image**:

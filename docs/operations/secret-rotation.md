@@ -19,8 +19,9 @@
    openssl rand -hex 32
    ```
 2. Update deployment environment variable `JWT_SECRET`.
-3. Restart backend service containers with zero-downtime rolling restart.
+3. Restart backend service containers with rolling container restart.
 4. Active mobile sessions will encounter `401 Unauthorized` and automatically trigger single-flight token refresh or prompt re-login.
+
 
 ### B. Rotating Resend API Key
 1. Navigate to **Resend Dashboard** $\rightarrow$ **API Keys** $\rightarrow$ **Create API Key** with name `gymdeck-prod-YYYY-MM`.

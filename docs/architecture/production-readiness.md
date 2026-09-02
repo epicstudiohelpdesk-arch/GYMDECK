@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary & Verification Matrix
 
-This document provides the definitive operational blueprint, infrastructure topology, secrets management policy, disaster recovery protocol, and readiness matrix for the GymDeck multi-platform enterprise ecosystem (Desktop Tauri/Rust application, Cloud Node.js backend, Owner Mobile Expo application, and Member Mobile Expo application).
+This document provides the operational blueprint, infrastructure topology, secrets management policy, disaster recovery protocol, and readiness matrix for the GymDeck multi-platform enterprise ecosystem (Desktop Tauri/Rust application, Cloud Node.js backend, Owner Mobile Expo application, and Member Mobile Expo application).
 
 ### Multi-Dimensional Verification Summary
 
@@ -10,7 +10,7 @@ This document provides the definitive operational blueprint, infrastructure topo
 | :--- | :--- | :--- | :--- |
 | **Rust Desktop Engine** | 51 Unit & Adversarial Tests (`cargo test`) | **51/51 PASS (0 Failed)** | **TESTED** |
 | **Cloud Backend Matrix** | 25 Automated Regression Suites | **25/25 PASS (0 Failed)** | **TESTED** |
-| **Phase 15 Verification** | `phase15ProductionReadiness.test.ts` | **7/7 Stages PASS** | **TESTED** |
+| **Phase 15 Verification** | `phase15ProductionReadiness.test.ts` | **7/7 Invariant Checks PASS** | **TESTED** |
 | **Backend TypeScript** | `npm run typecheck` (`tsc --noEmit`) | **0 Errors** | **TESTED** |
 | **Owner Mobile TypeScript** | `npm run typecheck` (`tsc --noEmit`) | **0 Errors** | **TESTED** |
 | **Member Mobile TypeScript** | `npm run typecheck` (`tsc --noEmit`) | **0 Errors** | **TESTED** |
@@ -21,12 +21,12 @@ This document provides the definitive operational blueprint, infrastructure topo
 
 ## 2. Capability & Operational Readiness Classification
 
-To preserve architectural honesty, every capability is classified strictly into one of five operational statuses:
+To preserve architectural accuracy and evidence-based reporting, every capability is classified strictly into one of five operational statuses:
 - **`IMPLEMENTED`**: Fully developed in application source code.
 - **`TESTED`**: Actively exercised and proven in automated test suites.
-- **`CONFIGURED`**: Fully defined in configuration templates, compose files, or CI/CD pipelines.
+- **`CONFIGURED`**: Defined in configuration templates, compose files, or CI/CD pipelines.
 - **`RECOMMENDED`**: Recommended for host cloud infrastructure setup during live production provisioning.
-- **`NOT YET PROVEN`**: Requires live multi-datacenter production traffic or third-party SLA load testing to establish proof.
+- **`NOT YET PROVEN`**: Requires live production traffic or third-party SLA load testing to establish proof.
 
 ---
 
@@ -40,18 +40,18 @@ graph TD
         MemberMob["📱 Member Mobile (React Native / Expo)"]
     end
 
-    subgraph Ingress_Tier["Edge & Security Ingress"]
+    subgraph Ingress_Tier["Edge & Security Ingress (Configured)"]
         DNS["🌐 Route53 / Cloudflare DNS (DMARC, SPF, SSL)"]
         Nginx["🛡️ Nginx Reverse Proxy (TLS 1.3 / HSTS / Rate Limiting)"]
     end
 
-    subgraph App_Tier["Application Cluster"]
+    subgraph App_Tier["Application Cluster (Configured)"]
         Node1["⚡ Cloud Gateway Node 1 (Docker / Non-Root Node 20)"]
         Node2["⚡ Cloud Gateway Node 2 (Docker / Non-Root Node 20)"]
     end
 
-    subgraph Data_Tier["Private Data Infrastructure (No Public Access)"]
-        Postgres[("🐘 PostgreSQL 16 (Drizzle ORM / Connection Pool / Strict RLS)")]
+    subgraph Data_Tier["Private Data Infrastructure (Isolated Network)"]
+        Postgres[("🐘 PostgreSQL 16 (Drizzle ORM / Connection Pool / Application Tenant Scoping)")]
         R2["📦 Cloudflare R2 / AWS S3 (Encrypted Document Vault)"]
     end
 
@@ -75,11 +75,11 @@ graph TD
 
 ### Part 0: Environment Separation
 - **Model**: Distinct strongly typed runtimes (`development`, `staging`, `production`, `test`).
-- **Safety**: Strict runtime validation (`validateEnvironmentConfig`) fails closed on missing variables.
+- **Safety**: Strict runtime validation (`validateEnvironmentConfig`) fails closed on missing variables or development credentials in staging/production.
 - **Status**: **`TESTED`**
 
 ### Part 1: Secrets Management & Protection
-- **Policy**: Zero server credentials in client builds. Server secrets injected via CSPRNG / Secret Manager.
+- **Policy**: Zero server credentials in client builds. Server secrets injected via managed secrets managers.
 - **Mobile Bundle Isolation**: Verified by automated forensic regex scans in CI.
 - **Status**: **`TESTED`**
 
@@ -108,8 +108,9 @@ graph TD
   - `.github/workflows/build-macos.yml`: macOS universal binary build, notarization and code-signing pipeline.
 - **Status**: **`CONFIGURED`**
 
-### Part 7: Zero-Downtime Database Migrations
+### Part 7: Database Migrations
 - **Discipline**: Schema additions are backward-compatible. Drizzle migrations track state in schema migrations log.
+- **Deployment**: Designed for low-downtime rolling deployment; zero-downtime execution not yet empirically proven in production cluster.
 - **Status**: **`CONFIGURED`**
 
 ### Part 8: Desktop Application Release Configuration
@@ -140,20 +141,23 @@ graph TD
 - **Status**: **`CONFIGURED`**
 
 ### Part 14: Disaster Recovery & Cloud Backups
-- **Objectives**: RPO < 15 minutes, RTO < 30 minutes.
-- **Engine**: Automated `pg_dump` with AES-256-CBC encryption and off-site cloud storage replication.
-- **Status**: **`CONFIGURED`**
+- **Targets**: Target RPO < 15 minutes, Target RTO < 30 minutes.
+- **Engine**: Automated `pg_dump` with AES-256-CBC encryption and off-site cloud storage replication documented in `docs/operations/disaster-recovery.md`.
+- **Empirical Measurement**: Live cloud multi-tenant cluster RPO/RTO has not yet been timed in production.
+- **Status**: **`CONFIGURED`** (Empirical RPO/RTO: **`NOT YET PROVEN`**)
 
 ### Part 15: Disaster Recovery Drill Protocols
-- **Procedure**: Documented step-by-step restoration verification in `docs/operations/disaster-recovery.md`.
-- **Status**: **`CONFIGURED`**
+- **Desktop Restore**: Isolated staging database restore and integrity validation is **`TESTED`** in `backup_tests.rs`.
+- **Cloud Restore**: Cloud PostgreSQL recovery procedure is **`IMPLEMENTED`** and **`CONFIGURED`**; live cloud failover drill is **`NOT YET PROVEN`**.
+- **Status**: **`CONFIGURED`** (Cloud Drill: **`NOT YET PROVEN`**)
 
 ### Part 16: Blue/Green & Rolling Deployment
 - **Topology**: Dual container upstream with Nginx health-check proxying.
+- **Validation**: Configured for rolling deployment; zero-downtime execution not yet empirically proven under live production load.
 - **Status**: **`CONFIGURED`**
 
 ### Part 17: Emergency Rollback Strategy
-- **Rollback**: Previous container images tagged and immutable. Atomic tag repointing.
+- **Rollback**: Immutable container image tags and rollback runbooks configured.
 - **Status**: **`CONFIGURED`**
 
 ### Part 18: Multi-Tier Rate Limiting
@@ -170,10 +174,11 @@ graph TD
 ### Part 20: Tenant Isolation & Anti-IDOR Boundary Validation
 - **Compound Scoping**: Every query strictly enforces `WHERE gym_id = $gymId`.
 - **Adversarial IDOR**: Attempted cross-tenant access returns 404 or empty dataset; 0 data leakage possible.
+- **Note**: Tenant isolation is enforced at the application query layer (Drizzle ORM compound scoping), not via PostgreSQL Row Level Security (RLS).
 - **Status**: **`TESTED`**
 
 ### Part 21: Financial Payment & Immutability Ledger
-- **Transactions**: Atomic double-entry style receipts with CSPRNG idempotency keys.
+- **Ledger Model**: Immutable transactional financial/payment ledger with CSPRNG-backed idempotency keys and protected payment mutation semantics. (Note: Not a double-entry accounting system).
 - **Status**: **`TESTED`**
 
 ### Part 22: Bi-Directional Desktop/Cloud Sync Engine
