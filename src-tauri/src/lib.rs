@@ -23,6 +23,8 @@ pub mod security_tests;
 pub mod sync_tests;
 #[cfg(test)]
 pub mod backup_tests;
+#[cfg(test)]
+pub mod sync_adversarial_tests;
 
 use tauri::Manager;
 use commands::auth_commands::{

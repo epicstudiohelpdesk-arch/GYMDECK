@@ -19,8 +19,8 @@ mod desktop_backup_verification_tests {
             CREATE TABLE payments (id TEXT PRIMARY KEY, gym_id TEXT, member_id TEXT, amount TEXT, refunded_amount TEXT DEFAULT '0.00', status TEXT, idempotency_key TEXT UNIQUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE attendance_logs (id TEXT PRIMARY KEY, gym_id TEXT, member_id TEXT, check_in_time DATETIME DEFAULT CURRENT_TIMESTAMP);
             CREATE TABLE sync_outbox (id TEXT PRIMARY KEY, event_id TEXT UNIQUE, gym_id TEXT, entity_type TEXT, entity_id TEXT, operation TEXT, payload TEXT, status TEXT DEFAULT 'PENDING', created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-            CREATE TABLE sync_state (key TEXT PRIMARY KEY, gym_id TEXT, value TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-            CREATE TABLE sync_inbox (server_sequence INTEGER PRIMARY KEY, gym_id TEXT, event_id TEXT UNIQUE, entity_type TEXT, entity_id TEXT, operation TEXT, payload TEXT, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE sync_state (key TEXT, gym_id TEXT, value TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (key, gym_id));
+            CREATE TABLE sync_inbox (server_sequence INTEGER, gym_id TEXT, event_id TEXT, entity_type TEXT, entity_id TEXT, operation TEXT, payload TEXT, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (gym_id, server_sequence), UNIQUE (gym_id, event_id));
             
             INSERT INTO gym_members (id, gym_id, full_name, phone, membership_status) VALUES ('m-1', 'g-1', 'Alice Walker', '555-0101', 'ACTIVE');
             INSERT INTO payments (id, gym_id, member_id, amount, status, idempotency_key) VALUES ('p-1', 'g-1', 'm-1', '100.00', 'COMPLETED', 'idem-1');

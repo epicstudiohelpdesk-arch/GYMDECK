@@ -72,6 +72,36 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         ALTER TABLE sync_outbox ADD COLUMN worker_id TEXT;
         CREATE INDEX IF NOT EXISTS idx_sync_outbox_claiming ON sync_outbox(gym_id, status, next_retry_at, lease_expires_at, created_at ASC);",
     ),
+    (
+        5,
+        "Enforce multi-tenant composite primary keys on sync_state and sync_inbox",
+        "CREATE TABLE IF NOT EXISTS sync_state_v5 (
+            key TEXT NOT NULL,
+            gym_id TEXT NOT NULL,
+            value TEXT NOT NULL,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (key, gym_id)
+        );
+        INSERT OR IGNORE INTO sync_state_v5 (key, gym_id, value, updated_at) SELECT key, gym_id, value, updated_at FROM sync_state;
+        DROP TABLE sync_state;
+        ALTER TABLE sync_state_v5 RENAME TO sync_state;
+
+        CREATE TABLE IF NOT EXISTS sync_inbox_v5 (
+            server_sequence INTEGER NOT NULL,
+            gym_id TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (gym_id, server_sequence),
+            UNIQUE (gym_id, event_id)
+        );
+        INSERT OR IGNORE INTO sync_inbox_v5 (server_sequence, gym_id, event_id, entity_type, entity_id, operation, payload, applied_at) SELECT server_sequence, gym_id, event_id, entity_type, entity_id, operation, payload, applied_at FROM sync_inbox;
+        DROP TABLE sync_inbox;
+        ALTER TABLE sync_inbox_v5 RENAME TO sync_inbox;",
+    ),
 ];
 
 pub fn ensure_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {

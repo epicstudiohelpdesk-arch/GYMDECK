@@ -359,7 +359,7 @@ impl SyncRepository {
                 "INSERT INTO sync_inbox (
                     server_sequence, gym_id, event_id, entity_type, entity_id, operation, payload, applied_at
                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-                ON CONFLICT(server_sequence) DO NOTHING",
+                ON CONFLICT(gym_id, server_sequence) DO NOTHING",
                 params![
                     change.server_sequence,
                     gym_id.to_string(),
@@ -563,14 +563,14 @@ impl SyncRepository {
         tx.execute(
             "INSERT INTO sync_state (key, gym_id, value, updated_at)
              VALUES ('last_applied_server_sequence', ?1, ?2, ?3)
-             ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = ?3",
+             ON CONFLICT(key, gym_id) DO UPDATE SET value = ?2, updated_at = ?3",
             params![gym_id.to_string(), next_cursor.to_string(), now],
         ).map_err(|e| AppError::Database(format!("Failed to advance sync cursor: {}", e)))?;
 
         tx.execute(
             "INSERT INTO sync_state (key, gym_id, value, updated_at)
              VALUES ('last_sync_at', ?1, ?2, ?3)
-             ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = ?3",
+             ON CONFLICT(key, gym_id) DO UPDATE SET value = ?2, updated_at = ?3",
             params![gym_id.to_string(), now, now],
         ).map_err(|e| AppError::Database(format!("Failed to record last_sync_at: {}", e)))?;
 
@@ -596,7 +596,7 @@ impl SyncRepository {
         conn.execute(
             "INSERT INTO sync_state (key, gym_id, value, updated_at)
              VALUES ('last_applied_server_sequence', ?1, ?2, ?3)
-             ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = ?3",
+             ON CONFLICT(key, gym_id) DO UPDATE SET value = ?2, updated_at = ?3",
             params![gym_id.to_string(), sequence.to_string(), Utc::now().to_rfc3339()],
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
@@ -608,7 +608,7 @@ impl SyncRepository {
         conn.execute(
             "INSERT INTO sync_state (key, gym_id, value, updated_at)
              VALUES (?1, ?2, ?3, ?4)
-             ON CONFLICT(key) DO UPDATE SET gym_id = excluded.gym_id, value = excluded.value, updated_at = excluded.updated_at",
+             ON CONFLICT(key, gym_id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
             params![key, gym_id.to_string(), value, Utc::now().to_rfc3339()],
         ).map_err(|e| AppError::Database(e.to_string()))?;
 
@@ -622,7 +622,7 @@ impl SyncRepository {
             "INSERT INTO sync_inbox (
                 server_sequence, gym_id, event_id, entity_type, entity_id, operation, payload, applied_at
             ) VALUES (?1, ?2, ?3, 'SYNC_ACK', ?3, 'ACK', '{}', ?4)
-            ON CONFLICT DO NOTHING",
+            ON CONFLICT(gym_id, server_sequence) DO NOTHING",
             params![
                 server_sequence,
                 gym_id.to_string(),
