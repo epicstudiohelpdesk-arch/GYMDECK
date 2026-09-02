@@ -2,20 +2,24 @@ const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
 const projectRoot = __dirname;
-const monorepoRoot = path.resolve(projectRoot, '../..');
+const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
 // 1. Watch both project and workspace root for monorepo pnpm symlinks
-config.watchFolders = [monorepoRoot];
+config.watchFolders = [workspaceRoot];
 
 // 2. Resolve modules from both local and monorepo node_modules
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
-  path.resolve(monorepoRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// 3. Block non-mobile directories like src-tauri and target
+// 3. Enable pnpm symlinks and package exports resolution
+config.resolver.unstable_enableSymlinks = true;
+config.resolver.unstable_enablePackageExports = true;
+
+// 4. Block non-mobile directories
 config.resolver.blockList = [
   /.*\/src-tauri\/.*/,
   /.*\/target\/.*/,
