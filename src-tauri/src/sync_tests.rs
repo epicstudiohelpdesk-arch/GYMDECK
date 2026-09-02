@@ -385,4 +385,155 @@ mod desktop_sync_verification_tests {
         let cursor = SyncRepository::get_cursor(&conn, &gym_uuid).unwrap();
         assert_eq!(cursor, 106, "Cursor must advance to 106");
     }
+
+    // =========================================================================
+    // TEST 5: Cloud Enrollment & Authoritative Tenant Binding Verification
+    // =========================================================================
+    #[test]
+    fn test_cloud_enrollment_and_tenant_binding() {
+        let mut conn = setup_test_db();
+        let devgym_id = Uuid::parse_str("66258084-af0b-49cb-a696-8fa6ef3d6373").unwrap();
+        let devowner_id = Uuid::parse_str("463a146f-faff-4729-a15b-4b236bc17b3d").unwrap();
+
+        // 1. Provision DEVGYM in SQLite
+        conn.execute(
+            "INSERT INTO gyms (id, name, owner_user_id) VALUES (?1, 'Dev Test Gym', ?2)
+             ON CONFLICT(id) DO UPDATE SET name = excluded.name",
+            rusqlite::params![devgym_id.to_string(), devowner_id.to_string()],
+        ).expect("Failed to provision DEVGYM");
+
+        conn.execute(
+            "INSERT INTO users (id, gym_id, full_name, email, password_hash, role, account_status)
+             VALUES (?1, ?2, 'Dev Gym Owner', 'devowner@gymdeck.com', 'CLOUD_AUTH', 'OWNER', 'ACTIVE')
+             ON CONFLICT(id) DO UPDATE SET gym_id = excluded.gym_id",
+            rusqlite::params![devowner_id.to_string(), devgym_id.to_string()],
+        ).expect("Failed to provision devowner");
+
+        // 2. Simulate Cloud Pull for Owner Mobile created members (Subham GD-7FDEB6 and Subham GD-BE15AA)
+        let subham_1_id = Uuid::parse_str("c309c5a2-9332-4d16-9340-0f10e0a83e1e").unwrap();
+        let subham_2_id = Uuid::parse_str("7f32e82c-d582-4551-8c4e-c282f23dbbf6").unwrap();
+
+        let remote_changes = vec![
+            RemoteChangeRecord {
+                server_sequence: 2628,
+                event_id: Uuid::new_v4(),
+                entity_type: "gym_member".into(),
+                entity_id: subham_1_id,
+                operation: "CREATE".into(),
+                payload: serde_json::json!({
+                    "id": subham_1_id.to_string(),
+                    "fullName": "Subham",
+                    "phone": "6291773811",
+                    "memberCode": "GD-7FDEB6",
+                    "membershipStatus": "ACTIVE",
+                    "gender": "MALE",
+                    "notes": "Didi"
+                }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+            RemoteChangeRecord {
+                server_sequence: 2629,
+                event_id: Uuid::new_v4(),
+                entity_type: "gym_member".into(),
+                entity_id: subham_2_id,
+                operation: "CREATE".into(),
+                payload: serde_json::json!({
+                    "id": subham_2_id.to_string(),
+                    "fullName": "Subham",
+                    "phone": "6219773811",
+                    "memberCode": "GD-BE15AA",
+                    "membershipStatus": "ACTIVE",
+                    "gender": "MALE"
+                }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+        ];
+
+        // 3. Apply initial reconciliation pull batch
+        SyncRepository::apply_pull_batch_tx(&mut conn, &devgym_id, &remote_changes, 2629)
+            .expect("Initial reconciliation pull must apply cleanly");
+
+        // Verify cursor advanced to 2629 for DEVGYM
+        let cursor = SyncRepository::get_cursor(&conn, &devgym_id).unwrap();
+        assert_eq!(cursor, 2629, "DEVGYM cursor must advance to 2629");
+
+        // 4. Query members for DEVGYM
+        let mut stmt = conn.prepare("SELECT id, member_code, full_name, phone FROM gym_members WHERE gym_id = ?1;").unwrap();
+        let dev_members: Vec<(String, String, String, String)> = stmt.query_map(
+            rusqlite::params![devgym_id.to_string()],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        ).unwrap().filter_map(|r| r.ok()).collect();
+
+        assert_eq!(dev_members.len(), 2, "DEVGYM must contain exactly 2 synced members");
+        assert!(dev_members.iter().any(|m| m.1 == "GD-7FDEB6" && m.2 == "Subham"));
+        assert!(dev_members.iter().any(|m| m.1 == "GD-BE15AA" && m.2 == "Subham"));
+
+        // 5. Cross-Tenant Isolation: Ensure Test Gym (gym_1) has 0 members
+        let other_gym_id: String = conn.query_row("SELECT id FROM gyms WHERE id != ?1 LIMIT 1", rusqlite::params![devgym_id.to_string()], |r| r.get(0)).unwrap();
+        let other_count: i64 = conn.query_row("SELECT count(*) FROM gym_members WHERE gym_id = ?1", rusqlite::params![other_gym_id], |r| r.get(0)).unwrap();
+        assert_eq!(other_count, 0, "Other gym must NOT receive DEVGYM members");
+    }
+
+    // =========================================================================
+    // TEST 6: Bidirectional Synchronization (Desktop Outbox -> Cloud Push)
+    // =========================================================================
+    #[test]
+    fn test_desktop_to_cloud_bidirectional_flow() {
+        let mut conn = setup_test_db();
+        let devgym_id = Uuid::parse_str("66258084-af0b-49cb-a696-8fa6ef3d6373").unwrap();
+        let owner_id = Uuid::new_v4();
+
+        conn.execute(
+            "INSERT INTO gyms (id, name, owner_user_id) VALUES (?1, 'Dev Test Gym', ?2)",
+            rusqlite::params![devgym_id.to_string(), owner_id.to_string()],
+        ).unwrap();
+
+        // 1. Desktop creates a new member locally in DEVGYM
+        let new_member_id = Uuid::new_v4();
+        {
+            let tx = conn.transaction().unwrap();
+            tx.execute(
+                "INSERT INTO gym_members (id, gym_id, member_code, full_name, phone, membership_status, joined_at, created_by_user_id, updated_by_user_id)
+                 VALUES (?1, ?2, 'GD-DESK01', 'DesktopToOwner Sync Test', '9876543210', 'ACTIVE', CURRENT_TIMESTAMP, 'DEVOWNER', 'DEVOWNER')",
+                rusqlite::params![new_member_id.to_string(), devgym_id.to_string()],
+            ).unwrap();
+
+            // Enqueue outbox event
+            SyncRepository::enqueue_outbox_event(
+                &tx,
+                &devgym_id,
+                "gym_member",
+                &new_member_id,
+                "CREATE",
+                &serde_json::json!({
+                    "id": new_member_id.to_string(),
+                    "gymId": devgym_id.to_string(),
+                    "memberCode": "GD-DESK01",
+                    "fullName": "DesktopToOwner Sync Test",
+                    "phone": "9876543210",
+                    "membershipStatus": "ACTIVE"
+                }).to_string(),
+            ).unwrap();
+            tx.commit().unwrap();
+        }
+
+        // 2. Claim event by Desktop sync worker
+        let claimed = SyncRepository::claim_pending_events(
+            &mut conn,
+            &devgym_id,
+            "desktop-node-01",
+            10,
+            60,
+        ).unwrap();
+        assert_eq!(claimed.len(), 1, "Must claim 1 outbox event");
+        assert_eq!(claimed[0].entity_id, new_member_id);
+
+        // 3. Simulate successful Cloud Push ack at server sequence 2630
+        SyncRepository::record_inbox_ack(&conn, &devgym_id, 2630, &claimed[0].event_id).unwrap();
+        SyncRepository::mark_event_synced(&conn, &claimed[0].event_id).unwrap();
+
+        // Verify outbox status is SYNCED
+        let pending = SyncRepository::get_pending_events(&conn, &devgym_id, 10).unwrap();
+        assert_eq!(pending.len(), 0, "No pending outbox events should remain");
+    }
 }

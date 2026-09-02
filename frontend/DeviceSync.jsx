@@ -43,7 +43,24 @@ const DeviceSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState("Connected Devices");
 
-  // --- MOCK DEVICE DATA ---
+  // --- CLOUD ENROLLMENT & MOBILE INTEGRATION STATE ---
+  const [cloudStatus, setCloudStatus] = useState({
+    isEnrolled: false,
+    state: "UNENROLLED",
+    gymId: null,
+    gymName: null,
+    gymCode: null,
+    email: null,
+    enrolledAt: null,
+    localMemberCount: 0,
+  });
+  const [enrollEmail, setEnrollEmail] = useState("");
+  const [enrollPassword, setEnrollPassword] = useState("");
+  const [enrollLoading, setEnrollLoading] = useState(false);
+  const [enrollError, setEnrollError] = useState(null);
+  const [enrollSuccess, setEnrollSuccess] = useState(null);
+
+  // --- DEVICE DATA ---
   const devices = [
     {
       id: "DEV-QR-842",
@@ -71,21 +88,87 @@ const DeviceSync = () => {
     },
     {
       id: "DEV-MOB-55",
-      name: "Admin Mobile App",
+      name: "Owner Mobile App",
       type: "Mobile Node",
-      status: "Offline",
-      lastSync: "1 hour ago",
-      latency: "---",
-      version: "v1.2.4",
+      status: cloudStatus.isEnrolled ? "Online" : "Offline",
+      lastSync: cloudStatus.isEnrolled ? "Continuous Sync" : "Not Linked",
+      latency: cloudStatus.isEnrolled ? "15ms" : "---",
+      version: "v1.0.0",
       icon: Smartphone,
       color: "text-amber-500",
       bg: "bg-amber-50"
     }
   ];
 
-  const handleSyncAll = () => {
+  const loadCloudStatus = async () => {
+    if (window.__TAURI__) {
+      try {
+        const res = await window.__TAURI__.core.invoke("get_cloud_enrollment_status_command");
+        if (res) {
+          setCloudStatus(res);
+        }
+      } catch (err) {
+        console.error("Failed to load cloud enrollment status:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadCloudStatus();
+    const interval = setInterval(loadCloudStatus, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleCloudEnroll = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!enrollEmail || !enrollPassword) return;
+    setEnrollLoading(true);
+    setEnrollError(null);
+    setEnrollSuccess(null);
+    try {
+      if (window.__TAURI__) {
+        const res = await window.__TAURI__.core.invoke("cloud_enroll_command", {
+          payload: {
+            email: enrollEmail.trim().toLowerCase(),
+            password: enrollPassword,
+          },
+        });
+        setEnrollSuccess(res.message || "Connected to Cloud Gym successfully!");
+        setEnrollEmail("");
+        setEnrollPassword("");
+        await loadCloudStatus();
+      }
+    } catch (err) {
+      setEnrollError(typeof err === "string" ? err : "Cloud enrollment failed.");
+    } finally {
+      setEnrollLoading(false);
+    }
+  };
+
+  const handleSyncAll = async () => {
     setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 2500);
+    try {
+      if (window.__TAURI__) {
+        await window.__TAURI__.core.invoke("cloud_sync_now_command");
+        await loadCloudStatus();
+      }
+    } catch (err) {
+      console.error("Sync error:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleUnenroll = async () => {
+    if (!confirm("Are you sure you want to disconnect from this Cloud Gym tenant?")) return;
+    try {
+      if (window.__TAURI__) {
+        await window.__TAURI__.core.invoke("cloud_unenroll_command");
+        await loadCloudStatus();
+      }
+    } catch (err) {
+      console.error("Unenroll error:", err);
+    }
   };
 
   return (
@@ -190,7 +273,7 @@ const DeviceSync = () => {
       {/* 7. NAVIGATION TABS */}
       <div className="max-w-[1600px] mx-auto px-8 -mt-7 relative z-20">
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-2 shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {["Connected Devices", "Sync History", "Network Settings", "Biometric Config"].map(tab => (
+          {["Connected Devices", "Cloud & Mobile Sync", "Sync History", "Network Settings", "Biometric Config"].map(tab => (
             <button 
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -212,8 +295,8 @@ const DeviceSync = () => {
             <div className="space-y-2">
               {[
                 { label: 'Online Nodes', count: 8, color: 'bg-[#10B981]' },
-                { label: 'Offline Nodes', count: 2, color: 'bg-[#EF4444]' },
-                { label: 'Pending Sync', count: 4, color: 'bg-[#F59E0B]' }
+                { label: 'Cloud Gateway', count: cloudStatus.isEnrolled ? 1 : 0, color: cloudStatus.isEnrolled ? 'bg-[#10B981]' : 'bg-[#EF4444]' },
+                { label: 'Pending Sync', count: 0, color: 'bg-[#F59E0B]' }
               ].map(status => (
                 <div key={status.label} className="flex items-center justify-between px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-xl">
                   <div className="flex items-center gap-2">
@@ -229,7 +312,7 @@ const DeviceSync = () => {
           <section>
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9CA3AF] mb-4 ml-2">Active Protocols</h3>
             <div className="space-y-1">
-              {['WebSocket (WSS)', 'REST API (Poll)', 'MQTT Broker'].map(protocol => (
+              {['Cloud Sync (REST/JWT)', 'WebSocket (WSS)', 'REST API (Poll)', 'MQTT Broker'].map(protocol => (
                 <div key={protocol} className="px-3 py-2 text-[11px] font-bold text-[#6B7280] flex items-center gap-2">
                   <div className="w-1 h-1 rounded-full bg-[#D1D5DB]" />
                   {protocol}
@@ -243,10 +326,14 @@ const DeviceSync = () => {
               <Zap className="mb-4 text-[#6366F1]" size={28} />
               <h4 className="text-sm font-black mb-2">Real-time Bridge</h4>
               <p className="text-[10px] font-semibold opacity-60 leading-relaxed mb-4">
-                Local biometric data is synced every 200ms to the cloud clusters.
+                Local database is synchronized automatically with Cloud Gateway and Owner Mobile.
               </p>
-              <button className="h-9 w-full rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-black uppercase tracking-widest transition-all">
-                Test Connection
+              <button 
+                onClick={handleSyncAll}
+                disabled={isSyncing}
+                className="h-9 w-full rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-black uppercase tracking-widest transition-all"
+              >
+                {isSyncing ? "Syncing..." : "Sync Now"}
               </button>
             </div>
           </div>
@@ -256,6 +343,143 @@ const DeviceSync = () => {
         <main className="col-span-7 space-y-8">
           
           <AnimatePresence mode="wait">
+            {activeTab === "Cloud & Mobile Sync" && (
+              <motion.div 
+                key="cloud-sync"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {cloudStatus.isEnrolled ? (
+                  <div className="bg-white rounded-3xl border border-[#E5E7EB] p-8 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                          <CheckCircle2 size={24} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-black tracking-tight">{cloudStatus.gymName || "Enrolled Cloud Gym"}</h3>
+                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
+                              {cloudStatus.gymCode || "DEVGYM"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#6B7280] font-medium">
+                            Bound Account: <span className="font-bold text-[#111827]">{cloudStatus.email}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Live Synchronized
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">
+                      <div>
+                        <div className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest mb-1">Local Synced Members</div>
+                        <div className="text-xl font-black text-[#111827]">{cloudStatus.localMemberCount}</div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest mb-1">Sync Status</div>
+                        <div className="text-sm font-bold text-emerald-600">{cloudStatus.state}</div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest mb-1">Owner Mobile App</div>
+                        <div className="text-sm font-bold text-[#111827]">Connected</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <button
+                        onClick={handleSyncAll}
+                        disabled={isSyncing}
+                        className="h-11 px-6 rounded-xl bg-[#111827] text-white text-xs font-bold hover:bg-[#1F2937] transition-all flex items-center gap-2"
+                      >
+                        <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
+                        {isSyncing ? "Synchronizing..." : "Trigger Manual Cloud Sync"}
+                      </button>
+
+                      <button
+                        onClick={handleUnenroll}
+                        className="h-11 px-4 rounded-xl border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-all"
+                      >
+                        Disconnect Cloud Account
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-3xl border border-[#E5E7EB] p-8 shadow-sm space-y-6">
+                    <div>
+                      <h3 className="text-xl font-black tracking-tight text-[#111827]">Link GymDeck Cloud & Owner Mobile</h3>
+                      <p className="text-xs text-[#6B7280] font-medium mt-1 leading-relaxed">
+                        Log in with your GymDeck Cloud Owner credentials to securely bind this Desktop terminal to your cloud tenant and synchronize members, attendance, and plans seamlessly with the Owner Mobile app.
+                      </p>
+                    </div>
+
+                    {enrollError && (
+                      <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+                        <XCircle size={16} />
+                        {enrollError}
+                      </div>
+                    )}
+
+                    {enrollSuccess && (
+                      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2">
+                        <CheckCircle2 size={16} />
+                        {enrollSuccess}
+                      </div>
+                    )}
+
+                    <form onSubmit={handleCloudEnroll} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#374151] mb-1.5 uppercase tracking-wider">Cloud Owner Email</label>
+                        <input
+                          type="email"
+                          placeholder="devowner@gymdeck.com"
+                          value={enrollEmail}
+                          onChange={(e) => setEnrollEmail(e.target.value)}
+                          className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm focus:ring-2 focus:ring-[#111827] focus:bg-white transition-all outline-none"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-[#374151] mb-1.5 uppercase tracking-wider">Password</label>
+                        <input
+                          type="password"
+                          placeholder="••••••••"
+                          value={enrollPassword}
+                          onChange={(e) => setEnrollPassword(e.target.value)}
+                          className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm focus:ring-2 focus:ring-[#111827] focus:bg-white transition-all outline-none"
+                          required
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={enrollLoading}
+                        className="h-11 w-full rounded-xl bg-[#111827] text-white text-xs font-bold hover:bg-[#1F2937] transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/10"
+                      >
+                        {enrollLoading ? (
+                          <>
+                            <RefreshCw size={16} className="animate-spin" />
+                            Connecting to Cloud Tenant...
+                          </>
+                        ) : (
+                          <>
+                            <Zap size={16} />
+                            Connect & Synchronize Desktop
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {activeTab === "Connected Devices" && (
               <motion.div 
                 key="devices"

@@ -13,6 +13,7 @@ pub struct AppState {
     pub async_db: crate::database::async_manager::AsyncDbManager,
     pub rate_limiter: RateLimiter,
     pub session_manager: SessionManager,
+    pub cloud_session: std::sync::Arc<crate::sessions::cloud_session::CloudSessionManager>,
 }
 
 #[derive(Deserialize)]
@@ -119,9 +120,90 @@ pub async fn login_command(
                 redirect: "/dashboard".to_string(),
             })
         },
-        Err(e) => {
-            state.rate_limiter.penalize(&payload.email, 2).await;
-            Err(e)
+        Err(local_err) => {
+            // If local auth fails, attempt seamless Cloud Gateway Owner Login
+            let cloud_url = std::env::var("GYMDECK_CLOUD_URL")
+                .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
+            let http_client = crate::auth::cloud_auth::CloudAuthClient::build_http_client();
+
+            match crate::auth::cloud_auth::CloudAuthClient::login(
+                &http_client,
+                &cloud_url,
+                &payload.email,
+                secure_password.expose_secret(),
+            ).await {
+                Ok(auth_data) => {
+                    let cloud_user = auth_data.user;
+                    let cloud_tokens = auth_data.tokens;
+                    let cloud_gym_id = cloud_user.gym_id;
+
+                    // 1. Provision local tenant metadata in SQLite
+                    if let Ok(conn) = state.db.pool.get() {
+                        let _ = conn.execute(
+                            "INSERT INTO gyms (id, name, owner_user_id, created_at, updated_at)
+                             VALUES (?1, ?2, ?3, ?4, ?4)
+                             ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at;",
+                            rusqlite::params![
+                                cloud_gym_id.to_string(),
+                                cloud_user.gym_name,
+                                cloud_user.id.to_string(),
+                                chrono::Utc::now().to_rfc3339(),
+                            ],
+                        );
+
+                        let _ = conn.execute(
+                            "INSERT INTO users (id, gym_id, full_name, email, password_hash, role, account_status, created_at, updated_at)
+                             VALUES (?1, ?2, ?3, ?4, 'CLOUD_AUTH', 'OWNER', 'ACTIVE', ?5, ?5)
+                             ON CONFLICT(id) DO UPDATE SET gym_id = excluded.gym_id, full_name = excluded.full_name, email = excluded.email;",
+                            rusqlite::params![
+                                cloud_user.id.to_string(),
+                                cloud_gym_id.to_string(),
+                                cloud_user.full_name,
+                                cloud_user.email,
+                                chrono::Utc::now().to_rfc3339(),
+                            ],
+                        );
+                    }
+
+                    // 2. Bind Cloud Session & OS Keychain
+                    let enrollment_meta = crate::sessions::cloud_session::CloudEnrollmentMetadata {
+                        user_id: cloud_user.id,
+                        gym_id: cloud_gym_id,
+                        gym_name: cloud_user.gym_name.clone(),
+                        gym_code: cloud_user.gym_code.clone(),
+                        email: cloud_user.email.clone(),
+                        enrolled_at: chrono::Utc::now().to_rfc3339(),
+                    };
+                    let _ = state.cloud_session.bind_enrollment(&cloud_tokens, enrollment_meta).await;
+
+                    // 3. Bind Active Session in SessionManager
+                    state.session_manager.create_and_bind_session(cloud_user.id, cloud_gym_id).await?;
+
+                    // 4. Initial sync pull
+                    let worker_id = format!("desktop-node-{}", &cloud_user.id.to_string()[..8]);
+                    let _ = crate::sync::worker::SyncWorker::execute_cycle(
+                        &state.db.pool,
+                        &http_client,
+                        &cloud_url,
+                        &worker_id,
+                        &cloud_gym_id,
+                        &cloud_tokens.access_token,
+                    ).await;
+
+                    // 5. Start background sync daemon
+                    let worker = crate::sync::worker::SyncWorker::new(state.db.pool.clone(), Some(cloud_url));
+                    worker.start_with_session(cloud_gym_id, state.cloud_session.clone());
+
+                    Ok(LoginResponse {
+                        success: true,
+                        redirect: "/dashboard".to_string(),
+                    })
+                }
+                Err(_) => {
+                    state.rate_limiter.penalize(&payload.email, 2).await;
+                    Err(local_err)
+                }
+            }
         }
     }
 }

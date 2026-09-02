@@ -101,7 +101,81 @@ impl SyncWorker {
         }
     }
 
-    /// Spawns the autonomous background sync worker loop in Tokio runtime.
+    /// Spawns the autonomous background sync worker loop in Tokio runtime with active cloud session.
+    pub fn start_with_session(
+        &self,
+        gym_id: Uuid,
+        session_mgr: Arc<crate::sessions::cloud_session::CloudSessionManager>,
+    ) -> Arc<AtomicBool> {
+        let running_flag = self.is_running.clone();
+        running_flag.store(true, Ordering::SeqCst);
+
+        let pool = self.db_pool.clone();
+        let worker_id = self.worker_id.clone();
+        let cloud_url = self.cloud_url.clone();
+        let client = self.client.clone();
+        let is_running = running_flag.clone();
+
+        tokio::spawn(async move {
+            tracing::info!("[SyncWorker] Autonomous background sync daemon started: worker_id={}, gym_id={}", worker_id, gym_id);
+
+            while is_running.load(Ordering::SeqCst) {
+                // 1. Get or refresh access token
+                let mut token = session_mgr.get_access_token().await.unwrap_or_default();
+                if token.is_empty() {
+                    if let Some(refresh_tok) = session_mgr.get_stored_refresh_token() {
+                        if let Ok(new_tokens) = crate::auth::cloud_auth::CloudAuthClient::refresh_tokens(
+                            &client,
+                            &cloud_url,
+                            &refresh_tok,
+                        ).await {
+                            session_mgr.set_access_token(new_tokens.access_token.clone()).await;
+                            token = new_tokens.access_token;
+                        } else {
+                            session_mgr.set_state(crate::sessions::cloud_session::EnrollmentState::AuthExpired).await;
+                        }
+                    }
+                }
+
+                if !token.is_empty() {
+                    match Self::execute_cycle(
+                        &pool,
+                        &client,
+                        &cloud_url,
+                        &worker_id,
+                        &gym_id,
+                        &token,
+                    ).await {
+                        Ok(_) => {
+                            session_mgr.set_state(crate::sessions::cloud_session::EnrollmentState::Ready).await;
+                        }
+                        Err(AppError::Unauthorized) => {
+                            // 401 detected: Force token refresh on next cycle
+                            tracing::warn!("[SyncWorker] 401 Unauthorized received. Triggering token refresh.");
+                            session_mgr.set_access_token("".into()).await;
+                        }
+                        Err(e) => {
+                            tracing::debug!("[SyncWorker] Sync cycle note (normal if offline): {}", e);
+                        }
+                    }
+                }
+
+                // Sleep 5 seconds interval with fast cancellation responsiveness (50 x 100ms)
+                for _ in 0..50 {
+                    if !is_running.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+            }
+
+            tracing::info!("[SyncWorker] Background sync daemon stopped gracefully.");
+        });
+
+        running_flag
+    }
+
+    /// Spawns the autonomous background sync worker loop in Tokio runtime with static token.
     pub fn start(&self, gym_id: Uuid, auth_token: Option<String>) -> Arc<AtomicBool> {
         let running_flag = self.is_running.clone();
         running_flag.store(true, Ordering::SeqCst);
@@ -116,7 +190,6 @@ impl SyncWorker {
             tracing::info!("[SyncWorker] Autonomous background sync daemon started: worker_id={}", worker_id);
 
             while is_running.load(Ordering::SeqCst) {
-                // Execute a single sync push/pull cycle
                 let token = auth_token.clone().unwrap_or_default();
                 if let Err(e) = Self::execute_cycle(
                     &pool,
@@ -129,8 +202,7 @@ impl SyncWorker {
                     tracing::debug!("[SyncWorker] Sync cycle note (normal if offline): {}", e);
                 }
 
-                // Sleep interval with fast cancellation responsiveness
-                for _ in 0..150 {
+                for _ in 0..50 {
                     if !is_running.load(Ordering::SeqCst) {
                         break;
                     }
@@ -142,6 +214,11 @@ impl SyncWorker {
         });
 
         running_flag
+    }
+
+    /// Stops the background sync loop.
+    pub fn stop(&self) {
+        self.is_running.store(false, Ordering::SeqCst);
     }
 
     /// Performs one atomic push and pull synchronization pass.

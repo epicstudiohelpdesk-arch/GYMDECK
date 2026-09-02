@@ -41,13 +41,18 @@ use commands::sync_commands::{
     mark_sync_event_synced_command, mark_sync_event_failed_command, update_sync_cursor_command,
     apply_pull_batch_command
 };
+use commands::cloud_enroll_commands::{
+    cloud_enroll_command, get_cloud_enrollment_status_command, cloud_sync_now_command, cloud_unenroll_command
+};
 use commands::backup_commands::{
     create_backup_command, list_backups_command, verify_backup_command, verify_restore_command
 };
 use auth::rate_limit::default_auth_limiter;
 use sessions::manager::SessionManager;
+use sessions::cloud_session::CloudSessionManager;
 use config::AppConfig;
 use chrono::Timelike;
+use std::sync::Arc;
 
 fn schedule_daily_backup(db_path: std::path::PathBuf) {
     tauri::async_runtime::spawn(async move {
@@ -133,12 +138,27 @@ pub fn run() {
 
       let rate_limiter = default_auth_limiter();
       let session_manager = SessionManager::new("com.gymdeck.desktop");
+      let cloud_session = Arc::new(CloudSessionManager::new("com.gymdeck.desktop"));
+
+      // Restore enrollment if previously enrolled and start sync daemon
+      let db_pool_clone = database_manager.pool.clone();
+      let cloud_session_clone = cloud_session.clone();
+      tauri::async_runtime::spawn(async move {
+          if let Ok(Some(meta)) = cloud_session_clone.restore_enrollment().await {
+              let cloud_url = std::env::var("GYMDECK_CLOUD_URL")
+                  .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
+              let worker = sync::worker::SyncWorker::new(db_pool_clone, Some(cloud_url));
+              worker.start_with_session(meta.gym_id, cloud_session_clone);
+              tracing::info!("Autonomous sync worker started for restored enrollment: {:?}", meta.gym_name);
+          }
+      });
 
       app.manage(AppState {
           db: database_manager,
           async_db,
           rate_limiter,
           session_manager,
+          cloud_session,
       });
 
       // Schedule automated daily backups
@@ -197,7 +217,11 @@ pub fn run() {
         create_backup_command,
         list_backups_command,
         verify_backup_command,
-        verify_restore_command
+        verify_restore_command,
+        cloud_enroll_command,
+        get_cloud_enrollment_status_command,
+        cloud_sync_now_command,
+        cloud_unenroll_command
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

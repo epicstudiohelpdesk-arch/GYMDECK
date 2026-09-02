@@ -22,6 +22,8 @@ pub enum AppError {
     Backup(String),
     #[error("Restore operation failed: {0}")]
     Restore(String),
+    #[error("Network connection error: {0}")]
+    Network(String),
 }
 
 // Implement Serialize to safely pass errors to the React frontend
@@ -42,6 +44,7 @@ impl serde::Serialize for AppError {
             AppError::Configuration(_) => "System Error: Invalid application configuration.".to_string(),
             AppError::Backup(_) => "System Error: Backup operation failed.".to_string(),
             AppError::Restore(_) => "System Error: Restore validation failed.".to_string(),
+            AppError::Network(e) => format!("Network Error: {}", e),
         };
         serializer.serialize_str(&safe_message)
     }

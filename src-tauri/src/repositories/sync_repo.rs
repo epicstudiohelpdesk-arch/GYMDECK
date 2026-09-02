@@ -393,6 +393,14 @@ impl SyncRepository {
                             .and_then(|v| v.as_str())
                             .unwrap_or("ACTIVE");
 
+                        let gender = change.payload.get("gender").and_then(|v| v.as_str());
+                        let dob = change.payload.get("dob").and_then(|v| v.as_str());
+                        let address = change.payload.get("address").and_then(|v| v.as_str());
+                        let notes = change.payload.get("notes").and_then(|v| v.as_str());
+                        let alternate_phone = change.payload.get("alternatePhone")
+                            .or_else(|| change.payload.get("alternate_phone"))
+                            .and_then(|v| v.as_str());
+
                         let joined_at = change.payload.get("joinedAt")
                             .or_else(|| change.payload.get("joined_at"))
                             .and_then(|v| v.as_str())
@@ -408,14 +416,20 @@ impl SyncRepository {
 
                         tx.execute(
                             "INSERT INTO gym_members (
-                                id, gym_id, member_code, full_name, phone, email, membership_status,
+                                id, gym_id, member_code, full_name, phone, alternate_phone, email,
+                                gender, dob, address, notes, membership_status,
                                 joined_at, created_by_user_id, updated_by_user_id, created_at, updated_at
-                            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)
+                            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?16)
                             ON CONFLICT(id) DO UPDATE SET
                                 member_code = excluded.member_code,
                                 full_name = excluded.full_name,
                                 phone = excluded.phone,
+                                alternate_phone = excluded.alternate_phone,
                                 email = excluded.email,
+                                gender = excluded.gender,
+                                dob = excluded.dob,
+                                address = excluded.address,
+                                notes = excluded.notes,
                                 membership_status = excluded.membership_status,
                                 joined_at = excluded.joined_at,
                                 updated_by_user_id = excluded.updated_by_user_id,
@@ -426,7 +440,12 @@ impl SyncRepository {
                                 member_code,
                                 full_name,
                                 phone,
+                                alternate_phone,
                                 email,
+                                gender,
+                                dob,
+                                address,
+                                notes,
                                 status,
                                 joined_at,
                                 created_by,
