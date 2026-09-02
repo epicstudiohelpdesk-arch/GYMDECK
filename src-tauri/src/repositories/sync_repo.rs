@@ -603,6 +603,37 @@ impl SyncRepository {
         Ok(())
     }
 
+    /// Sets an arbitrary key-value metadata entry in sync_state for a gym.
+    pub fn set_sync_state(conn: &Connection, gym_id: &Uuid, key: &str, value: &str) -> Result<(), AppError> {
+        conn.execute(
+            "INSERT INTO sync_state (key, gym_id, value, updated_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(key) DO UPDATE SET gym_id = excluded.gym_id, value = excluded.value, updated_at = excluded.updated_at",
+            params![key, gym_id.to_string(), value, Utc::now().to_rfc3339()],
+        ).map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Pre-records an acknowledged push event into sync_inbox to prevent echo re-application during subsequent pull.
+    pub fn record_inbox_ack(conn: &Connection, gym_id: &Uuid, server_sequence: i64, event_id: &Uuid) -> Result<(), AppError> {
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO sync_inbox (
+                server_sequence, gym_id, event_id, entity_type, entity_id, operation, payload, applied_at
+            ) VALUES (?1, ?2, ?3, 'SYNC_ACK', ?3, 'ACK', '{}', ?4)
+            ON CONFLICT DO NOTHING",
+            params![
+                server_sequence,
+                gym_id.to_string(),
+                event_id.to_string(),
+                now,
+            ],
+        ).map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(())
+    }
+
     /// Returns aggregate sync outbox statistics.
     pub fn get_outbox_stats(conn: &Connection, gym_id: &Uuid) -> Result<SyncStats, AppError> {
         let pending_count: i64 = conn.query_row(

@@ -153,10 +153,11 @@ impl SyncWorker {
         gym_id: &Uuid,
         auth_token: &str,
     ) -> Result<(), AppError> {
+        let mut conn = pool.get().map_err(|e| AppError::Database(e.to_string()))?;
+
         // =========================================================================
         // 1. PUSH PHASE: Claim pending outbox events and transmit to Cloud
         // =========================================================================
-        let mut conn = pool.get().map_err(|e| AppError::Database(e.to_string()))?;
         let claimed_events = SyncRepository::claim_pending_events(
             &mut conn,
             gym_id,
@@ -198,9 +199,23 @@ impl SyncWorker {
             match response_result {
                 Ok(resp) if resp.status().is_success() => {
                     if let Ok(push_resp) = resp.json::<PushApiResponse>().await {
+                        // Store cloud sequence watermark if provided
+                        if let Some(latest_seq) = push_resp.latest_server_sequence {
+                            let _ = SyncRepository::set_sync_state(
+                                &conn,
+                                gym_id,
+                                "cloud_latest_server_sequence",
+                                &latest_seq.to_string(),
+                            );
+                        }
+
                         for item in push_resp.results {
                             if let Ok(event_id) = Uuid::parse_str(&item.event_id) {
                                 if item.status == "APPLIED" || item.status == "ALREADY_APPLIED" {
+                                    // Pre-record inbox acknowledgment if server assigned a sequence
+                                    if let Some(srv_seq) = item.server_sequence {
+                                        let _ = SyncRepository::record_inbox_ack(&conn, gym_id, srv_seq, &event_id);
+                                    }
                                     let _ = SyncRepository::mark_event_synced(&conn, &event_id);
                                 } else if item.status == "FAILED" {
                                     let err_msg = item.error.unwrap_or_else(|| "Rejected by cloud".into());
@@ -245,47 +260,71 @@ impl SyncWorker {
         }
 
         // =========================================================================
-        // 2. PULL PHASE: Query incremental server sequence changes since local cursor
+        // 2. PULL PHASE: Query incremental server sequence changes in pages
         // =========================================================================
-        let current_cursor = SyncRepository::get_cursor(&conn, gym_id)?;
-        let pull_url = format!(
-            "{}/v1/sync/pull?cursor={}&limit=100&deviceId={}",
-            cloud_url, current_cursor, worker_id
-        );
+        let mut pull_page_count = 0;
+        const MAX_PULL_PAGES_PER_CYCLE: usize = 50;
 
-        let pull_result = client
-            .get(&pull_url)
-            .bearer_auth(auth_token)
-            .send()
-            .await;
+        loop {
+            let current_cursor = SyncRepository::get_cursor(&conn, gym_id)?;
+            let pull_url = format!(
+                "{}/v1/sync/pull?cursor={}&limit=100&deviceId={}",
+                cloud_url, current_cursor, worker_id
+            );
 
-        if let Ok(resp) = pull_result {
-            if resp.status().is_success() {
-                if let Ok(pull_resp) = resp.json::<PullApiResponse>().await {
-                    if !pull_resp.changes.is_empty() {
-                        let remote_changes: Vec<RemoteChangeRecord> = pull_resp
-                            .changes
-                            .into_iter()
-                            .map(|c| RemoteChangeRecord {
-                                server_sequence: c.server_sequence,
-                                event_id: Uuid::parse_str(&c.event_id).unwrap_or_default(),
-                                entity_type: c.entity_type,
-                                entity_id: Uuid::parse_str(&c.entity_id).unwrap_or_default(),
-                                operation: c.operation,
-                                payload: c.payload,
-                                created_at: c.created_at,
-                            })
-                            .collect();
+            let pull_result = client
+                .get(&pull_url)
+                .bearer_auth(auth_token)
+                .send()
+                .await;
 
-                        // Atomically apply changes into SQLite and advance cursor
-                        SyncRepository::apply_pull_batch_tx(
-                            &mut conn,
+            match pull_result {
+                Ok(resp) if resp.status().is_success() => {
+                    if let Ok(pull_resp) = resp.json::<PullApiResponse>().await {
+                        // Update authoritative cloud watermark
+                        let _ = SyncRepository::set_sync_state(
+                            &conn,
                             gym_id,
-                            &remote_changes,
-                            pull_resp.cursor,
-                        )?;
+                            "cloud_latest_server_sequence",
+                            &pull_resp.latest_server_sequence.to_string(),
+                        );
+
+                        let has_more = pull_resp.has_more;
+                        let batch_size = pull_resp.changes.len();
+
+                        if !pull_resp.changes.is_empty() {
+                            let remote_changes: Vec<RemoteChangeRecord> = pull_resp
+                                .changes
+                                .into_iter()
+                                .map(|c| RemoteChangeRecord {
+                                    server_sequence: c.server_sequence,
+                                    event_id: Uuid::parse_str(&c.event_id).unwrap_or_default(),
+                                    entity_type: c.entity_type,
+                                    entity_id: Uuid::parse_str(&c.entity_id).unwrap_or_default(),
+                                    operation: c.operation,
+                                    payload: c.payload,
+                                    created_at: c.created_at,
+                                })
+                                .collect();
+
+                            // Atomically apply changes into SQLite and advance cursor
+                            SyncRepository::apply_pull_batch_tx(
+                                &mut conn,
+                                gym_id,
+                                &remote_changes,
+                                pull_resp.cursor,
+                            )?;
+                        }
+
+                        pull_page_count += 1;
+                        if !has_more || batch_size == 0 || pull_page_count >= MAX_PULL_PAGES_PER_CYCLE {
+                            break;
+                        }
+                    } else {
+                        break;
                     }
                 }
+                _ => break,
             }
         }
 

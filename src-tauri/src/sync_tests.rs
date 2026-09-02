@@ -322,4 +322,67 @@ mod desktop_sync_verification_tests {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         assert!(!flag.load(std::sync::atomic::Ordering::SeqCst), "Worker must stop cleanly");
     }
+
+    // =========================================================================
+    // TEST 10: Push and Pull response metadata, inbox ack, and watermark tracking
+    // =========================================================================
+    #[test]
+    fn test_push_and_pull_response_metadata_and_inbox_ack() {
+        let mut conn = setup_test_db();
+        let gym_id: String = conn.query_row("SELECT id FROM gyms LIMIT 1", [], |r| r.get(0)).unwrap();
+        let gym_uuid = Uuid::parse_str(&gym_id).unwrap();
+        let event_id = Uuid::new_v4();
+
+        // 1. Test inbox pre-acknowledgment from push response
+        SyncRepository::record_inbox_ack(&conn, &gym_uuid, 105, &event_id).expect("Should record inbox ack");
+
+        let inbox_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sync_inbox WHERE server_sequence = 105 AND event_id = ?1",
+            rusqlite::params![event_id.to_string()],
+            |r| r.get(0),
+        ).unwrap();
+        assert_eq!(inbox_count, 1, "Inbox ack must exist in sync_inbox");
+
+        // Calling again with same sequence must not error (idempotent)
+        SyncRepository::record_inbox_ack(&conn, &gym_uuid, 105, &event_id).expect("Duplicate ack must not fail");
+
+        // 2. Test cloud watermark tracking from pull response
+        SyncRepository::set_sync_state(&conn, &gym_uuid, "cloud_latest_server_sequence", "250")
+            .expect("Should set cloud watermark");
+
+        let watermark: String = conn.query_row(
+            "SELECT value FROM sync_state WHERE key = 'cloud_latest_server_sequence' AND gym_id = ?1",
+            rusqlite::params![gym_id],
+            |r| r.get(0),
+        ).unwrap();
+        assert_eq!(watermark, "250", "Cloud watermark sequence must match stored value");
+
+        // 3. Test pull batch with pre-acknowledged sequence doesn't conflict
+        let pull_changes = vec![
+            RemoteChangeRecord {
+                server_sequence: 105, // Same sequence as acked push
+                event_id,
+                entity_type: "gym_member".into(),
+                entity_id: Uuid::new_v4(),
+                operation: "CREATE".into(),
+                payload: serde_json::json!({ "fullName": "Acked Member" }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+            RemoteChangeRecord {
+                server_sequence: 106,
+                event_id: Uuid::new_v4(),
+                entity_type: "gym_member".into(),
+                entity_id: Uuid::new_v4(),
+                operation: "CREATE".into(),
+                payload: serde_json::json!({ "fullName": "New Member" }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+        ];
+
+        SyncRepository::apply_pull_batch_tx(&mut conn, &gym_uuid, &pull_changes, 106)
+            .expect("Pull batch with pre-existing ack sequence must succeed cleanly");
+
+        let cursor = SyncRepository::get_cursor(&conn, &gym_uuid).unwrap();
+        assert_eq!(cursor, 106, "Cursor must advance to 106");
+    }
 }
