@@ -5,6 +5,7 @@ import ownerAuthRouter from './ownerAuth';
 import memberRouter from './member';
 import ownerRouter from './owner';
 import syncRouter from './sync';
+import webhookRouter from './webhooks';
 
 const router: Router = Router();
 
@@ -21,5 +22,8 @@ router.use('/v1/owner', ownerRouter);
 
 // Desktop & Mobile Synchronization API (/v1/sync)
 router.use('/v1/sync', syncRouter);
+
+// Provider Webhooks API (/v1/webhooks)
+router.use('/v1/webhooks', webhookRouter);
 
 export default router;

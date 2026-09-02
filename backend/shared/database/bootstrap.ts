@@ -500,12 +500,17 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
 
     ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS processing_started_at TIMESTAMPTZ;
     ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS processing_lease_expires_at TIMESTAMPTZ;
+    ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS provider VARCHAR(64);
+    ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(255);
+    ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS error_code VARCHAR(64);
+    ALTER TABLE notification_deliveries ADD COLUMN IF NOT EXISTS error_classification VARCHAR(64);
 
     CREATE INDEX IF NOT EXISTS idx_notif_deliveries_queue ON notification_deliveries(gym_id, channel, status, next_attempt_at);
     CREATE INDEX IF NOT EXISTS idx_notif_deliveries_notif ON notification_deliveries(notification_id);
     DELETE FROM notification_deliveries a USING notification_deliveries b WHERE a.created_at < b.created_at AND a.notification_id = b.notification_id AND a.channel = b.channel;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_notif_deliveries_unique_channel ON notification_deliveries(notification_id, channel);
     CREATE INDEX IF NOT EXISTS idx_notif_deliveries_lease_recovery ON notification_deliveries(status, processing_lease_expires_at);
+    CREATE INDEX IF NOT EXISTS idx_notif_deliveries_provider_msg ON notification_deliveries(provider_message_id);
 
     CREATE TABLE IF NOT EXISTS device_push_tokens (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -526,6 +531,22 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     DELETE FROM device_push_tokens a USING device_push_tokens b WHERE a.created_at < b.created_at AND a.gym_id = b.gym_id AND a.recipient_type = b.recipient_type AND a.recipient_id = b.recipient_id AND a.push_token = b.push_token;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_push_tokens_unique ON device_push_tokens(gym_id, recipient_type, recipient_id, push_token);
     CREATE INDEX IF NOT EXISTS idx_push_tokens_recipient ON device_push_tokens(gym_id, recipient_type, recipient_id, is_active);
+
+    CREATE TABLE IF NOT EXISTS provider_webhook_events (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+      provider VARCHAR(64) NOT NULL,
+      provider_event_id VARCHAR(255) NOT NULL,
+      provider_message_id VARCHAR(255),
+      event_type VARCHAR(64) NOT NULL,
+      payload TEXT NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'PROCESSED',
+      processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_events_dedup ON provider_webhook_events(provider, provider_event_id);
+    CREATE INDEX IF NOT EXISTS idx_webhook_events_provider_msg ON provider_webhook_events(provider_message_id);
   `;
 
   await pool.query(ddl);

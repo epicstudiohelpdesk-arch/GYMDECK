@@ -54,8 +54,17 @@ export class NotificationEngine {
         'PUSH'
       );
 
+      const whatsappEnabled = await this.isNotificationEnabled(
+        tx,
+        event.gymId,
+        notif.recipientType,
+        notif.recipientId,
+        notif.category,
+        'WHATSAPP'
+      );
+
       // If all channels are disabled, we don't need to persist this notification
-      if (!inAppEnabled && !pushEnabled) {
+      if (!inAppEnabled && !pushEnabled && !whatsappEnabled) {
         continue;
       }
 
@@ -130,7 +139,7 @@ export class NotificationEngine {
         }
       }
 
-      // 5. Stage PUSH Delivery Record for future Phase 12B provider execution (if enabled)
+      // 5. Stage PUSH Delivery Record for asynchronous provider execution (if enabled)
       if (pushEnabled) {
         const existingPushDelivery = (
           await tx
@@ -150,6 +159,33 @@ export class NotificationEngine {
             gymId: event.gymId,
             notificationId,
             channel: 'PUSH',
+            status: 'PENDING',
+            attemptCount: 0,
+            metadata: JSON.stringify({ sourceEventId: event.eventId }),
+          });
+        }
+      }
+
+      // 6. Stage WHATSAPP Delivery Record for asynchronous provider execution (if enabled)
+      if (whatsappEnabled) {
+        const existingWhatsAppDelivery = (
+          await tx
+            .select()
+            .from(notificationDeliveries)
+            .where(
+              and(
+                eq(notificationDeliveries.notificationId, notificationId),
+                eq(notificationDeliveries.channel, 'WHATSAPP')
+              )
+            )
+            .limit(1)
+        )[0];
+
+        if (!existingWhatsAppDelivery) {
+          await tx.insert(notificationDeliveries).values({
+            gymId: event.gymId,
+            notificationId,
+            channel: 'WHATSAPP',
             status: 'PENDING',
             attemptCount: 0,
             metadata: JSON.stringify({ sourceEventId: event.eventId }),

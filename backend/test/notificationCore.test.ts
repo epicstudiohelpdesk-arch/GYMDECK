@@ -213,8 +213,11 @@ async function runNotificationCoreHardeningTestSuite() {
     .from(notificationDeliveries)
     .where(eq(notificationDeliveries.notificationId, billingNotif!.id));
 
-  assert.equal(billingDeliveries.length, 1);
-  assert.equal(billingDeliveries[0]!.channel, 'IN_APP');
+  const inAppDelivery = billingDeliveries.find((d) => d.channel === 'IN_APP');
+  const pushDelivery = billingDeliveries.find((d) => d.channel === 'PUSH');
+
+  assert.ok(inAppDelivery, 'IN_APP delivery must exist');
+  assert.equal(pushDelivery, undefined, 'Disabled PUSH delivery must be omitted');
   console.log('     ✅ Channel preferences resolved independently: IN_APP created, disabled PUSH omitted.');
 
   // ==============================================================================

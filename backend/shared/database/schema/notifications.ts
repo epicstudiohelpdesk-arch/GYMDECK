@@ -114,15 +114,19 @@ export const notificationDeliveries = pgTable(
       .notNull()
       .references(() => notifications.id, { onDelete: 'cascade' }),
     channel: varchar('channel', { length: 32 }).notNull(), // IN_APP, PUSH, WHATSAPP, EMAIL, SMS
-    status: varchar('status', { length: 32 }).notNull().default('PENDING'), // PENDING, PROCESSING, DELIVERED, FAILED, RETRYING
+    provider: varchar('provider', { length: 64 }), // EXPO_PUSH, META_WHATSAPP, MOCK_PROVIDER
+    status: varchar('status', { length: 32 }).notNull().default('PENDING'), // PENDING, PROCESSING, SENT, DELIVERED, FAILED, RETRYING
     attemptCount: integer('attempt_count').notNull().default(0),
     maxAttempts: integer('max_attempts').notNull().default(3),
+    idempotencyKey: varchar('idempotency_key', { length: 255 }),
     processingStartedAt: timestamp('processing_started_at', { withTimezone: true }),
     processingLeaseExpiresAt: timestamp('processing_lease_expires_at', { withTimezone: true }),
     nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }),
     lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
     failureReason: text('failure_reason'),
+    errorCode: varchar('error_code', { length: 64 }),
+    errorClassification: varchar('error_classification', { length: 64 }),
     providerMessageId: varchar('provider_message_id', { length: 255 }),
     metadata: text('metadata'), // JSON string
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -143,6 +147,9 @@ export const notificationDeliveries = pgTable(
     deliveryLeaseRecoveryIdx: index('idx_notif_deliveries_lease_recovery').on(
       table.status,
       table.processingLeaseExpiresAt
+    ),
+    providerMessageIdx: index('idx_notif_deliveries_provider_msg').on(
+      table.providerMessageId
     ),
   })
 );
@@ -181,6 +188,31 @@ export const devicePushTokens = pgTable(
   })
 );
 
+export const providerWebhookEvents = pgTable(
+  'provider_webhook_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gymId: uuid('gym_id').references(() => gyms.id, { onDelete: 'cascade' }),
+    provider: varchar('provider', { length: 64 }).notNull(), // META_WHATSAPP, EXPO_PUSH
+    providerEventId: varchar('provider_event_id', { length: 255 }).notNull(),
+    providerMessageId: varchar('provider_message_id', { length: 255 }),
+    eventType: varchar('event_type', { length: 64 }).notNull(), // status_update, delivery_receipt
+    payload: text('payload').notNull(), // JSON string
+    status: varchar('status', { length: 32 }).notNull().default('PROCESSED'), // PROCESSED, IGNORED, FAILED
+    processedAt: timestamp('processed_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    webhookEventDedupIdx: uniqueIndex('idx_webhook_events_dedup').on(
+      table.provider,
+      table.providerEventId
+    ),
+    webhookProviderMsgIdx: index('idx_webhook_events_provider_msg').on(
+      table.providerMessageId
+    ),
+  })
+);
+
 export type DomainEvent = typeof domainEvents.$inferSelect;
 export type NewDomainEvent = typeof domainEvents.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
@@ -191,3 +223,5 @@ export type NotificationDelivery = typeof notificationDeliveries.$inferSelect;
 export type NewNotificationDelivery = typeof notificationDeliveries.$inferInsert;
 export type DevicePushToken = typeof devicePushTokens.$inferSelect;
 export type NewDevicePushToken = typeof devicePushTokens.$inferInsert;
+export type ProviderWebhookEvent = typeof providerWebhookEvents.$inferSelect;
+export type NewProviderWebhookEvent = typeof providerWebhookEvents.$inferInsert;

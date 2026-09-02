@@ -35,6 +35,20 @@ const EnvironmentSchema = z.object({
   RESEND_API_KEY: z.string().optional().default('re_dev_placeholder_key'),
   RESEND_FROM_EMAIL: z.string().email().default('auth@notifications.gymdeck.com'),
 
+  // External Push Provider (Expo Push)
+  EXPO_ACCESS_TOKEN: z.string().optional(),
+  EXPO_PUSH_API_URL: z.string().url().default('https://exp.host/--/api/v2/push/send'),
+
+  // WhatsApp Provider (Meta WhatsApp Cloud API)
+  WHATSAPP_API_URL: z.string().url().default('https://graph.facebook.com/v22.0'),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default('dev_whatsapp_phone_number_id'),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional().default('dev_whatsapp_access_token'),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional().default('dev_whatsapp_webhook_verify_token'),
+  WHATSAPP_APP_SECRET: z.string().optional().default('dev_whatsapp_app_secret_12345'),
+
+  // Provider Dispatch Mode
+  NOTIFICATION_PROVIDER_MODE: z.enum(['live', 'sandbox', 'mock']).default('sandbox'),
+
   // Redis Cache
   REDIS_URL: z.string().optional(),
 });
