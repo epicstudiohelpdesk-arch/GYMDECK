@@ -111,28 +111,29 @@ impl SyncWorker {
         running_flag.store(true, Ordering::SeqCst);
 
         let pool = self.db_pool.clone();
-        let worker_id = self.worker_id.clone();
         let cloud_url = self.cloud_url.clone();
         let client = self.client.clone();
         let is_running = running_flag.clone();
+        let worker_session = session_mgr.clone();
 
         tokio::spawn(async move {
-            tracing::info!("[SyncWorker] Autonomous background sync daemon started: worker_id={}, gym_id={}", worker_id, gym_id);
+            // Register this worker's flag to stop any previous background loop
+            worker_session.register_worker_flag(is_running.clone()).await;
+
+            // Use persistent, cryptographically secure Device ID
+            let device_id = worker_session.get_or_create_device_id();
+            tracing::info!("[SyncWorker] Autonomous background sync daemon started: device_id={}, gym_id={}", device_id, gym_id);
 
             while is_running.load(Ordering::SeqCst) {
-                // 1. Get or refresh access token
-                let mut token = session_mgr.get_access_token().await.unwrap_or_default();
+                // 1. Fetch or refresh access token via concurrency-safe single-flight manager
+                let mut token = worker_session.get_access_token().await.unwrap_or_default();
                 if token.is_empty() {
-                    if let Some(refresh_tok) = session_mgr.get_stored_refresh_token() {
-                        if let Ok(new_tokens) = crate::auth::cloud_auth::CloudAuthClient::refresh_tokens(
-                            &client,
-                            &cloud_url,
-                            &refresh_tok,
-                        ).await {
-                            session_mgr.set_access_token(new_tokens.access_token.clone()).await;
-                            token = new_tokens.access_token;
-                        } else {
-                            session_mgr.set_state(crate::sessions::cloud_session::EnrollmentState::AuthExpired).await;
+                    match worker_session.refresh_access_token_single_flight(&client, &cloud_url).await {
+                        Ok(new_tok) => {
+                            token = new_tok;
+                        }
+                        Err(e) => {
+                            tracing::debug!("[SyncWorker] Token refresh failed (will retry): {}", e);
                         }
                     }
                 }
@@ -142,17 +143,26 @@ impl SyncWorker {
                         &pool,
                         &client,
                         &cloud_url,
-                        &worker_id,
+                        &device_id,
                         &gym_id,
                         &token,
                     ).await {
                         Ok(_) => {
-                            session_mgr.set_state(crate::sessions::cloud_session::EnrollmentState::Ready).await;
+                            worker_session.set_state(crate::sessions::cloud_session::EnrollmentState::Ready).await;
                         }
                         Err(AppError::Unauthorized) => {
-                            // 401 detected: Force token refresh on next cycle
-                            tracing::warn!("[SyncWorker] 401 Unauthorized received. Triggering token refresh.");
-                            session_mgr.set_access_token("".into()).await;
+                            tracing::warn!("[SyncWorker] 401 Unauthorized received. Attempting single-flight token refresh...");
+                            if let Ok(new_tok) = worker_session.refresh_access_token_single_flight(&client, &cloud_url).await {
+                                // Retry cycle once with refreshed token
+                                let _ = Self::execute_cycle(
+                                    &pool,
+                                    &client,
+                                    &cloud_url,
+                                    &device_id,
+                                    &gym_id,
+                                    &new_tok,
+                                ).await;
+                            }
                         }
                         Err(e) => {
                             tracing::debug!("[SyncWorker] Sync cycle note (normal if offline): {}", e);

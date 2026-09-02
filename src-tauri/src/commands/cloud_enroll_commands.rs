@@ -150,12 +150,12 @@ pub async fn cloud_enroll_command(
 
     // 6. Perform Initial Synchronization Pull
     state.cloud_session.set_state(EnrollmentState::Syncing).await;
-    let worker_id = format!("desktop-node-{}", &cloud_user.id.to_string()[..8]);
+    let device_id = state.cloud_session.get_or_create_device_id();
     let _ = SyncWorker::execute_cycle(
         &state.db.pool,
         &client,
         &cloud_url,
-        &worker_id,
+        &device_id,
         &cloud_gym_id,
         &cloud_tokens.access_token,
     ).await;
@@ -251,31 +251,20 @@ pub async fn cloud_sync_now_command(
         None => return Err(AppError::Unauthorized),
     };
 
-    let token = match state.cloud_session.get_access_token().await {
-        Some(t) if !t.is_empty() => t,
-        _ => {
-            // Attempt token refresh
-            let cloud_url = get_effective_cloud_url(None);
-            let client = CloudAuthClient::build_http_client();
-            if let Some(refresh_tok) = state.cloud_session.get_stored_refresh_token() {
-                let new_tokens = CloudAuthClient::refresh_tokens(&client, &cloud_url, &refresh_tok).await?;
-                state.cloud_session.set_access_token(new_tokens.access_token.clone()).await;
-                new_tokens.access_token
-            } else {
-                return Err(AppError::SessionInvalid);
-            }
-        }
-    };
-
     let cloud_url = get_effective_cloud_url(None);
     let client = CloudAuthClient::build_http_client();
-    let worker_id = format!("desktop-node-{}", &meta.user_id.to_string()[..8]);
+    let token = match state.cloud_session.get_access_token().await {
+        Some(t) if !t.is_empty() => t,
+        _ => state.cloud_session.refresh_access_token_single_flight(&client, &cloud_url).await?,
+    };
+
+    let device_id = state.cloud_session.get_or_create_device_id();
 
     SyncWorker::execute_cycle(
         &state.db.pool,
         &client,
         &cloud_url,
-        &worker_id,
+        &device_id,
         &meta.gym_id,
         &token,
     ).await?;

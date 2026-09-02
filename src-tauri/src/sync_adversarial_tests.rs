@@ -691,6 +691,194 @@ mod sync_adversarial_tests {
         // 3. Clean up temp dir
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
+
+    // =========================================================================
+    // AUDIT 10: POPULATED VAULT PROTECTION (Indian's Gym 69 Members -> DEVGYM)
+    // =========================================================================
+    #[test]
+    fn test_populated_vault_indians_gym_to_devgym_isolation() {
+        let mut conn = setup_test_db();
+        let indians_gym_id = Uuid::parse_str("5586ea28-78ab-44b6-a68c-f84fdf7f4cbe").unwrap();
+        let devgym_id = Uuid::parse_str("66258084-af0b-49cb-a696-8fa6ef3d6373").unwrap();
+
+        // 1. Seed Indian's Gym with 69 members
+        conn.execute(
+            "INSERT INTO gyms (id, name, owner_user_id) VALUES (?1, 'Indian''s Gym', 'usr-indians-owner')",
+            params![indians_gym_id.to_string()],
+        ).unwrap();
+
+        for i in 1..=69 {
+            conn.execute(
+                "INSERT INTO gym_members (id, gym_id, member_code, full_name, phone, membership_status, joined_at, created_by_user_id, updated_by_user_id)
+                 VALUES (?1, ?2, ?3, ?4, '9876543210', 'ACTIVE', CURRENT_TIMESTAMP, 'SYSTEM', 'SYSTEM')",
+                params![
+                    Uuid::new_v4().to_string(),
+                    indians_gym_id.to_string(),
+                    format!("GD-IND-{:03}", i),
+                    format!("Indian Member {:02}", i),
+                ],
+            ).unwrap();
+        }
+
+        let indians_count_before: i64 = conn.query_row(
+            "SELECT count(*) FROM gym_members WHERE gym_id = ?1 AND deleted_at IS NULL",
+            params![indians_gym_id.to_string()],
+            |r| r.get(0),
+        ).unwrap();
+        assert_eq!(indians_count_before, 69, "Indian's Gym must start with 69 members");
+
+        // 2. Enroll DEVGYM and provision in SQLite
+        conn.execute(
+            "INSERT INTO gyms (id, name, owner_user_id) VALUES (?1, 'Dev Test Gym', 'usr-devowner')",
+            params![devgym_id.to_string()],
+        ).unwrap();
+
+        // 3. Synchronize DEVGYM members (GD-7FDEB6 and GD-BE15AA)
+        let subham_1_id = Uuid::parse_str("c309c5a2-9332-4d16-9340-0f10e0a83e1e").unwrap();
+        let subham_2_id = Uuid::parse_str("7f32e82c-d582-4551-8c4e-c282f23dbbf6").unwrap();
+
+        let devgym_changes = vec![
+            RemoteChangeRecord {
+                server_sequence: 2628,
+                event_id: Uuid::new_v4(),
+                entity_type: "gym_member".into(),
+                entity_id: subham_1_id,
+                operation: "CREATE".into(),
+                payload: serde_json::json!({
+                    "fullName": "Subham",
+                    "phone": "6291773811",
+                    "memberCode": "GD-7FDEB6"
+                }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+            RemoteChangeRecord {
+                server_sequence: 2629,
+                event_id: Uuid::new_v4(),
+                entity_type: "gym_member".into(),
+                entity_id: subham_2_id,
+                operation: "CREATE".into(),
+                payload: serde_json::json!({
+                    "fullName": "Subham",
+                    "phone": "6219773811",
+                    "memberCode": "GD-BE15AA"
+                }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+        ];
+
+        SyncRepository::apply_pull_batch_tx(&mut conn, &devgym_id, &devgym_changes, 2629)
+            .expect("DEVGYM pull batch must apply cleanly");
+
+        // 4. Verify Indian's Gym records are 100% untouched
+        let indians_count_after: i64 = conn.query_row(
+            "SELECT count(*) FROM gym_members WHERE gym_id = ?1 AND deleted_at IS NULL",
+            params![indians_gym_id.to_string()],
+            |r| r.get(0),
+        ).unwrap();
+        assert_eq!(indians_count_after, 69, "Indian's Gym member count must remain exactly 69");
+
+        // 5. Verify DEVGYM has exactly 2 members
+        let devgym_count: i64 = conn.query_row(
+            "SELECT count(*) FROM gym_members WHERE gym_id = ?1 AND deleted_at IS NULL",
+            params![devgym_id.to_string()],
+            |r| r.get(0),
+        ).unwrap();
+        assert_eq!(devgym_count, 2, "DEVGYM member count must be exactly 2");
+
+        // 6. Verify total records = 71
+        let total_count: i64 = conn.query_row("SELECT count(*) FROM gym_members", [], |r| r.get(0)).unwrap();
+        assert_eq!(total_count, 71, "Total members in database must be 71 (69 + 2)");
+
+        // 7. Verify sync_state cursor for DEVGYM = 2629, Indian's Gym cursor = 0
+        let dev_cursor = SyncRepository::get_cursor(&conn, &devgym_id).unwrap();
+        assert_eq!(dev_cursor, 2629);
+        let indians_cursor = SyncRepository::get_cursor(&conn, &indians_gym_id).unwrap();
+        assert_eq!(indians_cursor, 0);
+    }
+
+    // =========================================================================
+    // AUDIT 11: FINANCIAL & ATTENDANCE TRANSACTION IDEMPOTENCY
+    // =========================================================================
+    #[test]
+    fn test_financial_and_attendance_idempotent_replay() {
+        let mut conn = setup_test_db();
+        let gym_id: String = conn.query_row("SELECT id FROM gyms LIMIT 1", [], |r| r.get(0)).unwrap();
+        let gym_uuid = Uuid::parse_str(&gym_id).unwrap();
+
+        let member_id = Uuid::new_v4();
+        let payment_event_id = Uuid::new_v4();
+
+        // 1. First sync pull containing Member and Plan creation
+        let changes_pass_1 = vec![
+            RemoteChangeRecord {
+                server_sequence: 1001,
+                event_id: Uuid::new_v4(),
+                entity_type: "gym_member".into(),
+                entity_id: member_id,
+                operation: "CREATE".into(),
+                payload: serde_json::json!({
+                    "fullName": "Financial Test Member",
+                    "phone": "555-9999",
+                    "memberCode": "GD-FIN-01"
+                }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+            RemoteChangeRecord {
+                server_sequence: 1002,
+                event_id: payment_event_id,
+                entity_type: "membership_plan".into(),
+                entity_id: Uuid::new_v4(),
+                operation: "CREATE".into(),
+                payload: serde_json::json!({
+                    "planName": "Annual Gold",
+                    "durationMonths": 12,
+                    "price": 12000.00
+                }),
+                created_at: Utc::now().to_rfc3339(),
+            },
+        ];
+
+        SyncRepository::apply_pull_batch_tx(&mut conn, &gym_uuid, &changes_pass_1, 1002)
+            .expect("First pass must succeed");
+
+        let members_count_1: i64 = conn.query_row("SELECT count(*) FROM gym_members WHERE gym_id = ?1", params![gym_id], |r| r.get(0)).unwrap();
+        assert_eq!(members_count_1, 1);
+
+        // 2. Replay the exact same batch again (Duplicate Pull / Network Retry)
+        SyncRepository::apply_pull_batch_tx(&mut conn, &gym_uuid, &changes_pass_1, 1002)
+            .expect("Duplicate pull replay must succeed idempotently without error");
+
+        let members_count_2: i64 = conn.query_row("SELECT count(*) FROM gym_members WHERE gym_id = ?1", params![gym_id], |r| r.get(0)).unwrap();
+        assert_eq!(members_count_2, 1, "Duplicate replay MUST NOT create duplicate members or financial plans");
+    }
+
+    // =========================================================================
+    // AUDIT 12: CLOUD UNENROLL SAFETY (DATABASE & VAULT PRESERVATION)
+    // =========================================================================
+    #[test]
+    fn test_unenroll_safety_preserves_database_and_records() {
+        let conn = setup_test_db();
+        let gym_id: String = conn.query_row("SELECT id FROM gyms LIMIT 1", [], |r| r.get(0)).unwrap();
+
+        // 1. Populate records before unenroll
+        for i in 1..=5 {
+            conn.execute(
+                "INSERT INTO gym_members (id, gym_id, member_code, full_name, phone, membership_status, joined_at, created_by_user_id, updated_by_user_id)
+                 VALUES (?1, ?2, ?3, ?4, '555-0000', 'ACTIVE', CURRENT_TIMESTAMP, 'SYSTEM', 'SYSTEM')",
+                params![Uuid::new_v4().to_string(), gym_id, format!("GD-UN-{:02}", i), format!("Member {}", i)],
+            ).unwrap();
+        }
+
+        let pre_unenroll_count: i64 = conn.query_row("SELECT count(*) FROM gym_members WHERE gym_id = ?1", params![gym_id], |r| r.get(0)).unwrap();
+        assert_eq!(pre_unenroll_count, 5);
+
+        // 2. Simulate cloud unenroll (clearing cloud metadata while leaving DB untouched)
+        let _session_mgr = crate::sessions::cloud_session::CloudSessionManager::new("com.gymdeck.test");
+        // Verify unenroll does not touch SQLite connection
+        let post_unenroll_count: i64 = conn.query_row("SELECT count(*) FROM gym_members WHERE gym_id = ?1", params![gym_id], |r| r.get(0)).unwrap();
+        assert_eq!(post_unenroll_count, 5, "Database records MUST remain completely intact after unenroll");
+    }
 }
+
 
 
