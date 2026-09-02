@@ -21,7 +21,7 @@ export const ownerNotificationService = {
     const params: Record<string, any> = { limit, offset };
     if (unreadOnly) params.unreadOnly = true;
 
-    const response = await apiClient.get<ApiResponse<NotificationPageResponse>>('/v1/owner/notifications', {
+    const response = await apiClient.get<ApiResponse<NotificationPageResponse>>('/owner/notifications', {
       params,
     });
     return response.data.data;
@@ -32,7 +32,7 @@ export const ownerNotificationService = {
    */
   getUnreadCount: async (): Promise<number> => {
     const response = await apiClient.get<ApiResponse<{ unreadCount: number }>>(
-      '/v1/owner/notifications/unread-count'
+      '/owner/notifications/unread-count'
     );
     return response.data.data.unreadCount;
   },
@@ -42,7 +42,7 @@ export const ownerNotificationService = {
    */
   markAsRead: async (notificationId: string): Promise<{ success: boolean; id: string; readAt: string }> => {
     const response = await apiClient.patch<ApiResponse<{ success: boolean; id: string; readAt: string }>>(
-      `/v1/owner/notifications/${notificationId}/read`
+      `/owner/notifications/${notificationId}/read`
     );
     return response.data.data;
   },
@@ -52,7 +52,7 @@ export const ownerNotificationService = {
    */
   markAllAsRead: async (): Promise<{ success: boolean; count: number }> => {
     const response = await apiClient.patch<ApiResponse<{ success: boolean; count: number }>>(
-      '/v1/owner/notifications/read-all'
+      '/owner/notifications/read-all'
     );
     return response.data.data;
   },
@@ -62,7 +62,7 @@ export const ownerNotificationService = {
    */
   getPreferences: async (): Promise<NotificationPreferenceItem[]> => {
     const response = await apiClient.get<ApiResponse<{ preferences: NotificationPreferenceItem[] }>>(
-      '/v1/owner/notifications/preferences'
+      '/owner/notifications/preferences'
     );
     return response.data.data.preferences;
   },
@@ -74,7 +74,7 @@ export const ownerNotificationService = {
     preferences: Array<{ category: string; channel: string; isEnabled: boolean }>
   ): Promise<NotificationPreferenceItem[]> => {
     const response = await apiClient.patch<ApiResponse<{ preferences: NotificationPreferenceItem[] }>>(
-      '/v1/owner/notifications/preferences',
+      '/owner/notifications/preferences',
       { preferences }
     );
     return response.data.data.preferences;
@@ -90,7 +90,7 @@ export const ownerNotificationService = {
     appVersion?: string;
   }): Promise<{ success: boolean; tokenId: string }> => {
     const response = await apiClient.post<ApiResponse<{ success: boolean; tokenId: string }>>(
-      '/v1/owner/notifications/push-token',
+      '/owner/notifications/push-token',
       tokenData
     );
     return response.data.data;

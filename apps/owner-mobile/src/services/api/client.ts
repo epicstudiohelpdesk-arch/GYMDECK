@@ -6,6 +6,7 @@
  * - Request interceptor: Injects Bearer token & X-Device-Id
  * - Response interceptor: Single-flight 401 token refresh queue
  * - Automatic error normalization to AppError
+ * - Development diagnostics (request timing, error classification, without sensitive data)
  */
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
@@ -35,6 +36,8 @@ const processQueue = (error: unknown, token: string | null = null): void => {
 
 const baseURL = `${Config.api.baseUrl}/${Config.api.version}`;
 
+Logger.info(`[ApiClient] Configured with Base URL: ${baseURL} (Env: ${Config.env})`);
+
 export const apiClient: AxiosInstance = axios.create({
   baseURL,
   timeout: Config.api.timeoutMs,
@@ -47,6 +50,8 @@ export const apiClient: AxiosInstance = axios.create({
 // Request Interceptor: Attach Bearer Token & Device Identifier
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    (config as any).__startTime = Date.now();
+
     try {
       const accessToken = await SecureTokenStorage.getAccessToken();
       if (accessToken && config.headers) {
@@ -69,18 +74,25 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response Interceptor: 401 Single-Flight Token Refresh
+// Response Interceptor: 401 Single-Flight Token Refresh & Diagnostics
 apiClient.interceptors.response.use(
   (response) => {
-    Logger.debug(`[ApiClient] Response: ${response.status} ${response.config.url}`);
+    const startTime = (response.config as any).__startTime;
+    const duration = startTime ? Date.now() - startTime : 0;
+    Logger.debug(`[ApiClient] Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url} (${duration}ms)`);
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean; __startTime?: number };
+    const startTime = originalRequest?.__startTime;
+    const duration = startTime ? Date.now() - startTime : 0;
 
     if (!error.response || !originalRequest) {
+      Logger.warn(`[ApiClient] Network/Transport Error: ${error.code || 'ECONNABORTED/NETWORK'} on ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url} (${duration}ms)`);
       return Promise.reject(normalizeAxiosError(error));
     }
+
+    Logger.debug(`[ApiClient] HTTP Error: ${error.response.status} on ${originalRequest.method?.toUpperCase()} ${originalRequest.url} (${duration}ms)`);
 
     // Check if error is 401 and request was not already retried
     if (error.response.status === 401 && !originalRequest._retry) {
