@@ -18,8 +18,10 @@ export const attendanceLogs = pgTable(
       .references(() => gymMembers.id, { onDelete: 'cascade' }),
     checkInTime: timestamp('check_in_time', { withTimezone: true }).notNull().defaultNow(),
     checkOutTime: timestamp('check_out_time', { withTimezone: true }),
-    entryMethod: varchar('entry_method', { length: 32 }).notNull().default('QR_DYNAMIC'), // QR_DYNAMIC, MANUAL, RFID, BIOMETRIC
+    entryMethod: varchar('entry_method', { length: 32 }).notNull().default('QR_DYNAMIC'), // QR_DYNAMIC, MANUAL, RFID, BIOMETRIC, CODE_LOOKUP
     deviceMetadata: text('device_metadata'),
+    notes: text('notes'),
+    recordedByUserId: uuid('recorded_by_user_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({

@@ -1,11 +1,12 @@
 /**
- * GymDeck Cloud Backend - Owner Mobile Operations, Member Lifecycle & Financial Ledger API Routes (/v1/owner)
+ * GymDeck Cloud Backend - Owner Mobile Operations, Member Lifecycle, Financial Ledger & Attendance API Routes (/v1/owner)
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { ownerService } from '../../../services/owner/ownerService';
 import { billingService } from '../../../services/billing/billingService';
+import { ownerAttendanceService } from '../../../services/owner/ownerAttendanceService';
 import { requireAuth } from '../middleware/authMiddleware';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware';
 import { validateQuery, validateBody } from '../../../shared/validation';
@@ -99,6 +100,33 @@ const RecordPaymentBodySchema = z.object({
 const RefundPaymentBodySchema = z.object({
   reason: z.string().min(3, 'A reason is required for refund / reversal'),
   refundAmount: z.number().positive('Refund amount must be greater than 0').optional(),
+});
+
+const CheckInBodySchema = z.object({
+  memberId: z.string().uuid().optional(),
+  memberCode: z.string().optional(),
+  entryMethod: z.enum(['CODE_LOOKUP', 'QR_DYNAMIC', 'MANUAL', 'RFID', 'BIOMETRIC']).optional(),
+  deviceMetadata: z.string().optional(),
+  idempotencyKey: z.string().optional(),
+});
+
+const ManualAttendanceBodySchema = z.object({
+  memberId: z.string().uuid().optional(),
+  memberCode: z.string().optional(),
+  checkInTime: z.string().min(1, 'Check-in time is required'),
+  checkOutTime: z.string().optional(),
+  notes: z.string().min(3, 'Reason / notes (minimum 3 characters) is required for manual attendance'),
+});
+
+const CheckOutBodySchema = z.object({
+  checkOutTime: z.string().optional(),
+});
+
+const GetAttendanceQuerySchema = z.object({
+  date: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
+  query: z.string().optional(),
 });
 
 // ==============================================================================
@@ -595,8 +623,130 @@ router.get(
 );
 
 // ==============================================================================
-// 6. Attendance & Invites
+// 6. Attendance & Check-In Management
 // ==============================================================================
+
+router.get(
+  '/attendance',
+  requirePermission('attendance.read'),
+  validateQuery(GetAttendanceQuerySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const { date, limit, offset, query } = req.query as any;
+      const result = await ownerAttendanceService.getDailyAttendance(
+        gymId,
+        date,
+        Number(limit) || 50,
+        Number(offset) || 0,
+        query
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/attendance/check-in',
+  requirePermission('attendance.write'),
+  validateBody(CheckInBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await ownerAttendanceService.checkInMember(gymId, req.body, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/attendance/manual',
+  requirePermission('attendance.write'),
+  validateBody(ManualAttendanceBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await ownerAttendanceService.recordManualAttendance(gymId, req.body, actorUserId);
+
+      res.status(201).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/attendance/:id/checkout',
+  requirePermission('attendance.write'),
+  validateBody(CheckOutBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const attendanceId = req.params.id;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!attendanceId) throw AppError.validation('Attendance ID is required.');
+
+      const result = await ownerAttendanceService.checkOutMember(gymId, attendanceId, req.body, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/attendance/stats',
+  requirePermission('reports.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await ownerAttendanceService.getAttendanceStats(gymId, req.query.date as string);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.get(
   '/members/:id/attendance',
@@ -611,7 +761,7 @@ router.get(
       if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
       if (!memberId) throw AppError.validation('Member ID is required.');
 
-      const result = await ownerService.getMemberAttendance(
+      const result = await ownerAttendanceService.getMemberAttendanceHistory(
         gymId,
         memberId,
         Number(limit) || 50,
@@ -628,6 +778,10 @@ router.get(
     }
   }
 );
+
+// ==============================================================================
+// 7. Digital Invitations
+// ==============================================================================
 
 router.post(
   '/members/:id/invite',

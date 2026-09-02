@@ -93,6 +93,53 @@ export interface AttendanceRecord {
   entryMethod: string;
 }
 
+export interface AttendanceItem {
+  id: string;
+  gymId: string;
+  memberId: string;
+  memberCode: string;
+  fullName: string;
+  phone: string;
+  membershipStatus: string;
+  checkInTime: string;
+  checkOutTime: string | null;
+  entryMethod: string;
+  deviceMetadata: string | null;
+  notes: string | null;
+  recordedByUserId: string | null;
+  createdAt: string;
+}
+
+export interface DailyAttendanceResponse {
+  items: AttendanceItem[];
+  totalCount: number;
+  uniqueMembersCount: number;
+  date: string;
+}
+
+export interface AttendanceStatsResponse {
+  todayCheckIns: number;
+  todayUniqueMembers: number;
+  weekCheckIns: number;
+  monthCheckIns: number;
+}
+
+export interface CheckInInput {
+  memberId?: string;
+  memberCode?: string;
+  entryMethod?: 'CODE_LOOKUP' | 'QR_DYNAMIC' | 'MANUAL' | 'RFID' | 'BIOMETRIC';
+  deviceMetadata?: string;
+  idempotencyKey?: string;
+}
+
+export interface ManualAttendanceInput {
+  memberId?: string;
+  memberCode?: string;
+  checkInTime: string;
+  checkOutTime?: string;
+  notes: string;
+}
+
 export interface PaymentRecord {
   id: string;
   membershipId?: string | null;

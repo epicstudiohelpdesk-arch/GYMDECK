@@ -153,8 +153,13 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       check_out_time TIMESTAMPTZ,
       entry_method VARCHAR(32) NOT NULL DEFAULT 'QR_DYNAMIC',
       device_metadata TEXT,
+      notes TEXT,
+      recorded_by_user_id UUID,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS notes TEXT;
+    ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS recorded_by_user_id UUID;
 
     CREATE TABLE IF NOT EXISTS member_memberships (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
