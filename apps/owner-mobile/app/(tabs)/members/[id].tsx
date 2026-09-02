@@ -1,5 +1,5 @@
 /**
- * GymDeck Owner Mobile - Comprehensive Member Profile, Billing & Membership Operations Screen
+ * GymDeck Owner Mobile - Comprehensive Member Profile, Billing, Attendance & Trainer/PT Management Screen
  */
 
 import React, { useState } from 'react';
@@ -19,13 +19,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerMembersService } from '../../../src/services/api/ownerMembersService';
 import { OwnerBillingService } from '../../../src/services/api/ownerBillingService';
 import { OwnerMembershipService } from '../../../src/services/api/ownerMembershipService';
+import { OwnerTrainersService } from '../../../src/services/api/ownerTrainersService';
 import { StatusBadge } from '../../../src/components/StatusBadge';
 import { InviteModal } from '../../../src/components/InviteModal';
 import { ReceiptModal } from '../../../src/components/ReceiptModal';
 import { CollectPaymentModal } from '../../../src/components/CollectPaymentModal';
 import { RenewMembershipModal } from '../../../src/components/RenewMembershipModal';
 import { FreezeMembershipModal } from '../../../src/components/FreezeMembershipModal';
-import { MemberInvitationResult, ReceiptData, PaymentRecord } from '../../../src/types';
+import { AssignTrainerModal } from '../../../src/components/AssignTrainerModal';
+import { PurchasePTPackageModal } from '../../../src/components/PurchasePTPackageModal';
+import { CompletePTSessionModal } from '../../../src/components/CompletePTSessionModal';
+import {
+  MemberInvitationResult,
+  ReceiptData,
+  PaymentRecord,
+  PTPackageSummary,
+} from '../../../src/types';
 import {
   ArrowLeft,
   Phone,
@@ -44,9 +53,11 @@ import {
   PlusCircle,
   Snowflake,
   Play,
+  CheckCircle2,
+  UserCheck,
 } from 'lucide-react-native';
 
-export default function MemberDetailsScreen() {
+export default function MemberDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -60,6 +71,12 @@ export default function MemberDetailsScreen() {
   const [collectPaymentVisible, setCollectPaymentVisible] = useState(false);
   const [renewMembershipVisible, setRenewMembershipVisible] = useState(false);
   const [freezeModalVisible, setFreezeModalVisible] = useState(false);
+
+  // Trainer & PT Modals State
+  const [assignTrainerVisible, setAssignTrainerVisible] = useState(false);
+  const [purchasePTPackageVisible, setPurchasePTPackageVisible] = useState(false);
+  const [completeSessionModalVisible, setCompleteSessionModalVisible] = useState(false);
+  const [selectedPTPackage, setSelectedPTPackage] = useState<PTPackageSummary | null>(null);
 
   // 1. Fetch Profile Details
   const { data, isLoading, refetch, isRefetching, error } = useQuery({
@@ -79,6 +96,20 @@ export default function MemberDetailsScreen() {
   const { data: currentMembershipData } = useQuery({
     queryKey: ['owner-member-current-membership', id],
     queryFn: () => OwnerMembershipService.getCurrentMembership(id!),
+    enabled: !!id,
+  });
+
+  // 4. Fetch Member PT Packages
+  const { data: ptPackages } = useQuery({
+    queryKey: ['owner-member-pt-packages', id],
+    queryFn: () => OwnerTrainersService.getMemberPTPackages(id!),
+    enabled: !!id,
+  });
+
+  // 5. Fetch Member Trainer History
+  const { data: trainerHistory } = useQuery({
+    queryKey: ['owner-member-trainer-history', id],
+    queryFn: () => OwnerTrainersService.getMemberTrainerHistory(id!),
     enabled: !!id,
   });
 
@@ -127,19 +158,13 @@ export default function MemberDetailsScreen() {
       setSelectedReceipt(receipt);
       setReceiptModalVisible(true);
     } catch (err: any) {
-      Alert.alert('Receipt Error', err?.message || 'Unable to load receipt.');
+      Alert.alert('Receipt Error', err?.message || 'Failed to load official receipt.');
     }
   };
 
-  const confirmDeactivate = () => {
-    Alert.alert(
-      'Deactivate Member',
-      'Are you sure you want to deactivate this member profile? They will no longer have gym access.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Deactivate', style: 'destructive', onPress: () => deleteMutation.mutate() },
-      ]
-    );
+  const handleLogPTSession = (pkg: PTPackageSummary) => {
+    setSelectedPTPackage(pkg);
+    setCompleteSessionModalVisible(true);
   };
 
   if (isLoading) {
@@ -147,7 +172,7 @@ export default function MemberDetailsScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#EAB308" />
-          <Text style={styles.loadingText}>Loading member profile...</Text>
+          <Text style={styles.loadingText}>Loading Member Profile...</Text>
         </View>
       </SafeAreaView>
     );
@@ -157,134 +182,142 @@ export default function MemberDetailsScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
-          <ShieldAlert size={48} color="#EF4444" />
-          <Text style={styles.errorText}>Unable to load member profile</Text>
-          <TouchableOpacity style={styles.backBtnAlt} onPress={() => router.back()}>
-            <Text style={styles.backBtnAltText}>Go Back</Text>
+          <ShieldAlert size={48} color="#EF4444" style={{ marginBottom: 12 }} />
+          <Text style={styles.errorTitle}>Failed to Load Member</Text>
+          <Text style={styles.errorSubtitle}>
+            {error instanceof Error ? error.message : 'Member not found or access denied.'}
+          </Text>
+          <TouchableOpacity style={styles.backButtonCenter} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const { member, membership: rawMembership, attendanceSummary, paymentSummary, trainer, invite } = data;
-  const membership = currentMembershipData || rawMembership;
-  const outstandingDues = billingData?.outstandingBalance ?? 0;
+  const { member, attendanceSummary } = data;
+  const membership = currentMembershipData || data.membership;
+  const outstandingDues = billingData ? billingData.outstandingBalance : 0;
+  const isFrozen = membership?.status === 'FROZEN';
+
+  // Determine currently active assigned trainer
+  const activeAssignment = trainerHistory?.find((h) => h.status === 'ACTIVE');
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top Navigation Bar */}
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-          <ArrowLeft size={20} color="#F8FAFC" />
+      {/* Navigation Header */}
+      <View style={styles.navHeader}>
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <ArrowLeft size={22} color="#F8FAFC" />
         </TouchableOpacity>
         <Text style={styles.navTitle} numberOfLines={1}>
           {member.fullName}
         </Text>
-        <View style={styles.navActions}>
-          <TouchableOpacity style={styles.navIconBtn} onPress={confirmDeactivate} activeOpacity={0.7}>
-            <Trash2 size={18} color="#EF4444" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.navBtn}
+          onPress={() => inviteMutation.mutate()}
+          disabled={inviteMutation.isPending}
+          activeOpacity={0.7}
+        >
+          {inviteMutation.isPending ? (
+            <ActivityIndicator size="small" color="#EAB308" />
+          ) : (
+            <Send size={20} color="#EAB308" />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header Profile Card */}
-        <View style={styles.profileHeaderCard}>
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
           <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>{member.fullName.charAt(0).toUpperCase()}</Text>
-          </View>
-          <Text style={styles.profileName}>{member.fullName}</Text>
-          <Text style={styles.profileCode}>{member.memberCode}</Text>
-          <View style={{ marginTop: 8 }}>
-            <StatusBadge status={member.membershipStatus} />
+            <Text style={styles.avatarText}>
+              {member.fullName
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase()}
+            </Text>
           </View>
 
-          {/* Contact quick actions */}
-          <View style={styles.contactRow}>
-            <TouchableOpacity
-              style={styles.contactChip}
-              onPress={() => Linking.openURL(`tel:${member.phone}`)}
-            >
-              <Phone size={14} color="#EAB308" style={{ marginRight: 6 }} />
-              <Text style={styles.contactChipText}>{member.phone}</Text>
-            </TouchableOpacity>
-
-            {member.email && (
-              <TouchableOpacity
-                style={styles.contactChip}
-                onPress={() => Linking.openURL(`mailto:${member.email}`)}
-              >
-                <Mail size={14} color="#3B82F6" style={{ marginRight: 6 }} />
-                <Text style={styles.contactChipText} numberOfLines={1}>
-                  {member.email}
-                </Text>
-              </TouchableOpacity>
-            )}
+          <View style={styles.profileMeta}>
+            <View style={styles.nameRow}>
+              <Text style={styles.fullName}>{member.fullName}</Text>
+              <StatusBadge status={member.membershipStatus} />
+            </View>
+            <Text style={styles.memberCode}>ID: {member.memberCode}</Text>
           </View>
         </View>
 
-        {/* Action: Send / Show Activation Code */}
-        <View style={styles.section}>
+        {/* Quick Contact Bar */}
+        <View style={styles.contactBar}>
           <TouchableOpacity
-            style={styles.inviteBanner}
-            onPress={() => inviteMutation.mutate()}
-            disabled={inviteMutation.isPending}
-            activeOpacity={0.8}
+            style={styles.contactAction}
+            onPress={() => Linking.openURL(`tel:${member.phone}`)}
+            activeOpacity={0.7}
           >
-            <View style={styles.inviteIconBox}>
-              <Send size={20} color="#0A0D14" />
-            </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.inviteTitle}>
-                {invite ? 'Regenerate App Invite' : 'Invite to GymDeck Member App'}
-              </Text>
-              <Text style={styles.inviteSubtitle}>
-                {invite
-                  ? `Active code: ${invite.displayCode} (Expires: ${new Date(invite.expiresAt).toLocaleDateString()})`
-                  : 'Generate a 7-day secure activation code for mobile access.'}
-              </Text>
-            </View>
+            <Phone size={16} color="#EAB308" />
+            <Text style={styles.contactText}>{member.phone}</Text>
           </TouchableOpacity>
+
+          {member.email && (
+            <TouchableOpacity
+              style={styles.contactAction}
+              onPress={() => Linking.openURL(`mailto:${member.email}`)}
+              activeOpacity={0.7}
+            >
+              <Mail size={16} color="#EAB308" />
+              <Text style={styles.contactText} numberOfLines={1}>
+                {member.email}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Membership Details & Lifecycle Operations */}
+        {/* Membership Subscription Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Current Membership</Text>
-            <View style={styles.membershipActionGroup}>
-              {membership && membership.status === 'ACTIVE' && (
+            <Text style={styles.sectionTitle}>Membership Plan</Text>
+            {membership && (
+              <View style={styles.membershipActions}>
+                {isFrozen ? (
+                  <TouchableOpacity
+                    style={styles.unfreezeBtn}
+                    onPress={() => unfreezeMutation.mutate(membership.id)}
+                    disabled={unfreezeMutation.isPending}
+                    activeOpacity={0.8}
+                  >
+                    {unfreezeMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#000000" />
+                    ) : (
+                      <>
+                        <Play size={12} color="#000000" style={{ marginRight: 4 }} />
+                        <Text style={styles.unfreezeBtnText}>Unfreeze</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.freezeBtn}
+                    onPress={() => setFreezeModalVisible(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Snowflake size={12} color="#94A3B8" style={{ marginRight: 4 }} />
+                    <Text style={styles.freezeBtnText}>Freeze</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
-                  style={styles.freezeActionBtn}
-                  onPress={() => setFreezeModalVisible(true)}
+                  style={styles.renewTriggerBtn}
+                  onPress={() => setRenewMembershipVisible(true)}
                   activeOpacity={0.8}
                 >
-                  <Snowflake size={14} color="#38BDF8" style={{ marginRight: 4 }} />
-                  <Text style={styles.freezeActionText}>Freeze</Text>
+                  <RefreshCw size={12} color="#000000" style={{ marginRight: 4 }} />
+                  <Text style={styles.renewTriggerText}>Renew</Text>
                 </TouchableOpacity>
-              )}
-
-              {membership && membership.status === 'FROZEN' && (
-                <TouchableOpacity
-                  style={styles.unfreezeActionBtn}
-                  onPress={() => unfreezeMutation.mutate(membership.id)}
-                  disabled={unfreezeMutation.isPending}
-                  activeOpacity={0.8}
-                >
-                  <Play size={14} color="#10B981" style={{ marginRight: 4 }} />
-                  <Text style={styles.unfreezeActionText}>Unfreeze</Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={styles.renewActionBtn}
-                onPress={() => setRenewMembershipVisible(true)}
-                activeOpacity={0.8}
-              >
-                <RefreshCw size={14} color="#EAB308" style={{ marginRight: 4 }} />
-                <Text style={styles.renewActionText}>Renew</Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            )}
           </View>
 
           {membership ? (
@@ -313,72 +346,196 @@ export default function MemberDetailsScreen() {
                   </Text>
                 </View>
                 <View style={styles.dateCol}>
-                  <Text style={styles.dateLabel}>EXPIRY DATE</Text>
+                  <Text style={styles.dateLabel}>EXPIRATION</Text>
                   <Text style={styles.dateVal}>
                     {new Date(membership.endDate).toLocaleDateString()}
                   </Text>
                 </View>
                 <View style={styles.dateCol}>
-                  <Text style={styles.dateLabel}>DAYS REMAINING</Text>
-                  <Text style={[styles.dateVal, { color: membership.status === 'FROZEN' ? '#38BDF8' : '#EAB308' }]}>
-                    {membership.daysRemaining ?? 'N/A'} {membership.status === 'FROZEN' ? '(Saved)' : 'Days'}
+                  <Text style={styles.dateLabel}>REMAINING</Text>
+                  <Text style={[styles.dateVal, { color: isFrozen ? '#60A5FA' : '#EAB308' }]}>
+                    {isFrozen
+                      ? `${membership.frozenDaysRemaining ?? membership.daysRemaining ?? 0}d (Saved)`
+                      : `${membership.daysRemaining ?? 0} Days`}
                   </Text>
                 </View>
               </View>
 
-              {membership.freezeReason && (
-                <View style={styles.freezeNotice}>
-                  <Snowflake size={14} color="#38BDF8" style={{ marginRight: 6 }} />
-                  <Text style={styles.freezeNoticeText}>
-                    Frozen: {membership.freezeReason}
+              {isFrozen && (
+                <View style={styles.freezeBanner}>
+                  <Snowflake size={14} color="#60A5FA" style={{ marginRight: 6 }} />
+                  <Text style={styles.freezeBannerText}>
+                    Frozen on {new Date(membership.frozenAt || '').toLocaleDateString()}:{' '}
+                    {membership.freezeReason || 'Owner request'}
                   </Text>
                 </View>
               )}
             </View>
           ) : (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyBoxText}>No active membership plan on record.</Text>
+            <View style={styles.emptyPlanBox}>
+              <Text style={styles.emptyPlanText}>No active membership subscription.</Text>
+              <TouchableOpacity
+                style={styles.assignPlanBtn}
+                onPress={() => setRenewMembershipVisible(true)}
+              >
+                <PlusCircle size={16} color="#000000" style={{ marginRight: 6 }} />
+                <Text style={styles.assignPlanText}>Assign Membership</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* Billing & Financial Ledger */}
+        {/* Personal Trainer & PT Packages Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Billing & Payments</Text>
+            <Text style={styles.sectionTitle}>Personal Training (PT)</Text>
             <TouchableOpacity
-              style={styles.collectActionBtn}
-              onPress={() => setCollectPaymentVisible(true)}
+              style={styles.ptActionHeaderBtn}
+              onPress={() => setPurchasePTPackageVisible(true)}
               activeOpacity={0.8}
             >
-              <PlusCircle size={14} color="#0A0D14" style={{ marginRight: 4 }} />
-              <Text style={styles.collectActionText}>Collect Payment</Text>
+              <PlusCircle size={13} color="#000000" style={{ marginRight: 4 }} />
+              <Text style={styles.ptActionHeaderText}>Buy PT Pack</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Assigned Coach Card */}
           <View style={styles.card}>
-            {/* Financial Ledger Summary Cards */}
-            <View style={styles.financialRow}>
-              <View style={styles.financialCard}>
-                <Text style={styles.financialLabel}>TOTAL BILLED</Text>
-                <Text style={styles.financialVal}>
-                  ${Number(billingData?.totalBilled ?? 0).toFixed(2)}
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <Dumbbell size={20} color="#3B82F6" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.planName}>
+                  {activeAssignment ? activeAssignment.trainerName : 'No Coach Assigned'}
+                </Text>
+                <Text style={styles.planPrice}>
+                  {activeAssignment
+                    ? activeAssignment.specialization || 'Personal Trainer'
+                    : 'Assign a dedicated coach for custom fitness programs'}
                 </Text>
               </View>
-              <View style={styles.financialCard}>
-                <Text style={styles.financialLabel}>TOTAL PAID</Text>
-                <Text style={[styles.financialVal, { color: '#10B981' }]}>
-                  ${Number(billingData?.totalPaid ?? 0).toFixed(2)}
+              <TouchableOpacity
+                style={styles.assignCoachBtn}
+                onPress={() => setAssignTrainerVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.assignCoachBtnText}>
+                  {activeAssignment ? 'Change' : 'Assign'}
                 </Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
-            {outstandingDues > 0 && (
-              <View style={styles.duesAlert}>
-                <Text style={styles.duesAlertTitle}>Outstanding Dues: ${outstandingDues.toFixed(2)}</Text>
-                <Text style={styles.duesAlertSub}>Tap 'Collect Payment' to record a payment towards this balance.</Text>
-              </View>
+            {activeAssignment && (
+              <>
+                <View style={styles.cardDivider} />
+                <View style={styles.coachContactRow}>
+                  <Phone size={13} color="#94A3B8" style={{ marginRight: 6 }} />
+                  <Text style={styles.coachPhoneText}>{activeAssignment.trainerPhone}</Text>
+                  <Text style={styles.coachAssignedDate}>
+                    • Assigned {new Date(activeAssignment.assignedAt).toLocaleDateString()}
+                  </Text>
+                </View>
+              </>
             )}
+          </View>
+
+          {/* PT Packages List */}
+          {ptPackages && ptPackages.length > 0 && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={styles.subheading}>Allocated PT Packages</Text>
+              {ptPackages.map((pkg) => {
+                const isDepleted = pkg.remainingSessions === 0 || pkg.status === 'DEPLETED';
+                const progressPct = pkg.totalSessions > 0 ? (pkg.usedSessions / pkg.totalSessions) * 100 : 0;
+                return (
+                  <View key={pkg.id} style={styles.ptPackageCard}>
+                    <View style={styles.ptPackageHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.ptPackageName}>{pkg.packageName}</Text>
+                        <Text style={styles.ptCoachName}>Coach: {pkg.trainerName}</Text>
+                      </View>
+                      <View style={styles.ptSessionsBadge}>
+                        <Text
+                          style={[
+                            styles.ptSessionsBadgeText,
+                            isDepleted && { color: '#94A3B8' },
+                          ]}
+                        >
+                          {pkg.remainingSessions} Left
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Progress Bar */}
+                    <View style={styles.progressBarBg}>
+                      <View style={[styles.progressBarFill, { width: `${progressPct}%` }]} />
+                    </View>
+
+                    <View style={styles.ptFooterRow}>
+                      <Text style={styles.ptUsageText}>
+                        {pkg.usedSessions} / {pkg.totalSessions} Sessions Used • Exp:{' '}
+                        {new Date(pkg.expiryDate).toLocaleDateString()}
+                      </Text>
+                      {!isDepleted && (
+                        <TouchableOpacity
+                          style={styles.logSessionBtn}
+                          onPress={() => handleLogPTSession(pkg)}
+                          activeOpacity={0.8}
+                        >
+                          <CheckCircle2 size={13} color="#000000" style={{ marginRight: 4 }} />
+                          <Text style={styles.logSessionBtnText}>Log Session</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* Financial Ledger & Billing Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Financial Ledger</Text>
+            {outstandingDues > 0 && (
+              <TouchableOpacity
+                style={styles.payDuesBtn}
+                onPress={() => setCollectPaymentVisible(true)}
+                activeOpacity={0.8}
+              >
+                <DollarSign size={13} color="#000000" style={{ marginRight: 2 }} />
+                <Text style={styles.payDuesBtnText}>Collect ${outstandingDues.toFixed(2)}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.statGrid}>
+              <View style={styles.statCol}>
+                <Text style={styles.statNumber}>
+                  ${billingData ? billingData.totalBilled.toFixed(2) : '0.00'}
+                </Text>
+                <Text style={styles.statText}>Total Invoiced</Text>
+              </View>
+              <View style={styles.statCol}>
+                <Text style={[styles.statNumber, { color: '#10B981' }]}>
+                  ${billingData ? billingData.totalPaid.toFixed(2) : '0.00'}
+                </Text>
+                <Text style={styles.statText}>Total Collected</Text>
+              </View>
+              <View style={styles.statCol}>
+                <Text
+                  style={[
+                    styles.statNumber,
+                    outstandingDues > 0 ? { color: '#EF4444' } : { color: '#94A3B8' },
+                  ]}
+                >
+                  ${outstandingDues.toFixed(2)}
+                </Text>
+                <Text style={styles.statText}>Balance Due</Text>
+              </View>
+            </View>
 
             {/* Payment History Items */}
             {(billingData?.recentPayments || []).length > 0 && (
@@ -404,7 +561,12 @@ export default function MemberDetailsScreen() {
                       </View>
                     </View>
                     <View style={styles.paymentRight}>
-                      <Text style={[styles.paymentAmount, Number(p.amount) < 0 && { color: '#EF4444' }]}>
+                      <Text
+                        style={[
+                          styles.paymentAmount,
+                          Number(p.amount) < 0 && { color: '#EF4444' },
+                        ]}
+                      >
                         ${Number(p.amount).toFixed(2)}
                       </Text>
                       <Receipt size={14} color="#94A3B8" style={{ marginTop: 2 }} />
@@ -451,28 +613,6 @@ export default function MemberDetailsScreen() {
             )}
           </View>
         </View>
-
-        {/* Assigned Trainer */}
-        {trainer && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Trainer</Text>
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.cardIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                  <Dumbbell size={20} color="#3B82F6" />
-                </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.planName}>{trainer.trainerName}</Text>
-                  <Text style={styles.planPrice}>{trainer.packageName}</Text>
-                </View>
-              </View>
-              <View style={styles.cardDivider} />
-              <Text style={styles.trainerDetail}>
-                Remaining Sessions: {trainer.remainingSessions} / {trainer.totalSessions}
-              </Text>
-            </View>
-          </View>
-        )}
       </ScrollView>
 
       {/* Modals */}
@@ -530,6 +670,49 @@ export default function MemberDetailsScreen() {
           }}
         />
       )}
+
+      <AssignTrainerModal
+        visible={assignTrainerVisible}
+        memberId={member.id}
+        memberName={member.fullName}
+        currentTrainerId={activeAssignment?.trainerId}
+        onClose={() => setAssignTrainerVisible(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['owner-member-trainer-history', id] });
+          queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
+        }}
+      />
+
+      <PurchasePTPackageModal
+        visible={purchasePTPackageVisible}
+        memberId={member.id}
+        memberName={member.fullName}
+        defaultTrainerId={activeAssignment?.trainerId}
+        onClose={() => setPurchasePTPackageVisible(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['owner-member-pt-packages', id] });
+          queryClient.invalidateQueries({ queryKey: ['owner-member-billing', id] });
+        }}
+      />
+
+      {selectedPTPackage && (
+        <CompletePTSessionModal
+          visible={completeSessionModalVisible}
+          packageId={selectedPTPackage.id}
+          packageName={selectedPTPackage.packageName}
+          remainingSessions={selectedPTPackage.remainingSessions}
+          trainerName={selectedPTPackage.trainerName}
+          memberId={member.id}
+          onClose={() => {
+            setCompleteSessionModalVisible(false);
+            setSelectedPTPackage(null);
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['owner-member-pt-packages', id] });
+            queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -550,123 +733,129 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
   },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 16,
+  errorTitle: {
+    color: '#F8FAFC',
+    fontSize: 18,
     fontWeight: '700',
-    marginTop: 12,
+    marginBottom: 4,
   },
-  backBtnAlt: {
-    marginTop: 16,
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 16,
+  errorSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  backButtonCenter: {
+    paddingHorizontal: 20,
     paddingVertical: 10,
+    backgroundColor: '#1E293B',
     borderRadius: 8,
   },
-  backBtnAltText: {
+  backButtonText: {
     color: '#F8FAFC',
     fontWeight: '600',
   },
-  navBar: {
+  navHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
+    backgroundColor: '#0F131C',
   },
-  backBtn: {
+  navBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: '#131823',
+    borderRadius: 18,
+    backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
   },
   navTitle: {
+    flex: 1,
     fontSize: 17,
     fontWeight: '700',
     color: '#F8FAFC',
-    flex: 1,
     textAlign: 'center',
     marginHorizontal: 10,
   },
-  navActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  navIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#131823',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
-  profileHeaderCard: {
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#131823',
-    borderRadius: 20,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#1E293B',
-    alignItems: 'center',
-    padding: 20,
-    marginBottom: 20,
   },
   profileAvatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: '#1E293B',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#2A2410',
+    borderWidth: 1,
+    borderColor: '#EAB308',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#EAB308',
+    marginRight: 14,
   },
-  profileAvatarText: {
-    fontSize: 28,
+  avatarText: {
+    fontSize: 18,
     fontWeight: '800',
     color: '#EAB308',
   },
-  profileName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#F8FAFC',
+  profileMeta: {
+    flex: 1,
   },
-  profileCode: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  contactRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 16,
-    justifyContent: 'center',
-  },
-  contactChip: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F141F',
-    borderWidth: 1,
-    borderColor: '#334155',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
-  contactChipText: {
-    color: '#CBD5E1',
+  fullName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    flex: 1,
+    marginRight: 8,
+  },
+  memberCode: {
     fontSize: 12,
-    fontWeight: '600',
+    color: '#94A3B8',
+    fontFamily: 'monospace',
+  },
+  contactBar: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 8,
+  },
+  contactAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#131823',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  contactText: {
+    fontSize: 12,
+    color: '#F8FAFC',
+    marginLeft: 6,
+    fontWeight: '500',
   },
   section: {
-    marginBottom: 20,
+    marginTop: 20,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -674,114 +863,100 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  membershipActionGroup: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  freezeActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    borderWidth: 1,
-    borderColor: '#38BDF8',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  freezeActionText: {
-    color: '#38BDF8',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  unfreezeActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderWidth: 1,
-    borderColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  unfreezeActionText: {
-    color: '#10B981',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  renewActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(234, 179, 8, 0.1)',
-    borderWidth: 1,
-    borderColor: '#EAB308',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  renewActionText: {
-    color: '#EAB308',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  collectActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EAB308',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  collectActionText: {
-    color: '#0A0D14',
-    fontSize: 12,
-    fontWeight: '700',
-  },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  inviteBanner: {
+  membershipActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  freezeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  freezeBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  unfreezeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#60A5FA',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  unfreezeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  renewTriggerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EAB308',
-    borderRadius: 16,
-    padding: 14,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
   },
-  inviteIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+  renewTriggerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  payDuesBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#EAB308',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
   },
-  inviteTitle: {
-    color: '#0A0D14',
-    fontSize: 14,
-    fontWeight: '800',
+  payDuesBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
   },
-  inviteSubtitle: {
-    color: '#422006',
-    fontSize: 11,
-    marginTop: 2,
+  ptActionHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EAB308',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  ptActionHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000000',
   },
   card: {
     backgroundColor: '#131823',
-    borderRadius: 16,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#1E293B',
-    padding: 16,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   cardIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2A2410',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -809,78 +984,166 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     fontSize: 10,
-    color: '#64748B',
     fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
   dateVal: {
     fontSize: 13,
-    color: '#CBD5E1',
     fontWeight: '600',
-    marginTop: 2,
+    color: '#F8FAFC',
   },
-  freezeNotice: {
+  freezeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
     borderRadius: 8,
-    padding: 8,
-    marginTop: 10,
+    padding: 10,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.3)',
   },
-  freezeNoticeText: {
-    fontSize: 11,
-    color: '#38BDF8',
-    fontWeight: '600',
+  freezeBannerText: {
+    fontSize: 12,
+    color: '#60A5FA',
     flex: 1,
   },
-  financialRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  financialCard: {
-    flex: 1,
-    backgroundColor: '#0F141F',
+  emptyPlanBox: {
+    backgroundColor: '#131823',
+    borderRadius: 14,
+    padding: 20,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#1E293B',
-    borderRadius: 10,
-    padding: 10,
   },
-  financialLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+  emptyPlanText: {
+    fontSize: 14,
     color: '#64748B',
+    marginBottom: 12,
   },
-  financialVal: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#F8FAFC',
-    marginTop: 2,
+  assignPlanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EAB308',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
-  duesAlert: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: '#EF4444',
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 6,
-  },
-  duesAlertTitle: {
+  assignPlanText: {
+    color: '#000000',
     fontSize: 13,
     fontWeight: '700',
-    color: '#EF4444',
   },
-  duesAlertSub: {
-    fontSize: 11,
-    color: '#FCA5A5',
+  assignCoachBtn: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  assignCoachBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#EAB308',
+  },
+  coachContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coachPhoneText: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  coachAssignedDate: {
+    fontSize: 12,
+    color: '#64748B',
+    marginLeft: 4,
+  },
+  ptPackageCard: {
+    backgroundColor: '#131823',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  ptPackageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ptPackageName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F8FAFC',
+  },
+  ptCoachName: {
+    fontSize: 12,
+    color: '#94A3B8',
     marginTop: 2,
   },
-  subheading: {
+  ptSessionsBadge: {
+    backgroundColor: '#2A2410',
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#EAB308',
+  },
+  ptSessionsBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94A3B8',
-    marginBottom: 8,
+    color: '#EAB308',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#1E293B',
+    borderRadius: 3,
+    marginVertical: 10,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#EAB308',
+    borderRadius: 3,
+  },
+  ptFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ptUsageText: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  logSessionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  logSessionBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  statGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  subheading: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginBottom: 10,
   },
   paymentRow: {
     flexDirection: 'row',
@@ -888,7 +1151,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#0F131C',
   },
   paymentLeft: {
     flexDirection: 'row',
@@ -912,48 +1175,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#10B981',
   },
-  statGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  statCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
   statNumber: {
     fontSize: 18,
     fontWeight: '800',
     color: '#F8FAFC',
+    marginBottom: 4,
   },
   statText: {
     fontSize: 11,
     color: '#64748B',
-    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   attendanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    paddingVertical: 6,
   },
   attendanceTime: {
     fontSize: 12,
-    color: '#CBD5E1',
-    marginLeft: 8,
-  },
-  trainerDetail: {
-    fontSize: 13,
     color: '#94A3B8',
-  },
-  emptyBox: {
-    backgroundColor: '#131823',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 20,
-    alignItems: 'center',
-  },
-  emptyBoxText: {
-    color: '#64748B',
-    fontSize: 13,
+    marginLeft: 8,
   },
 });

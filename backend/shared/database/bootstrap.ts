@@ -220,31 +220,72 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS trainers (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      user_id UUID REFERENCES users(id) ON DELETE SET NULL,
       full_name VARCHAR(255) NOT NULL,
       email VARCHAR(255),
       phone VARCHAR(32) NOT NULL,
       specialization VARCHAR(255),
+      experience_years INTEGER DEFAULT 1,
+      certifications TEXT,
+      bio TEXT,
+      photo_url TEXT,
+      rating NUMERIC(3,2) DEFAULT 5.00,
+      commission_type VARCHAR(32) NOT NULL DEFAULT 'FIXED_PER_SESSION',
+      commission_rate NUMERIC(10,2) NOT NULL DEFAULT 0.00,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      deleted_at TIMESTAMPTZ
+    );
+
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS commission_type VARCHAR(32) NOT NULL DEFAULT 'FIXED_PER_SESSION';
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(10,2) NOT NULL DEFAULT 0.00;
+    ALTER TABLE trainers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+    CREATE TABLE IF NOT EXISTS trainer_assignments (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
+      trainer_id UUID NOT NULL REFERENCES trainers(id) ON DELETE CASCADE,
+      assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      ended_at TIMESTAMPTZ,
+      status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+      notes TEXT,
+      assigned_by_user_id UUID,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE INDEX IF NOT EXISTS idx_trainer_assignments_gym_member ON trainer_assignments(gym_id, member_id, status);
+    CREATE INDEX IF NOT EXISTS idx_trainer_assignments_gym_trainer ON trainer_assignments(gym_id, trainer_id, status);
 
     CREATE TABLE IF NOT EXISTS pt_packages (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
       member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
       trainer_id UUID NOT NULL REFERENCES trainers(id) ON DELETE RESTRICT,
+      payment_id UUID REFERENCES payments(id) ON DELETE SET NULL,
       package_name VARCHAR(255) NOT NULL,
       total_sessions INTEGER NOT NULL,
       used_sessions INTEGER NOT NULL DEFAULT 0,
       remaining_sessions INTEGER NOT NULL,
+      price NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+      start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       expiry_date TIMESTAMPTZ NOT NULL,
       status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+      notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE pt_packages ADD COLUMN IF NOT EXISTS payment_id UUID REFERENCES payments(id) ON DELETE SET NULL;
+    ALTER TABLE pt_packages ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0.00;
+    ALTER TABLE pt_packages ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE pt_packages ADD COLUMN IF NOT EXISTS notes TEXT;
+
     CREATE INDEX IF NOT EXISTS idx_pt_packages_gym_member ON pt_packages(gym_id, member_id);
+    CREATE INDEX IF NOT EXISTS idx_pt_packages_gym_trainer ON pt_packages(gym_id, trainer_id);
 
     CREATE TABLE IF NOT EXISTS pt_sessions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -253,15 +294,48 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
       trainer_id UUID NOT NULL REFERENCES trainers(id) ON DELETE RESTRICT,
       session_date TIMESTAMPTZ NOT NULL,
+      scheduled_at TIMESTAMPTZ,
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      cancelled_at TIMESTAMPTZ,
+      cancellation_reason TEXT,
       duration_minutes INTEGER NOT NULL DEFAULT 60,
       focus_area VARCHAR(255) NOT NULL,
       trainer_notes TEXT,
       status VARCHAR(32) NOT NULL DEFAULT 'COMPLETED',
+      recorded_by_user_id UUID,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE pt_sessions ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;
+    ALTER TABLE pt_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
+    ALTER TABLE pt_sessions ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+    ALTER TABLE pt_sessions ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
+    ALTER TABLE pt_sessions ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
+    ALTER TABLE pt_sessions ADD COLUMN IF NOT EXISTS recorded_by_user_id UUID;
+
     CREATE INDEX IF NOT EXISTS idx_pt_sessions_package ON pt_sessions(package_id);
     CREATE INDEX IF NOT EXISTS idx_pt_sessions_gym_member ON pt_sessions(gym_id, member_id, session_date);
+    CREATE INDEX IF NOT EXISTS idx_pt_sessions_gym_trainer ON pt_sessions(gym_id, trainer_id, session_date);
+
+    CREATE TABLE IF NOT EXISTS trainer_earnings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      trainer_id UUID NOT NULL REFERENCES trainers(id) ON DELETE CASCADE,
+      session_id UUID REFERENCES pt_sessions(id) ON DELETE SET NULL,
+      package_id UUID REFERENCES pt_packages(id) ON DELETE SET NULL,
+      member_id UUID NOT NULL REFERENCES gym_members(id) ON DELETE CASCADE,
+      earning_basis VARCHAR(32) NOT NULL DEFAULT 'PER_SESSION',
+      rate_applied NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+      amount NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+      status VARCHAR(32) NOT NULL DEFAULT 'ACCRUED',
+      period VARCHAR(32) NOT NULL,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_trainer_earnings_gym_trainer ON trainer_earnings(gym_id, trainer_id, status);
+    CREATE INDEX IF NOT EXISTS idx_trainer_earnings_period ON trainer_earnings(gym_id, period);
 
     CREATE TABLE IF NOT EXISTS audit_logs (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

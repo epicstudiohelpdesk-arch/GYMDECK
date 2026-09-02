@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, Users, UserCheck } from 'lucide-react-native';
+import { LayoutDashboard, Users, UserCheck, Dumbbell } from 'lucide-react-native';
 
 export default function TabsLayout() {
   return (
@@ -41,6 +41,13 @@ export default function TabsLayout() {
         options={{
           title: 'Members',
           tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="trainers"
+        options={{
+          title: 'Trainers',
+          tabBarIcon: ({ color, size }) => <Dumbbell size={size} color={color} />,
         }}
       />
     </Tabs>

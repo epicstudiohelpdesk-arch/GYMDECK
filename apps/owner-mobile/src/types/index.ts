@@ -203,6 +203,64 @@ export interface PaymentRecord {
   paidAt: string;
 }
 
+export interface TrainerSummary {
+  id: string;
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  specialization?: string | null;
+  experienceYears?: number;
+  certifications?: string[];
+  bio?: string | null;
+  photoUrl?: string | null;
+  rating?: string;
+  commissionType: string;
+  commissionRate: string;
+  isActive: boolean;
+  activeClientsCount?: number;
+  activePackagesCount?: number;
+}
+
+export interface TrainerAssignmentItem {
+  id: string;
+  trainerId: string;
+  trainerName: string;
+  trainerPhone: string;
+  specialization?: string | null;
+  status: string;
+  assignedAt: string;
+  endedAt?: string | null;
+  notes?: string | null;
+}
+
+export interface PTPackageSummary {
+  id: string;
+  packageName: string;
+  totalSessions: number;
+  usedSessions: number;
+  remainingSessions: number;
+  price: string;
+  startDate: string;
+  expiryDate: string;
+  status: string;
+  notes?: string | null;
+  trainerId: string;
+  trainerName: string;
+  trainerPhone: string;
+  specialization?: string | null;
+}
+
+export interface PTSessionSummary {
+  id: string;
+  packageId: string;
+  sessionDate: string;
+  durationMinutes: number;
+  focusArea: string;
+  trainerNotes?: string | null;
+  status: string;
+  trainerName?: string;
+}
+
 export interface TrainerAssignment {
   packageId: string;
   packageName: string;
@@ -231,6 +289,36 @@ export interface MemberProfileData {
     expiresAt: string;
     consumedAt?: string | null;
   } | null;
+}
+
+export interface CreateTrainerInput {
+  fullName: string;
+  phone: string;
+  email?: string;
+  specialization?: string;
+  experienceYears?: number;
+  certifications?: string[];
+  bio?: string;
+  photoUrl?: string;
+  commissionType?: 'FIXED_PER_SESSION' | 'PERCENTAGE';
+  commissionRate?: number;
+}
+
+export interface AssignTrainerInput {
+  trainerId: string;
+  notes?: string;
+}
+
+export interface PurchasePTPackageInput {
+  trainerId: string;
+  packageName: string;
+  totalSessions: number;
+  price: number;
+  expiryDays?: number;
+  paymentMethod?: 'CASH' | 'CARD' | 'UPI' | 'BANK_TRANSFER' | 'OTHER';
+  transactionReference?: string;
+  notes?: string;
+  idempotencyKey?: string;
 }
 
 export interface CreateMemberInput {

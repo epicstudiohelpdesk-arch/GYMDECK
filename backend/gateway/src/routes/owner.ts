@@ -1,5 +1,5 @@
 /**
- * GymDeck Cloud Backend - Owner Mobile Operations, Member Lifecycle, Financial Ledger & Attendance API Routes (/v1/owner)
+ * GymDeck Cloud Backend - Owner Mobile Operations, Member Lifecycle, Financial Ledger, Attendance & Trainer/PT Routes (/v1/owner)
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
@@ -8,6 +8,7 @@ import { ownerService } from '../../../services/owner/ownerService';
 import { billingService } from '../../../services/billing/billingService';
 import { ownerAttendanceService } from '../../../services/owner/ownerAttendanceService';
 import { ownerMembershipService } from '../../../services/owner/ownerMembershipService';
+import { ownerTrainerService } from '../../../services/owner/ownerTrainerService';
 import { requireAuth } from '../middleware/authMiddleware';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware';
 import { validateQuery, validateBody } from '../../../shared/validation';
@@ -138,6 +139,61 @@ const GetAttendanceQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
   offset: z.coerce.number().min(0).default(0),
   query: z.string().optional(),
+});
+
+const CreateTrainerBodySchema = z.object({
+  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  phone: z.string().min(7, 'Valid phone number is required'),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  specialization: z.string().optional(),
+  experienceYears: z.number().int().min(0).optional(),
+  certifications: z.array(z.string()).optional(),
+  bio: z.string().optional(),
+  photoUrl: z.string().optional(),
+  commissionType: z.enum(['FIXED_PER_SESSION', 'PERCENTAGE']).optional(),
+  commissionRate: z.number().min(0).optional(),
+});
+
+const UpdateTrainerBodySchema = z.object({
+  fullName: z.string().min(2).optional(),
+  phone: z.string().min(7).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  specialization: z.string().optional(),
+  experienceYears: z.number().int().min(0).optional(),
+  certifications: z.array(z.string()).optional(),
+  bio: z.string().optional(),
+  photoUrl: z.string().optional(),
+  commissionType: z.enum(['FIXED_PER_SESSION', 'PERCENTAGE']).optional(),
+  commissionRate: z.number().min(0).optional(),
+  rating: z.number().min(1).max(5).optional(),
+  isActive: z.boolean().optional(),
+});
+
+const AssignTrainerBodySchema = z.object({
+  trainerId: z.string().uuid('Valid Trainer ID is required'),
+  notes: z.string().optional(),
+});
+
+const PurchasePTPackageBodySchema = z.object({
+  trainerId: z.string().uuid('Valid Trainer ID is required'),
+  packageName: z.string().min(2, 'Package name must be at least 2 characters'),
+  totalSessions: z.number().int().min(1, 'Total sessions must be at least 1'),
+  price: z.number().min(0, 'Price cannot be negative'),
+  expiryDays: z.number().int().min(1).optional(),
+  paymentMethod: z.enum(['CASH', 'CARD', 'UPI', 'BANK_TRANSFER', 'OTHER']).optional(),
+  transactionReference: z.string().optional(),
+  notes: z.string().optional(),
+  idempotencyKey: z.string().optional(),
+});
+
+const CompletePTSessionBodySchema = z.object({
+  durationMinutes: z.number().int().min(1).optional(),
+  focusArea: z.string().optional(),
+  trainerNotes: z.string().optional(),
+});
+
+const CancelPTSessionBodySchema = z.object({
+  reason: z.string().min(3, 'A reason is required to cancel a PT session'),
 });
 
 // ==============================================================================
@@ -419,7 +475,7 @@ router.delete(
 );
 
 // ==============================================================================
-// 4. Membership Lifecycle & Operations (Purchase, Renew, Freeze, Unfreeze, Stats)
+// 4. Membership Lifecycle & Operations
 // ==============================================================================
 
 router.get(
@@ -924,7 +980,336 @@ router.get(
 );
 
 // ==============================================================================
-// 7. Digital Invitations
+// 7. Trainer & Personal Training Management
+// ==============================================================================
+
+router.get(
+  '/trainers',
+  requirePermission('trainers.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await ownerTrainerService.getTrainers(
+        gymId,
+        req.query.includeInactive === 'true',
+        req.query.query as string
+      );
+
+      res.status(200).json({
+        success: true,
+        data: { trainers: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/trainers',
+  requirePermission('trainers.write'),
+  validateBody(CreateTrainerBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const result = await ownerTrainerService.createTrainer(gymId, req.body, actorUserId);
+
+      res.status(201).json({
+        success: true,
+        data: { trainer: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/trainers/:id',
+  requirePermission('trainers.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const trainerId = req.params.id;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!trainerId) throw AppError.validation('Trainer ID is required.');
+
+      const result = await ownerTrainerService.getTrainerById(gymId, trainerId);
+
+      res.status(200).json({
+        success: true,
+        data: { trainer: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/trainers/:id',
+  requirePermission('trainers.write'),
+  validateBody(UpdateTrainerBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const trainerId = req.params.id;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!trainerId) throw AppError.validation('Trainer ID is required.');
+
+      const result = await ownerTrainerService.updateTrainer(gymId, trainerId, req.body, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: { trainer: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.delete(
+  '/trainers/:id',
+  requirePermission('trainers.write'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const trainerId = req.params.id;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!trainerId) throw AppError.validation('Trainer ID is required.');
+
+      const result = await ownerTrainerService.archiveTrainer(gymId, trainerId, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: { trainer: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/members/:id/trainer-assignment',
+  requirePermission('pt.write'),
+  validateBody(AssignTrainerBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId) throw AppError.validation('Member ID is required.');
+
+      const result = await ownerTrainerService.assignTrainer(gymId, memberId, req.body, actorUserId);
+
+      res.status(201).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/members/:id/trainer-assignment/:assignmentId/end',
+  requirePermission('pt.write'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+      const assignmentId = req.params.assignmentId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId || !assignmentId) throw AppError.validation('Member ID and Assignment ID are required.');
+
+      const result = await ownerTrainerService.endTrainerAssignment(gymId, memberId, assignmentId, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/members/:id/trainer-history',
+  requirePermission('trainers.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId) throw AppError.validation('Member ID is required.');
+
+      const result = await ownerTrainerService.getMemberTrainerHistory(gymId, memberId);
+
+      res.status(200).json({
+        success: true,
+        data: { history: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/members/:id/pt-packages',
+  requirePermission('pt.write'),
+  validateBody(PurchasePTPackageBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId) throw AppError.validation('Member ID is required.');
+
+      const result = await ownerTrainerService.purchasePTPackage(gymId, memberId, req.body, actorUserId);
+
+      res.status(201).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/members/:id/pt-packages',
+  requirePermission('pt.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const memberId = req.params.id;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!memberId) throw AppError.validation('Member ID is required.');
+
+      const result = await ownerTrainerService.getMemberPTPackages(gymId, memberId);
+
+      res.status(200).json({
+        success: true,
+        data: { packages: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/pt-packages/:packageId/complete-session',
+  requirePermission('pt.write'),
+  validateBody(CompletePTSessionBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const packageId = req.params.packageId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!packageId) throw AppError.validation('Package ID is required.');
+
+      const result = await ownerTrainerService.completePTSession(gymId, packageId, req.body, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/pt-sessions/:sessionId/cancel',
+  requirePermission('pt.write'),
+  validateBody(CancelPTSessionBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const sessionId = req.params.sessionId;
+      const actorUserId = req.user!.userId || req.user!.sub;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!sessionId) throw AppError.validation('Session ID is required.');
+
+      const result = await ownerTrainerService.cancelPTSession(gymId, sessionId, req.body.reason, actorUserId);
+
+      res.status(200).json({
+        success: true,
+        data: { session: result },
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get(
+  '/trainers/:id/earnings',
+  requirePermission('reports.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      const trainerId = req.params.id;
+
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      if (!trainerId) throw AppError.validation('Trainer ID is required.');
+
+      const result = await ownerTrainerService.getTrainerEarnings(gymId, trainerId, req.query.period as string);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ==============================================================================
+// 8. Digital Invitations
 // ==============================================================================
 
 router.post(
