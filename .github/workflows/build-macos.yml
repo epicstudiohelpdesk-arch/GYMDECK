@@ -1,5 +1,6 @@
 name: Build macOS (dmg)
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     tags: ["v*"]
@@ -16,11 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
       - name: Setup Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -34,11 +40,11 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Install npm deps
-        run: npm ci
+      - name: Install pnpm deps
+        run: pnpm install --frozen-lockfile
 
       - name: Build Tauri app
-        run: npm run tauri build
+        run: pnpm run tauri build
         env:
           GYMDECK_DB_KEY: ${{ secrets.GYMDECK_DB_KEY }}
           GYMDECK_UPDATER_PUBKEY: ${{ secrets.GYMDECK_UPDATER_PUBKEY }}

@@ -16,7 +16,7 @@ RUN apk add --no-cache libc6-compat
 COPY package*.json tsconfig.json drizzle.config.ts ./
 
 # Install all dependencies (including devDependencies for TypeScript compilation)
-RUN npm ci
+RUN npm install
 
 # Copy backend source tree
 COPY . .
@@ -44,7 +44,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nodejs:nodejs /app/shared/database/migrations ./shared/database/migrations
 
 # Install production-only dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 USER nodejs
 

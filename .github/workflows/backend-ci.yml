@@ -1,6 +1,7 @@
 name: GymDeck Backend CI & Verification Pipeline
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, develop]
     paths:
@@ -37,24 +38,29 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node.js 20 LTS Runtime
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Validate Backend TypeScript Compilation (No Emit)
         working-directory: backend
-        run: npm run typecheck
+        run: pnpm run typecheck
 
       - name: Forensic Secret Leakage Audit
         run: |
-          ! grep -rn "DEV_DB_KEY" backend/shared/config/
-          ! grep -rn "AWS_SECRET_ACCESS_KEY" backend/
-          ! grep -rn "PRIVATE_KEY_MATERIAL" backend/
+          ! grep -rn --exclude-dir=node_modules "DEV_DB_KEY" backend/shared/config/
+          ! grep -rn --exclude-dir=node_modules "AWS_SECRET_ACCESS_KEY" backend/
+          ! grep -rn --exclude-dir=node_modules "PRIVATE_KEY_MATERIAL" backend/
 
       - name: Run Full Backend Test Regression Matrix
         working-directory: backend
