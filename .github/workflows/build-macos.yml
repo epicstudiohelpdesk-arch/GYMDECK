@@ -48,11 +48,6 @@ jobs:
         env:
           GYMDECK_DB_KEY: ${{ secrets.GYMDECK_DB_KEY }}
           GYMDECK_UPDATER_PUBKEY: ${{ secrets.GYMDECK_UPDATER_PUBKEY }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_NOTARIZATION_EMAIL: ${{ secrets.APPLE_NOTARIZATION_EMAIL }}
-          APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

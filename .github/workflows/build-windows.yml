@@ -63,7 +63,7 @@ jobs:
           }
 
       - name: Build Tauri Application (MSI & EXE)
-        run: pnpm run tauri build -- --bundles msi,nsis
+        run: pnpm run tauri build
 
       - name: Show Build Outputs
         if: always()

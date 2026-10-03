@@ -293,7 +293,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export const AppBottomNav: React.FC = () => {
   const router = useRouter();
-  const segments = useSegments();
+  const segments = useSegments() as unknown as string[];
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);

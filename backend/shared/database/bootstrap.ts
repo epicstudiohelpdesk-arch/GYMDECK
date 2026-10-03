@@ -24,17 +24,30 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS gym_members (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
-      member_code VARCHAR(32) NOT NULL,
+      member_code VARCHAR(64) NOT NULL,
       full_name VARCHAR(255) NOT NULL,
       phone VARCHAR(32) NOT NULL,
+      alternate_phone VARCHAR(32),
       email VARCHAR(255),
+      gender VARCHAR(32),
+      dob DATE,
+      address TEXT,
       profile_photo_url TEXT,
       membership_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
       joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       expires_at TIMESTAMPTZ,
+      notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      deleted_at TIMESTAMPTZ
     );
+
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS alternate_phone VARCHAR(32);
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS gender VARCHAR(32);
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS dob DATE;
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS address TEXT;
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS notes TEXT;
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
