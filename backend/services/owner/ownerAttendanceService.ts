@@ -3,7 +3,7 @@
  */
 
 import * as crypto from 'crypto';
-import { eq, and, isNull, desc, count, countDistinct, or, ilike, gte, lte } from 'drizzle-orm';
+import { eq, and, isNull, desc, count, countDistinct, or, ilike, gte, lte, sql } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import {
   gymMembers,
@@ -176,6 +176,48 @@ export class OwnerAttendanceService {
 
     // E. Transactional Attendance Record Creation
     return await db.transaction(async (tx) => {
+      // Row-level lock to strictly serialize concurrent check-ins for the same member
+      await tx.execute(sql`SELECT id FROM gym_members WHERE id = ${member.id} FOR UPDATE`);
+
+      // Re-verify cooldown inside locked transaction to prevent concurrent race condition
+      const concurrentCheckIn = (
+        await tx
+          .select()
+          .from(attendanceLogs)
+          .where(
+            and(
+              eq(attendanceLogs.gymId, gymId),
+              eq(attendanceLogs.memberId, member.id),
+              gte(attendanceLogs.checkInTime, cooldownWindow),
+              isNull(attendanceLogs.checkOutTime)
+            )
+          )
+          .orderBy(desc(attendanceLogs.checkInTime))
+          .limit(1)
+      )[0];
+
+      if (concurrentCheckIn) {
+        if (dto.idempotencyKey) {
+          return {
+            attendanceId: concurrentCheckIn.id,
+            memberId: member.id,
+            memberCode: member.memberCode,
+            fullName: member.fullName,
+            checkInTime: concurrentCheckIn.checkInTime.toISOString(),
+            status: 'APPROVED',
+            idempotentReplay: true,
+          };
+        }
+
+        const checkedInAtTime = new Date(concurrentCheckIn.checkInTime).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        throw AppError.conflict(
+          `Duplicate check-in: Member already checked in at ${checkedInAtTime}. Cooldown is 2 hours.`
+        );
+      }
+
       const [record] = await tx
         .insert(attendanceLogs)
         .values({
