@@ -1,13 +1,18 @@
 /**
- * GymDeck Owner Mobile - Manual Attendance Entry Modal
+ * GymDeck Owner Mobile - Manual Attendance Entry Sheet
+ *
+ * Operational modal using Phase 02 BottomSheet:
+ * - Records manual attendance with mandatory audit reason (min 3 chars)
+ * - Canonical Light Theme tokens
+ * - Clear validation & error feedback
+ * - Thumb-friendly touch targets (>= 44pt)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Modal,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -15,12 +20,16 @@ import {
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerAttendanceService } from '../services/api/ownerAttendanceService';
-import { FileEdit, X, Check } from 'lucide-react-native';
+import { localMutationService } from '../services/LocalMutationService';
+import { isDatabaseOpen } from '../database/LocalDatabaseManager';
+import { useTheme } from '../theme';
+import { BottomSheet } from './ui/BottomSheet';
+import { FileEdit, Check, AlertCircle } from 'lucide-react-native';
 
 interface ManualAttendanceModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: (result: any) => void;
+  onSuccess?: (result: any) => void;
 }
 
 export const ManualAttendanceModal: React.FC<ManualAttendanceModalProps> = ({
@@ -29,175 +38,215 @@ export const ManualAttendanceModal: React.FC<ManualAttendanceModalProps> = ({
   onSuccess,
 }) => {
   const queryClient = useQueryClient();
+  const { colors, typography, radii } = useTheme();
+
   const [memberCode, setMemberCode] = useState('');
   const [notes, setNotes] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setMemberCode('');
+      setNotes('');
+      setErrorMessage(null);
+    }
+  }, [visible]);
 
   const manualMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      setErrorMessage(null);
       const cleanCode = memberCode.trim().toUpperCase();
-      if (!cleanCode) throw new Error('Please enter Member Code');
+      if (!cleanCode) throw new Error('Please enter a valid Member Code');
       if (!notes.trim() || notes.trim().length < 3) {
         throw new Error('Please enter a valid reason / notes (minimum 3 characters)');
       }
+
+      if (isDatabaseOpen()) {
+        const log = await localMutationService.checkInMember({
+          memberCode: cleanCode,
+          entryMethod: 'MANUAL',
+          notes: notes.trim(),
+        });
+        return {
+          fullName: 'Member',
+          memberCode: cleanCode,
+          record: log,
+          isLocal: true,
+        };
+      }
+
       return OwnerAttendanceService.recordManualAttendance({
         memberCode: cleanCode,
         checkInTime: new Date().toISOString(),
         notes: notes.trim(),
       });
     },
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['local-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['local-attendance-stats'] });
       queryClient.invalidateQueries({ queryKey: ['owner-daily-attendance'] });
       queryClient.invalidateQueries({ queryKey: ['owner-attendance-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-analytics-overview'] });
+      const suffix = res.isLocal ? ' locally (Pending sync)' : '';
       Alert.alert(
         'Manual Attendance Logged',
-        `Recorded manual entry for ${res.fullName} (${res.memberCode}).`
+        `Recorded manual entry for ${res.fullName} (${res.memberCode})${suffix}.`
       );
-      setMemberCode('');
-      setNotes('');
-      onSuccess(res);
+      onSuccess?.(res);
       onClose();
     },
     onError: (err: any) => {
-      Alert.alert('Manual Entry Failed', err?.message || 'Unable to record manual attendance.');
+      const msg = err?.message || 'Unable to record manual attendance.';
+      setErrorMessage(msg);
     },
   });
 
+  const isFormValid = memberCode.trim().length > 0 && notes.trim().length >= 3;
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <FileEdit size={22} color="#EAB308" style={{ marginRight: 6 }} />
-              <Text style={styles.title}>Manual Attendance Entry</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-              <X size={20} color="#94A3B8" />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.subtext}>
-            Log an attendance session manually with mandatory audit notes.
-          </Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Member Code</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. GD-1001"
-              placeholderTextColor="#64748B"
-              value={memberCode}
-              onChangeText={setMemberCode}
-              autoCapitalize="characters"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Reason / Audit Notes *</Text>
-            <TextInput
-              style={[styles.input, { height: 60, textAlignVertical: 'top', paddingTop: 8 }]}
-              placeholder="e.g. Scanner offline, member forgot RFID card..."
-              placeholderTextColor="#64748B"
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-            />
-          </View>
-
-          <TouchableOpacity
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Manual Attendance Entry"
+      subtitle="Log an attendance record with required audit reason"
+      maxHeightRatio={0.82}
+    >
+      <View style={styles.container}>
+        {errorMessage && (
+          <View
             style={[
-              styles.submitBtn,
-              (!memberCode.trim() || !notes.trim() || manualMutation.isPending) &&
-                styles.submitBtnDisabled,
+              styles.errorBanner,
+              {
+                backgroundColor: colors.dangerBg,
+                borderColor: colors.dangerBorder,
+                borderRadius: radii.md,
+              },
             ]}
-            onPress={() => manualMutation.mutate()}
-            disabled={!memberCode.trim() || !notes.trim() || manualMutation.isPending}
-            activeOpacity={0.8}
           >
-            {manualMutation.isPending ? (
-              <ActivityIndicator color="#0A0D14" />
-            ) : (
-              <>
-                <Check size={18} color="#0A0D14" style={{ marginRight: 6 }} />
-                <Text style={styles.submitBtnText}>Record Entry</Text>
-              </>
-            )}
-          </TouchableOpacity>
+            <AlertCircle size={16} color={colors.danger} style={{ marginRight: 8, marginTop: 1 }} />
+            <Text style={[typography.caption, { color: colors.dangerText, flex: 1, fontWeight: '600' }]}>
+              {errorMessage}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.inputGroup}>
+          <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+            Member Code *
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              typography.inputText,
+              {
+                backgroundColor: colors.surface,
+                borderColor: memberCode.trim() ? colors.primary : colors.border,
+                borderRadius: radii.md,
+                color: colors.textPrimary,
+              },
+            ]}
+            placeholder="e.g. GD-1001"
+            placeholderTextColor={colors.textMuted}
+            value={memberCode}
+            onChangeText={(text) => setMemberCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            autoFocus
+          />
         </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+            Audit Reason / Notes *
+          </Text>
+          <TextInput
+            style={[
+              styles.textArea,
+              typography.inputText,
+              {
+                backgroundColor: colors.surface,
+                borderColor: notes.trim().length >= 3 ? colors.primary : colors.border,
+                borderRadius: radii.md,
+                color: colors.textPrimary,
+              },
+            ]}
+            placeholder="e.g. Scanner offline, member forgot card, manual correction..."
+            placeholderTextColor={colors.textMuted}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+          <Text style={[typography.caption, { color: colors.textMuted, marginTop: 4 }]}>
+            Minimum 3 characters required for system audit tracking.
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.submitBtn,
+            {
+              backgroundColor: colors.primary,
+              borderRadius: radii.md,
+            },
+            (!isFormValid || manualMutation.isPending) && styles.submitBtnDisabled,
+          ]}
+          onPress={() => manualMutation.mutate()}
+          disabled={!isFormValid || manualMutation.isPending}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Record Manual Entry"
+        >
+          {manualMutation.isPending ? (
+            <ActivityIndicator color={colors.textOnPrimary} />
+          ) : (
+            <>
+              <Check size={18} color={colors.textOnPrimary} style={{ marginRight: 8 }} />
+              <Text style={[typography.button, { color: colors.textOnPrimary }]}>
+                Record Manual Entry
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    padding: 20,
+  container: {
+    paddingBottom: 20,
   },
-  card: {
-    backgroundColor: '#131823',
-    borderRadius: 20,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F8FAFC',
-  },
-  subtext: {
-    fontSize: 13,
-    color: '#94A3B8',
     marginBottom: 16,
   },
   inputGroup: {
-    marginBottom: 14,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#CBD5E1',
-    marginBottom: 6,
+    marginBottom: 16,
   },
   input: {
-    backgroundColor: '#0F141F',
+    height: 48,
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
     paddingHorizontal: 12,
-    height: 44,
-    color: '#F8FAFC',
-    fontSize: 14,
+  },
+  textArea: {
+    height: 80,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingTop: 10,
   },
   submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAB308',
-    borderRadius: 12,
-    height: 48,
-    marginTop: 6,
+    height: 50,
+    marginTop: 8,
   },
   submitBtnDisabled: {
     opacity: 0.5,
-  },
-  submitBtnText: {
-    color: '#0A0D14',
-    fontSize: 15,
-    fontWeight: '700',
   },
 });

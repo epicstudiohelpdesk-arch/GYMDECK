@@ -102,7 +102,60 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         DROP TABLE sync_inbox;
         ALTER TABLE sync_inbox_v5 RENAME TO sync_inbox;",
     ),
+    (
+        6,
+        "Migrate monetary columns to INTEGER minor units (paise)",
+        "CREATE TABLE IF NOT EXISTS membership_plans (id TEXT PRIMARY KEY, gym_id TEXT, plan_name TEXT, duration_days INTEGER, price REAL);
+        ALTER TABLE membership_plans ADD COLUMN price_minor_units INTEGER;
+        UPDATE membership_plans SET price_minor_units = CAST(ROUND(price * 100.0) AS INTEGER) WHERE price_minor_units IS NULL;
+
+        CREATE TABLE IF NOT EXISTS payments (id TEXT PRIMARY KEY, gym_id TEXT, member_id TEXT, amount REAL);
+        ALTER TABLE payments ADD COLUMN amount_minor_units INTEGER;
+        UPDATE payments SET amount_minor_units = CAST(ROUND(amount * 100.0) AS INTEGER) WHERE amount_minor_units IS NULL;
+
+        CREATE TABLE IF NOT EXISTS inventory (id TEXT PRIMARY KEY, gym_id TEXT, item_name TEXT, unit_price REAL);
+        ALTER TABLE inventory ADD COLUMN unit_price_minor_units INTEGER;
+        UPDATE inventory SET unit_price_minor_units = CAST(ROUND(unit_price * 100.0) AS INTEGER) WHERE unit_price IS NOT NULL AND unit_price_minor_units IS NULL;",
+    ),
 ];
+
+fn validate_legacy_monetary_records(conn: &Connection) -> Result<(), crate::errors::AppError> {
+    // 1. Validate membership_plans
+    if let Ok(mut plan_stmt) = conn.prepare("SELECT id, plan_name, price FROM membership_plans") {
+        let plan_rows = plan_stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, f64>(2)?))
+        }).map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
+
+        for row in plan_rows {
+            let (id, name, price) = row.map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
+            if let Err(e) = crate::utils::money::legacy_real_to_minor_units(price) {
+                return Err(crate::errors::AppError::Database(format!(
+                    "Migration v6 aborted: MembershipPlan id={} name='{}' has invalid/imprecise price {}: {}",
+                    id, name, price, e
+                )));
+            }
+        }
+    }
+
+    // 2. Validate payments
+    if let Ok(mut pay_stmt) = conn.prepare("SELECT id, amount FROM payments") {
+        let pay_rows = pay_stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?))
+        }).map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
+
+        for row in pay_rows {
+            let (id, amount) = row.map_err(|e| crate::errors::AppError::Database(e.to_string()))?;
+            if let Err(e) = crate::utils::money::legacy_real_to_minor_units(amount) {
+                return Err(crate::errors::AppError::Database(format!(
+                    "Migration v6 aborted: Payment id={} has invalid/imprecise amount {}: {}",
+                    id, amount, e
+                )));
+            }
+        }
+    }
+
+    Ok(())
+}
 
 pub fn ensure_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {
     conn.execute_batch(SCHEMA_VERSION_TABLE)
@@ -124,6 +177,11 @@ pub fn ensure_schema(conn: &Connection) -> Result<(), crate::errors::AppError> {
     for &(version, description, sql) in MIGRATIONS {
         if version > current_version {
             info!("Applying migration v{}: {}", version, description);
+
+            if version == 6 {
+                validate_legacy_monetary_records(conn)?;
+            }
+
             let backup_path = format!("pre_migration_v{}.sqlite.bak", version);
             let _ = conn.execute_batch(&format!("VACUUM INTO '{}'", backup_path));
             conn.execute_batch("BEGIN IMMEDIATE")

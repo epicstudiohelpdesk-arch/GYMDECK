@@ -15,8 +15,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// 3. Enable pnpm symlinks and package exports resolution
-config.resolver.unstable_enableSymlinks = true;
+// 3. Enable package exports resolution
 config.resolver.unstable_enablePackageExports = true;
 
 // 4. Block non-mobile directories

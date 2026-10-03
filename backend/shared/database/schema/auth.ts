@@ -179,6 +179,23 @@ export const userRefreshTokens = pgTable(
   })
 );
 
+export const userPasswordResetTokens = pgTable(
+  'user_password_reset_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: varchar('token_hash', { length: 64 }).notNull(), // SHA-256 hash
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userTokenIdx: index('idx_user_pwd_reset_token').on(table.userId, table.tokenHash),
+  })
+);
+
 export type MemberAccount = typeof memberAccounts.$inferSelect;
 export type NewMemberAccount = typeof memberAccounts.$inferInsert;
 export type EmailVerificationOtp = typeof emailVerificationOtps.$inferSelect;
@@ -190,3 +207,5 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type UserRefreshToken = typeof userRefreshTokens.$inferSelect;
 export type NewUserRefreshToken = typeof userRefreshTokens.$inferInsert;
+export type UserPasswordResetToken = typeof userPasswordResetTokens.$inferSelect;
+export type NewUserPasswordResetToken = typeof userPasswordResetTokens.$inferInsert;

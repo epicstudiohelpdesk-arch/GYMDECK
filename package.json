@@ -30,5 +30,8 @@
     "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^3.4.19",
     "vite": "^6.0.0"
+  },
+  "op-sqlite": {
+    "sqlcipher": true
   }
 }

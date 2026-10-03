@@ -1,22 +1,30 @@
 /**
- * GymDeck Owner Mobile - Add / Register Trainer Modal
+ * GymDeck Owner Mobile - Add / Register Personal Trainer Modal
+ *
+ * Replaces dark floating modal with canonical BottomSheet primitive:
+ * Light theme tokens, accessible inputs (>= 44pt), keyboard safe, and real backend mutation.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Modal,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerTrainersService } from '../services/api/ownerTrainersService';
-import { Award, X, Check, UserPlus, DollarSign } from 'lucide-react-native';
+import { localMutationService } from '../services/LocalMutationService';
+import { isDatabaseOpen } from '../database/LocalDatabaseManager';
+import { BottomSheet } from './ui/BottomSheet';
+import { useTheme } from '../theme';
+import { Award, Check, UserPlus, AlertCircle } from 'lucide-react-native';
 
 interface AddTrainerModalProps {
   visible: boolean;
@@ -29,23 +37,52 @@ export const AddTrainerModal: React.FC<AddTrainerModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { colors, typography, radii, shadows } = useTheme();
   const queryClient = useQueryClient();
+
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [specialization, setSpecialization] = useState('Strength & Conditioning');
   const [experienceYears, setExperienceYears] = useState('3');
   const [commissionType, setCommissionType] = useState<'FIXED_PER_SESSION' | 'PERCENTAGE'>('FIXED_PER_SESSION');
-  const [commissionRate, setCommissionRate] = useState('30.00');
+  const [commissionRate, setCommissionRate] = useState('500');
   const [bio, setBio] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setFullName('');
+      setPhone('');
+      setEmail('');
+      setSpecialization('Strength & Conditioning');
+      setExperienceYears('3');
+      setCommissionType('FIXED_PER_SESSION');
+      setCommissionRate('500');
+      setBio('');
+      setErrorMessage(null);
+    }
+  }, [visible]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!fullName.trim() || fullName.trim().length < 2) {
-        throw new Error('Full name is required (min 2 characters).');
+        throw new Error('Full name is required (minimum 2 characters).');
       }
       if (!phone.trim() || phone.trim().length < 7) {
-        throw new Error('Valid phone number is required.');
+        throw new Error('Valid contact phone number is required.');
+      }
+
+      if (isDatabaseOpen()) {
+        return await localMutationService.createTrainer({
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          email: email.trim() || undefined,
+          specialization: specialization.trim() || undefined,
+          experienceYears: parseInt(experienceYears, 10) || 1,
+          bio: bio.trim() || undefined,
+          isActive: true,
+        });
       }
 
       return await OwnerTrainersService.createTrainer({
@@ -60,317 +97,388 @@ export const AddTrainerModal: React.FC<AddTrainerModalProps> = ({
       });
     },
     onSuccess: () => {
-      Alert.alert('Trainer Added', 'Personal trainer successfully registered in the gym.');
+      Alert.alert('Coach Registered', 'Personal trainer successfully added locally (Pending sync).');
+      queryClient.invalidateQueries({ queryKey: ['local-trainers'] });
       queryClient.invalidateQueries({ queryKey: ['owner-trainers'] });
       queryClient.invalidateQueries({ queryKey: ['owner-trainers-list'] });
       onSuccess();
       onClose();
     },
     onError: (err: any) => {
-      Alert.alert(
-        'Action Failed',
-        err?.response?.data?.message || err.message || 'Failed to add trainer.'
+      setErrorMessage(
+        err?.response?.data?.message || err?.message || 'Failed to register trainer.'
       );
     },
   });
 
-  if (!visible) return null;
+  const isFormValid = fullName.trim().length >= 2 && phone.trim().length >= 7;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <UserPlus size={22} color="#EAB308" style={{ marginRight: 8 }} />
-              <Text style={styles.title}>Register Personal Trainer</Text>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Register Coach / Trainer"
+      subtitle="Add certified coaching staff to gym profile"
+      maxHeightRatio={0.9}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardContainer}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        >
+          {errorMessage && (
+            <View
+              style={[
+                styles.errorBanner,
+                { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder, borderRadius: radii.sm },
+              ]}
+            >
+              <AlertCircle size={16} color={colors.danger} style={{ marginRight: 8 }} />
+              <Text style={[typography.captionBold, { color: colors.dangerText, flex: 1 }]}>
+                {errorMessage}
+              </Text>
             </View>
-            <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={styles.closeBtn}>
-              <X size={20} color="#94A3B8" />
-            </TouchableOpacity>
-          </View>
+          )}
 
-          <Text style={styles.subtitle}>Add certified coaching staff to gym profile</Text>
-
-          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-            <Text style={styles.label}>FULL NAME *</Text>
+          {/* Full Name */}
+          <View style={styles.inputGroup}>
+            <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+              FULL NAME *
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                  color: colors.textPrimary,
+                },
+              ]}
               value={fullName}
               onChangeText={setFullName}
               placeholder="e.g. Alexander Cole"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.textMuted}
             />
+          </View>
 
-            <Text style={[styles.label, { marginTop: 14 }]}>PHONE NUMBER *</Text>
+          {/* Phone Number */}
+          <View style={styles.inputGroup}>
+            <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+              PHONE NUMBER *
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                  color: colors.textPrimary,
+                },
+              ]}
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
-              placeholder="e.g. +1 555-0192"
-              placeholderTextColor="#64748B"
+              placeholder="e.g. +91 98765 43210"
+              placeholderTextColor={colors.textMuted}
             />
+          </View>
 
-            <Text style={[styles.label, { marginTop: 14 }]}>EMAIL ADDRESS (OPTIONAL)</Text>
+          {/* Email Address */}
+          <View style={styles.inputGroup}>
+            <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+              EMAIL ADDRESS (OPTIONAL)
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                  color: colors.textPrimary,
+                },
+              ]}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               placeholder="e.g. alex@gymdeck.com"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
             />
+          </View>
 
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={[styles.label, { marginTop: 14 }]}>SPECIALIZATION</Text>
-                <TextInput
-                  style={styles.input}
-                  value={specialization}
-                  onChangeText={setSpecialization}
-                  placeholder="e.g. Powerlifting"
-                  placeholderTextColor="#64748B"
-                />
-              </View>
-              <View style={{ width: 100, marginLeft: 8 }}>
-                <Text style={[styles.label, { marginTop: 14 }]}>EXP (YRS)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={experienceYears}
-                  onChangeText={setExperienceYears}
-                  keyboardType="numeric"
-                  placeholder="3"
-                  placeholderTextColor="#64748B"
-                />
-              </View>
+          {/* Specialization & Experience */}
+          <View style={styles.rowInputs}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+                SPECIALIZATION
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    borderRadius: radii.md,
+                    color: colors.textPrimary,
+                  },
+                ]}
+                value={specialization}
+                onChangeText={setSpecialization}
+                placeholder="e.g. Powerlifting"
+                placeholderTextColor={colors.textMuted}
+              />
             </View>
 
-            <Text style={[styles.label, { marginTop: 14 }]}>COMMISSION TYPE</Text>
+            <View style={{ width: 100, marginLeft: 8 }}>
+              <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+                EXP (YRS)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    borderRadius: radii.md,
+                    color: colors.textPrimary,
+                  },
+                ]}
+                value={experienceYears}
+                onChangeText={setExperienceYears}
+                keyboardType="numeric"
+                placeholder="3"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+          </View>
+
+          {/* Commission Type Selector */}
+          <View style={styles.inputGroup}>
+            <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+              COMMISSION MODEL
+            </Text>
             <View style={styles.commTypeRow}>
               <TouchableOpacity
                 style={[
                   styles.commBtn,
-                  commissionType === 'FIXED_PER_SESSION' && styles.commBtnSelected,
+                  {
+                    backgroundColor: commissionType === 'FIXED_PER_SESSION' ? colors.primarySoft : colors.surface,
+                    borderColor: commissionType === 'FIXED_PER_SESSION' ? colors.primary : colors.border,
+                    borderRadius: radii.md,
+                  },
                 ]}
                 onPress={() => setCommissionType('FIXED_PER_SESSION')}
                 activeOpacity={0.7}
               >
                 <Text
                   style={[
-                    styles.commText,
-                    commissionType === 'FIXED_PER_SESSION' && styles.commTextSelected,
+                    typography.captionBold,
+                    { color: commissionType === 'FIXED_PER_SESSION' ? colors.primary : colors.textPrimary },
                   ]}
                 >
-                  Fixed / Session ($)
+                  Fixed / Session (₹)
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={[
                   styles.commBtn,
-                  commissionType === 'PERCENTAGE' && styles.commBtnSelected,
+                  {
+                    backgroundColor: commissionType === 'PERCENTAGE' ? colors.primarySoft : colors.surface,
+                    borderColor: commissionType === 'PERCENTAGE' ? colors.primary : colors.border,
+                    borderRadius: radii.md,
+                  },
                 ]}
                 onPress={() => setCommissionType('PERCENTAGE')}
                 activeOpacity={0.7}
               >
                 <Text
                   style={[
-                    styles.commText,
-                    commissionType === 'PERCENTAGE' && styles.commTextSelected,
+                    typography.captionBold,
+                    { color: commissionType === 'PERCENTAGE' ? colors.primary : colors.textPrimary },
                   ]}
                 >
                   Percentage (%)
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
 
-            <Text style={[styles.label, { marginTop: 14 }]}>COMMISSION RATE</Text>
+          {/* Commission Rate */}
+          <View style={styles.inputGroup}>
+            <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+              COMMISSION RATE {commissionType === 'PERCENTAGE' ? '(%)' : '(₹)'}
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                  color: colors.textPrimary,
+                },
+              ]}
               value={commissionRate}
               onChangeText={setCommissionRate}
               keyboardType="decimal-pad"
-              placeholder="30.00"
-              placeholderTextColor="#64748B"
+              placeholder={commissionType === 'PERCENTAGE' ? '30' : '500'}
+              placeholderTextColor={colors.textMuted}
             />
+          </View>
 
-            <Text style={[styles.label, { marginTop: 14 }]}>BIO / SUMMARY (OPTIONAL)</Text>
+          {/* Bio / Summary */}
+          <View style={styles.inputGroup}>
+            <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+              BIO / SUMMARY (OPTIONAL)
+            </Text>
             <TextInput
-              style={styles.textArea}
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                  color: colors.textPrimary,
+                },
+              ]}
               value={bio}
               onChangeText={setBio}
-              placeholder="e.g. Former state powerlifting champion specializing in strength..."
-              placeholderTextColor="#64748B"
+              placeholder="e.g. Certified strength coach specializing in hypertrophy & mobility..."
+              placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
             />
-          </ScrollView>
+          </View>
 
-          {/* Footer Buttons */}
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+          {/* Action Buttons */}
+          <View style={styles.footerRow}>
+            <TouchableOpacity
+              style={[
+                styles.cancelBtn,
+                {
+                  backgroundColor: colors.surfaceSubtle,
+                  borderColor: colors.border,
+                  borderRadius: radii.md,
+                },
+              ]}
+              onPress={onClose}
+              activeOpacity={0.7}
+            >
+              <Text style={[typography.button, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.submitBtn,
-                (!fullName.trim() || !phone.trim() || createMutation.isPending) &&
-                  styles.submitBtnDisabled,
+                {
+                  backgroundColor: isFormValid ? colors.primary : colors.surfaceSubtle,
+                  borderColor: isFormValid ? colors.primary : colors.border,
+                  borderRadius: radii.md,
+                },
               ]}
               onPress={() => createMutation.mutate()}
-              disabled={!fullName.trim() || !phone.trim() || createMutation.isPending}
+              disabled={!isFormValid || createMutation.isPending}
               activeOpacity={0.8}
             >
               {createMutation.isPending ? (
-                <ActivityIndicator color="#000000" size="small" />
+                <ActivityIndicator color={colors.textOnPrimary} size="small" />
               ) : (
                 <>
-                  <Check size={18} color="#000000" style={{ marginRight: 6 }} />
-                  <Text style={styles.submitBtnText}>Create Trainer</Text>
+                  <Check size={18} color={isFormValid ? colors.textOnPrimary : colors.textMuted} style={{ marginRight: 6 }} />
+                  <Text
+                    style={[
+                      typography.button,
+                      { color: isFormValid ? colors.textOnPrimary : colors.textMuted },
+                    ]}
+                  >
+                    Register Coach
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
-    </Modal>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  keyboardContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
-  card: {
-    width: '100%',
-    maxHeight: '90%',
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 32,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    marginBottom: 12,
   },
-  header: {
+  inputGroup: {
+    marginBottom: 14,
+  },
+  rowInputs: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginBottom: 16,
-  },
-  body: {
-    maxHeight: 420,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#94A3B8',
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    marginBottom: 14,
   },
   input: {
-    backgroundColor: '#0F172A',
+    height: 46,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    padding: 12,
-    color: '#F8FAFC',
-    fontSize: 14,
-  },
-  row: {
-    flexDirection: 'row',
+    fontSize: 15,
   },
   commTypeRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   commBtn: {
     flex: 1,
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
-  },
-  commBtnSelected: {
-    borderColor: '#EAB308',
-    backgroundColor: '#2A2410',
-  },
-  commText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  commTextSelected: {
-    color: '#EAB308',
+    justifyContent: 'center',
+    borderWidth: 1,
+    minHeight: 44,
   },
   textArea: {
-    backgroundColor: '#0F172A',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    padding: 12,
-    color: '#F8FAFC',
     fontSize: 14,
     textAlignVertical: 'top',
-    height: 70,
+    height: 74,
   },
-  footer: {
+  footerRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     gap: 12,
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
+    marginTop: 18,
   },
   cancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: '#334155',
-  },
-  cancelBtnText: {
-    color: '#F8FAFC',
-    fontSize: 14,
-    fontWeight: '600',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderWidth: 1,
   },
   submitBtn: {
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    backgroundColor: '#EAB308',
-  },
-  submitBtnDisabled: {
-    opacity: 0.5,
-  },
-  submitBtnText: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: '700',
+    justifyContent: 'center',
+    height: 48,
+    borderWidth: 1,
   },
 });

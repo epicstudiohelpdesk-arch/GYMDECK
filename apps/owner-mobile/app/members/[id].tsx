@@ -1,5 +1,16 @@
 /**
- * GymDeck Owner Mobile - Comprehensive Member Profile, Billing, Attendance & Trainer/PT Management Screen
+ * GymDeck Owner Mobile - Member Profile & Operations Command Center
+ *
+ * Answers in seconds:
+ * "WHO IS THIS MEMBER, WHAT IS THEIR STATUS, AND WHAT ACTIONS CAN I TAKE?"
+ *
+ * Information Architecture:
+ * 1. Back Navigation & Quick Share/Edit Header
+ * 2. Member Identity Card (Avatar initial, Name, Member Code, StatusBadge, Contact)
+ * 3. High-Frequency Action Bar (Call, WhatsApp, Check In, Collect Payment, Renew)
+ * 4. Quick Operational KPIs (Membership validity, Balance Due, Attendance visits)
+ * 5. Segmented Profile Navigation (Overview | Membership & Billing | Attendance | PT & Coach)
+ * 6. Business Modals (Payment Collection, Plan Renewal, Freeze/Unfreeze, PT Sessions, Receipts)
  */
 
 import React, { useState } from 'react';
@@ -8,19 +19,62 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
-  Alert,
   Linking,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowLeft,
+  Phone,
+  Mail,
+  MessageCircle,
+  Award,
+  Wallet,
+  Calendar,
+  Clock,
+  Dumbbell,
+  Send,
+  Edit,
+  UserCheck,
+  RefreshCw,
+  Snowflake,
+  Play,
+  CheckCircle2,
+  Receipt,
+  PlusCircle,
+  ChevronRight,
+  User,
+  Trash2,
+} from 'lucide-react-native';
+
+import { useTheme } from '../../src/theme';
 import { OwnerMembersService } from '../../src/services/api/ownerMembersService';
 import { OwnerBillingService } from '../../src/services/api/ownerBillingService';
 import { OwnerMembershipService } from '../../src/services/api/ownerMembershipService';
 import { OwnerTrainersService } from '../../src/services/api/ownerTrainersService';
-import { StatusBadge } from '../../src/components/StatusBadge';
+import { localMutationService } from '../../src/services/LocalMutationService';
+import { isDatabaseOpen } from '../../src/database/LocalDatabaseManager';
+
+import {
+  MemberInvitationResult,
+  ReceiptData,
+  PaymentRecord,
+  PTPackageSummary,
+} from '../../src/types';
+
+import {
+  Avatar,
+  StatusBadge,
+  ConfirmationDialog,
+  ErrorState,
+  EmptyState,
+} from '../../src/components/ui';
+import { OfflineBanner } from '../../src/components/ui/ConnectivityBanner';
+import { useLocalMemberDetail } from '../../src/hooks/useLocalMemberDetail';
+
 import { InviteModal } from '../../src/components/InviteModal';
 import { ReceiptModal } from '../../src/components/ReceiptModal';
 import { CollectPaymentModal } from '../../src/components/CollectPaymentModal';
@@ -29,90 +83,70 @@ import { FreezeMembershipModal } from '../../src/components/FreezeMembershipModa
 import { AssignTrainerModal } from '../../src/components/AssignTrainerModal';
 import { PurchasePTPackageModal } from '../../src/components/PurchasePTPackageModal';
 import { CompletePTSessionModal } from '../../src/components/CompletePTSessionModal';
-import {
-  MemberInvitationResult,
-  ReceiptData,
-  PaymentRecord,
-  PTPackageSummary,
-} from '../../src/types';
-import {
-  ArrowLeft,
-  Phone,
-  Mail,
-  Award,
-  Activity,
-  DollarSign,
-  Dumbbell,
-  Send,
-  Edit,
-  Trash2,
-  Clock,
-  ShieldAlert,
-  RefreshCw,
-  Receipt,
-  PlusCircle,
-  Snowflake,
-  Play,
-  CheckCircle2,
-  UserCheck,
-} from 'lucide-react-native';
 
-export default function MemberDetailScreen() {
+type ProfileTab = 'overview' | 'billing' | 'attendance' | 'pt';
+
+export default function MemberProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { colors, typography, radii, shadows } = useTheme();
 
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+
+  // Modals state
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [inviteResult, setInviteResult] = useState<MemberInvitationResult | null>(null);
-
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
-
   const [collectPaymentVisible, setCollectPaymentVisible] = useState(false);
   const [renewMembershipVisible, setRenewMembershipVisible] = useState(false);
   const [freezeModalVisible, setFreezeModalVisible] = useState(false);
-
-  // Trainer & PT Modals State
   const [assignTrainerVisible, setAssignTrainerVisible] = useState(false);
   const [purchasePTPackageVisible, setPurchasePTPackageVisible] = useState(false);
   const [completeSessionModalVisible, setCompleteSessionModalVisible] = useState(false);
   const [selectedPTPackage, setSelectedPTPackage] = useState<PTPackageSummary | null>(null);
+  const [deactivateConfirmVisible, setDeactivateConfirmVisible] = useState(false);
 
-  // 1. Fetch Profile Details
-  const { data, isLoading, isPending, refetch, isRefetching, error } = useQuery({
-    queryKey: ['owner-member-detail', id],
-    queryFn: () => OwnerMembersService.getMemberById(id!),
-    enabled: !!id,
-  });
+  // 1. Primary Member Profile Query (Local-First SQLCipher via MemberRepository)
+  const {
+    data,
+    isLoading,
+    isRefetching,
+    isOffline,
+    refetch,
+    error,
+  } = useLocalMemberDetail(id);
 
-  // 2. Fetch Derived Billing Summary
+  // 2. Billing Summary Query (Only active when online)
   const { data: billingData } = useQuery({
     queryKey: ['owner-member-billing', id],
     queryFn: () => OwnerBillingService.getMemberBilling(id!),
-    enabled: !!id,
+    enabled: !!id && !isOffline,
   });
 
-  // 3. Fetch Current Membership Lifecycle
+  // 3. Current Membership Lifecycle Query (Only active when online)
   const { data: currentMembershipData } = useQuery({
     queryKey: ['owner-member-current-membership', id],
     queryFn: () => OwnerMembershipService.getCurrentMembership(id!),
-    enabled: !!id,
+    enabled: !!id && !isOffline,
   });
 
-  // 4. Fetch Member PT Packages
+  // 4. PT Packages Query (Only active when online)
   const { data: ptPackages } = useQuery({
     queryKey: ['owner-member-pt-packages', id],
     queryFn: () => OwnerTrainersService.getMemberPTPackages(id!),
-    enabled: !!id,
+    enabled: !!id && !isOffline,
   });
 
-  // 5. Fetch Member Trainer History
+  // 5. Trainer History Query (Only active when online)
   const { data: trainerHistory } = useQuery({
     queryKey: ['owner-member-trainer-history', id],
     queryFn: () => OwnerTrainersService.getMemberTrainerHistory(id!),
-    enabled: !!id,
+    enabled: !!id && !isOffline,
   });
 
+  // Invitation Mutation
   const inviteMutation = useMutation({
     mutationFn: () => OwnerMembersService.generateInvite(id!),
     onSuccess: (res) => {
@@ -121,15 +155,24 @@ export default function MemberDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
     },
     onError: (err: any) => {
-      Alert.alert('Invitation Error', err?.message || 'Failed to generate activation invite.');
+      Alert.alert('Invitation Error', err?.message || 'Failed to generate invitation.');
     },
   });
 
+  // Deactivate Member Mutation (Local-First with Transactional Outbox)
   const deleteMutation = useMutation({
-    mutationFn: () => OwnerMembersService.deleteMember(id!),
+    mutationFn: async () => {
+      if (isDatabaseOpen()) {
+        return localMutationService.deleteMember(id!);
+      }
+      return OwnerMembersService.deleteMember(id!);
+    },
     onSuccess: () => {
-      Alert.alert('Member Deactivated', 'The member has been marked as inactive.');
+      setDeactivateConfirmVisible(false);
+      queryClient.invalidateQueries({ queryKey: ['local-members'] });
       queryClient.invalidateQueries({ queryKey: ['owner-members'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-dashboard'] });
+      Alert.alert('Member Deactivated', 'The member has been deactivated locally (Pending sync).');
       router.back();
     },
     onError: (err: any) => {
@@ -137,18 +180,17 @@ export default function MemberDetailScreen() {
     },
   });
 
+  // Unfreeze Mutation
   const unfreezeMutation = useMutation({
     mutationFn: (membershipId: string) => OwnerMembershipService.unfreezeMembership(id!, membershipId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owner-member-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-current-membership', id] });
       queryClient.invalidateQueries({ queryKey: ['owner-members'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-membership-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-daily-attendance'] });
-      Alert.alert('Membership Unfrozen', 'Subscription has been resumed and remaining duration restored.');
+      Alert.alert('Membership Resumed', 'Subscription has been unfrozen and remaining days restored.');
     },
     onError: (err: any) => {
-      Alert.alert('Unfreeze Failed', err?.message || 'Failed to unfreeze membership.');
+      Alert.alert('Unfreeze Error', err?.message || 'Failed to unfreeze membership.');
     },
   });
 
@@ -162,40 +204,67 @@ export default function MemberDetailScreen() {
     }
   };
 
+  const handleWhatsApp = async (phone: string) => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const url = `whatsapp://send?phone=${cleanPhone}`;
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        await Linking.openURL(`https://wa.me/${cleanPhone}`);
+      }
+    } catch {
+      await Linking.openURL(`https://wa.me/${cleanPhone}`);
+    }
+  };
+
+  const handleCall = (phone: string) => {
+    if (!phone) return;
+    Linking.openURL(`tel:${phone}`);
+  };
+
   const handleLogPTSession = (pkg: PTPackageSummary) => {
     setSelectedPTPackage(pkg);
     setCompleteSessionModalVisible(true);
   };
 
-  if (!id || isLoading || isPending || (!data && !error)) {
+  if (!id || (isLoading && !data)) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#EAB308" />
-          <Text style={styles.loadingText}>Loading Member Profile...</Text>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <Text style={[typography.bodyMedium, { color: colors.textSecondary }]}>
+            Loading Member Profile from secure vault...
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (error || !data) {
+  if (error && !data) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.center}>
-          <ShieldAlert size={48} color="#EF4444" style={{ marginBottom: 12 }} />
-          <Text style={styles.errorTitle}>Failed to Load Member</Text>
-          <Text style={styles.errorSubtitle}>
-            {error instanceof Error ? error.message : 'Member not found or access denied.'}
-          </Text>
-          <View style={styles.errorActionsRow}>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()} activeOpacity={0.8}>
-              <RefreshCw size={16} color="#0A0D14" style={{ marginRight: 6 }} />
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.backButtonCenter} onPress={() => router.back()} activeOpacity={0.8}>
-              <Text style={styles.backButtonText}>Go Back</Text>
-            </TouchableOpacity>
-          </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={styles.errorWrapper}>
+          <ErrorState
+            title="Member Profile Unavailable"
+            message={error instanceof Error ? error.message : 'Member not found in local vault.'}
+            onRetry={() => refetch()}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!data) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={styles.errorWrapper}>
+          <ErrorState
+            title="Member Not Found"
+            message="No record found for this member in the local database."
+            onRetry={() => refetch()}
+          />
         </View>
       </SafeAreaView>
     );
@@ -205,377 +274,417 @@ export default function MemberDetailScreen() {
   const membership = currentMembershipData || data.membership;
   const outstandingDues = billingData ? billingData.outstandingBalance : 0;
   const isFrozen = membership?.status === 'FROZEN';
-
-  // Determine currently active assigned trainer
   const activeAssignment = trainerHistory?.find((h) => h.status === 'ACTIVE');
 
+  // Days remaining calculation (plain calculation without conditional hooks)
+  let daysRemainingText = 'No Active Plan';
+  if (membership) {
+    if (isFrozen) {
+      daysRemainingText = `${membership.frozenDaysRemaining ?? membership.daysRemaining ?? 0}d (Frozen)`;
+    } else {
+      const days = membership.daysRemaining ?? 0;
+      daysRemainingText = `${days} ${days === 1 ? 'day' : 'days'} left`;
+    }
+  }
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Navigation Header */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.back()} activeOpacity={0.7}>
-          <ArrowLeft size={22} color="#F8FAFC" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* Offline Status Banner */}
+      {isOffline && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <OfflineBanner isOffline={isOffline} />
+        </View>
+      )}
+
+      {/* 1. Navigation Header */}
+      <View style={[styles.navHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }, shadows.low]}>
+        <TouchableOpacity
+          style={[styles.headerIconBtn, { backgroundColor: colors.surfaceSubtle }]}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Go back to member directory"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <ArrowLeft size={18} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.navTitle} numberOfLines={1}>
+
+        <Text style={[typography.sectionTitle, { color: colors.textPrimary, flex: 1, marginHorizontal: 12 }]} numberOfLines={1}>
           {member.fullName}
         </Text>
-        <TouchableOpacity
-          style={styles.navBtn}
-          onPress={() => inviteMutation.mutate()}
-          disabled={inviteMutation.isPending}
-          activeOpacity={0.7}
-        >
-          {inviteMutation.isPending ? (
-            <ActivityIndicator size="small" color="#EAB308" />
-          ) : (
-            <Send size={20} color="#EAB308" />
-          )}
-        </TouchableOpacity>
+
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            style={[styles.headerIconBtn, { backgroundColor: colors.primarySoft }]}
+            onPress={() => inviteMutation.mutate()}
+            disabled={inviteMutation.isPending}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Generate member app invitation link"
+          >
+            <Send size={16} color={colors.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.headerIconBtn, { backgroundColor: colors.surfaceSubtle, marginLeft: 8 }]}
+            onPress={() => router.push({ pathname: '/members/edit', params: { id: member.id } } as any)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Edit member details"
+          >
+            <Edit size={16} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.avatarText}>
-              {member.fullName
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .substring(0, 2)
-                .toUpperCase()}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+      >
+        {/* 2. Compact Member Identity Card */}
+        <View style={[styles.identityCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg }, shadows.low]}>
+          <View style={styles.identityTop}>
+            <Avatar
+              name={member.fullName}
+              size="lg"
+              showStatusDot={member.membershipStatus === 'ACTIVE'}
+              statusDotColor={colors.success}
+            />
+
+            <View style={styles.identityDetails}>
+              <View style={styles.nameStatusRow}>
+                <Text style={[typography.cardTitle, { color: colors.textPrimary, fontSize: 18, flex: 1 }]} numberOfLines={1}>
+                  {member.fullName}
+                </Text>
+                <StatusBadge status={member.membershipStatus} />
+              </View>
+
+              <Text style={[typography.captionBold, { color: colors.textSecondary, marginTop: 2 }]}>
+                {member.memberCode}
+              </Text>
+
+              <View style={styles.contactRow}>
+                {member.phone && (
+                  <View style={styles.inlineContactItem}>
+                    <Phone size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+                    <Text style={[typography.caption, { color: colors.textSecondary }]}>{member.phone}</Text>
+                  </View>
+                )}
+                {member.email && (
+                  <View style={[styles.inlineContactItem, { marginLeft: 12 }]}>
+                    <Mail size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+                    <Text style={[typography.caption, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {member.email}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* 3. Primary Action Rail (Thumb-Accessible Operational Actions) */}
+        <View style={styles.actionRailWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.actionRailScroll}
+          >
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => handleCall(member.phone)}
+              disabled={!member.phone}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Call member"
+            >
+              <Phone size={16} color={member.phone ? colors.primary : colors.textMuted} />
+              <Text style={[typography.captionBold, { color: member.phone ? colors.textPrimary : colors.textMuted, marginTop: 4 }]}>
+                Call
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => handleWhatsApp(member.phone)}
+              disabled={!member.phone}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Message on WhatsApp"
+            >
+              <MessageCircle size={16} color={member.phone ? '#25D366' : colors.textMuted} />
+              <Text style={[typography.captionBold, { color: member.phone ? colors.textPrimary : colors.textMuted, marginTop: 4 }]}>
+                WhatsApp
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push('/attendance' as any)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Attendance Check-In"
+            >
+              <UserCheck size={16} color={colors.success} />
+              <Text style={[typography.captionBold, { color: colors.textPrimary, marginTop: 4 }]}>
+                Check In
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: outstandingDues > 0 ? colors.dangerBg : colors.surface,
+                  borderColor: outstandingDues > 0 ? colors.dangerBorder : colors.border,
+                },
+              ]}
+              onPress={() => setCollectPaymentVisible(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Collect fee payment"
+            >
+              <Wallet size={16} color={outstandingDues > 0 ? colors.danger : colors.warning} />
+              <Text style={[typography.captionBold, { color: outstandingDues > 0 ? colors.dangerText : colors.textPrimary, marginTop: 4 }]}>
+                Collect
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => setRenewMembershipVisible(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Renew membership plan"
+            >
+              <RefreshCw size={16} color={colors.special} />
+              <Text style={[typography.captionBold, { color: colors.textPrimary, marginTop: 4 }]}>
+                Renew
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* 4. Quick Operational Metrics Overview */}
+        <View style={[styles.inlineKpiRow, { borderColor: colors.borderSubtle }]}>
+          <View style={styles.inlineKpiItem}>
+            <Text style={[typography.caption, { color: colors.textSecondary }]}>PLAN STATUS</Text>
+            <Text style={[typography.bodyBold, { color: colors.textPrimary, marginTop: 2 }]} numberOfLines={1}>
+              {daysRemainingText}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 1 }]} numberOfLines={1}>
+              {membership?.planName || 'No plan active'}
             </Text>
           </View>
 
-          <View style={styles.profileMeta}>
-            <View style={styles.nameRow}>
-              <Text style={styles.fullName}>{member.fullName}</Text>
-              <StatusBadge status={member.membershipStatus} />
-            </View>
-            <Text style={styles.memberCode}>ID: {member.memberCode}</Text>
-          </View>
-        </View>
+          <View style={[styles.inlineKpiDivider, { backgroundColor: colors.borderSubtle }]} />
 
-        {/* Quick Contact Bar */}
-        <View style={styles.contactBar}>
-          <TouchableOpacity
-            style={styles.contactAction}
-            onPress={() => Linking.openURL(`tel:${member.phone}`)}
-            activeOpacity={0.7}
-          >
-            <Phone size={16} color="#EAB308" />
-            <Text style={styles.contactText}>{member.phone}</Text>
-          </TouchableOpacity>
-
-          {member.email && (
-            <TouchableOpacity
-              style={styles.contactAction}
-              onPress={() => Linking.openURL(`mailto:${member.email}`)}
-              activeOpacity={0.7}
+          <View style={styles.inlineKpiItem}>
+            <Text style={[typography.caption, { color: colors.textSecondary }]}>BALANCE DUE</Text>
+            <Text
+              style={[
+                typography.bodyBold,
+                { color: outstandingDues > 0 ? colors.dangerText : colors.successText, marginTop: 2 },
+              ]}
+              numberOfLines={1}
             >
-              <Mail size={16} color="#EAB308" />
-              <Text style={styles.contactText} numberOfLines={1}>
-                {member.email}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Membership Subscription Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Membership Plan</Text>
-            {membership && (
-              <View style={styles.membershipActions}>
-                {isFrozen ? (
-                  <TouchableOpacity
-                    style={styles.unfreezeBtn}
-                    onPress={() => unfreezeMutation.mutate(membership.id)}
-                    disabled={unfreezeMutation.isPending}
-                    activeOpacity={0.8}
-                  >
-                    {unfreezeMutation.isPending ? (
-                      <ActivityIndicator size="small" color="#000000" />
-                    ) : (
-                      <>
-                        <Play size={12} color="#000000" style={{ marginRight: 4 }} />
-                        <Text style={styles.unfreezeBtnText}>Unfreeze</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.freezeBtn}
-                    onPress={() => setFreezeModalVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Snowflake size={12} color="#94A3B8" style={{ marginRight: 4 }} />
-                    <Text style={styles.freezeBtnText}>Freeze</Text>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  style={styles.renewTriggerBtn}
-                  onPress={() => setRenewMembershipVisible(true)}
-                  activeOpacity={0.8}
-                >
-                  <RefreshCw size={12} color="#000000" style={{ marginRight: 4 }} />
-                  <Text style={styles.renewTriggerText}>Renew</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              ₹{outstandingDues.toFixed(2)}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 1 }]}>
+              {outstandingDues > 0 ? 'Dues pending' : 'All cleared'}
+            </Text>
           </View>
 
-          {membership ? (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardIconBox}>
-                  <Award size={20} color="#EAB308" />
-                </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.planName}>{membership.planName}</Text>
-                  <Text style={styles.planPrice}>
-                    ${membership.price || membership.priceAtPurchase || '0.00'}
-                    {membership.durationDays ? ` • ${membership.durationDays} Days` : ''}
-                  </Text>
-                </View>
-                <StatusBadge status={membership.status} />
-              </View>
+          <View style={[styles.inlineKpiDivider, { backgroundColor: colors.borderSubtle }]} />
 
-              <View style={styles.cardDivider} />
-
-              <View style={styles.datesGrid}>
-                <View style={styles.dateCol}>
-                  <Text style={styles.dateLabel}>START DATE</Text>
-                  <Text style={styles.dateVal}>
-                    {new Date(membership.startDate).toLocaleDateString()}
-                  </Text>
-                </View>
-                <View style={styles.dateCol}>
-                  <Text style={styles.dateLabel}>EXPIRATION</Text>
-                  <Text style={styles.dateVal}>
-                    {new Date(membership.endDate).toLocaleDateString()}
-                  </Text>
-                </View>
-                <View style={styles.dateCol}>
-                  <Text style={styles.dateLabel}>REMAINING</Text>
-                  <Text style={[styles.dateVal, { color: isFrozen ? '#60A5FA' : '#EAB308' }]}>
-                    {isFrozen
-                      ? `${membership.frozenDaysRemaining ?? membership.daysRemaining ?? 0}d (Saved)`
-                      : `${membership.daysRemaining ?? 0} Days`}
-                  </Text>
-                </View>
-              </View>
-
-              {isFrozen && (
-                <View style={styles.freezeBanner}>
-                  <Snowflake size={14} color="#60A5FA" style={{ marginRight: 6 }} />
-                  <Text style={styles.freezeBannerText}>
-                    Frozen on {new Date(membership.frozenAt || '').toLocaleDateString()}:{' '}
-                    {membership.freezeReason || 'Owner request'}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={styles.emptyPlanBox}>
-              <Text style={styles.emptyPlanText}>No active membership subscription.</Text>
-              <TouchableOpacity
-                style={styles.assignPlanBtn}
-                onPress={() => setRenewMembershipVisible(true)}
-              >
-                <PlusCircle size={16} color="#000000" style={{ marginRight: 6 }} />
-                <Text style={styles.assignPlanText}>Assign Membership</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View style={styles.inlineKpiItem}>
+            <Text style={[typography.caption, { color: colors.textSecondary }]}>GYM VISITS</Text>
+            <Text style={[typography.bodyBold, { color: colors.textPrimary, marginTop: 2 }]} numberOfLines={1}>
+              {attendanceSummary.totalCheckIns}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 1 }]}>
+              {attendanceSummary.recentCheckIns?.[0]
+                ? `Last: ${new Date(attendanceSummary.recentCheckIns[0].checkInTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
+                : 'No visits'}
+            </Text>
+          </View>
         </View>
 
-        {/* Personal Trainer & PT Packages Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Personal Training (PT)</Text>
-            <TouchableOpacity
-              style={styles.ptActionHeaderBtn}
-              onPress={() => setPurchasePTPackageVisible(true)}
-              activeOpacity={0.8}
-            >
-              <PlusCircle size={13} color="#000000" style={{ marginRight: 4 }} />
-              <Text style={styles.ptActionHeaderText}>Buy PT Pack</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ============================================================ */}
+        {/* 5. CURRENT MEMBERSHIP                                        */}
+        {/* ============================================================ */}
+        <View style={styles.profileSection}>
+          <Text style={[typography.captionBold, styles.profileSectionTitle, { color: colors.textSecondary }]}>
+            CURRENT MEMBERSHIP
+          </Text>
 
-          {/* Assigned Coach Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.cardIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                <Dumbbell size={20} color="#3B82F6" />
+          <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg }, shadows.low]}>
+            <View style={styles.cardHeaderRow}>
+              <View style={[styles.cardIconCircle, { backgroundColor: colors.primarySoft }]}>
+                <Award size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.planName}>
-                  {activeAssignment ? activeAssignment.trainerName : 'No Coach Assigned'}
+                <Text style={[typography.cardTitle, { color: colors.textPrimary }]}>
+                  {membership?.planName || 'No Active Membership Plan'}
                 </Text>
-                <Text style={styles.planPrice}>
-                  {activeAssignment
-                    ? activeAssignment.specialization || 'Personal Trainer'
-                    : 'Assign a dedicated coach for custom fitness programs'}
+                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+                  {membership?.price ? `₹${membership.price}` : 'Plan unassigned'} · {membership?.durationDays ? `${membership.durationDays} Days` : 'Inactive'}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.assignCoachBtn}
-                onPress={() => setAssignTrainerVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.assignCoachBtnText}>
-                  {activeAssignment ? 'Change' : 'Assign'}
-                </Text>
-              </TouchableOpacity>
+              {membership && <StatusBadge status={membership.status} />}
             </View>
 
-            {activeAssignment && (
+            {membership && (
               <>
-                <View style={styles.cardDivider} />
-                <View style={styles.coachContactRow}>
-                  <Phone size={13} color="#94A3B8" style={{ marginRight: 6 }} />
-                  <Text style={styles.coachPhoneText}>{activeAssignment.trainerPhone}</Text>
-                  <Text style={styles.coachAssignedDate}>
-                    • Assigned {new Date(activeAssignment.assignedAt).toLocaleDateString()}
-                  </Text>
+                <View style={[styles.cardDivider, { backgroundColor: colors.borderSubtle }]} />
+                <View style={styles.planDatesRow}>
+                  <View style={styles.planDateCol}>
+                    <Text style={[typography.caption, { color: colors.textMuted }]}>START DATE</Text>
+                    <Text style={[typography.bodyBold, { color: colors.textPrimary, marginTop: 2 }]}>
+                      {new Date(membership.startDate).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View style={styles.planDateCol}>
+                    <Text style={[typography.caption, { color: colors.textMuted }]}>EXPIRATION</Text>
+                    <Text style={[typography.bodyBold, { color: colors.textPrimary, marginTop: 2 }]}>
+                      {new Date(membership.endDate).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View style={styles.planDateCol}>
+                    <Text style={[typography.caption, { color: colors.textMuted }]}>REMAINING</Text>
+                    <Text style={[typography.bodyBold, { color: isFrozen ? colors.specialText : colors.primary, marginTop: 2 }]}>
+                      {daysRemainingText}
+                    </Text>
+                  </View>
                 </View>
               </>
             )}
-          </View>
 
-          {/* PT Packages List */}
-          {ptPackages && ptPackages.length > 0 && (
-            <View style={{ marginTop: 12 }}>
-              <Text style={styles.subheading}>Allocated PT Packages</Text>
-              {ptPackages.map((pkg) => {
-                const isDepleted = pkg.remainingSessions === 0 || pkg.status === 'DEPLETED';
-                const progressPct = pkg.totalSessions > 0 ? (pkg.usedSessions / pkg.totalSessions) * 100 : 0;
-                return (
-                  <View key={pkg.id} style={styles.ptPackageCard}>
-                    <View style={styles.ptPackageHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.ptPackageName}>{pkg.packageName}</Text>
-                        <Text style={styles.ptCoachName}>Coach: {pkg.trainerName}</Text>
-                      </View>
-                      <View style={styles.ptSessionsBadge}>
-                        <Text
-                          style={[
-                            styles.ptSessionsBadgeText,
-                            isDepleted && { color: '#94A3B8' },
-                          ]}
-                        >
-                          {pkg.remainingSessions} Left
-                        </Text>
-                      </View>
-                    </View>
+            <View style={[styles.cardActionRow, { borderTopColor: colors.borderSubtle }]}>
+              {membership ? (
+                <>
+                  {isFrozen ? (
+                    <TouchableOpacity
+                      style={[styles.smallActionBtn, { backgroundColor: colors.specialBg, borderColor: colors.specialBorder }]}
+                      onPress={() => unfreezeMutation.mutate(membership.id)}
+                      disabled={unfreezeMutation.isPending}
+                    >
+                      <Play size={12} color={colors.specialText} style={{ marginRight: 4 }} />
+                      <Text style={[typography.captionBold, { color: colors.specialText }]}>Unfreeze</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.smallActionBtn, { backgroundColor: colors.surfaceSubtle, borderColor: colors.border }]}
+                      onPress={() => setFreezeModalVisible(true)}
+                    >
+                      <Snowflake size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                      <Text style={[typography.captionBold, { color: colors.textSecondary }]}>Freeze</Text>
+                    </TouchableOpacity>
+                  )}
 
-                    {/* Progress Bar */}
-                    <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${progressPct}%` }]} />
-                    </View>
-
-                    <View style={styles.ptFooterRow}>
-                      <Text style={styles.ptUsageText}>
-                        {pkg.usedSessions} / {pkg.totalSessions} Sessions Used • Exp:{' '}
-                        {new Date(pkg.expiryDate).toLocaleDateString()}
-                      </Text>
-                      {!isDepleted && (
-                        <TouchableOpacity
-                          style={styles.logSessionBtn}
-                          onPress={() => handleLogPTSession(pkg)}
-                          activeOpacity={0.8}
-                        >
-                          <CheckCircle2 size={13} color="#000000" style={{ marginRight: 4 }} />
-                          <Text style={styles.logSessionBtnText}>Log Session</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
+                  <TouchableOpacity
+                    style={[styles.smallActionBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder }]}
+                    onPress={() => setRenewMembershipVisible(true)}
+                  >
+                    <RefreshCw size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                    <Text style={[typography.captionBold, { color: colors.primary }]}>Renew Plan</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.smallActionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                  onPress={() => setRenewMembershipVisible(true)}
+                >
+                  <PlusCircle size={14} color={colors.textOnPrimary} style={{ marginRight: 6 }} />
+                  <Text style={[typography.captionBold, { color: colors.textOnPrimary }]}>Assign Membership Plan</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          )}
+          </View>
         </View>
 
-        {/* Financial Ledger & Billing Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Financial Ledger</Text>
+        {/* ============================================================ */}
+        {/* 6. FINANCIAL LEDGER & RECENT PAYMENTS                        */}
+        {/* ============================================================ */}
+        <View style={styles.profileSection}>
+          <View style={styles.sectionHeaderBetween}>
+            <Text style={[typography.captionBold, styles.profileSectionTitle, { color: colors.textSecondary }]}>
+              FINANCIAL LEDGER
+            </Text>
             {outstandingDues > 0 && (
               <TouchableOpacity
-                style={styles.payDuesBtn}
+                style={[styles.collectDuesBtn, { backgroundColor: colors.danger }]}
                 onPress={() => setCollectPaymentVisible(true)}
-                activeOpacity={0.8}
               >
-                <DollarSign size={13} color="#000000" style={{ marginRight: 2 }} />
-                <Text style={styles.payDuesBtnText}>Collect ${outstandingDues.toFixed(2)}</Text>
+                <Text style={[typography.captionBold, { color: colors.textOnPrimary, fontSize: 11 }]}>
+                  Collect ₹{outstandingDues.toFixed(2)}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg }, shadows.low]}>
             <View style={styles.statGrid}>
-              <View style={styles.statCol}>
-                <Text style={styles.statNumber}>
-                  ${billingData ? billingData.totalBilled.toFixed(2) : '0.00'}
+              <View style={styles.statBox}>
+                <Text style={[typography.caption, { color: colors.textMuted }]}>INVOICED</Text>
+                <Text style={[typography.bodyBold, { color: colors.textPrimary, marginTop: 2 }]}>
+                  ₹{billingData ? billingData.totalBilled.toFixed(2) : '0.00'}
                 </Text>
-                <Text style={styles.statText}>Total Invoiced</Text>
               </View>
-              <View style={styles.statCol}>
-                <Text style={[styles.statNumber, { color: '#10B981' }]}>
-                  ${billingData ? billingData.totalPaid.toFixed(2) : '0.00'}
+              <View style={styles.statBox}>
+                <Text style={[typography.caption, { color: colors.textMuted }]}>COLLECTED</Text>
+                <Text style={[typography.bodyBold, { color: colors.successText, marginTop: 2 }]}>
+                  ₹{billingData ? billingData.totalPaid.toFixed(2) : '0.00'}
                 </Text>
-                <Text style={styles.statText}>Total Collected</Text>
               </View>
-              <View style={styles.statCol}>
+              <View style={styles.statBox}>
+                <Text style={[typography.caption, { color: colors.textMuted }]}>BALANCE DUE</Text>
                 <Text
                   style={[
-                    styles.statNumber,
-                    outstandingDues > 0 ? { color: '#EF4444' } : { color: '#94A3B8' },
+                    typography.bodyBold,
+                    { color: outstandingDues > 0 ? colors.dangerText : colors.textSecondary, marginTop: 2 },
                   ]}
                 >
-                  ${outstandingDues.toFixed(2)}
+                  ₹{outstandingDues.toFixed(2)}
                 </Text>
-                <Text style={styles.statText}>Balance Due</Text>
               </View>
             </View>
 
-            {/* Payment History Items */}
+            {/* Payment Records */}
             {(billingData?.recentPayments || []).length > 0 && (
               <>
-                <View style={styles.cardDivider} />
-                <Text style={styles.subheading}>Payment Ledger History</Text>
-                {billingData!.recentPayments.map((p: PaymentRecord) => (
+                <View style={[styles.cardDivider, { backgroundColor: colors.borderSubtle }]} />
+                <Text style={[typography.captionBold, { color: colors.textSecondary, marginBottom: 8 }]}>
+                  RECENT TRANSACTIONS
+                </Text>
+                {billingData!.recentPayments.slice(0, 3).map((p: PaymentRecord, idx: number) => (
                   <TouchableOpacity
                     key={p.id}
-                    style={styles.paymentRow}
+                    style={[
+                      styles.paymentRow,
+                      idx < Math.min(billingData!.recentPayments.length, 3) - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
+                    ]}
                     onPress={() => handleOpenReceipt(p.id)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.paymentLeft}>
-                      <DollarSign size={16} color="#10B981" />
-                      <View style={{ marginLeft: 8 }}>
-                        <Text style={styles.paymentMethod}>
-                          {p.paymentMethod} {p.receiptNumber ? `• ${p.receiptNumber}` : ''}
-                        </Text>
-                        <Text style={styles.paymentDate}>
-                          {new Date(p.paidAt).toLocaleDateString()} • {p.status}
-                        </Text>
-                      </View>
+                    <View style={[styles.paymentIconBox, { backgroundColor: colors.successBg }]}>
+                      <Receipt size={14} color={colors.success} />
                     </View>
-                    <View style={styles.paymentRight}>
-                      <Text
-                        style={[
-                          styles.paymentAmount,
-                          Number(p.amount) < 0 && { color: '#EF4444' },
-                        ]}
-                      >
-                        ${Number(p.amount).toFixed(2)}
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[typography.bodyBold, { color: colors.textPrimary, fontSize: 13 }]}>
+                        {p.paymentMethod} {p.receiptNumber ? `· ${p.receiptNumber}` : ''}
                       </Text>
-                      <Receipt size={14} color="#94A3B8" style={{ marginTop: 2 }} />
+                      <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                        {new Date(p.paidAt).toLocaleDateString()} · {p.status}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[typography.bodyBold, { color: colors.textPrimary }]}>
+                        ₹{Number(p.amount).toFixed(2)}
+                      </Text>
+                      <Text style={[typography.caption, { color: colors.primary, fontSize: 11 }]}>Receipt →</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -584,44 +693,187 @@ export default function MemberDetailScreen() {
           </View>
         </View>
 
-        {/* Attendance Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Attendance Summary</Text>
-          <View style={styles.card}>
+        {/* ============================================================ */}
+        {/* 7. ATTENDANCE RECORD                                         */}
+        {/* ============================================================ */}
+        <View style={styles.profileSection}>
+          <Text style={[typography.captionBold, styles.profileSectionTitle, { color: colors.textSecondary }]}>
+            ATTENDANCE RECORD
+          </Text>
+
+          <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg }, shadows.low]}>
             <View style={styles.statGrid}>
-              <View style={styles.statCol}>
-                <Text style={styles.statNumber}>{attendanceSummary.totalCheckIns}</Text>
-                <Text style={styles.statText}>Total Check-ins</Text>
+              <View style={styles.statBox}>
+                <Text style={[typography.caption, { color: colors.textMuted }]}>TOTAL VISITS</Text>
+                <Text style={[typography.sectionTitle, { color: colors.textPrimary, marginTop: 2 }]}>
+                  {attendanceSummary.totalCheckIns}
+                </Text>
               </View>
-              <View style={styles.statCol}>
-                <Text style={styles.statNumber}>
+              <View style={styles.statBox}>
+                <Text style={[typography.caption, { color: colors.textMuted }]}>LATEST VISIT</Text>
+                <Text style={[typography.bodyBold, { color: colors.textPrimary, marginTop: 4 }]}>
                   {attendanceSummary.recentCheckIns[0]
                     ? new Date(attendanceSummary.recentCheckIns[0].checkInTime).toLocaleDateString()
-                    : 'N/A'}
+                    : 'Never'}
                 </Text>
-                <Text style={styles.statText}>Latest Visit</Text>
               </View>
             </View>
 
             {attendanceSummary.recentCheckIns.length > 0 && (
               <>
-                <View style={styles.cardDivider} />
-                <Text style={styles.subheading}>Recent Check-Ins</Text>
-                {attendanceSummary.recentCheckIns.map((a, i) => (
-                  <View key={a.id || i} style={styles.attendanceRow}>
-                    <Clock size={14} color="#94A3B8" />
-                    <Text style={styles.attendanceTime}>
-                      {new Date(a.checkInTime).toLocaleString()} ({a.entryMethod})
-                    </Text>
+                <View style={[styles.cardDivider, { backgroundColor: colors.borderSubtle }]} />
+                <Text style={[typography.captionBold, { color: colors.textSecondary, marginBottom: 8 }]}>
+                  RECENT CHECK-INS
+                </Text>
+                {attendanceSummary.recentCheckIns.slice(0, 3).map((item, idx) => (
+                  <View
+                    key={item.id || idx}
+                    style={[
+                      styles.attendanceRow,
+                      idx < Math.min(attendanceSummary.recentCheckIns.length, 3) - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
+                    ]}
+                  >
+                    <View style={[styles.attendanceDot, { backgroundColor: colors.successBg }]}>
+                      <Clock size={12} color={colors.success} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[typography.bodyBold, { color: colors.textPrimary, fontSize: 13 }]}>
+                        {new Date(item.checkInTime).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                      <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                        Check-in: {new Date(item.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {item.entryMethod}
+                      </Text>
+                    </View>
+                    <StatusBadge status="CHECKED_IN" />
                   </View>
                 ))}
               </>
             )}
           </View>
         </View>
+
+        {/* ============================================================ */}
+        {/* 8. COACHING & PERSONAL TRAINING (PT)                         */}
+        {/* ============================================================ */}
+        <View style={styles.profileSection}>
+          <View style={styles.sectionHeaderBetween}>
+            <Text style={[typography.captionBold, styles.profileSectionTitle, { color: colors.textSecondary }]}>
+              COACHING & PERSONAL TRAINING
+            </Text>
+            <TouchableOpacity
+              style={[styles.smallActionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              onPress={() => setPurchasePTPackageVisible(true)}
+            >
+              <PlusCircle size={12} color={colors.textOnPrimary} style={{ marginRight: 4 }} />
+              <Text style={[typography.captionBold, { color: colors.textOnPrimary }]}>Buy PT Pack</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Assigned Coach */}
+          <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg }, shadows.low]}>
+            <View style={styles.cardHeaderRow}>
+              <View style={[styles.cardIconCircle, { backgroundColor: colors.primarySoft }]}>
+                <User size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[typography.cardTitle, { color: colors.textPrimary }]}>
+                  {activeAssignment ? activeAssignment.trainerName : 'No Assigned Coach'}
+                </Text>
+                <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                  {activeAssignment ? (activeAssignment.specialization || 'Dedicated Coach') : 'Assign coach for personal training'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.smallActionBtn, { backgroundColor: colors.surfaceSubtle, borderColor: colors.border }]}
+                onPress={() => setAssignTrainerVisible(true)}
+              >
+                <Text style={[typography.captionBold, { color: colors.textPrimary }]}>
+                  {activeAssignment ? 'Change' : 'Assign'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* PT Packages Progress */}
+            {ptPackages && ptPackages.length > 0 && (
+              <>
+                <View style={[styles.cardDivider, { backgroundColor: colors.borderSubtle }]} />
+                <Text style={[typography.captionBold, { color: colors.textSecondary, marginBottom: 8 }]}>
+                  ACTIVE PT PACKAGES
+                </Text>
+                {ptPackages.map((pkg) => {
+                  const isDepleted = pkg.remainingSessions === 0 || pkg.status === 'DEPLETED';
+                  const progressPct = pkg.totalSessions > 0 ? (pkg.usedSessions / pkg.totalSessions) * 100 : 0;
+                  return (
+                    <View key={pkg.id} style={styles.ptPkgItem}>
+                      <View style={styles.ptPkgHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[typography.cardTitle, { color: colors.textPrimary, fontSize: 13 }]}>{pkg.packageName}</Text>
+                          <Text style={[typography.caption, { color: colors.textSecondary }]}>Coach: {pkg.trainerName}</Text>
+                        </View>
+                        <View style={[styles.sessionsBadge, { backgroundColor: isDepleted ? colors.surfaceSubtle : colors.primarySoft }]}>
+                          <Text style={[typography.captionBold, { color: isDepleted ? colors.textMuted : colors.primary, fontSize: 11 }]}>
+                            {pkg.remainingSessions} Left
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={[styles.progressTrack, { backgroundColor: colors.surfaceSubtle }]}>
+                        <View style={[styles.progressFill, { width: `${progressPct}%`, backgroundColor: colors.primary }]} />
+                      </View>
+
+                      <View style={styles.ptFooterRow}>
+                        <Text style={[typography.caption, { color: colors.textSecondary, fontSize: 11 }]}>
+                          {pkg.usedSessions}/{pkg.totalSessions} Sessions · Exp: {new Date(pkg.expiryDate).toLocaleDateString()}
+                        </Text>
+                        {!isDepleted && (
+                          <TouchableOpacity
+                            style={[styles.smallActionBtn, { backgroundColor: colors.successBg, borderColor: colors.successBorder }]}
+                            onPress={() => handleLogPTSession(pkg)}
+                          >
+                            <CheckCircle2 size={12} color={colors.success} style={{ marginRight: 4 }} />
+                            <Text style={[typography.captionBold, { color: colors.successText, fontSize: 11 }]}>Log Session</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* ============================================================ */}
+        {/* 9. DEACTIVATE MEMBER ACCOUNT                                 */}
+        {/* ============================================================ */}
+        <View style={styles.deactivateSection}>
+          <TouchableOpacity
+            style={[styles.deactivateBtn, { borderColor: colors.dangerBorder, borderRadius: radii.md }]}
+            onPress={() => setDeactivateConfirmVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Trash2 size={16} color={colors.danger} style={{ marginRight: 6 }} />
+            <Text style={[typography.captionBold, { color: colors.danger }]}>
+              Deactivate Member Account
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      {/* Modals */}
+      {/* --- CONFIRMATION DIALOG FOR DEACTIVATION --- */}
+      <ConfirmationDialog
+        visible={deactivateConfirmVisible}
+        onClose={() => setDeactivateConfirmVisible(false)}
+        onConfirm={() => deleteMutation.mutate()}
+        title="Deactivate Member?"
+        message={`Are you sure you want to deactivate ${member.fullName}? They will be marked as inactive in your directory.`}
+        confirmLabel="Deactivate"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        loading={deleteMutation.isPending}
+      />
+
+      {/* --- BUSINESS MODALS --- */}
       <InviteModal
         visible={inviteModalVisible}
         invite={inviteResult}
@@ -726,499 +978,252 @@ export default function MemberDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0A0D14',
   },
-  center: {
+  loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
   },
-  loadingText: {
-    color: '#94A3B8',
-    marginTop: 12,
-    fontSize: 14,
-  },
-  errorTitle: {
-    color: '#F8FAFC',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  errorSubtitle: {
-    color: '#94A3B8',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  errorActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#EAB308',
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#0A0D14',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  backButtonCenter: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#1E293B',
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#F8FAFC',
-    fontWeight: '600',
+  errorWrapper: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
   },
   navHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    height: 56,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    backgroundColor: '#0F131C',
   },
-  navBtn: {
+  headerIconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    textAlign: 'center',
-    marginHorizontal: 10,
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
-  profileCard: {
+  identityCard: {
+    padding: 14,
+    borderWidth: 1,
+  },
+  identityTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#131823',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
   },
-  profileAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#2A2410',
-    borderWidth: 1,
-    borderColor: '#EAB308',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#EAB308',
-  },
-  profileMeta: {
+  identityDetails: {
     flex: 1,
+    marginLeft: 12,
   },
-  nameRow: {
+  nameStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
-  fullName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    flex: 1,
-    marginRight: 8,
-  },
-  memberCode: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontFamily: 'monospace',
-  },
-  contactBar: {
-    flexDirection: 'row',
-    marginTop: 10,
-    gap: 8,
-  },
-  contactAction: {
-    flex: 1,
+  contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#131823',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    marginTop: 4,
+    flexWrap: 'wrap',
   },
-  contactText: {
-    fontSize: 12,
-    color: '#F8FAFC',
-    marginLeft: 6,
-    fontWeight: '500',
-  },
-  section: {
-    marginTop: 20,
-  },
-  sectionHeaderRow: {
+  inlineContactItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  actionRailWrapper: {
+    marginTop: 14,
     marginBottom: 10,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  membershipActions: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  freezeBtn: {
+  actionRailScroll: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    gap: 8,
+    paddingVertical: 2,
+  },
+  actionButton: {
+    width: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderRadius: 12,
+    minHeight: 52,
   },
-  freezeBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  unfreezeBtn: {
+  inlineKpiRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#60A5FA',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    marginVertical: 12,
   },
-  unfreezeBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#000000',
+  inlineKpiItem: {
+    flex: 1,
+    alignItems: 'center',
   },
-  renewTriggerBtn: {
+  inlineKpiDivider: {
+    width: 1,
+    height: 28,
+  },
+  profileSection: {
+    marginTop: 18,
+  },
+  profileSectionTitle: {
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    fontSize: 11,
+  },
+  sectionHeaderBetween: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EAB308',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  renewTriggerText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#000000',
+  profileCard: {
+    padding: 14,
+    borderWidth: 1,
   },
-  payDuesBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EAB308',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  payDuesBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  ptActionHeaderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EAB308',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  ptActionHeaderText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#000000',
+  ptPkgItem: {
+    marginTop: 12,
   },
   card: {
-    backgroundColor: '#131823',
-    borderRadius: 14,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#1E293B',
   },
-  cardHeader: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  cardIconBox: {
+  cardIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#2A2410',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  planName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
-  planPrice: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
   cardDivider: {
     height: 1,
-    backgroundColor: '#1E293B',
+    width: '100%',
     marginVertical: 12,
   },
-  datesGrid: {
+  planDatesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  dateCol: {
+  planDateCol: {
     flex: 1,
   },
-  dateLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-    marginBottom: 4,
-    letterSpacing: 0.5,
-  },
-  dateVal: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#F8FAFC',
-  },
-  freezeBanner: {
+  cardActionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
-    borderRadius: 8,
-    padding: 10,
+    justifyContent: 'flex-end',
+    gap: 8,
     marginTop: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.3)',
+    paddingTop: 12,
+    borderTopWidth: 1,
   },
-  freezeBannerText: {
-    fontSize: 12,
-    color: '#60A5FA',
-    flex: 1,
-  },
-  emptyPlanBox: {
-    backgroundColor: '#131823',
-    borderRadius: 14,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-  },
-  emptyPlanText: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 12,
-  },
-  assignPlanBtn: {
+  smallActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EAB308',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  assignPlanText: {
-    color: '#000000',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  assignCoachBtn: {
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#334155',
-    paddingVertical: 5,
     paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 6,
-  },
-  assignCoachBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#EAB308',
+    borderWidth: 1,
   },
   coachContactRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  coachPhoneText: {
-    fontSize: 12,
-    color: '#94A3B8',
+  deactivateSection: {
+    marginTop: 24,
+    alignItems: 'center',
   },
-  coachAssignedDate: {
-    fontSize: 12,
-    color: '#64748B',
-    marginLeft: 4,
-  },
-  ptPackageCard: {
-    backgroundColor: '#131823',
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 8,
+  deactivateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#1E293B',
   },
-  ptPackageHeader: {
+  ledgerHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 12,
   },
-  ptPackageName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
-  ptCoachName: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  ptSessionsBadge: {
-    backgroundColor: '#2A2410',
-    borderRadius: 6,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: '#EAB308',
-  },
-  ptSessionsBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#EAB308',
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: '#1E293B',
-    borderRadius: 3,
-    marginVertical: 10,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#EAB308',
-    borderRadius: 3,
-  },
-  ptFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ptUsageText: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  logSessionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#10B981',
-    paddingVertical: 4,
+  collectDuesBtn: {
     paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  logSessionBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#000000',
+    paddingVertical: 4,
   },
   statGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  statCol: {
+  statBox: {
     flex: 1,
-    alignItems: 'center',
-  },
-  subheading: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    marginBottom: 10,
   },
   paymentRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#0F131C',
+    paddingVertical: 10,
   },
-  paymentLeft: {
-    flexDirection: 'row',
+  paymentIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-  },
-  paymentMethod: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#F8FAFC',
-  },
-  paymentDate: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  paymentRight: {
-    alignItems: 'flex-end',
-  },
-  paymentAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#10B981',
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F8FAFC',
-    marginBottom: 4,
-  },
-  statText: {
-    fontSize: 11,
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    justifyContent: 'center',
   },
   attendanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 10,
   },
-  attendanceTime: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginLeft: 8,
+  attendanceDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  ptPkgHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sessionsBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  progressTrack: {
+    height: 6,
+    width: '100%',
+    borderRadius: 3,
+    marginVertical: 10,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  ptFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 });

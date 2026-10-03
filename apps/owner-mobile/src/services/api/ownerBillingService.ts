@@ -85,4 +85,41 @@ export class OwnerBillingService {
     );
     return response.data.data;
   }
+
+  /**
+   * 7. Get Financial Dashboard Metrics
+   */
+  public static async getFinancialDashboard(): Promise<{
+    todayRevenue: number;
+    monthRevenue: number;
+    activeMembershipsCount: number;
+    expiringSoonCount: number;
+  }> {
+    const response = await apiClient.get<
+      ApiResponse<{
+        todayRevenue: number;
+        monthRevenue: number;
+        activeMembershipsCount: number;
+        expiringSoonCount: number;
+      }>
+    >('/owner/billing/dashboard');
+    return response.data.data;
+  }
+
+  /**
+   * 8. Refund Payment / Ledger Reversal
+   */
+  public static async refundPayment(
+    paymentId: string,
+    data: { refundAmount?: number; reason: string; notes?: string }
+  ): Promise<PaymentRecord> {
+    const response = await apiClient.post<ApiResponse<{ refund: PaymentRecord }>>(
+      `/owner/payments/${paymentId}/refund`,
+      {
+        ...data,
+        idempotencyKey: `REFUND-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      }
+    );
+    return response.data.data.refund;
+  }
 }

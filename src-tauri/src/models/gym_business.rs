@@ -50,7 +50,10 @@ pub struct MembershipPlan {
     pub gym_id: Uuid,
     pub plan_name: String,
     pub duration_days: i32,
-    pub price: f64,
+    #[serde(alias = "priceMinorUnits", default)]
+    pub price_minor_units: i64,
+    #[serde(default)]
+    pub price: Option<f64>,
     pub description: Option<String>,
     pub is_active: bool,
     pub created_by_user_id: Uuid,
@@ -58,4 +61,23 @@ pub struct MembershipPlan {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Payment {
+    pub id: Uuid,
+    pub gym_id: Uuid,
+    pub member_id: Uuid,
+    #[serde(alias = "amountMinorUnits", default)]
+    pub amount_minor_units: i64,
+    #[serde(default)]
+    pub amount: Option<f64>,
+    pub payment_method: String,
+    pub transaction_reference: Option<String>,
+    pub payment_date: DateTime<Utc>,
+    pub status: String,
+    pub created_by_user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub deleted_by_user_id: Option<Uuid>,
 }

@@ -1,23 +1,42 @@
 /**
  * GymDeck Owner Mobile - Assign Personal Trainer Modal
+ *
+ * Light-first canonical experience with dark theme toggle support.
+ * Uses standard BottomSheet primitive with trainer search, profile badges,
+ * current assignment context, and coaching objectives.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Modal,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
   StyleSheet,
   Alert,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerTrainersService } from '../services/api/ownerTrainersService';
+import { localMutationService } from '../services/LocalMutationService';
+import { isDatabaseOpen } from '../database/LocalDatabaseManager';
 import { TrainerSummary } from '../types';
-import { Award, X, Check, UserCheck, Shield } from 'lucide-react-native';
+import { useTheme } from '../theme';
+import { BottomSheet } from './ui/BottomSheet';
+import { PrimaryButton, SecondaryButton } from './ui/Button';
+import {
+  Award,
+  Search,
+  Check,
+  UserCheck,
+  User,
+  Dumbbell,
+  FileText,
+  AlertCircle,
+  Star,
+  X,
+  Sparkles,
+} from 'lucide-react-native';
 
 interface AssignTrainerModalProps {
   visible: boolean;
@@ -37,298 +56,514 @@ export const AssignTrainerModal: React.FC<AssignTrainerModalProps> = ({
   onSuccess,
 }) => {
   const queryClient = useQueryClient();
-  const [selectedTrainerId, setSelectedTrainerId] = useState<string>(currentTrainerId || '');
-  const [notes, setNotes] = useState('');
+  const { colors, typography, radii, shadows } = useTheme();
 
+  const [selectedTrainerId, setSelectedTrainerId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notes, setNotes] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync initial trainer selection and reset fields on open
+  useEffect(() => {
+    if (visible) {
+      setSelectedTrainerId(currentTrainerId || '');
+      setSearchQuery('');
+      setNotes('');
+      setErrorMessage(null);
+    }
+  }, [visible, currentTrainerId]);
+
+  // Fetch available trainers from gym directory
   const { data: trainers, isLoading: isTrainersLoading } = useQuery({
     queryKey: ['owner-trainers-list'],
     queryFn: () => OwnerTrainersService.getTrainers(false),
     enabled: visible,
   });
 
+  // Filter trainers based on search query
+  const filteredTrainers = useMemo(() => {
+    if (!trainers) return [];
+    if (!searchQuery.trim()) return trainers;
+    const q = searchQuery.toLowerCase().trim();
+    return trainers.filter(
+      (t) =>
+        t.fullName.toLowerCase().includes(q) ||
+        (t.specialization && t.specialization.toLowerCase().includes(q))
+    );
+  }, [trainers, searchQuery]);
+
+  // Current trainer object
+  const currentTrainer = (trainers || []).find((t) => t.id === currentTrainerId);
+  const selectedTrainer = (trainers || []).find((t) => t.id === selectedTrainerId);
+
+  // Assignment Mutation
   const assignMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTrainerId) {
         throw new Error('Please select a trainer to assign.');
       }
+
+      if (isDatabaseOpen()) {
+        return await localMutationService.assignTrainer({
+          memberId,
+          trainerId: selectedTrainerId,
+          notes: notes.trim() || undefined,
+        });
+      }
+
       return await OwnerTrainersService.assignTrainer(memberId, {
         trainerId: selectedTrainerId,
         notes: notes.trim() || undefined,
       });
     },
     onSuccess: () => {
-      Alert.alert('Trainer Assigned', 'The trainer has been successfully assigned to the member.');
+      queryClient.invalidateQueries({ queryKey: ['local-member-detail', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-detail', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-trainer-history', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-trainers'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-pt-dashboard'] });
+      Alert.alert(
+        'Trainer Assigned',
+        `${selectedTrainer?.fullName || 'Coach'} has been assigned to ${memberName} locally (Pending sync).`
+      );
       onSuccess();
       onClose();
     },
     onError: (err: any) => {
-      Alert.alert(
-        'Assignment Failed',
-        err?.response?.data?.message || err.message || 'Failed to assign trainer. Please try again.'
+      setErrorMessage(
+        err?.response?.data?.message || err?.message || 'Failed to assign trainer. Please try again.'
       );
     },
   });
 
-  if (!visible) return null;
+  const isFormValid = !!selectedTrainerId && !assignMutation.isPending;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <Award size={22} color="#EAB308" style={{ marginRight: 8 }} />
-              <Text style={styles.title}>Assign Personal Trainer</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={styles.closeBtn}>
-              <X size={20} color="#94A3B8" />
-            </TouchableOpacity>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Assign Personal Trainer"
+      subtitle={`Dedicated coach assignment for ${memberName}`}
+      maxHeightRatio={0.88}
+      footer={
+        <View style={styles.footerRow}>
+          <View style={{ flex: 1, marginRight: 10 }}>
+            <SecondaryButton
+              label="Cancel"
+              onPress={onClose}
+              disabled={assignMutation.isPending}
+              size="md"
+            />
           </View>
-
-          <Text style={styles.subtitle}>Assign a certified trainer to {memberName}</Text>
-
-          {isTrainersLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator color="#EAB308" size="large" />
-              <Text style={styles.loadingText}>Loading available trainers...</Text>
-            </View>
-          ) : (
-            <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-              <Text style={styles.label}>SELECT TRAINER</Text>
-              {trainers && trainers.length > 0 ? (
-                trainers.map((t: TrainerSummary) => {
-                  const isSelected = selectedTrainerId === t.id;
-                  return (
-                    <TouchableOpacity
-                      key={t.id}
-                      style={[styles.trainerOption, isSelected && styles.trainerOptionSelected]}
-                      onPress={() => setSelectedTrainerId(t.id)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.trainerInfo}>
-                        <Text style={styles.trainerName}>{t.fullName}</Text>
-                        <Text style={styles.trainerSpec}>
-                          {t.specialization || 'Fitness & Conditioning'} • ⭐ {t.rating || '5.0'}
-                        </Text>
-                      </View>
-                      <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
-                        {isSelected && <View style={styles.radioInner} />}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              ) : (
-                <View style={styles.emptyBox}>
-                  <Text style={styles.emptyText}>No active trainers found in gym.</Text>
-                </View>
-              )}
-
-              <Text style={[styles.label, { marginTop: 16 }]}>TRAINING NOTES / GOALS (OPTIONAL)</Text>
-              <TextInput
-                style={styles.textArea}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="e.g. Strength building, knee injury rehab, dietary goals..."
-                placeholderTextColor="#64748B"
-                multiline
-                numberOfLines={3}
-              />
-            </ScrollView>
-          )}
-
-          {/* Footer Buttons */}
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                (!selectedTrainerId || assignMutation.isPending) && styles.submitBtnDisabled,
-              ]}
+          <View style={{ flex: 1.6 }}>
+            <PrimaryButton
+              label="Confirm Assignment"
+              icon={<UserCheck size={18} color={colors.textOnPrimary} />}
               onPress={() => assignMutation.mutate()}
-              disabled={!selectedTrainerId || assignMutation.isPending}
-              activeOpacity={0.8}
-            >
-              {assignMutation.isPending ? (
-                <ActivityIndicator color="#000000" size="small" />
-              ) : (
-                <>
-                  <UserCheck size={18} color="#000000" style={{ marginRight: 6 }} />
-                  <Text style={styles.submitBtnText}>Confirm Assignment</Text>
-                </>
-              )}
-            </TouchableOpacity>
+              disabled={!isFormValid}
+              loading={assignMutation.isPending}
+              size="md"
+              accessibilityLabel="Confirm coach assignment"
+            />
+          </View>
+        </View>
+      }
+    >
+      <View style={styles.content}>
+        {/* Error Banner */}
+        {errorMessage && (
+          <View
+            style={[
+              styles.errorBanner,
+              { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder, borderRadius: radii.sm },
+            ]}
+          >
+            <AlertCircle size={16} color={colors.danger} style={{ marginRight: 8 }} />
+            <Text style={[typography.captionBold, { color: colors.dangerText, flex: 1 }]}>
+              {errorMessage}
+            </Text>
+          </View>
+        )}
+
+        {/* Member Context Card */}
+        <View
+          style={[
+            styles.contextCard,
+            { backgroundColor: colors.surfaceSubtle, borderColor: colors.border, borderRadius: radii.md },
+          ]}
+        >
+          <View
+            style={[
+              styles.memberIconCircle,
+              { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder },
+            ]}
+          >
+            <User size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={[typography.cardTitle, { color: colors.textPrimary }]}>
+              {memberName}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary }]}>
+              {currentTrainer
+                ? `Currently assigned to ${currentTrainer.fullName}`
+                : 'No dedicated trainer assigned currently'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Notice if replacing existing coach */}
+        {currentTrainerId && selectedTrainerId && selectedTrainerId !== currentTrainerId && (
+          <View
+            style={[
+              styles.reassignNotice,
+              { backgroundColor: colors.warningBg, borderColor: colors.warningBorder, borderRadius: radii.sm },
+            ]}
+          >
+            <Sparkles size={14} color={colors.warning} style={{ marginRight: 6 }} />
+            <Text style={[typography.captionBold, { color: colors.warningText, flex: 1 }]}>
+              This will transition active coaching from {currentTrainer?.fullName || 'previous coach'} to {selectedTrainer?.fullName}.
+            </Text>
+          </View>
+        )}
+
+        {/* Trainer Search Box */}
+        {(trainers || []).length > 3 && (
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.md,
+              },
+            ]}
+          >
+            <Search size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+            <TextInput
+              style={[styles.searchInput, typography.body, { color: colors.textPrimary }]}
+              placeholder="Search trainer by name or specialty..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Trainer Options List */}
+        <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 8, marginTop: 4 }]}>
+          SELECT CERTIFIED TRAINER *
+        </Text>
+
+        {isTrainersLoading ? (
+          <View style={styles.centerLoading}>
+            <ActivityIndicator color={colors.primary} size="small" />
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 8 }]}>
+              Loading available trainers...
+            </Text>
+          </View>
+        ) : filteredTrainers.length > 0 ? (
+          <View style={styles.trainersList}>
+            {filteredTrainers.map((t: TrainerSummary) => {
+              const isSelected = selectedTrainerId === t.id;
+              const isCurrent = t.id === currentTrainerId;
+
+              return (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[
+                    styles.trainerOption,
+                    {
+                      backgroundColor: isSelected ? colors.primarySoft : colors.surface,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                      borderRadius: radii.md,
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedTrainerId(t.id);
+                    setErrorMessage(null);
+                  }}
+                  activeOpacity={0.7}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`Select trainer ${t.fullName}`}
+                >
+                  {/* Trainer Avatar */}
+                  <View
+                    style={[
+                      styles.trainerAvatar,
+                      {
+                        backgroundColor: isSelected ? colors.primary : colors.surfaceSubtle,
+                        borderColor: isSelected ? colors.primary : colors.borderSubtle,
+                        borderRadius: radii.full,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        typography.cardTitle,
+                        { color: isSelected ? colors.textOnPrimary : colors.textPrimary },
+                      ]}
+                    >
+                      {(t.fullName || 'T').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+
+                  {/* Trainer Details */}
+                  <View style={styles.trainerInfo}>
+                    <View style={styles.trainerNameRow}>
+                      <Text
+                        style={[
+                          typography.cardTitle,
+                          { color: isSelected ? colors.primary : colors.textPrimary },
+                        ]}
+                      >
+                        {t.fullName}
+                      </Text>
+                      {isCurrent && (
+                        <View
+                          style={[
+                            styles.currentBadge,
+                            { backgroundColor: colors.infoBg, borderColor: colors.infoBorder },
+                          ]}
+                        >
+                          <Text style={[typography.captionBold, { color: colors.info, fontSize: 10 }]}>
+                            Current Coach
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                      {t.specialization || 'General Fitness & Conditioning'}
+                    </Text>
+
+                    <View style={styles.metaRow}>
+                      {t.rating && (
+                        <View style={styles.ratingBadge}>
+                          <Star size={11} color={colors.warning} fill={colors.warning} style={{ marginRight: 3 }} />
+                          <Text style={[typography.captionBold, { color: colors.textPrimary, fontSize: 11 }]}>
+                            {t.rating}
+                          </Text>
+                        </View>
+                      )}
+                      {t.experienceYears ? (
+                        <Text style={[typography.caption, { color: colors.textMuted, marginLeft: 8 }]}>
+                          • {t.experienceYears} yrs exp
+                        </Text>
+                      ) : null}
+                      {t.activeClientsCount !== undefined ? (
+                        <Text style={[typography.caption, { color: colors.textMuted, marginLeft: 8 }]}>
+                          • {t.activeClientsCount} clients
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {/* Radio Indicator */}
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      {
+                        borderColor: isSelected ? colors.primary : colors.borderStrong,
+                        backgroundColor: isSelected ? colors.primary : 'transparent',
+                        borderRadius: radii.full,
+                      },
+                    ]}
+                  >
+                    {isSelected && <Check size={12} color={colors.textOnPrimary} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.emptyBox,
+              { backgroundColor: colors.surfaceSubtle, borderColor: colors.border, borderRadius: radii.md },
+            ]}
+          >
+            <Dumbbell size={28} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+            <Text style={[typography.bodyBold, { color: colors.textPrimary }]}>
+              {searchQuery ? 'No trainers match your search' : 'No active trainers found'}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4, textAlign: 'center' }]}>
+              {searchQuery
+                ? 'Try searching with a different name or specialization.'
+                : 'Add personal trainers in the Trainers tab before making assignments.'}
+            </Text>
+          </View>
+        )}
+
+        {/* Coaching Notes & Objectives */}
+        <View style={styles.notesSection}>
+          <Text style={[typography.formLabel, { color: colors.textSecondary, marginBottom: 6 }]}>
+            COACHING OBJECTIVES & NOTES (OPTIONAL)
+          </Text>
+          <View
+            style={[
+              styles.textAreaWrapper,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.md,
+              },
+            ]}
+          >
+            <FileText size={16} color={colors.textMuted} style={styles.textAreaIcon} />
+            <TextInput
+              style={[
+                styles.textArea,
+                typography.body,
+                { color: colors.textPrimary },
+              ]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="e.g. Strength building, knee injury rehab, dietary goals, session target..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
           </View>
         </View>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  content: {
+    paddingBottom: 16,
   },
-  card: {
-    width: '100%',
-    maxHeight: '85%',
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    marginBottom: 12,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  titleRow: {
+  contextCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    marginBottom: 12,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginBottom: 16,
-  },
-  body: {
-    maxHeight: 360,
-  },
-  loadingBox: {
-    padding: 40,
+  memberIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#94A3B8',
+  reassignNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderWidth: 1,
+    marginBottom: 12,
   },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#94A3B8',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    height: 42,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+  },
+  trainersList: {
+    gap: 8,
   },
   trainerOption: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    padding: 12,
+    borderWidth: 1.5,
   },
-  trainerOptionSelected: {
-    borderColor: '#EAB308',
-    backgroundColor: '#2A2410',
+  trainerAvatar: {
+    width: 40,
+    height: 40,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   trainerInfo: {
     flex: 1,
-  },
-  trainerName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#F8FAFC',
-    marginBottom: 2,
-  },
-  trainerSpec: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#64748B',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginLeft: 12,
   },
-  radioCircleSelected: {
-    borderColor: '#EAB308',
+  trainerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#EAB308',
+  currentBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    marginLeft: 6,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioCircle: {
+    width: 22,
+    height: 22,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  centerLoading: {
+    paddingVertical: 24,
+    alignItems: 'center',
   },
   emptyBox: {
     padding: 20,
+    borderWidth: 1,
     alignItems: 'center',
   },
-  emptyText: {
-    fontSize: 13,
-    color: '#94A3B8',
+  notesSection: {
+    marginTop: 16,
+  },
+  textAreaWrapper: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 74,
+  },
+  textAreaIcon: {
+    marginTop: 3,
+    marginRight: 8,
   },
   textArea: {
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    padding: 12,
-    color: '#F8FAFC',
-    fontSize: 14,
-    textAlignVertical: 'top',
-    height: 80,
+    flex: 1,
+    padding: 0,
+    minHeight: 54,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-  },
-  cancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: '#334155',
-  },
-  cancelBtnText: {
-    color: '#F8FAFC',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  submitBtn: {
+  footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    backgroundColor: '#EAB308',
-  },
-  submitBtnDisabled: {
-    opacity: 0.5,
-  },
-  submitBtnText: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

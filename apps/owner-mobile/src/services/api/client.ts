@@ -23,6 +23,23 @@ let failedQueue: Array<{
   reject: (error: unknown) => void;
 }> = [];
 
+type SessionExpiredCallback = () => void;
+let sessionExpiredCallback: SessionExpiredCallback | null = null;
+
+export const setSessionExpiredCallback = (cb: SessionExpiredCallback | null): void => {
+  sessionExpiredCallback = cb;
+};
+
+const notifySessionExpired = (): void => {
+  if (sessionExpiredCallback) {
+    try {
+      sessionExpiredCallback();
+    } catch (e) {
+      Logger.warn('[ApiClient] Error in sessionExpiredCallback', { error: e });
+    }
+  }
+};
+
 const processQueue = (error: unknown, token: string | null = null): void => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -102,6 +119,9 @@ apiClient.interceptors.response.use(
       ) {
         // Refresh or login itself failed - cannot refresh
         await SecureTokenStorage.clearTokens();
+        if (originalRequest.url?.includes('/auth/owner/refresh')) {
+          notifySessionExpired();
+        }
         const responseData = error.response?.data as { error?: { message?: string } } | undefined;
         const message =
           responseData?.error?.message ||
@@ -127,15 +147,16 @@ apiClient.interceptors.response.use(
           });
       }
 
+      const refreshToken = await SecureTokenStorage.getRefreshToken();
+      if (!refreshToken) {
+        // No stored session exists - do not notify session expired
+        return Promise.reject(normalizeAxiosError(error));
+      }
+
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        const refreshToken = await SecureTokenStorage.getRefreshToken();
-        if (!refreshToken) {
-          throw AppError.unauthorized('Session has expired. Please log in again.');
-        }
-
         const refreshResponse = await axios.post<ApiResponse<AuthTokens>>(
           `${baseURL}/auth/owner/refresh`,
           { refreshToken },
@@ -154,6 +175,7 @@ apiClient.interceptors.response.use(
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         await SecureTokenStorage.clearTokens();
+        notifySessionExpired();
         return Promise.reject(AppError.unauthorized('Session has expired. Please log in again.'));
       } finally {
         isRefreshing = false;

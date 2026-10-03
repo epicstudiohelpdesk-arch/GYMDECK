@@ -22,12 +22,18 @@ impl PlanRepository {
         let plan_iter = stmt.query_map(
             [ctx.gym_id.to_string()],
             |row| {
+                let price_minor_units: i64 = row.get("price_minor_units").unwrap_or_else(|_| {
+                    row.get::<_, f64>("price").map(|p| (p * 100.0).round() as i64).unwrap_or(0)
+                });
+                let price_real: Option<f64> = row.get("price").ok();
+
                 Ok(MembershipPlan {
                     id: Uuid::parse_str(&row.get::<_, String>("id")?).unwrap_or_default(),
                     gym_id: Uuid::parse_str(&row.get::<_, String>("gym_id")?).unwrap_or_default(),
                     plan_name: row.get("plan_name")?,
                     duration_days: row.get("duration_days")?,
-                    price: row.get("price")?,
+                    price_minor_units,
+                    price: price_real,
                     description: row.get("description")?,
                     is_active: row.get("is_active")?,
                     created_by_user_id: Uuid::parse_str(&row.get::<_, String>("created_by_user_id")?).unwrap_or_default(),
@@ -56,14 +62,24 @@ impl PlanRepository {
         ctx: &AuthenticatedContext,
         plan: &MembershipPlan
     ) -> Result<(), AppError> {
+        let price_minor_units = if plan.price_minor_units > 0 {
+            plan.price_minor_units
+        } else if let Some(p) = plan.price {
+            crate::utils::money::legacy_real_to_minor_units(p).unwrap_or(0)
+        } else {
+            0
+        };
+        let price_real = price_minor_units as f64 / 100.0;
+
         tx.execute(
             "INSERT INTO membership_plans (
-                id, gym_id, plan_name, duration_days, price, description, is_active,
+                id, gym_id, plan_name, duration_days, price_minor_units, price, description, is_active,
                 created_by_user_id, updated_by_user_id, created_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
             ON CONFLICT(id) DO UPDATE SET
                 plan_name = excluded.plan_name,
                 duration_days = excluded.duration_days,
+                price_minor_units = excluded.price_minor_units,
                 price = excluded.price,
                 description = excluded.description,
                 is_active = excluded.is_active,
@@ -74,7 +90,8 @@ impl PlanRepository {
                 ctx.gym_id.to_string(),
                 &plan.plan_name,
                 plan.duration_days,
-                plan.price,
+                price_minor_units,
+                price_real,
                 &plan.description,
                 plan.is_active,
                 ctx.user_id.to_string(),

@@ -105,6 +105,17 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS user_password_reset_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_pwd_reset_token ON user_password_reset_tokens(user_id, token_hash);
+
     CREATE TABLE IF NOT EXISTS member_refresh_tokens (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       member_account_id UUID NOT NULL REFERENCES member_accounts(id) ON DELETE CASCADE,

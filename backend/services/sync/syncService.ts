@@ -18,6 +18,7 @@ import {
   gyms,
   gymMembers,
   membershipPlans,
+  memberMemberships,
   payments,
   attendanceLogs,
   trainers,
@@ -28,12 +29,20 @@ import {
 } from '../../shared/database/schema';
 import { AppError } from '../../shared/errors';
 import { logger } from '../../shared/logging';
+import { toMinorUnits, fromMinorUnits } from '../../shared/utils/money';
 
 export type SyncOperation = 'CREATE' | 'UPDATE' | 'DELETE' | 'VOID';
 
 export interface SyncPushEventDto {
   eventId: string; // Client UUIDv4
-  entityType: 'gym_member' | 'membership_plan' | 'payment' | 'attendance' | 'trainer';
+  entityType:
+    | 'gym_member'
+    | 'membership_plan'
+    | 'member_membership'
+    | 'payment'
+    | 'attendance'
+    | 'attendance_log'
+    | 'trainer';
   entityId: string; // Target record UUIDv4
   operation: SyncOperation;
   payload: Record<string, any>;
@@ -429,13 +438,19 @@ export class SyncService {
               .limit(1)
           )[0];
 
+          const priceStr = payload.priceMinorUnits !== undefined
+            ? fromMinorUnits(BigInt(payload.priceMinorUnits))
+            : payload.price !== undefined
+            ? fromMinorUnits(toMinorUnits(payload.price))
+            : undefined;
+
           if (existing) {
             await tx
               .update(membershipPlans)
               .set({
                 planName: payload.planName || payload.name || payload.plan_name || existing.planName,
                 durationDays: payload.durationDays || payload.duration_days || existing.durationDays,
-                price: payload.price !== undefined ? payload.price.toString() : existing.price,
+                price: priceStr !== undefined ? priceStr : existing.price,
                 isActive: payload.isActive !== undefined ? payload.isActive : existing.isActive,
                 updatedAt: new Date(),
               })
@@ -446,9 +461,60 @@ export class SyncService {
               gymId,
               planName: payload.planName || payload.name || payload.plan_name || 'Standard Plan',
               durationDays: payload.durationDays || payload.duration_days || 30,
-              price: (payload.price || 0).toString(),
+              price: priceStr || '0.00',
               isActive: payload.isActive !== undefined ? payload.isActive : true,
             });
+          }
+        }
+        break;
+      }
+
+      case 'member_membership': {
+        const memberId = payload.memberId || payload.member_id;
+        const planId = payload.planId || payload.plan_id;
+        const status = payload.status || payload.membershipStatus || 'ACTIVE';
+        const startDate = payload.startDate ? new Date(payload.startDate) : new Date();
+        const endDate = payload.endDate ? new Date(payload.endDate) : new Date();
+
+        if (operation === 'CREATE' || operation === 'UPDATE') {
+          const existing = (
+            await tx
+              .select()
+              .from(memberMemberships)
+              .where(and(eq(memberMemberships.id, entityId), eq(memberMemberships.gymId, gymId)))
+              .limit(1)
+          )[0];
+
+          if (existing) {
+            await tx
+              .update(memberMemberships)
+              .set({
+                status,
+                startDate,
+                endDate,
+              })
+              .where(eq(memberMemberships.id, entityId));
+          } else if (memberId && planId) {
+            await tx.insert(memberMemberships).values({
+              id: entityId,
+              gymId,
+              memberId,
+              planId,
+              status,
+              startDate,
+              endDate,
+            });
+          }
+
+          if (memberId) {
+            await tx
+              .update(gymMembers)
+              .set({
+                membershipStatus: status,
+                expiresAt: endDate,
+                updatedAt: new Date(),
+              })
+              .where(and(eq(gymMembers.id, memberId), eq(gymMembers.gymId, gymId)));
           }
         }
         break;
@@ -465,11 +531,15 @@ export class SyncService {
         )[0];
 
         if (!existing) {
+          const amountStr = payload.amountMinorUnits !== undefined
+            ? fromMinorUnits(BigInt(payload.amountMinorUnits))
+            : fromMinorUnits(toMinorUnits(payload.amount || payload.amount_paid || 0));
+
           await tx.insert(payments).values({
             id: entityId,
             gymId,
             memberId: payload.memberId || payload.member_id,
-            amount: (payload.amount || 0).toString(),
+            amount: amountStr,
             paymentMethod: payload.paymentMethod || payload.payment_method || 'CASH',
             status: payload.status || 'COMPLETED',
             paidAt: payload.paymentDate || payload.paidAt ? new Date(payload.paymentDate || payload.paidAt) : new Date(),
@@ -478,7 +548,8 @@ export class SyncService {
         break;
       }
 
-      case 'attendance': {
+      case 'attendance':
+      case 'attendance_log': {
         // Attendance logs are append-only events
         const existing = (
           await tx

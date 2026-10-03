@@ -7,16 +7,17 @@ use r2d2_sqlite::SqliteConnectionManager;
 use serde::{Serialize, Deserialize};
 use crate::repositories::sync_repo::{SyncRepository, RemoteChangeRecord};
 use crate::errors::AppError;
+use crate::utils::serde_helpers::{deserialize_seq_i64, deserialize_optional_seq_i64};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PushPayload {
+pub struct PushPayload {
     #[serde(rename = "deviceId")]
     pub device_id: String,
     pub events: Vec<PushEventItem>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PushEventItem {
+pub struct PushEventItem {
     #[serde(rename = "eventId")]
     pub event_id: String,
     #[serde(rename = "entityType")]
@@ -30,26 +31,34 @@ struct PushEventItem {
 }
 
 #[derive(Debug, Deserialize)]
-struct PushApiResponse {
+pub struct PushApiResponse {
     pub results: Vec<PushApiResultItem>,
-    #[serde(rename = "latestServerSequence")]
+    #[serde(default, rename = "latestServerSequence", deserialize_with = "deserialize_optional_seq_i64")]
     pub latest_server_sequence: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
-struct PushApiResultItem {
+#[serde(untagged)]
+pub enum WrappedOrDirectPushResponse {
+    Wrapped { data: PushApiResponse },
+    Direct(PushApiResponse),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PushApiResultItem {
     #[serde(rename = "eventId")]
     pub event_id: String,
     pub status: String,
-    #[serde(rename = "serverSequence")]
+    #[serde(default, rename = "serverSequence", deserialize_with = "deserialize_optional_seq_i64")]
     pub server_sequence: Option<i64>,
     pub error: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct PullApiResponse {
+pub struct PullApiResponse {
+    #[serde(deserialize_with = "deserialize_seq_i64")]
     pub cursor: i64,
-    #[serde(rename = "latestServerSequence")]
+    #[serde(rename = "latestServerSequence", deserialize_with = "deserialize_seq_i64")]
     pub latest_server_sequence: i64,
     #[serde(rename = "hasMore")]
     pub has_more: bool,
@@ -57,8 +66,15 @@ struct PullApiResponse {
 }
 
 #[derive(Debug, Deserialize)]
-struct PullChangeItem {
-    #[serde(rename = "serverSequence")]
+#[serde(untagged)]
+pub enum WrappedOrDirectPullResponse {
+    Wrapped { data: PullApiResponse },
+    Direct(PullApiResponse),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PullChangeItem {
+    #[serde(rename = "serverSequence", deserialize_with = "deserialize_seq_i64")]
     pub server_sequence: i64,
     #[serde(rename = "eventId")]
     pub event_id: String,
@@ -285,35 +301,57 @@ impl SyncWorker {
 
             match response_result {
                 Ok(resp) if resp.status().is_success() => {
-                    if let Ok(push_resp) = resp.json::<PushApiResponse>().await {
-                        // Store cloud sequence watermark if provided
-                        if let Some(latest_seq) = push_resp.latest_server_sequence {
-                            let _ = SyncRepository::set_sync_state(
-                                &conn,
-                                gym_id,
-                                "cloud_latest_server_sequence",
-                                &latest_seq.to_string(),
-                            );
-                        }
+                    let resp_body = resp.text().await.map_err(|e| {
+                        AppError::Network(format!("Failed to read push response body: {}", e))
+                    })?;
 
-                        for item in push_resp.results {
-                            if let Ok(event_id) = Uuid::parse_str(&item.event_id) {
-                                if item.status == "APPLIED" || item.status == "ALREADY_APPLIED" {
-                                    // Pre-record inbox acknowledgment if server assigned a sequence
-                                    if let Some(srv_seq) = item.server_sequence {
-                                        let _ = SyncRepository::record_inbox_ack(&conn, gym_id, srv_seq, &event_id);
-                                    }
-                                    let _ = SyncRepository::mark_event_synced(&conn, &event_id);
-                                } else if item.status == "FAILED" {
-                                    let err_msg = item.error.unwrap_or_else(|| "Rejected by cloud".into());
-                                    let _ = SyncRepository::mark_event_failed(
-                                        &conn,
-                                        &event_id,
-                                        "CLOUD_VALIDATION_ERROR",
-                                        &err_msg,
-                                        true, // Permanent error
-                                    );
+                    let resp_enum = match serde_json::from_str::<WrappedOrDirectPushResponse>(&resp_body) {
+                        Ok(val) => val,
+                        Err(err) => {
+                            let snippet = &resp_body[..std::cmp::min(resp_body.len(), 256)];
+                            tracing::error!(
+                                "[SyncWorker] Failed to deserialize push response: {}. Body snippet: {}",
+                                err,
+                                snippet
+                            );
+                            return Err(AppError::Configuration(format!(
+                                "Failed to deserialize push response: {}",
+                                err
+                            )));
+                        }
+                    };
+
+                    let push_resp = match resp_enum {
+                        WrappedOrDirectPushResponse::Wrapped { data } => data,
+                        WrappedOrDirectPushResponse::Direct(data) => data,
+                    };
+                    // Store cloud sequence watermark if provided
+                    if let Some(latest_seq) = push_resp.latest_server_sequence {
+                        let _ = SyncRepository::set_sync_state(
+                            &conn,
+                            gym_id,
+                            "cloud_latest_server_sequence",
+                            &latest_seq.to_string(),
+                        );
+                    }
+
+                    for item in push_resp.results {
+                        if let Ok(event_id) = Uuid::parse_str(&item.event_id) {
+                            if item.status == "APPLIED" || item.status == "ALREADY_APPLIED" {
+                                // Pre-record inbox acknowledgment if server assigned a sequence
+                                if let Some(srv_seq) = item.server_sequence {
+                                    let _ = SyncRepository::record_inbox_ack(&conn, gym_id, srv_seq, &event_id);
                                 }
+                                let _ = SyncRepository::mark_event_synced(&conn, &event_id);
+                            } else if item.status == "FAILED" {
+                                let err_msg = item.error.unwrap_or_else(|| "Rejected by cloud".into());
+                                let _ = SyncRepository::mark_event_failed(
+                                    &conn,
+                                    &event_id,
+                                    "CLOUD_VALIDATION_ERROR",
+                                    &err_msg,
+                                    true, // Permanent error
+                                );
                             }
                         }
                     }
@@ -367,51 +405,88 @@ impl SyncWorker {
 
             match pull_result {
                 Ok(resp) if resp.status().is_success() => {
-                    if let Ok(pull_resp) = resp.json::<PullApiResponse>().await {
-                        // Update authoritative cloud watermark
-                        let _ = SyncRepository::set_sync_state(
-                            &conn,
+                    let resp_body = resp.text().await.map_err(|e| {
+                        AppError::Network(format!("Failed to read pull response body: {}", e))
+                    })?;
+
+                    let resp_enum = match serde_json::from_str::<WrappedOrDirectPullResponse>(&resp_body) {
+                        Ok(val) => val,
+                        Err(err) => {
+                            let snippet = &resp_body[..std::cmp::min(resp_body.len(), 256)];
+                            tracing::error!(
+                                "[SyncWorker] Failed to deserialize pull response: {}. Body snippet: {}",
+                                err,
+                                snippet
+                            );
+                            return Err(AppError::Configuration(format!(
+                                "Failed to deserialize pull response: {}",
+                                err
+                            )));
+                        }
+                    };
+
+                    let pull_resp = match resp_enum {
+                        WrappedOrDirectPullResponse::Wrapped { data } => data,
+                        WrappedOrDirectPullResponse::Direct(data) => data,
+                    };
+                    // Update authoritative cloud watermark
+                    let _ = SyncRepository::set_sync_state(
+                        &conn,
+                        gym_id,
+                        "cloud_latest_server_sequence",
+                        &pull_resp.latest_server_sequence.to_string(),
+                    );
+
+                    let has_more = pull_resp.has_more;
+                    let batch_size = pull_resp.changes.len();
+
+                    if !pull_resp.changes.is_empty() {
+                        let remote_changes: Vec<RemoteChangeRecord> = pull_resp
+                            .changes
+                            .into_iter()
+                            .map(|c| RemoteChangeRecord {
+                                server_sequence: c.server_sequence,
+                                event_id: Uuid::parse_str(&c.event_id).unwrap_or_default(),
+                                entity_type: c.entity_type,
+                                entity_id: Uuid::parse_str(&c.entity_id).unwrap_or_default(),
+                                operation: c.operation,
+                                payload: c.payload,
+                                created_at: c.created_at,
+                            })
+                            .collect();
+
+                        // Atomically apply changes into SQLite and advance cursor
+                        SyncRepository::apply_pull_batch_tx(
+                            &mut conn,
                             gym_id,
-                            "cloud_latest_server_sequence",
-                            &pull_resp.latest_server_sequence.to_string(),
-                        );
+                            &remote_changes,
+                            pull_resp.cursor,
+                        )?;
+                    }
 
-                        let has_more = pull_resp.has_more;
-                        let batch_size = pull_resp.changes.len();
-
-                        if !pull_resp.changes.is_empty() {
-                            let remote_changes: Vec<RemoteChangeRecord> = pull_resp
-                                .changes
-                                .into_iter()
-                                .map(|c| RemoteChangeRecord {
-                                    server_sequence: c.server_sequence,
-                                    event_id: Uuid::parse_str(&c.event_id).unwrap_or_default(),
-                                    entity_type: c.entity_type,
-                                    entity_id: Uuid::parse_str(&c.entity_id).unwrap_or_default(),
-                                    operation: c.operation,
-                                    payload: c.payload,
-                                    created_at: c.created_at,
-                                })
-                                .collect();
-
-                            // Atomically apply changes into SQLite and advance cursor
-                            SyncRepository::apply_pull_batch_tx(
-                                &mut conn,
-                                gym_id,
-                                &remote_changes,
-                                pull_resp.cursor,
-                            )?;
-                        }
-
-                        pull_page_count += 1;
-                        if !has_more || batch_size == 0 || pull_page_count >= MAX_PULL_PAGES_PER_CYCLE {
-                            break;
-                        }
-                    } else {
+                    pull_page_count += 1;
+                    if !has_more || batch_size == 0 || pull_page_count >= MAX_PULL_PAGES_PER_CYCLE {
                         break;
                     }
                 }
-                _ => break,
+                Ok(resp) => {
+                    let status = resp.status();
+                    let err_body = resp.text().await.unwrap_or_default();
+                    let snippet = &err_body[..std::cmp::min(err_body.len(), 256)];
+                    tracing::error!(
+                        "[SyncWorker] Cloud API rejected pull request (HTTP {}): {}",
+                        status,
+                        snippet
+                    );
+                    return Err(AppError::Network(format!(
+                        "Cloud API rejected pull request (HTTP {})",
+                        status
+                    )));
+                }
+                Err(err) => {
+                    tracing::warn!("[SyncWorker] Transient network error during pull: {}", err);
+                    return Err(AppError::Network(err.to_string()));
+                }
             }
         }
 

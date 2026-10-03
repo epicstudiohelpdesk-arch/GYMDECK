@@ -471,9 +471,15 @@ impl SyncRepository {
                             .or_else(|| change.payload.get("duration_days"))
                             .and_then(|v| v.as_i64())
                             .unwrap_or(30) as i32;
-                        let price = change.payload.get("price")
-                            .and_then(|v| v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok())))
-                            .unwrap_or(0.0);
+                        let price_minor_units = change.payload.get("priceMinorUnits")
+                            .or_else(|| change.payload.get("price_minor_units"))
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or_else(|| {
+                                change.payload.get("price")
+                                    .and_then(|v| crate::utils::money::json_value_to_minor_units(v).ok())
+                                    .unwrap_or(0)
+                            });
+                        let price_real = price_minor_units as f64 / 100.0;
                         let is_active = change.payload.get("isActive")
                             .or_else(|| change.payload.get("is_active"))
                             .and_then(|v| v.as_bool())
@@ -489,12 +495,13 @@ impl SyncRepository {
 
                         tx.execute(
                             "INSERT INTO membership_plans (
-                                id, gym_id, plan_name, duration_days, price, is_active,
+                                id, gym_id, plan_name, duration_days, price_minor_units, price, is_active,
                                 created_by_user_id, updated_by_user_id, created_at, updated_at
-                            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+                            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
                             ON CONFLICT(id) DO UPDATE SET
                                 plan_name = excluded.plan_name,
                                 duration_days = excluded.duration_days,
+                                price_minor_units = excluded.price_minor_units,
                                 price = excluded.price,
                                 is_active = excluded.is_active,
                                 updated_by_user_id = excluded.updated_by_user_id,
@@ -504,7 +511,8 @@ impl SyncRepository {
                                 gym_id.to_string(),
                                 plan_name,
                                 duration_days,
-                                price,
+                                price_minor_units,
+                                price_real,
                                 is_active,
                                 created_by,
                                 updated_by,
@@ -513,16 +521,22 @@ impl SyncRepository {
                         ).map_err(|e| AppError::Database(format!("Failed to apply membership_plan mutation: {}", e)))?;
                     } else if change.operation == "DELETE" {
                         tx.execute(
-                            "DELETE FROM membership_plans WHERE id = ?1 AND gym_id = ?2",
-                            params![change.entity_id.to_string(), gym_id.to_string()],
+                            "UPDATE membership_plans SET deleted_at = ?1, updated_at = ?1 WHERE id = ?2 AND gym_id = ?3",
+                            params![now, change.entity_id.to_string(), gym_id.to_string()],
                         ).map_err(|e| AppError::Database(format!("Failed to delete membership_plan: {}", e)))?;
                     }
                 }
                 "payment" => {
                     // Immutable financial record
-                    let amount = change.payload.get("amount")
-                        .and_then(|v| v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok())))
-                        .unwrap_or(0.0);
+                    let amount_minor_units = change.payload.get("amountMinorUnits")
+                        .or_else(|| change.payload.get("amount_minor_units"))
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or_else(|| {
+                            change.payload.get("amount")
+                                .and_then(|v| crate::utils::money::json_value_to_minor_units(v).ok())
+                                .unwrap_or(0)
+                        });
+                    let amount_real = amount_minor_units as f64 / 100.0;
                     let payment_method = change.payload.get("paymentMethod")
                         .or_else(|| change.payload.get("payment_method"))
                         .and_then(|v| v.as_str())
@@ -531,46 +545,202 @@ impl SyncRepository {
                         .or_else(|| change.payload.get("member_id"))
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
+                    let status = change.payload.get("status")
+                        .or_else(|| change.payload.get("paymentStatus"))
+                        .or_else(|| change.payload.get("payment_status"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("COMPLETED");
+                    let transaction_ref = change.payload.get("transactionReference")
+                        .or_else(|| change.payload.get("transaction_reference"))
+                        .or_else(|| change.payload.get("receiptNumber"))
+                        .or_else(|| change.payload.get("receipt_number"))
+                        .and_then(|v| v.as_str());
+                    let payment_date = change.payload.get("paymentDate")
+                        .or_else(|| change.payload.get("payment_date"))
+                        .or_else(|| change.payload.get("paidAt"))
+                        .or_else(|| change.payload.get("paid_at"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&now);
+                    let created_by = change.payload.get("createdByUserId")
+                        .or_else(|| change.payload.get("created_by_user_id"))
+                        .or_else(|| change.payload.get("actorUserId"))
+                        .or_else(|| change.payload.get("actor_user_id"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("SYSTEM_SYNC");
 
-                    tx.execute(
-                        "INSERT INTO payments (
-                            id, gym_id, member_id, amount, payment_method, payment_status, payment_date, created_at
-                        ) VALUES (?1, ?2, ?3, ?4, ?5, 'COMPLETED', ?6, ?6)
-                        ON CONFLICT(id) DO NOTHING",
-                        params![
-                            change.entity_id.to_string(),
-                            gym_id.to_string(),
-                            member_id,
-                            amount,
-                            payment_method,
-                            now,
-                        ],
-                    ).map_err(|e| AppError::Database(format!("Failed to apply payment record: {}", e)))?;
+                    if change.operation == "CREATE" || change.operation == "UPDATE" {
+                        tx.execute(
+                            "INSERT INTO payments (
+                                id, gym_id, member_id, amount_minor_units, amount, payment_method, transaction_reference,
+                                payment_date, status, created_by_user_id, created_at
+                            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                            ON CONFLICT(id) DO UPDATE SET
+                                amount_minor_units = excluded.amount_minor_units,
+                                amount = excluded.amount,
+                                payment_method = excluded.payment_method,
+                                transaction_reference = COALESCE(excluded.transaction_reference, payments.transaction_reference),
+                                payment_date = excluded.payment_date,
+                                status = excluded.status",
+                            params![
+                                change.entity_id.to_string(),
+                                gym_id.to_string(),
+                                member_id,
+                                amount_minor_units,
+                                amount_real,
+                                payment_method,
+                                transaction_ref,
+                                payment_date,
+                                status,
+                                created_by,
+                                now,
+                            ],
+                        ).map_err(|e| AppError::Database(format!("Failed to apply payment record: {}", e)))?;
+                    } else if change.operation == "DELETE" {
+                        tx.execute(
+                            "UPDATE payments SET deleted_at = ?1, deleted_by_user_id = ?2 WHERE id = ?3 AND gym_id = ?4",
+                            params![now, created_by, change.entity_id.to_string(), gym_id.to_string()],
+                        ).map_err(|e| AppError::Database(format!("Failed to delete payment: {}", e)))?;
+                    }
                 }
-                "attendance" => {
-                    // Append-only attendance record
+                "attendance" | "attendance_log" => {
+                    // Attendance record with mutable checkout session support
                     let member_id = change.payload.get("memberId")
                         .or_else(|| change.payload.get("member_id"))
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
-                    let entry_method = change.payload.get("entryMethod")
-                        .or_else(|| change.payload.get("attendanceMethod"))
+                    let check_in_time = change.payload.get("checkInTime")
+                        .or_else(|| change.payload.get("check_in_time"))
                         .and_then(|v| v.as_str())
-                        .unwrap_or("QR_DYNAMIC");
+                        .unwrap_or(&now);
+                    let check_out_time = change.payload.get("checkOutTime")
+                        .or_else(|| change.payload.get("check_out_time"))
+                        .and_then(|v| v.as_str());
+                    let method = change.payload.get("attendanceMethod")
+                        .or_else(|| change.payload.get("attendance_method"))
+                        .or_else(|| change.payload.get("entryMethod"))
+                        .or_else(|| change.payload.get("entry_method"))
+                        .or_else(|| change.payload.get("checkInMethod"))
+                        .or_else(|| change.payload.get("check_in_method"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("MANUAL");
+                    let recorded_by = change.payload.get("recordedByUserId")
+                        .or_else(|| change.payload.get("recorded_by_user_id"))
+                        .or_else(|| change.payload.get("actorUserId"))
+                        .or_else(|| change.payload.get("actor_user_id"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("SYSTEM_SYNC");
 
-                    tx.execute(
-                        "INSERT INTO attendance_logs (
-                            id, gym_id, member_id, check_in_time, check_in_method, created_at
-                        ) VALUES (?1, ?2, ?3, ?4, ?5, ?4)
-                        ON CONFLICT(id) DO NOTHING",
-                        params![
-                            change.entity_id.to_string(),
-                            gym_id.to_string(),
-                            member_id,
-                            now,
-                            entry_method,
-                        ],
-                    ).map_err(|e| AppError::Database(format!("Failed to apply attendance log: {}", e)))?;
+                    if change.operation == "CREATE" || change.operation == "UPDATE" {
+                        tx.execute(
+                            "INSERT INTO attendance_logs (
+                                id, gym_id, member_id, check_in_time, check_out_time, attendance_method,
+                                recorded_by_user_id, created_at
+                            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                            ON CONFLICT(id) DO UPDATE SET
+                                check_out_time = COALESCE(excluded.check_out_time, attendance_logs.check_out_time),
+                                attendance_method = excluded.attendance_method",
+                            params![
+                                change.entity_id.to_string(),
+                                gym_id.to_string(),
+                                member_id,
+                                check_in_time,
+                                check_out_time,
+                                method,
+                                recorded_by,
+                                now,
+                            ],
+                        ).map_err(|e| AppError::Database(format!("Failed to apply attendance log: {}", e)))?;
+                    } else if change.operation == "DELETE" {
+                        tx.execute(
+                            "UPDATE attendance_logs SET deleted_at = ?1 WHERE id = ?2 AND gym_id = ?3",
+                            params![now, change.entity_id.to_string(), gym_id.to_string()],
+                        ).map_err(|e| AppError::Database(format!("Failed to delete attendance log: {}", e)))?;
+                    }
+                }
+                "member_membership" => {
+                    let member_id = change.payload.get("memberId")
+                        .or_else(|| change.payload.get("member_id"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let plan_id = change.payload.get("planId")
+                        .or_else(|| change.payload.get("plan_id"))
+                        .and_then(|v| v.as_str());
+                    let status = change.payload.get("membershipStatus")
+                        .or_else(|| change.payload.get("membership_status"))
+                        .or_else(|| change.payload.get("status"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("ACTIVE");
+                    let expires_at = change.payload.get("endDate")
+                        .or_else(|| change.payload.get("end_date"))
+                        .or_else(|| change.payload.get("expiresAt"))
+                        .or_else(|| change.payload.get("expires_at"))
+                        .and_then(|v| v.as_str());
+
+                    if !member_id.is_empty() {
+                        tx.execute(
+                            "UPDATE gym_members
+                             SET membership_plan_id = COALESCE(?1, membership_plan_id),
+                                 membership_status = ?2,
+                                 expires_at = COALESCE(?3, expires_at),
+                                 updated_at = ?4
+                             WHERE id = ?5 AND gym_id = ?6",
+                            params![
+                                plan_id,
+                                status,
+                                expires_at,
+                                now,
+                                member_id,
+                                gym_id.to_string(),
+                            ],
+                        ).map_err(|e| AppError::Database(format!("Failed to apply member_membership mutation: {}", e)))?;
+                    }
+                }
+                "trainer" | "trainers" => {
+                    if change.operation == "CREATE" || change.operation == "UPDATE" {
+                        let full_name = change.payload.get("fullName")
+                            .or_else(|| change.payload.get("full_name"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Trainer");
+                        let phone = change.payload.get("phone")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("0000000000");
+                        let specialization = change.payload.get("specialization")
+                            .and_then(|v| v.as_str());
+                        let is_active = change.payload.get("isActive")
+                            .or_else(|| change.payload.get("is_active"))
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true);
+
+                        tx.execute(
+                            "INSERT INTO trainers (
+                                id, gym_id, full_name, phone, specialization, is_active, created_at, updated_at
+                            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+                            ON CONFLICT(id) DO UPDATE SET
+                                full_name = excluded.full_name,
+                                phone = excluded.phone,
+                                specialization = excluded.specialization,
+                                is_active = excluded.is_active,
+                                updated_at = excluded.updated_at",
+                            params![
+                                change.entity_id.to_string(),
+                                gym_id.to_string(),
+                                full_name,
+                                phone,
+                                specialization,
+                                is_active,
+                                now,
+                            ],
+                        ).map_err(|e| AppError::Database(format!("Failed to apply trainer mutation: {}", e)))?;
+                    } else if change.operation == "DELETE" {
+                        tx.execute(
+                            "UPDATE trainers SET deleted_at = ?1, updated_at = ?1, is_active = 0 WHERE id = ?2 AND gym_id = ?3",
+                            params![now, change.entity_id.to_string(), gym_id.to_string()],
+                        ).map_err(|e| AppError::Database(format!("Failed to delete trainer: {}", e)))?;
+                    }
+                }
+                "trainer_assignment" | "pt_package" | "pt_session" => {
+                    // PT domain entities are recorded in sync_inbox for sequence and idempotency tracking.
+                    tracing::info!("Recorded PT entity in sync_inbox: entity_type={}, id={}", change.entity_type, change.entity_id);
                 }
                 _ => {
                     return Err(AppError::Database(format!("Unsupported entity type in pull batch: {}", change.entity_type)));
@@ -695,5 +865,312 @@ impl SyncRepository {
             last_synced_sequence: last_seq,
             last_sync_at,
         })
+    }
+
+    /// Scans local SQLite business records (plans, members, payments, attendance, trainers)
+    /// for the given gym_id that have not yet been recorded in sync_outbox or sync_inbox,
+    /// and enqueues idempotent 'CREATE' outbox events.
+    /// Returns the number of events staged.
+    pub fn stage_unpushed_local_records_to_outbox(
+        conn: &mut Connection,
+        gym_id: &Uuid,
+    ) -> Result<usize, AppError> {
+        let tx = conn.transaction().map_err(|e| AppError::Database(e.to_string()))?;
+        let mut staged_count = 0;
+        let gym_id_str = gym_id.to_string();
+        let now = Utc::now().to_rfc3339();
+
+        // 1. Stage Membership Plans
+        {
+            let mut stmt = tx.prepare(
+                "SELECT id, plan_name, duration_days, price_minor_units, price, is_active
+                 FROM membership_plans
+                 WHERE gym_id = ?1 AND deleted_at IS NULL
+                   AND id NOT IN (SELECT entity_id FROM sync_outbox WHERE gym_id = ?1 AND entity_type = 'membership_plan')"
+            ).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let rows = stmt.query_map(params![gym_id_str], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i64>(2)?,
+                    r.get::<_, i64>(3).unwrap_or(0),
+                    r.get::<_, Option<f64>>(4)?,
+                    r.get::<_, bool>(5).unwrap_or(true),
+                ))
+            }).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let mut plans = Vec::new();
+            for r in rows {
+                plans.push(r.map_err(|e| AppError::Database(e.to_string()))?);
+            }
+
+            for (plan_id, plan_name, duration_days, price_minor_units, price, is_active) in plans {
+                let payload = serde_json::json!({
+                    "id": plan_id,
+                    "gymId": gym_id_str,
+                    "planName": plan_name,
+                    "durationDays": duration_days,
+                    "priceMinorUnits": price_minor_units,
+                    "price": price,
+                    "isActive": is_active,
+                });
+                let id = Uuid::new_v4();
+                let event_id = Uuid::new_v4();
+                tx.execute(
+                    "INSERT INTO sync_outbox (
+                        id, event_id, gym_id, entity_type, entity_id, operation, payload,
+                        created_at, attempt_count, status
+                    ) VALUES (?1, ?2, ?3, 'membership_plan', ?4, 'CREATE', ?5, ?6, 0, 'PENDING')",
+                    params![
+                        id.to_string(),
+                        event_id.to_string(),
+                        gym_id_str,
+                        plan_id,
+                        payload.to_string(),
+                        now,
+                    ],
+                ).map_err(|e| AppError::Database(e.to_string()))?;
+                staged_count += 1;
+            }
+        }
+
+        // 2. Stage Gym Members
+        {
+            let mut stmt = tx.prepare(
+                "SELECT id, member_code, full_name, phone, alternate_phone, email, gender, dob, address,
+                        membership_status, joined_at, expires_at, notes, membership_plan_id
+                 FROM gym_members
+                 WHERE gym_id = ?1 AND deleted_at IS NULL
+                   AND id NOT IN (SELECT entity_id FROM sync_outbox WHERE gym_id = ?1 AND entity_type = 'gym_member')"
+            ).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let rows = stmt.query_map(params![gym_id_str], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                    r.get::<_, String>(3)?,
+                    r.get::<_, Option<String>>(4)?,
+                    r.get::<_, Option<String>>(5)?,
+                    r.get::<_, Option<String>>(6)?,
+                    r.get::<_, Option<String>>(7)?,
+                    r.get::<_, Option<String>>(8)?,
+                    r.get::<_, String>(9)?,
+                    r.get::<_, String>(10)?,
+                    r.get::<_, Option<String>>(11)?,
+                    r.get::<_, Option<String>>(12)?,
+                    r.get::<_, Option<String>>(13)?,
+                ))
+            }).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let mut members = Vec::new();
+            for r in rows {
+                members.push(r.map_err(|e| AppError::Database(e.to_string()))?);
+            }
+
+            for (
+                mem_id, member_code, full_name, phone, alt_phone, email, gender, dob, address,
+                membership_status, joined_at, expires_at, notes, plan_id
+            ) in members {
+                let payload = serde_json::json!({
+                    "id": mem_id,
+                    "gymId": gym_id_str,
+                    "memberCode": member_code,
+                    "fullName": full_name,
+                    "phone": phone,
+                    "alternatePhone": alt_phone,
+                    "email": email,
+                    "gender": gender,
+                    "dob": dob,
+                    "address": address,
+                    "membershipStatus": membership_status,
+                    "joinedAt": joined_at,
+                    "expiresAt": expires_at,
+                    "notes": notes,
+                    "membershipPlanId": plan_id,
+                });
+                let id = Uuid::new_v4();
+                let event_id = Uuid::new_v4();
+                tx.execute(
+                    "INSERT INTO sync_outbox (
+                        id, event_id, gym_id, entity_type, entity_id, operation, payload,
+                        created_at, attempt_count, status
+                    ) VALUES (?1, ?2, ?3, 'gym_member', ?4, 'CREATE', ?5, ?6, 0, 'PENDING')",
+                    params![
+                        id.to_string(),
+                        event_id.to_string(),
+                        gym_id_str,
+                        mem_id,
+                        payload.to_string(),
+                        now,
+                    ],
+                ).map_err(|e| AppError::Database(e.to_string()))?;
+                staged_count += 1;
+            }
+        }
+
+        // 3. Stage Payments (if any)
+        {
+            let mut stmt = tx.prepare(
+                "SELECT id, member_id, amount_minor_units, payment_method, payment_date, status
+                 FROM payments
+                 WHERE gym_id = ?1 AND deleted_at IS NULL
+                   AND id NOT IN (SELECT entity_id FROM sync_outbox WHERE gym_id = ?1 AND entity_type = 'payment')"
+            ).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let rows = stmt.query_map(params![gym_id_str], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i64>(2).unwrap_or(0),
+                    r.get::<_, String>(3)?,
+                    r.get::<_, String>(4)?,
+                    r.get::<_, String>(5)?,
+                ))
+            }).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let mut payments = Vec::new();
+            for r in rows {
+                payments.push(r.map_err(|e| AppError::Database(e.to_string()))?);
+            }
+
+            for (pay_id, member_id, amount_minor_units, payment_method, payment_date, status) in payments {
+                let payload = serde_json::json!({
+                    "id": pay_id,
+                    "gymId": gym_id_str,
+                    "memberId": member_id,
+                    "amountMinorUnits": amount_minor_units,
+                    "paymentMethod": payment_method,
+                    "paymentDate": payment_date,
+                    "status": status,
+                });
+                let id = Uuid::new_v4();
+                let event_id = Uuid::new_v4();
+                tx.execute(
+                    "INSERT INTO sync_outbox (
+                        id, event_id, gym_id, entity_type, entity_id, operation, payload,
+                        created_at, attempt_count, status
+                    ) VALUES (?1, ?2, ?3, 'payment', ?4, 'CREATE', ?5, ?6, 0, 'PENDING')",
+                    params![
+                        id.to_string(),
+                        event_id.to_string(),
+                        gym_id_str,
+                        pay_id,
+                        payload.to_string(),
+                        now,
+                    ],
+                ).map_err(|e| AppError::Database(e.to_string()))?;
+                staged_count += 1;
+            }
+        }
+
+        // 4. Stage Attendance Logs (if any)
+        {
+            let mut stmt = tx.prepare(
+                "SELECT id, member_id, check_in_time, attendance_method
+                 FROM attendance_logs
+                 WHERE gym_id = ?1 AND deleted_at IS NULL
+                   AND id NOT IN (SELECT entity_id FROM sync_outbox WHERE gym_id = ?1 AND (entity_type = 'attendance' OR entity_type = 'attendance_log'))"
+            ).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let rows = stmt.query_map(params![gym_id_str], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                    r.get::<_, Option<String>>(3)?,
+                ))
+            }).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let mut logs = Vec::new();
+            for r in rows {
+                logs.push(r.map_err(|e| AppError::Database(e.to_string()))?);
+            }
+
+            for (att_id, member_id, check_in_time, method) in logs {
+                let payload = serde_json::json!({
+                    "id": att_id,
+                    "gymId": gym_id_str,
+                    "memberId": member_id,
+                    "checkInTime": check_in_time,
+                    "attendanceMethod": method.unwrap_or_else(|| "MANUAL".into()),
+                });
+                let id = Uuid::new_v4();
+                let event_id = Uuid::new_v4();
+                tx.execute(
+                    "INSERT INTO sync_outbox (
+                        id, event_id, gym_id, entity_type, entity_id, operation, payload,
+                        created_at, attempt_count, status
+                    ) VALUES (?1, ?2, ?3, 'attendance_log', ?4, 'CREATE', ?5, ?6, 0, 'PENDING')",
+                    params![
+                        id.to_string(),
+                        event_id.to_string(),
+                        gym_id_str,
+                        att_id,
+                        payload.to_string(),
+                        now,
+                    ],
+                ).map_err(|e| AppError::Database(e.to_string()))?;
+                staged_count += 1;
+            }
+        }
+
+        // 5. Stage Trainers (if any)
+        {
+            let mut stmt = tx.prepare(
+                "SELECT id, full_name, phone, specialization, is_active
+                 FROM trainers
+                 WHERE gym_id = ?1 AND deleted_at IS NULL
+                   AND id NOT IN (SELECT entity_id FROM sync_outbox WHERE gym_id = ?1 AND entity_type = 'trainer')"
+            ).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let rows = stmt.query_map(params![gym_id_str], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                    r.get::<_, Option<String>>(3)?,
+                    r.get::<_, bool>(4).unwrap_or(true),
+                ))
+            }).map_err(|e| AppError::Database(e.to_string()))?;
+
+            let mut trainers = Vec::new();
+            for r in rows {
+                trainers.push(r.map_err(|e| AppError::Database(e.to_string()))?);
+            }
+
+            for (tr_id, full_name, phone, spec, is_active) in trainers {
+                let payload = serde_json::json!({
+                    "id": tr_id,
+                    "gymId": gym_id_str,
+                    "fullName": full_name,
+                    "phone": phone,
+                    "specialization": spec,
+                    "isActive": is_active,
+                });
+                let id = Uuid::new_v4();
+                let event_id = Uuid::new_v4();
+                tx.execute(
+                    "INSERT INTO sync_outbox (
+                        id, event_id, gym_id, entity_type, entity_id, operation, payload,
+                        created_at, attempt_count, status
+                    ) VALUES (?1, ?2, ?3, 'trainer', ?4, 'CREATE', ?5, ?6, 0, 'PENDING')",
+                    params![
+                        id.to_string(),
+                        event_id.to_string(),
+                        gym_id_str,
+                        tr_id,
+                        payload.to_string(),
+                        now,
+                    ],
+                ).map_err(|e| AppError::Database(e.to_string()))?;
+                staged_count += 1;
+            }
+        }
+
+        tx.commit().map_err(|e| AppError::Database(e.to_string()))?;
+        tracing::info!("[SyncRepository] Staged {} unpushed local business records to outbox for gym {}", staged_count, gym_id);
+        Ok(staged_count)
     }
 }

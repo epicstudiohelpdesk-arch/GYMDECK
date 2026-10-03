@@ -6,13 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "gymdeck-owner",
-    "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A0D14"
-    },
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gymdeck.owner"
@@ -20,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A0D14"
+        "backgroundColor": "#EA4303"
       },
       "package": "com.gymdeck.owner"
     },
@@ -30,23 +24,29 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0A0D14"
+          "backgroundColor": "#EA4303"
         }
-      ]
+      ],
+      "expo-build-properties",
+      "expo-font",
+      "./plugins/withFixConstantsPath"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "gymdeck-owner-mobile"
+        "projectId": "1e308201-cf62-4fc3-912e-80d42dbf8872"
       }
-    }
+    },
+    "owner": "sd_2007"
   }
 }

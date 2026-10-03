@@ -115,6 +115,91 @@ pub async fn login_command(
     match AuthService::login(&state.db, &payload.email, &secure_password) {
         Ok((user_id, gym_id)) => {
             state.session_manager.create_and_bind_session(user_id, gym_id).await?;
+
+            let cloud_url = std::env::var("GYMDECK_CLOUD_URL")
+                .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
+            let http_client = crate::auth::cloud_auth::CloudAuthClient::build_http_client();
+
+            let is_enrolled = if let Some(meta) = state.cloud_session.get_metadata().await {
+                meta.gym_id == gym_id
+            } else {
+                false
+            };
+
+            if !is_enrolled {
+                // Query local full_name and gym_name for bootstrap registration
+                let (full_name, gym_name) = if let Ok(conn) = state.db.pool.get() {
+                    let fn_res: String = conn.query_row(
+                        "SELECT full_name FROM users WHERE id = ?1",
+                        rusqlite::params![user_id.to_string()],
+                        |r| r.get(0),
+                    ).unwrap_or_else(|_| "Owner".to_string());
+                    let gn_res: String = conn.query_row(
+                        "SELECT name FROM gyms WHERE id = ?1",
+                        rusqlite::params![gym_id.to_string()],
+                        |r| r.get(0),
+                    ).unwrap_or_else(|_| "Gym".to_string());
+                    (fn_res, gn_res)
+                } else {
+                    ("Owner".to_string(), "Gym".to_string())
+                };
+
+                // Attempt controlled Cloud Bootstrap / Linking
+                if let Ok(auth_data) = crate::auth::cloud_auth::CloudAuthClient::bootstrap_desktop(
+                    &http_client,
+                    &cloud_url,
+                    &payload.email,
+                    secure_password.expose_secret(),
+                    &full_name,
+                    &gym_id,
+                    &gym_name,
+                    Some(user_id),
+                ).await {
+                    let cloud_user = auth_data.user;
+                    let cloud_tokens = auth_data.tokens;
+
+                    // Bind Cloud Session & OS Keychain
+                    let enrollment_meta = crate::sessions::cloud_session::CloudEnrollmentMetadata {
+                        user_id: cloud_user.id,
+                        gym_id,
+                        gym_name: cloud_user.gym_name.clone(),
+                        gym_code: cloud_user.gym_code.clone(),
+                        email: cloud_user.email.clone(),
+                        enrolled_at: chrono::Utc::now().to_rfc3339(),
+                    };
+                    let _ = state.cloud_session.bind_enrollment(&cloud_tokens, enrollment_meta).await;
+
+                    // Stage all unpushed local business records (plans, members, etc.) into sync_outbox
+                    if let Ok(mut conn) = state.db.pool.get() {
+                        let _ = crate::repositories::sync_repo::SyncRepository::stage_unpushed_local_records_to_outbox(
+                            &mut conn,
+                            &gym_id,
+                        );
+                    }
+
+                    // Execute initial sync cycle to push staged records and pull remote updates
+                    let worker_id = state.cloud_session.get_or_create_device_id();
+                    let _ = crate::sync::worker::SyncWorker::execute_cycle(
+                        &state.db.pool,
+                        &http_client,
+                        &cloud_url,
+                        &worker_id,
+                        &gym_id,
+                        &cloud_tokens.access_token,
+                    ).await;
+
+                    // Start background sync daemon
+                    let worker = crate::sync::worker::SyncWorker::new(state.db.pool.clone(), Some(cloud_url));
+                    worker.start_with_session(gym_id, state.cloud_session.clone());
+                } else {
+                    tracing::info!("[Auth] Local login succeeded; cloud gateway unreachable (offline mode retained).");
+                }
+            } else {
+                // Already enrolled; ensure background sync daemon is active
+                let worker = crate::sync::worker::SyncWorker::new(state.db.pool.clone(), Some(cloud_url));
+                worker.start_with_session(gym_id, state.cloud_session.clone());
+            }
+
             Ok(LoginResponse {
                 success: true,
                 redirect: "/dashboard".to_string(),

@@ -1,6 +1,15 @@
+/**
+ * GymDeck Owner Mobile - Primary 3-Tab Navigation Layout
+ *
+ * Target Architecture:
+ * [ Home ] [ Finance ] [ More ]
+ *
+ * Enforces safe-area layout adaptation, accessibility touch targets (>= 44pt),
+ * and GymDeck Light Theme styling.
+ */
+
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, Users, UserCheck, Dumbbell } from 'lucide-react-native';
 
 export default function TabsLayout() {
   return (
@@ -8,48 +17,15 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#131823',
-          borderTopColor: '#1E293B',
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: '#EAB308',
-        tabBarInactiveTintColor: '#64748B',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          display: 'none',
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="attendance"
-        options={{
-          title: 'Attendance',
-          tabBarIcon: ({ color, size }) => <UserCheck size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="members"
-        options={{
-          title: 'Members',
-          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="trainers"
-        options={{
-          title: 'Trainers',
-          tabBarIcon: ({ color, size }) => <Dumbbell size={size} color={color} />,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="members" options={{ title: 'Members', href: null }} />
+      <Tabs.Screen name="attendance" options={{ title: 'Attendance', href: null }} />
+      <Tabs.Screen name="finance" options={{ title: 'Finance' }} />
+      <Tabs.Screen name="more" options={{ title: 'More' }} />
     </Tabs>
   );
 }

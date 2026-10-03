@@ -55,7 +55,7 @@ const envConfigs: Record<Environment, AppConfig> = {
   development: {
     env: 'development',
     api: {
-      baseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:3001',
+      baseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.31.193:3001',
       version: 'v1',
       timeoutMs: 15000,
       retryLimit: 2,

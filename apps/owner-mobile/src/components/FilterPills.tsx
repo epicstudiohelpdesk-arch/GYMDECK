@@ -1,7 +1,14 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { useTheme } from '../theme';
 
-const STATUS_OPTIONS = [
+export interface FilterOption {
+  label: string;
+  value: string;
+  count?: number;
+}
+
+const DEFAULT_STATUS_OPTIONS: FilterOption[] = [
   { label: 'All', value: 'ALL' },
   { label: 'Active', value: 'ACTIVE' },
   { label: 'Expired', value: 'EXPIRED' },
@@ -12,27 +19,73 @@ const STATUS_OPTIONS = [
 interface FilterPillsProps {
   selectedStatus: string;
   onSelect: (status: string) => void;
+  options?: FilterOption[];
 }
 
-export const FilterPills: React.FC<FilterPillsProps> = ({ selectedStatus, onSelect }) => {
+export const FilterPills: React.FC<FilterPillsProps> = ({
+  selectedStatus,
+  onSelect,
+  options = DEFAULT_STATUS_OPTIONS,
+}) => {
+  const { colors, typography, radii } = useTheme();
+
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
-      {STATUS_OPTIONS.map((option) => {
+      {options.map((option) => {
         const isSelected = selectedStatus === option.value;
         return (
           <TouchableOpacity
             key={option.value}
-            style={[styles.pill, isSelected && styles.pillSelected]}
+            style={[
+              styles.pill,
+              {
+                borderRadius: radii.full,
+                backgroundColor: isSelected ? colors.primarySoft : colors.surface,
+                borderColor: isSelected ? colors.primary : colors.border,
+              },
+            ]}
             onPress={() => onSelect(option.value)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={`Filter ${option.label}${typeof option.count === 'number' ? `, ${option.count} members` : ''}`}
           >
-            <Text style={[styles.pillText, isSelected && styles.pillTextSelected]}>
+            <Text
+              style={[
+                typography.captionBold,
+                {
+                  color: isSelected ? colors.primary : colors.textSecondary,
+                },
+              ]}
+            >
               {option.label}
             </Text>
+            {typeof option.count === 'number' && (
+              <View
+                style={[
+                  styles.countBadge,
+                  {
+                    backgroundColor: isSelected ? colors.primary : colors.surfaceSubtle,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.countText,
+                    {
+                      color: isSelected ? colors.textOnPrimary : colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {option.count}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -43,28 +96,26 @@ export const FilterPills: React.FC<FilterPillsProps> = ({ selectedStatus, onSele
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 6,
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#131823',
+    paddingVertical: 7,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    marginRight: 6,
+    marginRight: 8,
+    minHeight: 36,
   },
-  pillSelected: {
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
-    borderColor: '#EAB308',
+  countBadge: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 9999,
   },
-  pillText: {
-    color: '#94A3B8',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  pillTextSelected: {
-    color: '#EAB308',
+  countText: {
+    fontSize: 10,
     fontWeight: '700',
   },
 });

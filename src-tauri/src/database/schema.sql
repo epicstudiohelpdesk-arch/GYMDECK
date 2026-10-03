@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS membership_plans (
     gym_id TEXT NOT NULL,
     plan_name TEXT NOT NULL,
     duration_days INTEGER NOT NULL,
-    price REAL NOT NULL,
+    price_minor_units INTEGER NOT NULL DEFAULT 0,
+    price REAL,                        -- Legacy compatibility column
     description TEXT,
     is_active BOOLEAN NOT NULL DEFAULT 1,
     created_by_user_id TEXT NOT NULL,
@@ -130,7 +131,8 @@ CREATE TABLE IF NOT EXISTS payments (
     id TEXT PRIMARY KEY,               -- UUID v4
     gym_id TEXT NOT NULL,
     member_id TEXT NOT NULL,
-    amount REAL NOT NULL,
+    amount_minor_units INTEGER NOT NULL DEFAULT 0,
+    amount REAL,                       -- Legacy compatibility column
     payment_method TEXT NOT NULL,      -- CASH, CARD, UPI, BANK_TRANSFER
     transaction_reference TEXT,
     payment_date DATETIME NOT NULL,
@@ -167,6 +169,7 @@ CREATE TABLE IF NOT EXISTS inventory (
     gym_id TEXT NOT NULL,
     item_name TEXT NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 0,
+    unit_price_minor_units INTEGER,
     unit_price REAL,
     supplier TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

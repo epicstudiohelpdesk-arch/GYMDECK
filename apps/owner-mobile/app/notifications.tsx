@@ -1,8 +1,19 @@
 /**
  * GymDeck Owner Mobile - Notification Center Screen
+ *
+ * Phase 11 — Reports & Analytics + Notifications Experience
+ *
+ * Features:
+ * - Real backend data via ownerNotificationService
+ * - FilterPills: All vs Unread
+ * - Compact high-density notification rows
+ * - Category-aware iconography (Membership, Billing, Attendance, Training, Security, System)
+ * - Single-item mark-as-read & Mark All Read
+ * - EmptyState ("You're all caught up"), ErrorState, and Skeleton loading
+ * - Honest inbox/status presentation (zero false delivery guarantees)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,9 +21,10 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Bell,
@@ -21,81 +33,124 @@ import {
   UserCheck,
   Dumbbell,
   ShieldAlert,
-  Info,
   Calendar,
+  Info,
 } from 'lucide-react-native';
 import { ownerNotificationService } from '../src/services/api/ownerNotificationService';
 import { NotificationItem } from '../src/types';
+import { FilterPills, FilterOption } from '../src/components/FilterPills';
+import { EmptyState } from '../src/components/ui/EmptyState';
+import { ErrorState } from '../src/components/ui/ErrorState';
+import { useTheme } from '../src/theme';
+
+type NotificationFilterType = 'ALL' | 'UNREAD';
 
 export default function OwnerNotificationsScreen() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [filterUnreadOnly, setFilterUnreadOnly] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const { colors, typography, radii, shadows } = useTheme();
+  const queryClient = useQueryClient();
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await ownerNotificationService.getNotifications(50, 0, filterUnreadOnly);
-      setNotifications(data.items);
-      setUnreadCount(data.unreadCount);
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.message || 'Failed to load notifications.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const [filterType, setFilterType] = useState<NotificationFilterType>('ALL');
+
+  // Query notifications list
+  const {
+    data: notificationPage,
+    isLoading,
+    isRefetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['owner-notifications', filterType],
+    queryFn: () => ownerNotificationService.getNotifications(50, 0, filterType === 'UNREAD'),
+  });
+
+  // Query unread count for badge & filters
+  const {
+    data: unreadCount = 0,
+    refetch: refetchUnread,
+  } = useQuery({
+    queryKey: ['owner-unread-notifications'],
+    queryFn: () => ownerNotificationService.getUnreadCount(),
+    refetchInterval: 30000,
+  });
+
+  const notifications = notificationPage?.items || [];
+  const totalCount = notificationPage?.total ?? notifications.length;
+
+  // Mark single notification as read mutation
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => ownerNotificationService.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-unread-notifications'] });
+    },
+  });
+
+  // Mark all notifications as read mutation
+  const markAllReadMutation = useMutation({
+    mutationFn: () => ownerNotificationService.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-unread-notifications'] });
+    },
+  });
+
+  const handleNotificationPress = (item: NotificationItem) => {
+    if (!item.isRead) {
+      markReadMutation.mutate(item.id);
     }
-  }, [filterUnreadOnly]);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchNotifications();
   };
 
-  const handleMarkAsRead = async (item: NotificationItem) => {
-    if (item.isRead) return;
-    try {
-      await ownerNotificationService.markAsRead(item.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch {
-      // Ignore silent error
-    }
-  };
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([refetch(), refetchUnread()]);
+  }, [refetch, refetchUnread]);
 
-  const handleMarkAllRead = async () => {
-    try {
-      await ownerNotificationService.markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
-      setUnreadCount(0);
-    } catch {
-      // Ignore silent error
-    }
-  };
+  const filterOptions: FilterOption[] = useMemo(
+    () => [
+      { label: 'All', value: 'ALL', count: totalCount },
+      { label: 'Unread', value: 'UNREAD', count: unreadCount },
+    ],
+    [totalCount, unreadCount]
+  );
 
-  const getCategoryIcon = (category: string) => {
+  const getCategoryDetails = (category: string) => {
     switch (category) {
       case 'MEMBERSHIP':
-        return <Calendar size={18} color="#06B6D4" />;
+        return {
+          icon: <Calendar size={18} color={colors.primary} />,
+          bg: colors.primarySoft,
+          border: colors.primaryBorder,
+        };
       case 'BILLING':
-        return <CreditCard size={18} color="#10B981" />;
+        return {
+          icon: <CreditCard size={18} color={colors.success} />,
+          bg: colors.successBg,
+          border: colors.successBorder,
+        };
       case 'ATTENDANCE':
-        return <UserCheck size={18} color="#8B5CF6" />;
+        return {
+          icon: <UserCheck size={18} color={colors.primary} />,
+          bg: colors.primarySoft,
+          border: colors.primaryBorder,
+        };
       case 'TRAINING':
-        return <Dumbbell size={18} color="#F59E0B" />;
+        return {
+          icon: <Dumbbell size={18} color={colors.warning} />,
+          bg: colors.warningBg,
+          border: colors.warningBorder,
+        };
       case 'SECURITY':
-        return <ShieldAlert size={18} color="#EF4444" />;
+        return {
+          icon: <ShieldAlert size={18} color={colors.danger} />,
+          bg: colors.dangerBg,
+          border: colors.dangerBorder,
+        };
       default:
-        return <Info size={18} color="#94A3B8" />;
+        return {
+          icon: <Info size={18} color={colors.textSecondary} />,
+          bg: colors.surfaceSubtle,
+          border: colors.borderSubtle,
+        };
     }
   };
 
@@ -112,328 +167,341 @@ export default function OwnerNotificationsScreen() {
       if (diffMinutes < 60) return `${diffMinutes}m ago`;
       if (diffHours < 24) return `${diffHours}h ago`;
       if (diffDays === 1) return 'Yesterday';
-      return date.toLocaleDateString();
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     } catch {
       return '';
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-        >
-          <ArrowLeft size={22} color="#F8FAFC" />
-        </TouchableOpacity>
+  const renderNotificationRow = ({ item }: { item: NotificationItem }) => {
+    const categoryDetails = getCategoryDetails(item.category);
 
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Notification Center</Text>
-          {unreadCount > 0 && (
-            <View style={styles.badgeContainer}>
-              <Text style={styles.badgeText}>{unreadCount} new</Text>
+    return (
+      <TouchableOpacity
+        style={[
+          styles.notificationRow,
+          {
+            borderBottomColor: colors.borderSubtle,
+          },
+        ]}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}, ${item.body}, ${item.isRead ? 'read' : 'unread'}`}
+      >
+        <View style={styles.cardHeaderRow}>
+          <View
+            style={[
+              styles.categoryIconBox,
+              {
+                backgroundColor: categoryDetails.bg,
+                borderColor: categoryDetails.border,
+                borderRadius: radii.full,
+              },
+            ]}
+          >
+            {categoryDetails.icon}
+          </View>
+
+          <View style={styles.cardTextCol}>
+            <View style={styles.titleLine}>
+              <Text
+                style={[
+                  typography.cardTitle,
+                  {
+                    color: colors.textPrimary,
+                    fontWeight: item.isRead ? '600' : '700',
+                    flex: 1,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {item.title}
+              </Text>
+
+              {!item.isRead && (
+                <View
+                  style={[
+                    styles.unreadDot,
+                    { backgroundColor: colors.primary, borderRadius: radii.full },
+                  ]}
+                />
+              )}
             </View>
-          )}
+
+            <Text
+              style={[
+                typography.bodySecondary,
+                {
+                  color: item.isRead ? colors.textSecondary : colors.textPrimary,
+                  marginTop: 2,
+                  lineHeight: 18,
+                },
+              ]}
+              numberOfLines={2}
+            >
+              {item.body}
+            </Text>
+
+            <View style={styles.metaFooter}>
+              <Text style={[typography.caption, { color: colors.textMuted }]}>
+                {formatTimestamp(item.createdAt)}
+              </Text>
+
+              {item.isRead && item.readAt && (
+                <Text style={[typography.caption, { color: colors.textMuted, marginLeft: 8 }]}>
+                  • Read
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* Top Header */}
+      <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
+        <View style={styles.headerLeftGroup}>
+          <TouchableOpacity
+            style={[
+              styles.backBtn,
+              { backgroundColor: colors.surfaceSubtle, borderColor: colors.borderSubtle, borderRadius: radii.full },
+            ]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Go back to More"
+          >
+            <ArrowLeft size={16} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={{ marginLeft: 10, flex: 1 }}>
+            <View style={styles.titleRow}>
+              <Text style={[typography.screenTitle, { color: colors.textPrimary, letterSpacing: -0.5 }]}>
+                Notifications
+              </Text>
+              {unreadCount > 0 && (
+                <View
+                  style={[
+                    styles.unreadBadge,
+                    { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder, borderRadius: radii.full },
+                  ]}
+                >
+                  <Text style={[typography.captionBold, { color: colors.primary, fontSize: 10 }]}>
+                    {unreadCount} new
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 1 }]}>
+              {unreadCount > 0 ? `${unreadCount} unread updates` : 'All caught up'}
+            </Text>
+          </View>
         </View>
 
-        {unreadCount > 0 ? (
+        {unreadCount > 0 && (
           <TouchableOpacity
-            style={styles.markAllButton}
-            onPress={handleMarkAllRead}
+            style={[
+              styles.markAllBtn,
+              { backgroundColor: colors.surfaceSubtle, borderColor: colors.borderSubtle, borderRadius: radii.full },
+            ]}
+            onPress={() => markAllReadMutation.mutate()}
+            disabled={markAllReadMutation.isPending}
+            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Mark all as read"
           >
-            <CheckCheck size={18} color="#38BDF8" />
-            <Text style={styles.markAllText}>Read All</Text>
+            <CheckCheck size={14} color={colors.primary} style={{ marginRight: 4 }} />
+            <Text style={[typography.captionBold, { color: colors.primary }]}>Mark read</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={{ width: 60 }} />
         )}
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.filterRow}>
-        <TouchableOpacity
-          style={[styles.filterChip, !filterUnreadOnly && styles.filterChipActive]}
-          onPress={() => setFilterUnreadOnly(false)}
-        >
-          <Text style={[styles.filterChipText, !filterUnreadOnly && styles.filterChipTextActive]}>
-            All Notifications
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterChip, filterUnreadOnly && styles.filterChipActive]}
-          onPress={() => setFilterUnreadOnly(true)}
-        >
-          <Text style={[styles.filterChipText, filterUnreadOnly && styles.filterChipTextActive]}>
-            Unread Only
-          </Text>
-        </TouchableOpacity>
+      {/* Filter Options */}
+      <View style={styles.filterBar}>
+        <FilterPills
+          options={filterOptions}
+          selectedStatus={filterType}
+          onSelect={(status) => setFilterType(status as NotificationFilterType)}
+        />
       </View>
 
-      {/* Main Content */}
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+      {/* Main Content Area */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          {[1, 2, 3, 4].map((key) => (
+            <View
+              key={key}
+              style={[
+                styles.skeletonCard,
+                { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.md },
+              ]}
+            >
+              <View style={styles.cardHeaderRow}>
+                <View
+                  style={[
+                    styles.categoryIconBox,
+                    { backgroundColor: colors.surfaceSubtle, borderRadius: radii.sm },
+                  ]}
+                />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <View
+                    style={[
+                      styles.skeletonLine,
+                      { width: '50%', height: 14, backgroundColor: colors.surfaceSubtle, borderRadius: radii.xs },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.skeletonLine,
+                      { width: '80%', height: 12, marginTop: 6, backgroundColor: colors.surfaceSubtle, borderRadius: radii.xs },
+                    ]}
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
         </View>
       ) : error ? (
-        <View style={styles.centerContainer}>
-          <ShieldAlert size={48} color="#EF4444" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchNotifications}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      ) : notifications.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Bell size={48} color="#475569" />
-          <Text style={styles.emptyTitle}>All Caught Up!</Text>
-          <Text style={styles.emptySubtitle}>
-            {filterUnreadOnly
-              ? 'No unread notifications right now.'
-              : 'You have no system or operational notifications at this time.'}
-          </Text>
+        <View style={styles.errorContainer}>
+          <ErrorState
+            title="Couldn't load notifications"
+            message="Check your connection and try again to view gym updates."
+            onRetry={handleRefresh}
+          />
         </View>
       ) : (
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
+          renderItem={renderNotificationRow}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
+              refreshing={isRefetching}
               onRefresh={handleRefresh}
-              tintColor="#38BDF8"
-              colors={['#38BDF8']}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.card, !item.isRead && styles.cardUnread]}
-              onPress={() => handleMarkAsRead(item)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.iconContainer}>{getCategoryIcon(item.category)}</View>
-
-              <View style={styles.cardContent}>
-                <View style={styles.cardHeader}>
-                  <Text style={[styles.cardTitle, !item.isRead && styles.cardTitleUnread]}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
-                </View>
-
-                <Text style={styles.cardBody}>{item.body}</Text>
-              </View>
-
-              {!item.isRead && <View style={styles.unreadDot} />}
-            </TouchableOpacity>
-          )}
+          ListEmptyComponent={
+            <EmptyState
+              icon={<Bell size={40} color={colors.textMuted} />}
+              title="You're all caught up"
+              description="New gym notifications and system alerts will appear here."
+            />
+          }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 54,
-    paddingBottom: 16,
-    backgroundColor: '#1E293B',
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
   },
-  backButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#334155',
+  headerLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
-  headerTitleContainer: {
+  backBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#F8FAFC',
+  unreadBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderWidth: 1,
   },
-  badgeContainer: {
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  markAllButton: {
+  markAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-  },
-  markAllText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#38BDF8',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-    backgroundColor: '#0F172A',
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#1E293B',
     borderWidth: 1,
-    borderColor: '#334155',
   },
-  filterChipActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#38BDF8',
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#94A3B8',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+  filterBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 0,
+    paddingBottom: 110,
   },
-  card: {
+  notificationRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#1E293B',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
   },
-  cardUnread: {
-    backgroundColor: '#1E293B',
-    borderColor: '#0284C7',
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  iconContainer: {
+  categoryIconBox: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(51, 65, 85, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-    marginTop: 2,
   },
-  cardContent: {
+  cardTextCol: {
     flex: 1,
+    marginLeft: 10,
   },
-  cardHeader: {
+  titleLine: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#E2E8F0',
-    flex: 1,
-    marginRight: 8,
-  },
-  cardTitleUnread: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  timestamp: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  cardBody: {
-    fontSize: 13,
-    color: '#94A3B8',
-    lineHeight: 18,
+    justifyContent: 'space-between',
   },
   unreadDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
-    backgroundColor: '#38BDF8',
-    marginLeft: 8,
-    marginTop: 6,
+    marginLeft: 6,
   },
-  centerContainer: {
-    flex: 1,
+  metaFooter: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 5,
+  },
+  loadingContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  skeletonCard: {
+    padding: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  skeletonLine: {
+    marginBottom: 2,
+  },
+  errorContainer: {
+    flex: 1,
     justifyContent: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  errorText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#EF4444',
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 16,
-    backgroundColor: '#0284C7',
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  emptyTitle: {
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E2E8F0',
-  },
-  emptySubtitle: {
-    marginTop: 6,
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
   },
 });

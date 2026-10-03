@@ -16,6 +16,7 @@ import {
   syncIdempotencyLog,
 } from '../../shared/database/schema';
 import { AppError } from '../../shared/errors';
+import { toMinorUnits, fromMinorUnits, minorUnitsToNumber } from '../../shared/utils/money';
 
 // ==============================================================================
 // DTOs & Interfaces
@@ -98,6 +99,9 @@ export interface MemberBillingSummary {
   totalBilled: number;
   totalPaid: number;
   outstandingBalance: number;
+  totalBilledMinorUnits?: number;
+  totalPaidMinorUnits?: number;
+  outstandingBalanceMinorUnits?: number;
   activeMembership: any | null;
   recentPayments: any[];
 }
@@ -737,27 +741,35 @@ export class BillingService {
         )
       );
 
-    const totalAlreadyRefunded = existingRefunds.reduce(
-      (sum, r) => sum + Math.abs(Number(r.amount || 0)),
-      0
+    const totalAlreadyRefundedMinorUnits = existingRefunds.reduce(
+      (sum, r) => {
+        const u = toMinorUnits(r.amount);
+        return sum + (u < 0n ? -u : u);
+      },
+      0n
     );
 
-    const originalAmount = Math.abs(Number(originalPayment.amount));
-    const maxRefundable = Math.max(0, originalAmount - totalAlreadyRefunded);
+    const orig = toMinorUnits(originalPayment.amount);
+    const originalAmountMinorUnits = orig < 0n ? -orig : orig;
+    const maxRefundableMinorUnits = originalAmountMinorUnits > totalAlreadyRefundedMinorUnits
+      ? originalAmountMinorUnits - totalAlreadyRefundedMinorUnits
+      : 0n;
 
-    if (maxRefundable <= 0) {
+    if (maxRefundableMinorUnits <= 0n) {
       throw AppError.conflict('Payment transaction has already been fully refunded.');
     }
 
-    const requestedRefund = dto.refundAmount !== undefined ? Number(dto.refundAmount) : maxRefundable;
+    const requestedRefundMinorUnits = dto.refundAmount !== undefined
+      ? toMinorUnits(dto.refundAmount)
+      : maxRefundableMinorUnits;
 
-    if (isNaN(requestedRefund) || requestedRefund <= 0) {
+    if (requestedRefundMinorUnits <= 0n) {
       throw AppError.validation('Refund amount must be greater than 0.');
     }
 
-    if (requestedRefund > maxRefundable) {
+    if (requestedRefundMinorUnits > maxRefundableMinorUnits) {
       throw AppError.validation(
-        `Refund amount ($${requestedRefund.toFixed(2)}) exceeds remaining refundable balance of $${maxRefundable.toFixed(2)}.`
+        `Refund amount (₹${fromMinorUnits(requestedRefundMinorUnits)}) exceeds remaining refundable balance of ₹${fromMinorUnits(maxRefundableMinorUnits)}.`
       );
     }
 
@@ -772,7 +784,7 @@ export class BillingService {
           gymId,
           memberId: originalPayment.memberId,
           membershipId: originalPayment.membershipId,
-          amount: (-Math.abs(requestedRefund)).toFixed(2),
+          amount: fromMinorUnits(-requestedRefundMinorUnits),
           paymentMethod: originalPayment.paymentMethod,
           transactionReference: `REFUND-OF-${originalPayment.id}`,
           receiptNumber,
@@ -792,7 +804,7 @@ export class BillingService {
         metadata: JSON.stringify({
           refundRecordId: refundRecord!.id,
           originalPaymentId: paymentId,
-          amountRefunded: requestedRefund,
+          amountRefunded: fromMinorUnits(requestedRefundMinorUnits),
           reason: dto.reason,
           actorUserId,
         }),
@@ -873,10 +885,10 @@ export class BillingService {
       )
       .orderBy(desc(memberMemberships.startDate));
 
-    // Calculate Total Billed
-    const totalBilled = allMemberships.reduce(
-      (sum, m) => sum + Number(m.priceAtPurchase || 0),
-      0
+    // Calculate Total Billed in minor units
+    const totalBilledMinorUnits = allMemberships.reduce(
+      (sum, m) => sum + toMinorUnits(m.priceAtPurchase),
+      0n
     );
 
     // 3. Fetch all payments
@@ -891,17 +903,22 @@ export class BillingService {
       )
       .orderBy(desc(payments.paidAt));
 
-    // Calculate Total Paid
-    const totalPaid = paymentsList
+    // Calculate Total Paid in minor units
+    const totalPaidMinorUnits = paymentsList
       .filter((p) => p.status === 'COMPLETED')
-      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      .reduce((sum, p) => sum + toMinorUnits(p.amount), 0n);
 
-    const outstandingBalance = Math.max(0, totalBilled - totalPaid);
+    const outstandingMinorUnits = totalBilledMinorUnits > totalPaidMinorUnits
+      ? totalBilledMinorUnits - totalPaidMinorUnits
+      : 0n;
 
     return {
-      totalBilled,
-      totalPaid,
-      outstandingBalance,
+      totalBilled: minorUnitsToNumber(totalBilledMinorUnits),
+      totalPaid: minorUnitsToNumber(totalPaidMinorUnits),
+      outstandingBalance: minorUnitsToNumber(outstandingMinorUnits),
+      totalBilledMinorUnits: Number(totalBilledMinorUnits),
+      totalPaidMinorUnits: Number(totalPaidMinorUnits),
+      outstandingBalanceMinorUnits: Number(outstandingMinorUnits),
       activeMembership: allMemberships[0] || null,
       recentPayments: paymentsList,
     };
@@ -1005,7 +1022,8 @@ export class BillingService {
           sql`${payments.paidAt} >= ${todayStart.toISOString()}`
         )
       );
-    const todayRevenue = todayPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const todayRevenueMinorUnits = todayPayments.reduce((sum, p) => sum + toMinorUnits(p.amount), 0n);
+    const todayRevenue = minorUnitsToNumber(todayRevenueMinorUnits);
 
     // Monthly Revenue
     const monthPayments = await db
@@ -1018,7 +1036,8 @@ export class BillingService {
           sql`${payments.paidAt} >= ${monthStart.toISOString()}`
         )
       );
-    const monthRevenue = monthPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const monthRevenueMinorUnits = monthPayments.reduce((sum, p) => sum + toMinorUnits(p.amount), 0n);
+    const monthRevenue = minorUnitsToNumber(monthRevenueMinorUnits);
 
     // Active Memberships Count
     const activeMembershipsCount = (

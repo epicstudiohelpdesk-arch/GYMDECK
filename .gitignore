@@ -25,3 +25,17 @@ scratch/
 *.sqlite
 *.sqlite*
 *.bak
+
+# Android build & cache
+.gradle/
+**/android/.gradle/
+**/android/build/
+**/android/app/build/
+**/android/app/.cxx/
+**/android/.kotlin/
+
+# iOS build & dependencies
+Pods/
+**/ios/Pods/
+**/ios/build/
+**/ios/*.xcworkspace

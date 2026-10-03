@@ -109,6 +109,55 @@ impl CloudAuthClient {
         }
     }
 
+    /// Controlled bootstrap linking of local Desktop owner & gym tenant to Cloud (/v1/auth/owner/bootstrap-desktop).
+    pub async fn bootstrap_desktop(
+        client: &reqwest::Client,
+        cloud_url: &str,
+        email: &str,
+        password: &str,
+        full_name: &str,
+        gym_id: &Uuid,
+        gym_name: &str,
+        user_id: Option<Uuid>,
+    ) -> Result<CloudAuthData, AppError> {
+        let endpoint = format!("{}/v1/auth/owner/bootstrap-desktop", cloud_url.trim_end_matches('/'));
+        let mut payload = serde_json::json!({
+            "email": email.trim().to_lowercase(),
+            "password": password,
+            "fullName": full_name,
+            "gymId": gym_id.to_string(),
+            "gymName": gym_name,
+        });
+
+        if let Some(uid) = user_id {
+            payload["userId"] = serde_json::Value::String(uid.to_string());
+        }
+
+        let response = client
+            .post(&endpoint)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| AppError::Network(format!("Failed to connect to Cloud Gateway bootstrap at {}: {}", endpoint, e)))?;
+
+        let status = response.status();
+        if status.is_success() {
+            let api_resp = response
+                .json::<CloudAuthApiResponse>()
+                .await
+                .map_err(|e| AppError::Configuration(format!("Invalid response format from cloud bootstrap: {}", e)))?;
+
+            if let Some(data) = api_resp.data {
+                Ok(data)
+            } else {
+                Err(AppError::Authentication)
+            }
+        } else {
+            let error_text = response.text().await.unwrap_or_default();
+            Err(AppError::Network(format!("Cloud Gateway bootstrap error (HTTP {}): {}", status.as_u16(), error_text)))
+        }
+    }
+
     /// Refreshes the Cloud Access Token using the stored Cloud Refresh Token (/v1/auth/owner/refresh).
     pub async fn refresh_tokens(
         client: &reqwest::Client,

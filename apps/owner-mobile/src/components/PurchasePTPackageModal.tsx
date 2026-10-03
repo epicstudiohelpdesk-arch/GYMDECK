@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerTrainersService } from '../services/api/ownerTrainersService';
+import { localMutationService } from '../services/LocalMutationService';
+import { isDatabaseOpen } from '../database/LocalDatabaseManager';
 import { TrainerSummary } from '../types';
 import { Award, X, Check, DollarSign, Dumbbell } from 'lucide-react-native';
 
@@ -66,6 +68,20 @@ export const PurchasePTPackageModal: React.FC<PurchasePTPackageModalProps> = ({
         throw new Error('Please enter a valid non-negative price.');
       }
 
+      if (isDatabaseOpen()) {
+        return await localMutationService.purchasePTPackage({
+          memberId,
+          trainerId: selectedTrainerId,
+          packageName: packageName.trim(),
+          totalSessions: numSessions,
+          price: numPrice,
+          expiryDays: parseInt(expiryDays, 10) || 90,
+          paymentMethod,
+          transactionReference: transactionRef.trim() || undefined,
+          notes: notes.trim() || undefined,
+        });
+      }
+
       return await OwnerTrainersService.purchasePTPackage(memberId, {
         trainerId: selectedTrainerId,
         packageName: packageName.trim(),
@@ -78,7 +94,11 @@ export const PurchasePTPackageModal: React.FC<PurchasePTPackageModalProps> = ({
       });
     },
     onSuccess: () => {
-      Alert.alert('PT Package Purchased', 'Personal training package allocated and payment recorded in ledger.');
+      Alert.alert('PT Package Purchased', 'Personal training package allocated locally (Pending sync).');
+      queryClient.invalidateQueries({ queryKey: ['local-pt-packages', memberId] });
+      queryClient.invalidateQueries({ queryKey: ['local-member-detail', memberId] });
+      queryClient.invalidateQueries({ queryKey: ['local-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['local-revenue'] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-detail', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-pt-packages', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-billing', memberId] });
@@ -112,12 +132,21 @@ export const PurchasePTPackageModal: React.FC<PurchasePTPackageModalProps> = ({
 
           <Text style={styles.subtitle}>Allocate training sessions for {memberName}</Text>
 
-          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.body}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+          >
             <Text style={styles.label}>ASSIGNED TRAINER</Text>
             {isTrainersLoading ? (
               <ActivityIndicator color="#EAB308" size="small" />
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.trainerScroll}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
+                style={styles.trainerScroll}
+              >
                 {trainers?.map((t: TrainerSummary) => {
                   const isSelected = selectedTrainerId === t.id;
                   return (

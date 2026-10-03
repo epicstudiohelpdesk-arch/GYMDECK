@@ -4,6 +4,32 @@
 
 export type OwnerRole = 'OWNER' | 'MANAGER' | 'STAFF' | 'ADMIN' | 'RECEPTIONIST' | 'TRAINER';
 
+export type AuthStatus =
+  | 'BOOTSTRAPPING'
+  | 'AUTHENTICATED'
+  | 'UNAUTHENTICATED'
+  | 'AUTH_EXPIRED'
+  | 'AUTH_ERROR';
+
+export interface OwnerSignupInput {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string;
+  gymName: string;
+  gymCode?: string;
+}
+
+export interface OwnerForgotPasswordInput {
+  email: string;
+}
+
+export interface OwnerResetPasswordInput {
+  email: string;
+  token: string;
+  newPassword: string;
+}
+
 export interface OwnerUser {
   id: string;
   gymId: string;

@@ -17,7 +17,15 @@ const router: Router = Router();
 
 const SyncPushEventSchema = z.object({
   eventId: z.string().uuid('Valid UUIDv4 event ID is required'),
-  entityType: z.enum(['gym_member', 'membership_plan', 'payment', 'attendance', 'trainer']),
+  entityType: z.enum([
+    'gym_member',
+    'membership_plan',
+    'member_membership',
+    'payment',
+    'attendance',
+    'attendance_log',
+    'trainer',
+  ]),
   entityId: z.string().uuid('Valid UUIDv4 entity ID is required'),
   operation: z.enum(['CREATE', 'UPDATE', 'DELETE', 'VOID']),
   payload: z.record(z.any()),

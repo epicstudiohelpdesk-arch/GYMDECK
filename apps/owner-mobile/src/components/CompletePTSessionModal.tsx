@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { OwnerTrainersService } from '../services/api/ownerTrainersService';
+import { localMutationService } from '../services/LocalMutationService';
+import { isDatabaseOpen } from '../database/LocalDatabaseManager';
 import { CheckCircle2, X, Check, Dumbbell } from 'lucide-react-native';
 
 interface CompletePTSessionModalProps {
@@ -45,6 +47,22 @@ export const CompletePTSessionModal: React.FC<CompletePTSessionModalProps> = ({
 
   const completeMutation = useMutation({
     mutationFn: async () => {
+      if (isDatabaseOpen()) {
+        const session = await localMutationService.recordPTSession({
+          packageId,
+          memberId,
+          sessionDate: new Date().toISOString(),
+          durationMinutes: parseInt(durationMinutes, 10) || 60,
+          focusArea: focusArea.trim() || 'General Fitness',
+          trainerNotes: trainerNotes.trim() || undefined,
+        });
+        return {
+          packageRemainingSessions: Math.max(0, remainingSessions - 1),
+          session,
+          isLocal: true,
+        };
+      }
+
       return await OwnerTrainersService.completePTSession(packageId, {
         durationMinutes: parseInt(durationMinutes, 10) || 60,
         focusArea: focusArea.trim() || 'General Fitness',
@@ -52,10 +70,13 @@ export const CompletePTSessionModal: React.FC<CompletePTSessionModalProps> = ({
       });
     },
     onSuccess: (data: any) => {
+      const statusSuffix = data.isLocal ? ' locally (Pending sync)' : '';
       Alert.alert(
         'Session Logged',
-        `1 session deducted. ${data.packageRemainingSessions} sessions remaining in package.`
+        `1 session deducted${statusSuffix}. ${data.packageRemainingSessions} sessions remaining in package.`
       );
+      queryClient.invalidateQueries({ queryKey: ['local-pt-packages', memberId] });
+      queryClient.invalidateQueries({ queryKey: ['local-member-detail', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-detail', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-member-pt-packages', memberId] });
       queryClient.invalidateQueries({ queryKey: ['owner-trainers'] });
