@@ -137,9 +137,36 @@ export class SyncService {
   public async pullChanges(
     gymId: string,
     deviceId: string,
-    cursor: number,
-    limit: number = 100
+    cursor?: number | string,
+    limit?: number
+  ): Promise<SyncPullResponse>;
+  public async pullChanges(
+    gymId: string,
+    cursor: number | string,
+    limit?: number
+  ): Promise<SyncPullResponse>;
+  public async pullChanges(
+    gymId: string,
+    arg2: string | number,
+    arg3?: number | string,
+    arg4?: number
   ): Promise<SyncPullResponse> {
+    let deviceId: string;
+    let cursor: number;
+    let limit: number;
+
+    if (typeof arg2 === 'number' || (!isNaN(Number(arg2)) && arg4 === undefined)) {
+      // Called as: pullChanges(gymId, cursor, limit)
+      deviceId = 'default_device';
+      cursor = Number(arg2) || 0;
+      limit = typeof arg3 === 'number' ? arg3 : Number(arg3) || 100;
+    } else {
+      // Called as: pullChanges(gymId, deviceId, cursor, limit)
+      deviceId = String(arg2);
+      cursor = typeof arg3 === 'number' ? arg3 : Number(arg3) || 0;
+      limit = arg4 ?? 100;
+    }
+
     const safeLimit = Math.min(Math.max(limit, 1), 500);
     const safeCursor = Math.max(cursor, 0);
 
