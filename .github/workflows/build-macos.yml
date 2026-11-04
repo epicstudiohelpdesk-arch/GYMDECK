@@ -9,10 +9,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [macos-13, macos-14]
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v4
@@ -52,5 +49,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gymdeck-macos-${{ matrix.os }}
+          name: gymdeck-macos-dmg
           path: src-tauri/target/release/bundle/dmg/*.dmg
