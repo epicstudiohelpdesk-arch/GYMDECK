@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="docs/assets/gymdeck-banner.png" alt="GYMDECK - Engineered Desk" width="100%"/>
-
 ```
   ██████╗ ██╗   ██╗███╗   ███╗██████╗ ███████╗ ██████╗██╗  ██╗
  ██╔════╝ ╚██╗ ██╔╝████╗ ████║██╔══██╗██╔════╝██╔════╝██║ ██╔╝
