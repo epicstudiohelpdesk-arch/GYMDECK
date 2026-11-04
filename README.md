@@ -13,18 +13,18 @@
 
 <p align="center">
   <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-macos.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-macos.yml?branch=main&label=macOS%20DMG&style=for-the-badge&logo=apple&logoColor=white&color=000000" alt="macOS Build"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-linux.yml?branch=main&label=Linux%20AppImage&style=for-the-badge&logo=linux&logoColor=white&color=18181b" alt="Linux Build"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-windows.yml?branch=main&label=Windows%20MSI&style=for-the-badge&logo=windows&logoColor=white&color=27272a" alt="Windows Build"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/backend-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/backend-ci.yml?branch=main&label=Backend%20CI&style=for-the-badge&logo=docker&logoColor=white&color=0f172a" alt="Backend CI"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/mobile-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/mobile-ci.yml?branch=main&label=Mobile%20CI&style=for-the-badge&logo=expo&logoColor=white&color=09090b" alt="Mobile CI"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-linux.yml?branch=main&label=Linux%20AppImage&style=for-the-badge&logo=linux&logoColor=white&color=FCC624" alt="Linux Build"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-windows.yml?branch=main&label=Windows%20MSI&style=for-the-badge&logo=windows&logoColor=white&color=0078D6" alt="Windows Build"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/backend-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/backend-ci.yml?branch=main&label=Backend%20CI&style=for-the-badge&logo=docker&logoColor=white&color=2496ED" alt="Backend CI"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/mobile-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/mobile-ci.yml?branch=main&label=Mobile%20CI&style=for-the-badge&logo=expo&logoColor=white&color=4630EB" alt="Mobile CI"></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Security_Tests-23%2F23_Passed-000000?style=for-the-badge&logo=rust&logoColor=white" alt="Security Tests">
-  <img src="https://img.shields.io/badge/TypeScript-Strict_Clean-18181b?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript Strict">
-  <img src="https://img.shields.io/badge/Database-SQLCipher_AES--256-27272a?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLCipher AES-256">
-  <img src="https://img.shields.io/badge/License-Proprietary-000000?style=for-the-badge&logo=shield&logoColor=white" alt="Proprietary License">
-  <img src="https://img.shields.io/badge/Status-Production_Grade-18181b?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Production Grade">
+  <img src="https://img.shields.io/badge/Security_Tests-23%2F23_Passed-success?style=for-the-badge&logo=rust&logoColor=white&color=10B981" alt="Security Tests">
+  <img src="https://img.shields.io/badge/TypeScript-Strict_Clean-blue?style=for-the-badge&logo=typescript&logoColor=white&color=3178C6" alt="TypeScript Strict">
+  <img src="https://img.shields.io/badge/Database-SQLCipher_AES--256-critical?style=for-the-badge&logo=sqlite&logoColor=white&color=991B1B" alt="SQLCipher AES-256">
+  <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge&logo=shield&logoColor=white" alt="Proprietary License">
+  <img src="https://img.shields.io/badge/Status-Production_Grade-purple?style=for-the-badge&logo=checkmarx&logoColor=white&color=7C3AED" alt="Production Grade">
 </p>
 
 ---
