@@ -8,9 +8,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, UserCheck, Calendar, Clock, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -25,7 +25,7 @@ export default function PTPackagesScreen() {
 
   if (pkgLoading && !ptPkg) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <View style={{ padding: spacing.lg }}>
           <SkeletonLoader height={36} width={160} style={{ marginBottom: 20 }} />
           <SkeletonLoader height={160} borderRadius={20} style={{ marginBottom: 16 }} />
@@ -39,7 +39,7 @@ export default function PTPackagesScreen() {
   const progressRatio = ptPkg ? ptPkg.usedSessions / ptPkg.totalSessions : 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.topBar,

@@ -14,7 +14,7 @@ interface ThemeState {
 
 const THEME_STORAGE_KEY = 'gymdeck_theme_mode';
 
-const initialTheme = (FastAppStorage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'dark';
+const initialTheme = (FastAppStorage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'light';
 
 export const useThemeStore = create<ThemeState>((set) => ({
   themeMode: initialTheme,

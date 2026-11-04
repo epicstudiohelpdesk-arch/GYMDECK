@@ -7,8 +7,8 @@ import {
   View,
   TextInput,
   StyleSheet,
-  NativeSyntheticEvent,
-  TextInputKeyPressEventData,
+  TextInputKeyPressEvent,
+  TextInputInstance,
 } from 'react-native';
 import { useTheme } from '../../theme';
 
@@ -28,7 +28,7 @@ export const OtpInputField: React.FC<OtpInputFieldProps> = ({
   disabled = false,
 }) => {
   const { colors, radii } = useTheme();
-  const inputRefs = useRef<Array<TextInput | null>>([]);
+  const inputRefs = useRef<Array<TextInputInstance | null>>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
   const digits = Array.from({ length }, (_, i) => value[i] || '');
@@ -58,7 +58,7 @@ export const OtpInputField: React.FC<OtpInputFieldProps> = ({
   };
 
   const handleKeyPress = (
-    e: NativeSyntheticEvent<TextInputKeyPressEventData>,
+    e: TextInputKeyPressEvent,
     index: number
   ) => {
     if (e.nativeEvent.key === 'Backspace') {

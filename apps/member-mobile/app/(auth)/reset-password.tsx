@@ -12,6 +12,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Lock, CheckCircle } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -91,23 +92,25 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <AuthHeader
-          title="Set New Password"
-          subtitle={
-            email
-              ? `Enter the 6-digit recovery code sent to ${email} along with your new password.`
-              : 'Enter your 6-digit recovery code and new password.'
-          }
-          showBack={true}
-        />
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <AuthHeader
+            title="Set New Password"
+            subtitle={
+              email
+                ? `Enter the 6-digit recovery code sent to ${email} along with your new password.`
+                : 'Enter your 6-digit recovery code and new password.'
+            }
+            showBack={true}
+          />
 
         <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} />
 
@@ -205,6 +208,7 @@ export default function ResetPasswordScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  </SafeAreaView>
   );
 }
 
@@ -212,16 +216,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardContainer: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 8,
   },
   fieldError: {
@@ -233,7 +251,16 @@ const styles = StyleSheet.create({
   successCard: {
     width: '100%',
     alignItems: 'center',
-    paddingVertical: 16,
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   iconCircle: {
     width: 64,
@@ -245,7 +272,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 8,
   },
   successDesc: {
@@ -258,6 +285,6 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

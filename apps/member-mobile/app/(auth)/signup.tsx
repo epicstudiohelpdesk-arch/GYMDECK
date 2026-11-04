@@ -12,6 +12,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Mail, Phone, Lock, Building2, CheckSquare, Square } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -94,19 +95,21 @@ export default function SignupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <AuthHeader
-          title="Create Account"
-          subtitle="Join your gym on GymDeck to track workouts, check in faster, and manage your membership."
-          showBack={true}
-        />
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <AuthHeader
+            title="Create Account"
+            subtitle="Join your gym on GymDeck to track workouts, check in faster, and manage your membership."
+            showBack={true}
+          />
 
         <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} />
 
@@ -245,6 +248,7 @@ export default function SignupScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  </SafeAreaView>
   );
 }
 
@@ -252,28 +256,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardContainer: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   termsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: 12,
     gap: 10,
   },
   termsText: {
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
+    color: '#4B5563',
   },
   termsError: {
     fontSize: 12,
     marginBottom: 8,
     marginLeft: 30,
+    color: '#EF4444',
   },
   footerRow: {
     flexDirection: 'row',
@@ -282,9 +302,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   footerLink: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

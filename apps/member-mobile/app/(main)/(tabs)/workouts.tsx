@@ -9,11 +9,22 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Dumbbell, Clock, ChevronDown, ChevronUp, UserCheck, Flame } from 'lucide-react-native';
+import {
+  Dumbbell,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  Flame,
+  Activity,
+  Camera,
+  BookOpen,
+  Sparkles,
+} from 'lucide-react-native';
 import { useTheme } from '../../../src/theme';
 import { useWorkouts } from '../../../src/hooks';
 import { SkeletonLoader, EmptyState, PrimaryButton } from '../../../src/components';
@@ -31,11 +42,11 @@ export default function WorkoutsScreen() {
 
   if (isLoading && !workouts) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <View style={{ padding: spacing.lg }}>
           <SkeletonLoader height={32} width={180} style={{ marginBottom: 20 }} />
-          <SkeletonLoader height={140} borderRadius={16} style={{ marginBottom: 16 }} />
-          <SkeletonLoader height={140} borderRadius={16} />
+          <SkeletonLoader height={140} borderRadius={24} style={{ marginBottom: 16 }} />
+          <SkeletonLoader height={140} borderRadius={24} />
         </View>
       </SafeAreaView>
     );
@@ -43,7 +54,7 @@ export default function WorkoutsScreen() {
 
   if (error && !workouts) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <View style={[styles.centerContainer, { padding: spacing.xl }]}>
           <Text style={[styles.errorTitle, { color: colors.textPrimary }]}>
             Couldn't load workouts
@@ -61,24 +72,32 @@ export default function WorkoutsScreen() {
   const routines = workouts || [];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg, paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={refetch}
+            onRefresh={() => {
+              void refetch();
+            }}
             tintColor={colors.brand.primary}
             colors={[colors.brand.primary]}
           />
         }
       >
         <View style={styles.header}>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>
+          <View style={styles.badgeRow}>
+            <View style={[styles.badgePill, { backgroundColor: '#E0E9FD' }]}>
+              <Sparkles size={12} color="#4F75E3" />
+              <Text style={[styles.badgePillText, { color: '#4F75E3' }]}>POWER ROUTINES • AI COACHED</Text>
+            </View>
+          </View>
+          <Text style={[styles.screenTitle, { color: '#111827' }]}>
             Assigned Workouts
           </Text>
-          <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.screenSubtitle, { color: '#6B7280' }]}>
             Custom routines designed for your strength & hypertrophy goals.
           </Text>
 
@@ -86,7 +105,7 @@ export default function WorkoutsScreen() {
           <View style={styles.topActionsRow}>
             <TouchableOpacity
               onPress={() => router.push('/details/workout-session' as any)}
-              style={[styles.actionChip, { backgroundColor: colors.brand.primary }]}
+              style={[styles.actionChip, { backgroundColor: '#111318' }]}
               accessibilityRole="button"
               accessibilityLabel="Start active workout session"
             >
@@ -98,17 +117,76 @@ export default function WorkoutsScreen() {
               onPress={() => router.push('/details/workout-history' as any)}
               style={[
                 styles.actionChip,
-                { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+                { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', borderWidth: 1 },
               ]}
               accessibilityRole="button"
               accessibilityLabel="View workout history"
             >
-              <Clock size={15} color={colors.textPrimary} />
-              <Text style={[styles.actionChipText, { color: colors.textPrimary }]}>
+              <Clock size={15} color="#111827" />
+              <Text style={[styles.actionChipText, { color: '#111827' }]}>
                 Workout History
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* AI Tools Quick Bar */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.aiToolsScroll}
+          >
+            <TouchableOpacity
+              onPress={() => router.push('/details/ai-rep-counter' as any)}
+              style={[
+                styles.aiToolPill,
+                { backgroundColor: '#FEEFD8', borderColor: '#F59D42' },
+              ]}
+            >
+              <Activity size={14} color="#D97706" />
+              <Text style={[styles.aiToolPillText, { color: '#B45309' }]}>
+                AI Pose Coach
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/details/ai-equipment' as any)}
+              style={[
+                styles.aiToolPill,
+                { backgroundColor: '#E0E9FD', borderColor: '#4F75E3' },
+              ]}
+            >
+              <Camera size={14} color="#4F75E3" />
+              <Text style={[styles.aiToolPillText, { color: '#3B82F6' }]}>
+                Scan Machine
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/details/exercise-library' as any)}
+              style={[
+                styles.aiToolPill,
+                { backgroundColor: '#F6EBFD', borderColor: '#DBA6F4' },
+              ]}
+            >
+              <BookOpen size={14} color="#A855F7" />
+              <Text style={[styles.aiToolPillText, { color: '#7E22CE' }]}>
+                ExerciseDB
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/details/ai-hub' as any)}
+              style={[
+                styles.aiToolPill,
+                { backgroundColor: '#111318', borderColor: '#111318' },
+              ]}
+            >
+              <Sparkles size={14} color="#FFFFFF" />
+              <Text style={[styles.aiToolPillText, { color: '#FFFFFF' }]}>
+                AI Studio
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {routines.length === 0 ? (
@@ -332,9 +410,27 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
+    marginTop: 4,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  badgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 6,
+  },
+  badgePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   screenTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
@@ -351,9 +447,9 @@ const styles = StyleSheet.create({
   actionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 20,
     gap: 6,
   },
   actionChipText: {
@@ -361,12 +457,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  aiToolsScroll: {
+    marginTop: 14,
+  },
+  aiToolPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+    gap: 6,
+  },
+  aiToolPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   routinesList: {
     width: '100%',
   },
   routineCard: {
     borderWidth: 1,
+    borderRadius: 26,
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 3,
   },
   routineHeader: {
     flexDirection: 'row',
@@ -451,10 +572,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   exerciseIndexCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FF5E62',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#4F75E3',
     justifyContent: 'center',
     alignItems: 'center',
   },

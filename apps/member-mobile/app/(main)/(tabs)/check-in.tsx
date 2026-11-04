@@ -9,10 +9,10 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
-import { ShieldCheck, WifiOff, CheckCircle2 } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ShieldCheck, WifiOff, CheckCircle2, Sparkles, QrCode } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme';
 import { useCheckInPass, useSubmitCheckIn, useNetworkStatus } from '../../../src/hooks';
 import { QrCodeView, SkeletonLoader, PrimaryButton, ErrorBanner } from '../../../src/components';
@@ -42,34 +42,42 @@ export default function CheckInScreen() {
 
   if (isLoading && !pass) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <View style={{ padding: spacing.xl, alignItems: 'center' }}>
           <SkeletonLoader height={32} width={200} style={{ marginBottom: 20 }} />
-          <SkeletonLoader height={380} borderRadius={24} />
+          <SkeletonLoader height={380} borderRadius={28} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg, paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={refetch}
+            onRefresh={() => {
+              void refetch();
+            }}
             tintColor={colors.brand.primary}
             colors={[colors.brand.primary]}
           />
         }
       >
         <View style={styles.header}>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>
+          <View style={styles.headerPillRow}>
+            <View style={[styles.badgePill, { backgroundColor: '#E0E9FD' }]}>
+              <Sparkles size={12} color="#4F75E3" />
+              <Text style={[styles.badgePillText, { color: '#4F75E3' }]}>TURNSTILE GATE PASS</Text>
+            </View>
+          </View>
+          <Text style={[styles.screenTitle, { color: '#111827' }]}>
             Floor Access Pass
           </Text>
-          <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.screenSubtitle, { color: '#6B7280' }]}>
             Present this dynamic QR code at the turnstile or front desk to check in.
           </Text>
         </View>
@@ -150,10 +158,28 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    marginBottom: 16,
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  headerPillRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  badgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 6,
+  },
+  badgePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   screenTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
@@ -165,9 +191,9 @@ const styles = StyleSheet.create({
   offlineAlert: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 18,
     marginBottom: 16,
     gap: 10,
   },
@@ -175,27 +201,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   successAlert: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 18,
     marginBottom: 16,
     gap: 10,
   },
   successText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
   },
   devBox: {
-    padding: 16,
-    borderRadius: 16,
+    padding: 18,
+    borderRadius: 24,
     marginTop: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
   devTitle: {
     fontSize: 11,

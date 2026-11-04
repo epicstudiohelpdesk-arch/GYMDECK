@@ -1517,4 +1517,43 @@ router.post(
   }
 );
 
+/**
+ * Payment & Settlement Configuration Routes (Paytm / PhonePe Direct Bank Integration)
+ */
+router.get(
+  '/payment-config',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      const config = await billingService.getPaymentConfig(gymId);
+      res.status(200).json({
+        success: true,
+        data: config,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/payment-config',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+      const updatedConfig = await billingService.savePaymentConfig(gymId, req.body);
+      res.status(200).json({
+        success: true,
+        data: updatedConfig,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;

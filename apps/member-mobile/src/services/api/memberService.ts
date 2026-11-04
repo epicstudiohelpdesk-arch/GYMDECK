@@ -10,7 +10,8 @@
  */
 
 import { apiClient, normalizeAxiosError } from './client';
-import { ApiResponse } from './types';
+import { ApiResponse, GymPaymentConfig } from './types';
+import { Linking, Alert } from 'react-native';
 import {
   MemberDashboardData,
   MemberMembership,
@@ -69,7 +70,7 @@ const DEV_DASHBOARD_FIXTURE: MemberDashboardData = {
     expiresAt: '2027-01-15T23:59:59Z',
     daysRemaining: 139,
     isExpiringSoon: false,
-    price: 899.0,
+    price: 2499.0,
     features: [
       'Unlimited 24/7 Gym Floor Access',
       'All Group Fitness & HIIT Classes',
@@ -109,7 +110,7 @@ const DEV_DASHBOARD_FIXTURE: MemberDashboardData = {
   outstandingDues: {
     hasDues: false,
     amount: 0.0,
-    currency: '$',
+    currency: '₹',
   },
   unreadNotificationCount: 2,
 };
@@ -271,6 +272,58 @@ class MemberService {
       return response.data.data;
     } catch (err) {
       throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Fetch active gym receiving bank & UPI VPA configuration
+   */
+  public async getPaymentConfig(): Promise<GymPaymentConfig> {
+    try {
+      Logger.info('[MemberService] Fetching gym receiving payment configuration...');
+      const response = await apiClient.get<ApiResponse<GymPaymentConfig>>('/member/payment-config');
+      return response.data.data;
+    } catch (err) {
+      if (__DEV__) {
+        return {
+          receivingMode: 'UPI',
+          bankName: 'State Bank of India',
+          accountHolder: "Indians Gym Fitness Studio",
+          accountNumberMasked: '•••• •••• 7192',
+          ifscCode: 'SBIN0000421',
+          branch: 'Main Commercial Branch',
+          upiVpa: 'indiansgym@oksbi',
+        };
+      }
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Launch native UPI intent (GPay, PhonePe, Paytm, BHIM) to transfer 100% directly to gym's bank account
+   */
+  public async payFeeViaUPI(amount: number, note: string = 'Gym Membership Fee'): Promise<void> {
+    try {
+      const config = await this.getPaymentConfig();
+      const vpa = config.upiVpa || 'indiansgym@oksbi';
+      const merchantName = encodeURIComponent(config.accountHolder || 'GymDeck Fitness');
+      const encodedNote = encodeURIComponent(note);
+      const amountStr = amount.toFixed(2);
+      
+      const upiUrl = `upi://pay?pa=${vpa}&pn=${merchantName}&am=${amountStr}&cu=INR&tn=${encodedNote}`;
+      
+      const supported = await Linking.canOpenURL(upiUrl);
+      if (supported) {
+        await Linking.openURL(upiUrl);
+      } else {
+        Alert.alert(
+          'UPI App Not Found',
+          'Please install Google Pay, PhonePe, Paytm, or BHIM on this device to pay fees directly to the gym.'
+        );
+      }
+    } catch (err) {
+      Logger.error('[MemberService] Failed to launch UPI Intent', err);
+      Alert.alert('Payment Error', 'Unable to launch UPI payments. Please try again.');
     }
   }
 }

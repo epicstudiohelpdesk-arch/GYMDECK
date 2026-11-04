@@ -8,10 +8,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   User,
@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ChevronRight,
   Award,
+  Sparkles,
 } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme';
 import { useAuthStore, useThemeStore, queryClient } from '../../../src/store';
@@ -70,16 +71,22 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg, paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>
+          <View style={styles.badgeRow}>
+            <View style={[styles.badgePill, { backgroundColor: '#E0E9FD' }]}>
+              <Sparkles size={12} color="#4F75E3" />
+              <Text style={[styles.badgePillText, { color: '#4F75E3' }]}>ATHLETE ACCOUNT • GYMDECK</Text>
+            </View>
+          </View>
+          <Text style={[styles.screenTitle, { color: '#111827' }]}>
             Member Profile
           </Text>
-          <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.screenSubtitle, { color: '#6B7280' }]}>
             Account credentials, club affiliations, and app preferences.
           </Text>
         </View>
@@ -89,9 +96,9 @@ export default function ProfileScreen() {
           style={[
             styles.profileCard,
             {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: radii.xl,
+              backgroundColor: '#FFFFFF',
+              borderColor: '#E5E7EB',
+              borderRadius: 28,
               padding: spacing.xl,
             },
           ]}
@@ -101,7 +108,7 @@ export default function ProfileScreen() {
               style={[
                 styles.largeAvatar,
                 {
-                  backgroundColor: colors.brand.primary,
+                  backgroundColor: '#4F75E3',
                   borderRadius: radii.full,
                 },
               ]}
@@ -110,12 +117,12 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.profileDetails}>
-              <Text style={[styles.fullNameText, { color: colors.textPrimary }]}>
+              <Text style={[styles.fullNameText, { color: '#111827' }]}>
                 {user?.fullName || 'Athlete Member'}
               </Text>
-              <View style={[styles.verifiedPill, { backgroundColor: colors.status.successBg }]}>
-                <ShieldCheck size={12} color={colors.status.success} />
-                <Text style={[styles.verifiedPillText, { color: colors.status.success }]}>
+              <View style={[styles.verifiedPill, { backgroundColor: '#ECFDF5' }]}>
+                <ShieldCheck size={12} color="#10B981" />
+                <Text style={[styles.verifiedPillText, { color: '#10B981' }]}>
                   MEMBER VERIFIED
                 </Text>
               </View>
@@ -162,62 +169,62 @@ export default function ProfileScreen() {
             style={[
               styles.portalLinksCard,
               {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderRadius: radii.lg,
+                backgroundColor: '#FFFFFF',
+                borderColor: '#E5E7EB',
+                borderRadius: 26,
               },
             ]}
           >
             <TouchableOpacity
               onPress={() => router.push('/details/trainer' as any)}
-              style={[styles.portalRow, { borderBottomColor: colors.borderSubtle }]}
+              style={[styles.portalRow, { borderBottomColor: '#F3F4F6' }]}
               accessibilityRole="button"
               accessibilityLabel="View assigned personal trainer"
             >
-              <User size={18} color={colors.brand.primary} />
-              <Text style={[styles.portalText, { color: colors.textPrimary }]}>
+              <User size={18} color="#4F75E3" />
+              <Text style={[styles.portalText, { color: '#111827' }]}>
                 Assigned Personal Trainer
               </Text>
-              <ChevronRight size={16} color={colors.textMuted} />
+              <ChevronRight size={16} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => router.push('/details/pt-packages' as any)}
-              style={[styles.portalRow, { borderBottomColor: colors.borderSubtle }]}
+              style={[styles.portalRow, { borderBottomColor: '#F3F4F6' }]}
               accessibilityRole="button"
               accessibilityLabel="View PT packages and sessions"
             >
-              <Building2 size={18} color={colors.brand.secondary} />
-              <Text style={[styles.portalText, { color: colors.textPrimary }]}>
+              <Building2 size={18} color="#F59D42" />
+              <Text style={[styles.portalText, { color: '#111827' }]}>
                 PT Packages & Session Credits
               </Text>
-              <ChevronRight size={16} color={colors.textMuted} />
+              <ChevronRight size={16} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => router.push('/details/documents' as any)}
-              style={[styles.portalRow, { borderBottomColor: colors.borderSubtle }]}
+              style={[styles.portalRow, { borderBottomColor: '#F3F4F6' }]}
               accessibilityRole="button"
               accessibilityLabel="Open document vault"
             >
-              <ShieldCheck size={18} color={colors.status.success} />
-              <Text style={[styles.portalText, { color: colors.textPrimary }]}>
+              <ShieldCheck size={18} color="#10B981" />
+              <Text style={[styles.portalText, { color: '#111827' }]}>
                 Document Vault & Agreements
               </Text>
-              <ChevronRight size={16} color={colors.textMuted} />
+              <ChevronRight size={16} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => router.push('/details/progress' as any)}
-              style={[styles.portalRow, { borderBottomColor: colors.borderSubtle }]}
+              style={[styles.portalRow, { borderBottomColor: '#F3F4F6' }]}
               accessibilityRole="button"
               accessibilityLabel="View fitness progress and measurements"
             >
               <Award size={18} color="#38BDF8" />
-              <Text style={[styles.portalText, { color: colors.textPrimary }]}>
+              <Text style={[styles.portalText, { color: '#111827' }]}>
                 Body Weight & Measurements Log
               </Text>
-              <ChevronRight size={16} color={colors.textMuted} />
+              <ChevronRight size={16} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -226,11 +233,11 @@ export default function ProfileScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open notification center"
             >
-              <Mail size={18} color="#F59E0B" />
-              <Text style={[styles.portalText, { color: colors.textPrimary }]}>
+              <Mail size={18} color="#F59D42" />
+              <Text style={[styles.portalText, { color: '#111827' }]}>
                 Notifications & Announcements
               </Text>
-              <ChevronRight size={16} color={colors.textMuted} />
+              <ChevronRight size={16} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -359,9 +366,27 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
+    marginTop: 4,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  badgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 6,
+  },
+  badgePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   screenTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
@@ -374,6 +399,11 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     marginBottom: 24,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   profileTop: {
     flexDirection: 'row',
@@ -381,8 +411,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   largeAvatar: {
-    width: 60,
-    height: 60,
+    width: 64,
+    height: 64,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -405,14 +435,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
   verifiedPillText: {
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   divider: {
     height: 1,
@@ -429,7 +459,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     width: 65,
   },
   infoValue: {
@@ -439,16 +469,22 @@ const styles = StyleSheet.create({
   },
   section: {
     width: '100%',
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 10,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 12,
   },
   portalLinksCard: {
     width: '100%',
     borderWidth: 1,
     overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   portalRow: {
     flexDirection: 'row',
@@ -460,13 +496,17 @@ const styles = StyleSheet.create({
   },
   portalText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
   },
   themeSelector: {
     flexDirection: 'row',
     borderWidth: 1,
     gap: 6,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    padding: 6,
   },
   themeOption: {
     flex: 1,
@@ -475,6 +515,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     gap: 6,
+    borderRadius: 18,
   },
   themeText: {
     fontSize: 13,

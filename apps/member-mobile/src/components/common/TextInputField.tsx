@@ -54,7 +54,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
               : isFocused
               ? colors.brand.primary
               : colors.border,
-            borderRadius: radii.md,
+            borderRadius: 20,
           },
         ]}
       >

@@ -12,6 +12,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Mail, Lock } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -92,19 +93,21 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <AuthHeader
-          title="Welcome Back"
-          subtitle="Sign in to access your workout routines, membership pass, and check-in barcode."
-          showBack={false}
-        />
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <AuthHeader
+            title="Welcome Back"
+            subtitle="Sign in to access your workout routines, membership pass, and check-in barcode."
+            showBack={false}
+          />
 
         <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} />
 
@@ -185,11 +188,15 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  keyboardContainer: {
     flex: 1,
   },
   scrollContent: {
@@ -198,14 +205,25 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   forgotPasswordRow: {
     alignItems: 'flex-end',
-    marginBottom: 16,
+    marginBottom: 18,
+    marginTop: 2,
   },
   forgotPasswordText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   footerRow: {
     flexDirection: 'row',
@@ -214,22 +232,23 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
+    fontWeight: '500',
   },
   footerLink: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   demoButton: {
     marginTop: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: 24,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   demoButtonText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

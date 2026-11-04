@@ -8,10 +8,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
@@ -53,11 +53,11 @@ export default function NotificationsScreen() {
 
   if (isLoading && !notifications) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <View style={{ padding: spacing.lg }}>
           <SkeletonLoader height={36} width={160} style={{ marginBottom: 20 }} />
-          <SkeletonLoader height={80} borderRadius={16} style={{ marginBottom: 12 }} />
-          <SkeletonLoader height={80} borderRadius={16} />
+          <SkeletonLoader height={80} borderRadius={20} style={{ marginBottom: 12 }} />
+          <SkeletonLoader height={80} borderRadius={20} />
         </View>
       </SafeAreaView>
     );
@@ -67,7 +67,7 @@ export default function NotificationsScreen() {
   const unreadCount = items.filter((n) => !n.isRead).length;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.topBar,
@@ -112,7 +112,9 @@ export default function NotificationsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={refetch}
+            onRefresh={() => {
+              void refetch();
+            }}
             tintColor={colors.brand.primary}
             colors={[colors.brand.primary]}
           />

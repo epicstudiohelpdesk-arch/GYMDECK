@@ -7,6 +7,10 @@
     "icon": "./assets/icons/icon.png",
     "scheme": "gymdeck-member",
     "userInterfaceStyle": "automatic",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "splash": {
       "image": "./assets/icons/splash.png",
       "resizeMode": "contain",
@@ -16,7 +20,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.gymdeck.member",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "GymDeck uses Face ID to securely authenticate your member account."
+        "NSFaceIDUsageDescription": "GymDeck uses Face ID to securely authenticate your member account.",
+        "NSCameraUsageDescription": "GymDeck needs camera access to scan meals for calorie estimation, classify gym machines, and track posture during workouts.",
+        "NSPhotoLibraryUsageDescription": "GymDeck needs photo library access to analyze meal pictures and equipment photos.",
+        "NSMicrophoneUsageDescription": "GymDeck uses microphone access for workout audio coaching."
       }
     },
     "android": {
@@ -27,12 +34,26 @@
       "package": "com.gymdeck.member",
       "permissions": [
         "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "USE_FINGERPRINT",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
       ]
     },
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "GymDeck needs camera access to scan meals for calories, identify gym machines, and count exercise reps."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GymDeck needs photo access to select meal and machine images."
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -41,10 +62,11 @@
             "targetSdkVersion": 34
           },
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "16.4"
           }
         }
-      ]
+      ],
+      "expo-splash-screen"
     ],
     "experiments": {
       "typedRoutes": true

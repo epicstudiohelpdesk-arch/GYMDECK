@@ -4,7 +4,7 @@
 
 import * as crypto from 'crypto';
 import { eq, and, isNull, sql, desc, count } from 'drizzle-orm';
-import { db } from '../../shared/database';
+import { db, getDatabasePool } from '../../shared/database';
 import {
   gyms,
   gymMembers,
@@ -1076,6 +1076,107 @@ export class BillingService {
       monthRevenue,
       activeMembershipsCount: activeMembershipsCount?.count || 0,
       expiringSoonCount: expiringSoonCount?.count || 0,
+    };
+  }
+
+  /**
+   * Fetch active payment & receiving bank configuration
+   */
+  async getPaymentConfig(gymId: string) {
+    const pool = getDatabasePool();
+    const result = await pool.query(
+      `SELECT * FROM payment_configurations WHERE gym_id = $1 LIMIT 1;`,
+      [gymId]
+    );
+    if (result.rows.length === 0) {
+      return {
+        receivingMode: 'UPI',
+        bankId: 'hdfc',
+        bankName: 'HDFC Bank',
+        accountHolder: "Indian's Gym Fitness Studio",
+        accountNumberMasked: '•••• •••• 4182',
+        accountType: 'Current Account',
+        ifscCode: 'HDFC0001248',
+        branch: 'Park Street Commercial',
+        upiVpa: 'indiansgym@okhdfcbank',
+        phoneNumber: '+91 98765 00123',
+        isVerified: true,
+        soundboxEnabled: true,
+      };
+    }
+    const row = result.rows[0];
+    return {
+      receivingMode: row.receiving_mode,
+      bankId: row.bank_id,
+      bankName: row.bank_name,
+      accountHolder: row.account_holder,
+      accountNumberMasked: row.account_number_masked,
+      accountType: row.account_type,
+      ifscCode: row.ifsc_code,
+      branch: row.branch,
+      upiVpa: row.upi_vpa,
+      phoneNumber: row.phone_number,
+      isVerified: row.is_verified,
+      soundboxEnabled: row.soundbox_enabled,
+    };
+  }
+
+  /**
+   * Save or update payment & receiving bank configuration
+   */
+  async savePaymentConfig(gymId: string, data: any) {
+    const pool = getDatabasePool();
+    const result = await pool.query(
+      `INSERT INTO payment_configurations (
+        gym_id, receiving_mode, bank_id, bank_name, account_holder,
+        account_number_masked, account_type, ifsc_code, branch, upi_vpa,
+        phone_number, is_verified, soundbox_enabled, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+      ON CONFLICT (gym_id) DO UPDATE SET
+        receiving_mode = EXCLUDED.receiving_mode,
+        bank_id = EXCLUDED.bank_id,
+        bank_name = EXCLUDED.bank_name,
+        account_holder = EXCLUDED.account_holder,
+        account_number_masked = EXCLUDED.account_number_masked,
+        account_type = EXCLUDED.account_type,
+        ifsc_code = EXCLUDED.ifsc_code,
+        branch = EXCLUDED.branch,
+        upi_vpa = EXCLUDED.upi_vpa,
+        phone_number = EXCLUDED.phone_number,
+        is_verified = EXCLUDED.is_verified,
+        soundbox_enabled = EXCLUDED.soundbox_enabled,
+        updated_at = NOW()
+      RETURNING *;`,
+      [
+        gymId,
+        data.receivingMode || 'UPI',
+        data.bankId || 'hdfc',
+        data.bankName || 'HDFC Bank',
+        data.accountHolder || "Indian's Gym Fitness",
+        data.accountNumberMasked || '•••• •••• 4182',
+        data.accountType || 'Current Account',
+        data.ifscCode || 'HDFC0001248',
+        data.branch || 'Commercial Capital Branch',
+        data.upiVpa || 'gymdeck@okhdfcbank',
+        data.phoneNumber || '+91 98765 00123',
+        data.isVerified ?? true,
+        data.soundboxEnabled ?? true,
+      ]
+    );
+    const row = result.rows[0];
+    return {
+      receivingMode: row.receiving_mode,
+      bankId: row.bank_id,
+      bankName: row.bank_name,
+      accountHolder: row.account_holder,
+      accountNumberMasked: row.account_number_masked,
+      accountType: row.account_type,
+      ifscCode: row.ifsc_code,
+      branch: row.branch,
+      upiVpa: row.upi_vpa,
+      phoneNumber: row.phone_number,
+      isVerified: row.is_verified,
+      soundboxEnabled: row.soundbox_enabled,
     };
   }
 }

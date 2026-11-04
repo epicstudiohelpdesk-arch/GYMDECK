@@ -8,9 +8,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, UserCheck, Award, CheckCircle2, Dumbbell, Sparkles } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -24,7 +24,7 @@ export default function TrainerScreen() {
 
   if (isLoading && !trainer) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <View style={{ padding: spacing.lg }}>
           <SkeletonLoader height={36} width={140} style={{ marginBottom: 20 }} />
           <SkeletonLoader height={180} borderRadius={20} style={{ marginBottom: 16 }} />
@@ -44,7 +44,7 @@ export default function TrainerScreen() {
     .toUpperCase();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.topBar,

@@ -15,7 +15,7 @@ export default function DetailsLayout() {
         headerShown: false,
         animation: 'slide_from_right',
         contentStyle: {
-          backgroundColor: mode === 'dark' ? '#090A0F' : '#F8FAFC',
+          backgroundColor: mode === 'dark' ? '#090A0F' : '#F0F2F6',
         },
       }}
     >
@@ -26,6 +26,11 @@ export default function DetailsLayout() {
       <Stack.Screen name="documents" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ headerShown: false }} />
       <Stack.Screen name="progress" options={{ headerShown: false }} />
+      <Stack.Screen name="ai-hub" options={{ headerShown: false }} />
+      <Stack.Screen name="ai-nutrition" options={{ headerShown: false }} />
+      <Stack.Screen name="ai-equipment" options={{ headerShown: false }} />
+      <Stack.Screen name="ai-rep-counter" options={{ headerShown: false }} />
+      <Stack.Screen name="exercise-library" options={{ headerShown: false }} />
     </Stack>
   );
 }

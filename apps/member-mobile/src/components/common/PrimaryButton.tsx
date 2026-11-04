@@ -69,7 +69,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
         styles.button,
         {
           backgroundColor,
-          borderRadius: radii.md,
+          borderRadius: radii.full,
           borderWidth,
           borderColor,
           opacity: disabled ? 0.6 : 1,

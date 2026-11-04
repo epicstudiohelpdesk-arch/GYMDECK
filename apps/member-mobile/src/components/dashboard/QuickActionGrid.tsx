@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { QrCode, Award, Dumbbell, User } from 'lucide-react-native';
+import { QrCode, Award, Dumbbell, User, Sparkles } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme';
 
@@ -14,23 +14,28 @@ export const QuickActionGrid: React.FC = () => {
 
   const actions = [
     {
-      title: 'QR Check-In',
-      icon: <QrCode size={22} color={colors.brand.primary} />,
+      title: 'QR Pass',
+      icon: <QrCode size={20} color={colors.brand.primary} />,
       route: '/(main)/(tabs)/check-in',
     },
     {
+      title: 'AI Studio',
+      icon: <Sparkles size={20} color="#FF5E62" />,
+      route: '/details/ai-hub',
+    },
+    {
       title: 'My Plan',
-      icon: <Award size={22} color={colors.brand.secondary} />,
+      icon: <Award size={20} color={colors.brand.secondary} />,
       route: '/(main)/(tabs)/membership',
     },
     {
       title: 'Workouts',
-      icon: <Dumbbell size={22} color="#38BDF8" />,
+      icon: <Dumbbell size={20} color="#38BDF8" />,
       route: '/(main)/(tabs)/workouts',
     },
     {
       title: 'Profile',
-      icon: <User size={22} color="#A78BFA" />,
+      icon: <User size={20} color="#A78BFA" />,
       route: '/(main)/(tabs)/profile',
     },
   ];
@@ -73,23 +78,23 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 80,
+    minHeight: 76,
   },
   iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   actionTitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
     textAlign: 'center',
   },

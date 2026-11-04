@@ -572,6 +572,27 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_webhook_events_dedup ON provider_webhook_events(provider, provider_event_id);
     CREATE INDEX IF NOT EXISTS idx_webhook_events_provider_msg ON provider_webhook_events(provider_message_id);
 
+    -- Payment Configurations for Direct Bank / PhonePe / Paytm Collections
+    CREATE TABLE IF NOT EXISTS payment_configurations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      receiving_mode VARCHAR(32) NOT NULL DEFAULT 'UPI',
+      bank_id VARCHAR(64) NOT NULL DEFAULT 'hdfc',
+      bank_name VARCHAR(128) NOT NULL DEFAULT 'HDFC Bank',
+      account_holder VARCHAR(255) NOT NULL DEFAULT 'GymDeck Fitness Studio',
+      account_number_masked VARCHAR(64) NOT NULL DEFAULT '•••• •••• 4182',
+      account_type VARCHAR(64) NOT NULL DEFAULT 'Current Account',
+      ifsc_code VARCHAR(32) NOT NULL DEFAULT 'HDFC0001248',
+      branch VARCHAR(255) NOT NULL DEFAULT 'Park Street Commercial',
+      upi_vpa VARCHAR(255) NOT NULL DEFAULT 'gymdeck.fitness@okhdfcbank',
+      phone_number VARCHAR(32) NOT NULL DEFAULT '+91 98765 00123',
+      is_verified BOOLEAN NOT NULL DEFAULT TRUE,
+      soundbox_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_configurations_gym ON payment_configurations(gym_id);
+
     -- Analytics & Reporting Composite Performance Indexes
     CREATE INDEX IF NOT EXISTS idx_payments_gym_status_date ON payments(gym_id, status, paid_at);
     CREATE INDEX IF NOT EXISTS idx_member_memberships_gym_status_end ON member_memberships(gym_id, status, end_date);

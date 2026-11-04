@@ -8,12 +8,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   Alert,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
@@ -68,7 +68,7 @@ export default function ProgressScreen() {
   const weightDiff = (latestWeight - previousWeight).toFixed(1);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.topBar,
@@ -99,7 +99,9 @@ export default function ProgressScreen() {
         refreshControl={
           <RefreshControl
             refreshing={wtLoading}
-            onRefresh={refetchWt}
+            onRefresh={() => {
+              void refetchWt();
+            }}
             tintColor={colors.brand.primary}
             colors={[colors.brand.primary]}
           />

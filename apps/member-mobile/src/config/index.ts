@@ -5,6 +5,8 @@
  * Never embed API keys, secrets, or database passwords in mobile bundles.
  */
 
+import { Platform } from 'react-native';
+
 export type Environment = 'development' | 'testing' | 'production';
 
 export interface AppConfig {
@@ -43,13 +45,23 @@ const getEnvironment = (): Environment => {
   return 'production';
 };
 
+const getDevApiBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:3001';
+  }
+  return 'http://localhost:3001';
+};
+
 const currentEnv = getEnvironment();
 
 const envConfigs: Record<Environment, AppConfig> = {
   development: {
     env: 'development',
     api: {
-      baseUrl: 'http://192.168.31.193:3001',
+      baseUrl: getDevApiBaseUrl(),
       version: 'v1',
       timeoutMs: 10000,
       retryLimit: 2,

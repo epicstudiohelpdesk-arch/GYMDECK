@@ -28,3 +28,15 @@ export interface RefreshTokenResponse {
   refreshToken?: string;
   expiresIn: number;
 }
+
+export interface GymPaymentConfig {
+  receivingMode: string;
+  bankName: string;
+  accountHolder: string;
+  accountNumberMasked: string;
+  ifscCode: string;
+  branch: string;
+  upiVpa: string;
+  phoneNumber?: string;
+}
+

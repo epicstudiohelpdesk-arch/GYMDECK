@@ -15,7 +15,7 @@ export default function AuthLayout() {
         headerShown: false,
         animation: 'slide_from_right',
         contentStyle: {
-          backgroundColor: mode === 'dark' ? '#090A0F' : '#F8FAFC',
+          backgroundColor: mode === 'dark' ? '#090A0F' : '#F0F2F6',
         },
       }}
     >

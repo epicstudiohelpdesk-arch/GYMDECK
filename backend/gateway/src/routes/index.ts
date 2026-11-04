@@ -6,11 +6,15 @@ import memberRouter from './member';
 import ownerRouter from './owner';
 import syncRouter from './sync';
 import webhookRouter from './webhooks';
+import paymentConfigRouter from './paymentConfig';
 
 const router: Router = Router();
 
 // Infrastructure & Health routes
 router.use('/', healthRouter);
+
+// Payment Configuration & Onboarding API (/v1/payments)
+router.use('/v1/payments', paymentConfigRouter);
 
 // Authentication API (/v1/auth)
 router.use('/v1/auth/owner', ownerAuthRouter);

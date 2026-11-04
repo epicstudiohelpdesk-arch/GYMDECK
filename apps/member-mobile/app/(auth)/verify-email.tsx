@@ -12,6 +12,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MailCheck, RotateCcw } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -113,19 +114,21 @@ export default function VerifyEmailScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <AuthHeader
-          title="Verify Email"
-          subtitle={`We sent a 6-digit verification code to:\n${email}`}
-          showBack={true}
-        />
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <AuthHeader
+            title="Verify Email"
+            subtitle={`We sent a 6-digit verification code to:\n${email}`}
+            showBack={true}
+          />
 
         <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} />
 
@@ -212,12 +215,13 @@ export default function VerifyEmailScreen() {
             accessibilityLabel="Return to sign in"
           >
             <Text style={[styles.footerLink, { color: colors.textSecondary }]}>
-              Wrong email address? <Text style={{ color: colors.brand.primary }}>Sign in instead</Text>
+              Wrong email address? <Text style={{ color: colors.brand.primary, fontWeight: '700' }}>Sign in instead</Text>
             </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  </SafeAreaView>
   );
 }
 
@@ -225,26 +229,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardContainer: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   successBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 20,
     marginBottom: 16,
     gap: 10,
     width: '100%',
@@ -253,14 +271,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     flex: 1,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   resendContainer: {
-    marginTop: 20,
+    marginTop: 22,
     alignItems: 'center',
   },
   cooldownText: {
     fontSize: 13,
+    fontWeight: '500',
   },
   resendButton: {
     flexDirection: 'row',
@@ -270,7 +289,7 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   footerRow: {
     alignItems: 'center',
@@ -280,9 +299,9 @@ const styles = StyleSheet.create({
   },
   demoButton: {
     marginTop: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: 24,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -290,6 +309,6 @@ const styles = StyleSheet.create({
   },
   demoButtonText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

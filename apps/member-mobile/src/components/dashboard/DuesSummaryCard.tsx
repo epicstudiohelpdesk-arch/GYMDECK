@@ -3,10 +3,11 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { CreditCard, CheckCircle2, AlertTriangle } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { CreditCard, CheckCircle2, AlertTriangle, ArrowUpRight } from 'lucide-react-native';
 import { useTheme } from '../../theme';
 import { OutstandingDues } from '../../types';
+import { memberService } from '../../services/api/memberService';
 
 export interface DuesSummaryCardProps {
   dues: OutstandingDues;
@@ -58,7 +59,18 @@ export const DuesSummaryCard: React.FC<DuesSummaryCardProps> = ({ dues }) => {
           </Text>
         </View>
 
-        <CreditCard size={18} color={colors.textMuted} />
+        {dues.hasDues ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => memberService.payFeeViaUPI(dues.amount, 'Clear Pending Gym Dues')}
+            style={[styles.payButton, { backgroundColor: colors.brand.primary, borderRadius: radii.md }]}
+          >
+            <Text style={styles.payButtonText}>Pay Now</Text>
+            <ArrowUpRight size={14} color="#FFF" />
+          </TouchableOpacity>
+        ) : (
+          <CreditCard size={18} color={colors.textMuted} />
+        )}
       </View>
     </View>
   );
@@ -93,6 +105,18 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  payButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  payButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });
 

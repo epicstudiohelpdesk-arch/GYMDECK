@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { QrCode, Dumbbell, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -17,62 +18,65 @@ export default function WelcomeScreen() {
 
   const perks = [
     {
-      icon: <QrCode size={24} color={colors.brand.primary} />,
+      icon: <QrCode size={22} color="#4F75E3" />,
+      iconBg: '#E0E9FD',
       title: 'Fast Floor Check-In',
-      description: 'Display your dynamic QR pass at the reception desk for zero-wait entry.',
+      description: 'Display your dynamic QR pass at the reception turnstile for zero-wait entry.',
     },
     {
-      icon: <Dumbbell size={24} color={colors.brand.secondary} />,
+      icon: <Dumbbell size={22} color="#F59D42" />,
+      iconBg: '#FEEFD8',
       title: 'Trainer-Assigned Workouts',
-      description: 'Access exercises, rep targets, and daily progress logged directly by your coach.',
+      description: 'Access routines, rep targets, and daily progress logged directly by your coach.',
     },
     {
-      icon: <ShieldCheck size={24} color={colors.status.success} />,
+      icon: <ShieldCheck size={22} color="#10B981" />,
+      iconBg: '#ECFDF5',
       title: 'Real-Time Membership Radar',
-      description: 'Track active tenure, plan benefits, and receive automatic expiry reminders.',
+      description: 'Track active tenure, plan benefits, and receive automated dues clear confirmation.',
     },
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={[styles.iconPill, { backgroundColor: colors.surfaceSubtle }]}>
-            <Sparkles size={16} color={colors.brand.primary} />
-            <Text style={[styles.pillText, { color: colors.brand.primary }]}>WELCOME TO GYMDECK</Text>
+          <View style={[styles.iconPill, { backgroundColor: '#E0E9FD' }]}>
+            <Sparkles size={14} color="#4F75E3" />
+            <Text style={[styles.pillText, { color: '#4F75E3' }]}>LEVEL UP • GYMDECK</Text>
           </View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>
+          <Text style={[styles.title, { color: '#111827' }]}>
             Hello, {user?.fullName?.split(' ')[0] || 'Athlete'}!
           </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.subtitle, { color: '#6B7280' }]}>
             Your member portal is set up. Link your home gym to unlock instant check-ins and workout programs.
           </Text>
         </View>
 
-        <View style={[styles.perksContainer, { gap: spacing.md }]}>
+        <View style={[styles.perksContainer, { gap: 14 }]}>
           {perks.map((perk, idx) => (
             <View
               key={idx}
               style={[
                 styles.perkCard,
                 {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radii.lg,
+                  backgroundColor: '#FFFFFF',
+                  borderColor: '#E5E7EB',
+                  borderRadius: 24,
                 },
               ]}
             >
-              <View style={[styles.perkIconWrapper, { backgroundColor: colors.surfaceSubtle }]}>
+              <View style={[styles.perkIconWrapper, { backgroundColor: perk.iconBg }]}>
                 {perk.icon}
               </View>
               <View style={styles.perkTextWrapper}>
-                <Text style={[styles.perkTitle, { color: colors.textPrimary }]}>
+                <Text style={[styles.perkTitle, { color: '#111827' }]}>
                   {perk.title}
                 </Text>
-                <Text style={[styles.perkDescription, { color: colors.textSecondary }]}>
+                <Text style={[styles.perkDescription, { color: '#6B7280' }]}>
                   {perk.description}
                 </Text>
               </View>
@@ -87,7 +91,7 @@ export default function WelcomeScreen() {
           />
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -98,25 +102,26 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
+    paddingBottom: 24,
   },
   header: {
-    marginTop: 20,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 20,
   },
   iconPill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 20,
     gap: 6,
     marginBottom: 12,
   },
   pillText: {
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   title: {
     fontSize: 28,
@@ -133,9 +138,14 @@ const styles = StyleSheet.create({
   },
   perkCard: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
     alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   perkIconWrapper: {
     width: 48,
@@ -149,13 +159,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   perkTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     marginBottom: 4,
   },
   perkDescription: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   buttonContainer: {
     marginTop: 24,

@@ -12,6 +12,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Building2, QrCode, ArrowRight } from 'lucide-react-native';
 import { useTheme } from '../../src/theme';
@@ -74,19 +75,21 @@ export default function GymLinkingScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <AuthHeader
-          title="Link Your Gym"
-          subtitle="Connect your member profile to your gym's GymDeck system to activate your membership and pass."
-          showBack={true}
-        />
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { padding: spacing.xl }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <AuthHeader
+            title="Link Your Gym"
+            subtitle="Connect your member profile to your gym's GymDeck system to activate your membership and pass."
+            showBack={true}
+          />
 
         <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} />
 
@@ -160,13 +163,14 @@ export default function GymLinkingScreen() {
             accessibilityRole="button"
             accessibilityLabel="Skip gym linking for now"
           >
-            <Text style={[styles.skipLink, { color: colors.textMuted }]}>
-              I'll link my gym later <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Skip</Text>
+            <Text style={[styles.skipLink, { color: '#6B7280' }]}>
+              I'll link my gym later <Text style={{ color: '#4F75E3', fontWeight: '800' }}>Skip</Text>
             </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  </SafeAreaView>
   );
 }
 
@@ -174,12 +178,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardContainer: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    paddingBottom: 40,
   },
   formContainer: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -189,17 +207,22 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
+    backgroundColor: '#E5E7EB',
   },
   dividerText: {
     marginHorizontal: 16,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#9CA3AF',
   },
   qrOptionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
   },
   qrIconWrapper: {
     width: 44,
@@ -208,18 +231,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    backgroundColor: '#E0E9FD',
   },
   qrTextWrapper: {
     flex: 1,
   },
   qrTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#111827',
     marginBottom: 2,
   },
   qrSubtitle: {
     fontSize: 12,
     lineHeight: 16,
+    color: '#6B7280',
   },
   footerRow: {
     alignItems: 'center',

@@ -8,6 +8,7 @@ import { requireAuth } from '../middleware/authMiddleware';
 import { authService } from '../../../services/auth';
 import { dashboardService, checkInPassService, attendanceService } from '../../../services/member';
 import { membershipService } from '../../../services/membership';
+import { billingService } from '../../../services/billing/billingService';
 import { workoutService } from '../../../services/workout';
 import { ptService } from '../../../services/pt';
 import { documentService } from '../../../services/documents';
@@ -603,6 +604,28 @@ router.get('/progress/milestones', async (req: Request, res: Response, next: Nex
     res.status(200).json({
       success: true,
       data: result,
+      meta: { requestId: req.id, timestamp: new Date().toISOString() },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/payment-config', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user!;
+    const config = await billingService.getPaymentConfig(user.gymId);
+    res.status(200).json({
+      success: true,
+      data: {
+        receivingMode: config.receivingMode,
+        bankName: config.bankName,
+        accountHolder: config.accountHolder,
+        accountNumberMasked: config.accountNumberMasked,
+        ifscCode: config.ifscCode,
+        branch: config.branch,
+        upiVpa: config.upiVpa,
+      },
       meta: { requestId: req.id, timestamp: new Date().toISOString() },
     });
   } catch (err) {

@@ -37,25 +37,25 @@ export const AuthHeader: React.FC<AuthHeaderProps> = ({
       {showBack && (
         <TouchableOpacity
           onPress={handleBack}
-          style={[styles.backButton, { backgroundColor: colors.surfaceSubtle }]}
+          style={[styles.backButton, { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', borderWidth: 1 }]}
           accessibilityRole="button"
           accessibilityLabel="Go back"
           activeOpacity={0.7}
         >
-          <ArrowLeft size={20} color={colors.textPrimary} />
+          <ArrowLeft size={18} color="#111827" />
         </TouchableOpacity>
       )}
 
       <View style={styles.brandRow}>
-        <Text style={[styles.brandMark, { color: colors.brand.primary }]}>GYMDECK</Text>
-        <View style={[styles.badge, { backgroundColor: colors.surfaceSubtle }]}>
-          <Text style={[styles.badgeText, { color: colors.brand.secondary }]}>MEMBER</Text>
+        <Text style={[styles.brandMark, { color: '#4F75E3' }]}>GYMDECK</Text>
+        <View style={[styles.badge, { backgroundColor: '#E0E9FD' }]}>
+          <Text style={[styles.badgeText, { color: '#4F75E3' }]}>MEMBER</Text>
         </View>
       </View>
 
-      <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.title, { color: '#111827' }]}>{title}</Text>
       {subtitle && (
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+        <Text style={[styles.subtitle, { color: '#6B7280' }]}>{subtitle}</Text>
       )}
     </View>
   );
