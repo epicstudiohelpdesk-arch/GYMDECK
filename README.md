@@ -1,38 +1,121 @@
 <div align="center">
 
-#  GYMDECK
+<img src="docs/assets/gymdeck-banner.svg" alt="GYMDECK - Engineered Desk" width="100%"/>
 
-### **Unified Offline-First + Cloud-Synchronized Gym Management ERP & AI Mobile Ecosystem**
+```
+  ██████╗ ██╗   ██╗███╗   ███╗██████╗ ███████╗ ██████╗██╗  ██╗
+ ██╔════╝ ╚██╗ ██╔╝████╗ ████║██╔══██╗██╔════╝██╔════╝██║ ██╔╝
+ ██║  ███╗ ╚████╔╝ ██╔████╔██║██║  ██║█████╗  ██║     █████═╝ 
+ ██║   ██║  ╚██╔╝  ██║╚██╔╝██║██║  ██║██╔══╝  ██║     ██╔═██╗ 
+ ╚██████╔╝   ██║   ██║ ╚═╝ ██║██████╔╝███████╗╚██████╗██║ ╚██╗
+  ╚═════╝    ╚═╝   ╚═╝     ╚═╝╚═════╝ ╚══════╝ ╚═════╝╚═╝  ╚═╝
+ =============================================================
+       E T H N O C E N T R I C   E N G I N E E R I N G
+```
 
-[![React Native](https://img.shields.io/badge/React_Native-0.74+-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
-[![Expo SDK](https://img.shields.io/badge/Expo_SDK-54%20%7C%2058-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
-[![Tauri v2](https://img.shields.io/badge/Tauri_v2-2.10.3-FFC131?style=for-the-badge&logo=tauri&logoColor=black)](https://tauri.app/)
-[![Rust](https://img.shields.io/badge/Rust-1.77+-DEA584?style=for-the-badge&logo=rust&logoColor=black)](https://www.rust-lang.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4+-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![SQLite](https://img.shields.io/badge/SQLCipher-AES--256-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.zetetic.net/sqlcipher/)
-[![AI Vision](https://img.shields.io/badge/AI_Vision-Edge_Computer_Vision-FF6F61?style=for-the-badge&logo=google&logoColor=white)](https://github.com/epicstudiohelpdesk-arch/GYMDECK)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+### **The Unified Offline-First ERP · Cloud-Synchronized Gateway · Bento AI Mobile Ecosystem**
 
 <p align="center">
-  <b>Local-First Desktop ERP</b> • <b>Cloud-Synchronized Gateway</b> • <b>Bento Light-Theme Member App</b> • <b>Edge AI/ML Fitness Suite</b>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-macos.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-macos.yml?branch=main&label=macOS%20DMG&style=for-the-badge&logo=apple&logoColor=white&color=000000" alt="macOS Build"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-linux.yml?branch=main&label=Linux%20AppImage&style=for-the-badge&logo=linux&logoColor=white&color=FCC624" alt="Linux Build"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-windows.yml?branch=main&label=Windows%20MSI&style=for-the-badge&logo=windows&logoColor=white&color=0078D6" alt="Windows Build"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/backend-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/backend-ci.yml?branch=main&label=Backend%20CI&style=for-the-badge&logo=docker&logoColor=white&color=2496ED" alt="Backend CI"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/mobile-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/mobile-ci.yml?branch=main&label=Mobile%20CI&style=for-the-badge&logo=expo&logoColor=white&color=4630EB" alt="Mobile CI"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Security_Tests-23%2F23_Passed-success?style=for-the-badge&logo=rust&logoColor=white&color=10B981" alt="Security Tests">
+  <img src="https://img.shields.io/badge/TypeScript-Strict_Clean-blue?style=for-the-badge&logo=typescript&logoColor=white&color=3178C6" alt="TypeScript Strict">
+  <img src="https://img.shields.io/badge/Database-SQLCipher_AES--256-critical?style=for-the-badge&logo=sqlite&logoColor=white&color=991B1B" alt="SQLCipher AES-256">
+  <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge&logo=shield&logoColor=white" alt="Proprietary License">
+  <img src="https://img.shields.io/badge/Status-Production_Grade-purple?style=for-the-badge&logo=checkmarx&logoColor=white&color=7C3AED" alt="Production Grade">
 </p>
 
 ---
 
-> 🏛️ **Core Architecture Principle:**  
-> *"The gym creates the member. The member creates the digital account. GymDeck Cloud securely links the two."*  
-> 
-> ⚡ **Platform Invariant:**  
+> 🏛️ **System Specification Invariant:**  
 > *"Local-first. Cloud-synchronized. Server-authorized."*  
 > 
-> 📄 **Official Specification:** [`docs/architecture/SYSTEM-SPECIFICATION.md`](docs/architecture/SYSTEM-SPECIFICATION.md)
+> ⚡ **Core Operational Law:**  
+> *"The gym creates the member. The member creates the digital account. GymDeck Cloud securely links the two."*  
+> 
+> 📄 **Architectural Blueprint:** [`docs/architecture/SYSTEM-SPECIFICATION.md`](docs/architecture/SYSTEM-SPECIFICATION.md)
 
 </div>
 
 ---
 
-## 📱 Member Mobile App Showcase
+## 🛠️ The Engineered Tech Desk (Full Technology Matrix)
+
+<div align="center">
+
+<p align="center">
+  <a href="https://skillicons.dev">
+    <img src="https://skillicons.dev/icons?i=rust,ts,react,tauri,tailwind,nodejs,express,postgres,sqlite,docker,python,pytorch,bash,git,githubactions,vite,html,css,postman,vscode,apple,android&theme=dark" alt="GymDeck Tech Desk" />
+  </a>
+</p>
+
+</div>
+
+### 1. 🦀 Core Native Systems & Desktop Runtime
+| Technology | Role & Architecture | Version / Spec | Status |
+|:---|:---|:---|:---:|
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/rust/rust-original.svg" width="18"/> **Rust** | Zero-cost abstractions, multi-threaded write engine, memory safety | `1.77+` | `● Active` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/tauri/tauri-original.svg" width="18"/> **Tauri v2** | Native desktop window shell, cross-platform IPC bridge | `v2.10.3` | `● Verified` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/sqlite/sqlite-original.svg" width="18"/> **SQLCipher** | AES-256 encrypted local database, WAL mode, 15-connection pool | `0.31` | `● Production` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/cplusplus/cplusplus-original.svg" width="18"/> **OpenSSL 3.0** | Vendored cryptographic primitives for SQLCipher CBC encryption | `v3.0.x` | `● Secured` |
+| ⚡ **Tokio Async** | Multi-threaded async runtime, mpsc channel write workers | `v1.37` | `● Active` |
+| 🛡️ **Argon2id** | Memory-hard password hashing (64MB RAM, 3 iterations, 4 parallelism) | `v0.5.3` | `● Enforced` |
+| 🔒 **Zeroize** | Cryptographic memory wiper for passwords and tokens on `Drop` | `v1.8` | `● Enforced` |
+| 📄 **lopdf + flate2** | 5-phase server-side PDF stream deduplication and image downscaler | `v0.33` | `● Production` |
+
+### 2. 📱 Mobile Engineering Suite (iOS & Android)
+| Technology | Role & Architecture | Version / Spec | Status |
+|:---|:---|:---|:---:|
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg" width="18"/> **React Native** | High-performance native mobile UI rendering framework | `0.74+` | `● Active` |
+| <img src="https://assets.stickpng.com/images/62a74f85223343fbc2207d05.png" width="18"/> **Expo SDK** | Managed cross-platform native runtime with Expo Router v3 | `SDK 54 / 58` | `● Verified` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" width="18"/> **TypeScript** | Strict compile-time typing across routes, stores, and AI models | `v5.3+` | `● 0 Errors` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/tailwindcss/tailwindcss-original.svg" width="18"/> **NativeWind** | Utility-first Bento design system styling for React Native | `v4.0` | `● Active` |
+| 🐻 **Zustand** | Micro-state management for theme, nutrition logs, and user auth | `v4.5` | `● Active` |
+| 🛡️ **Safe Area Context** | Edge-to-edge scaling for Dynamic Island, notch, and Android bars | `v4.10` | `● Responsive` |
+| 🎟️ **HMAC QR Engine** | Dynamic turnstile pass generation with 30s auto-refresh cycles | `crypto-js` | `● Secured` |
+
+### 3. 🧠 Edge AI / ML Computer Vision Engine
+| Technology | Role & Architecture | Version / Spec | Status |
+|:---|:---|:---|:---:|
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg" width="18"/> **Python** | Model training, ONNX graph export, and dataset preprocessing | `3.11+` | `● Active` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/pytorch/pytorch-original.svg" width="18"/> **PyTorch** | Deep neural network training for equipment & food classification | `v2.2` | `● Verified` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/google/google-original.svg" width="18"/> **MediaPipe** | Real-time 33-point skeletal landmark detection on device | `v0.10` | `● Edge Ready` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/opencv/opencv-original.svg" width="18"/> **OpenCV** | Frame normalization, bounding-box cropping, perspective correction | `v4.9` | `● Active` |
+| 🥗 **Calorie Vision** | Semantic food item segmentation, macro & micronutrient estimation | `In-house` | `● Active` |
+| 🏋️ **Gym Classifier** | Machine identification, targeted muscle maps, safety & alternative cues | `In-house` | `● Active` |
+| 📐 **Pose Kinematics** | Real-time trigonometric joint angle calculation and rep cadence counting | `In-house` | `● Active` |
+| 📚 **ExerciseDB API** | 1,300+ indexed strength exercises categorized by body part & equipment | `v1.2` | `● Integrated` |
+
+### 4. ☁️ Cloud Gateway, Microservices & Synchronization
+| Technology | Role & Architecture | Version / Spec | Status |
+|:---|:---|:---|:---:|
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original.svg" width="18"/> **Node.js** | High-throughput asynchronous backend runtime | `v22 LTS` | `● Active` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/express/express-original.svg" width="18"/> **Express.js** | Enterprise REST gateway and route coordination | `v5.2` | `● Active` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original.svg" width="18"/> **PostgreSQL** | Cloud database with row-level locks for turnstile gate serialization | `v16 Alpine` | `● Scalable` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/docker/docker-original.svg" width="18"/> **Docker** | Multi-stage production container build with minimal attack surface | `v26+` | `● Containerized` |
+| 🛡️ **Zod** | Runtime request body and query schema contract enforcement | `v3.23` | `● Enforced` |
+| 🔄 **Delta Sync** | Bi-directional offline reconciliation supporting 3-arg & 4-arg handshakes | `Custom` | `● Operational` |
+| 💳 **NPCI / UPI Switch** | Direct bank settlement, simulated SMS OTP verification, and VPA routing | `Custom` | `● Integrated` |
+
+### 5. 🖥️ Desktop Frontend WebView (React 19 Shell)
+| Technology | Role & Architecture | Version / Spec | Status |
+|:---|:---|:---|:---:|
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg" width="18"/> **React 19** | Desktop UI shell utilizing `createRoot` and `unmount()` lifecycle | `19.2.5` | `● Active` |
+| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/vite/vite-original.svg" width="18"/> **Vite 6** | Bundler with manual chunk splitting producing 47 code-split chunks | `v6.4.2` | `● Optimized` |
+| ⚡ **Terser** | Multi-pass JavaScript minifier (`drop_console`, `passes: 3`) | `v5.46` | `● Production` |
+| 🎭 **Framer Motion** | Desktop animation engine for smooth stage transitions | `v12.38` | `● Active` |
+| ✨ **Lottie React** | Vector animation rendering for welcome overlays and loader screens | `v2.4` | `● Active` |
+| 🎛️ **Lucide Icons** | Clean, scalable engineering iconography across all 36 stages | `v0.468` | `● Active` |
+
+---
+
+## 📱 Mobile App Showcase & Bento Design System
 
 The **GymDeck Member Mobile App** (`apps/member-mobile`) features a custom **Light-Theme Bento Design System** engineered for fluid responsiveness on both **iOS** (Dynamic Island & notch safe areas) and **Android** (navigation bars & display cutouts).
 
@@ -59,82 +142,59 @@ The **GymDeck Member Mobile App** (`apps/member-mobile`) features a custom **Lig
   </table>
 </div>
 
-### 🎨 Bento Light-Theme Aesthetic
+### 🎨 Bento Light-Theme Color Geometry
 
-| Token | Hex Code | Visual Role |
-|---|---|---|
-| **Periwinkle Primary** | `#4F75E3` / `#9BB6F6` | Primary accents, interactive pill buttons, active indicators |
-| **Orchid Lilac** | `#DBA6F4` | Quick action widgets, secondary stat highlights, badges |
-| **Golden Tangerine** | `#F59D42` | Daily streaks, alerts, workout energy highlights |
-| **Crisp Canvas** | `#F0F2F6` | Neutral ultra-clean background with safe contrast |
-| **Pure White Bento Cards** | `#FFFFFF` | Layered depth cards with soft border strokes and subtle elevation |
-| **Deep Charcoal** | `#1C1D22` | High-contrast typography and icon glyphs |
-
----
-
-## 📑 Table of Contents
-
-- [Executive Overview](#-executive-overview)
-- [System Architecture](#-system-architecture)
-- [Member Mobile App](#-member-mobile-app)
-- [AI & ML Vision Suite](#-ai--ml-vision-suite)
-- [Desktop Admin ERP (Tauri + Rust)](#-desktop-admin-erp-tauri--rust)
-- [Cloud Gateway & Microservices](#-cloud-gateway--microservices)
-- [Security & Cryptography](#-security--cryptography)
-- [Document Compression Pipeline](#-document-compression-pipeline)
-- [Monorepo Directory Structure](#-monorepo-directory-structure)
-- [Setup & Quickstart Guide](#-setup--quickstart-guide)
-- [Automated Testing & Verification](#-automated-testing--verification)
-- [Environment Variables](#-environment-variables)
-- [CI/CD & Production Build Targets](#-cicd--production-build-targets)
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                      BENTO PALETTE SPECIFICATIONS                      │
+├───────────────────┬─────────────┬──────────────────────────────────────┤
+│ Token Name        │ Hex Code    │ Visual Role & Usage                  │
+├───────────────────┼─────────────┼──────────────────────────────────────┤
+│ Periwinkle Primary│ #4F75E3     │ Primary brand action, pill buttons   │
+│ Pastel Periwinkle │ #9BB6F6     │ Hero Bento cards, soft accent fields │
+│ Orchid Lilac      │ #DBA6F4     │ Quick action tiles, secondary stats  │
+│ Golden Tangerine  │ #F59D42     │ Streaks, energy badges, warnings     │
+│ Clean Canvas      │ #F0F2F6     │ Ultra-clean neutral background       │
+│ Pure White Card   │ #FFFFFF     │ High-elevation Bento surface cards   │
+│ Deep Charcoal     │ #1C1D22     │ High-contrast primary typography     │
+│ Muted Slate       │ #8F92A1     │ Subtitles, micro-labels, metadata    │
+└───────────────────┴─────────────┴──────────────────────────────────────┘
+```
 
 ---
 
-## 🌟 Executive Overview
-
-**GymDeck** is an enterprise-grade gym management ecosystem designed to solve the two biggest operational pitfalls in physical fitness facilities:
-1. **Network Fragility:** Single-point cloud software failure stops turnstiles, locks out members, and halts front-desk operations during ISP outages.
-2. **Disconnected Member Experiences:** Members struggle with separate apps for payments, workout tracking, nutrition guidance, and gate access.
-
-GymDeck unifies this into a **tri-tier hybrid architecture**:
-- **Offline-First Desktop ERP:** Runs locally on front-desk computers via **Tauri v2 + Rust**, storing all gym data in an AES-256 encrypted SQLCipher database. The gym stays 100% operational offline.
-- **Cloud Gateway Hub:** Acts as an asynchronous bi-directional sync coordinator, serializing turnstile entries, managing memberships, and processing online payments.
-- **Member Mobile Experience:** An Expo/React Native mobile application featuring instant turnstile QR access, workout logging, PT schedules, and an **on-device AI Computer Vision suite** for nutrition and exercise coaching.
-
----
-
-## 🏛️ System Architecture
+## 🏛️ Tri-Tier Engineering Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                    GYMDECK ECOSYSTEM                                    │
+│                           GYMDECK TRI-TIER TOPOLOGY BLUEPRINT                           │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
                                              │
                   ┌──────────────────────────┴──────────────────────────┐
                   ▼                                                     ▼
 ┌───────────────────────────────────┐                 ┌───────────────────────────────────┐
-│   TAURI V2 DESKTOP ERP (ADMIN)    │                 │    EXPO / REACT NATIVE MOBILE     │
-│   (macOS / Windows / Linux)       │                 │         (iOS & Android)           │
+│     TIER 1: FRONT-DESK ERP        │                 │     TIER 2: MEMBER MOBILE         │
+│     (Tauri v2 + Rust Core)        │                 │     (React Native + Expo SDK)     │
 │                                   │                 │                                   │
 │  ┌─────────────────────────────┐  │                 │  ┌─────────────────────────────┐  │
-│  │ React 19 Frontend Shell     │  │                 │  │ Bento Light-Theme UI/UX     │  │
+│  │ React 19 Frontend Shell     │  │                 │  │ Light Bento Design System   │  │
 │  │ 36 Lazy-Loaded Admin Stages │  │                 │  │ Floating Bottom Nav Dock    │  │
 │  └──────────────┬──────────────┘  │                 │  └──────────────┬──────────────┘  │
 │                 │ IPC Commands    │                 │                 │                 │
 │  ┌──────────────▼──────────────┐  │                 │  ┌──────────────▼──────────────┐  │
-│  │ Rust Core Engine            │  │                 │  │ AI/ML Computer Vision Suite │  │
-│  │ - SQLCipher AES-256 DB      │  │                 │  │ - Calorie/Macro Scanner     │  │
+│  │ Rust Native Engine          │  │                 │  │ Edge AI Computer Vision     │  │
+│  │ - SQLCipher AES-256 DB      │  │                 │  │ - Calorie & Macro Scanner   │  │
 │  │ - Dedicated Write Worker    │  │                 │  │ - Gym Equipment Classifier  │  │
 │  │ - Argon2id Cryptography     │  │                 │  │ - Real-Time Pose Coach      │  │
-│  │ - lopdf Document Optimizer  │  │                 │  │ - ExerciseDB 1300+ Library  │  │
+│  │ - 5-Phase PDF Optimizer     │  │                 │  │ - 1,300+ ExerciseDB Library │  │
 │  │ - Daily 3:00 AM VACUUM      │  │                 │  └──────────────┬──────────────┘  │
 │  └──────────────┬──────────────┘  │                 │                 │                 │
 └─────────────────┼─────────────────┘                 └─────────────────┼─────────────────┘
                   │                                                     │
-                  │ WebSocket / HTTPS Sync Hub                          │ RESTful APIs / HMAC
+                  │ Asynchronous Delta Sync Hub                         │ HTTPS REST / HMAC Pass
                   ▼                                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                         GYMDECK CLOUD GATEWAY & MICROSERVICES                           │
+│                      TIER 3: CLOUD GATEWAY & CONCURRENCY ORCHESTRATOR                   │
 │  ┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────────────┐  │
 │  │ Multi-Tenant Sync Hub │ │ Turnstile Gate Lock   │ │ Payment Orchestration         │  │
 │  │ Delta Conflict Matrix │ │ Concurrent Check-Ins  │ │ Razorpay / Stripe / UPI QR    │  │
@@ -144,48 +204,9 @@ GymDeck unifies this into a **tri-tier hybrid architecture**:
 
 ---
 
-## 📱 Member Mobile App
+## 🤖 Edge AI & Computer Vision Kinematics
 
-Built on **React Native** and **Expo SDK 54+**, the Member App gives gym-goers seamless daily access to their fitness life:
-
-### 🔐 Auth & Onboarding Suite
-- **Welcome Onboarding Walkthrough:** Interactive value proposition cards showcasing AI coach features, turnstile entry, and workout planners.
-- **Cloud Gym Linking:** Connects digital accounts to local physical gym memberships via Gym Code and Member PIN verification.
-- **Biometric & Secure Auth:** High-assurance Login, Signup, Forgot Password, and 6-Digit OTP Email Verification.
-
-### 🏠 Navigation & Tab Architecture
-- **Floating Bento Dock:** Elevated frosted bottom dock (`borderTopRadius: 32`) with active state micro-dots, haptic feedback, and responsive padding.
-- **Home Dashboard:**
-  - Dynamic Member Greeting with avatar & status badges.
-  - Daily Streak & Goal Progress counters.
-  - Active Floor Pass Bento Card with quick turnstile trigger.
-  - Interactive Bento Quick Actions: *AI Nutrition*, *Equipment Scanner*, *Pose Coach*, *Exercise Catalog*.
-  - Live Gym Capacity indicator.
-- **Turnstile Check-In / Floor Pass:**
-  - Dynamic QR Code backed by rotating **HMAC-SHA256 signatures**.
-  - 30-second live countdown timer with auto-refresh mechanism.
-  - Anti-screenshot watermarking and anti-replay timestamps.
-  - Recent check-in timestamps and access validation alerts.
-- **Workouts & Routines:**
-  - Day-by-day split scheduler (Push, Pull, Legs, Upper, Lower, Cardio).
-  - Target muscle group visual tags.
-  - Exercise volume, set, rep, and weight counters.
-  - Personal Record (PR) celebration tracker.
-- **Membership & Billing:**
-  - Premium Tier card (Platinum, Gold, Silver, Student).
-  - Renewal countdown and expiry notifications.
-  - Outstanding dues summary card.
-  - Payment history with instant PDF invoice downloads.
-- **Member Profile:**
-  - Personal health metrics (Weight, Height, BMI, Body Fat %).
-  - Emergency contact details and locker assignments.
-  - Appearance preferences (Light Bento default / Dark theme).
-
----
-
-## 🤖 AI & ML Vision Suite
-
-GymDeck integrates cutting-edge computer vision capabilities directly into the mobile experience (`apps/member-mobile/src/services/ai/`):
+The GymDeck AI engine (`apps/member-mobile/src/services/ai/`) delivers edge computer vision directly onto mobile hardware:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -203,46 +224,31 @@ GymDeck integrates cutting-edge computer vision capabilities directly into the m
 └──────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
 ```
 
-### 1. AI Calorie & Nutrition Vision Scanner (`calorieVisionService.ts`)
-- Scans meal plates via live camera feed or photo gallery.
-- Performs multi-item semantic segmentation (e.g., grilled chicken breast, quinoa, steamed broccoli).
-- Calculates macronutrient distribution: **Calories (kcal)**, **Protein (g)**, **Carbohydrates (g)**, **Fats (g)**, and **Fiber (g)**.
-- Persists daily food logs into the reactive `nutritionStore.ts`.
+### 1. 🥗 AI Calorie & Macro Vision (`calorieVisionService.ts`)
+- Analyzes meal plates captured via camera or camera roll.
+- Segments multiple items simultaneously (e.g. brown rice, salmon fillet, steamed asparagus).
+- Estimates weight, calories, macronutrients (Protein, Carbohydrates, Fats), and micronutrients (Fiber, Sodium).
+- Persists logs into the reactive `nutritionStore.ts` tracking daily caloric deficits/surpluses.
 
-### 2. AI Gym Machine & Equipment Classifier (`gymMachineService.ts`)
-- Instantly detects gym machines (Lat Pulldown, Smith Machine, Leg Press, Cable Crossover, Pec Deck).
-- Displays primary and secondary muscles targeted in 3D-style anatomical maps.
-- Provides step-by-step seat setup, pin placement, grip adjustments, and common rookie mistakes to avoid.
-- Suggests alternative dumbbell and resistance band variations if the machine is occupied.
+### 2. 🏋️ AI Gym Equipment & Machine Classifier (`gymMachineService.ts`)
+- Automatically identifies machines (Smith Machine, Lat Pulldown, Leg Press, Cable Cross, Pec Fly).
+- Renders 3D anatomical muscle maps indicating primary and secondary targeted muscle groups.
+- Displays step-by-step seat pin, handle, and cable positioning guides.
+- Recommends alternative dumbbell or bodyweight movements when equipment is occupied.
 
-### 3. AI Real-Time Pose Coach & Rep Counter (`poseCoachService.ts`)
-- Leverages edge keypoint tracking across 33 skeletal body landmarks.
-- Supported exercises: **Barbell Squats**, **Pushups**, **Bench Press**, **Deadlifts**, and **Bicep Curls**.
-- Calculates trigonometric joint angles in real time (e.g., knee flexion angle: depth verification at `< 90°`).
-- Tracks eccentric vs. concentric phases and counts reps only upon full range of motion.
-- Triggers instant visual/audio feedback for improper form (e.g., *"Keep chest up"*, *"Knees caving inward"*).
-
-### 4. ExerciseDB Muscle Directory (`exerciseDbService.ts`)
-- 1,300+ indexed strength, hypertrophy, and mobility movements.
-- Filterable by target muscle (Chest, Lats, Quads, Hamstrings, Deltoids, Core), equipment (Barbell, Cable, Machine, Dumbbell), and difficulty.
+### 3. 📐 Real-Time Pose Coach & Rep Counter (`poseCoachService.ts`)
+- Tracks 33 skeletal body keypoints at up to 60 FPS.
+- Supports **Barbell Squats**, **Pushups**, **Bench Press**, **Deadlifts**, and **Bicep Curls**.
+- Evaluates trigonometric joint angles in real time:
+  $$\theta = \arccos\left(\frac{\vec{BA} \cdot \vec{BC}}{|\vec{BA}| |\vec{BC}|}\right)$$
+- Detects eccentric vs. concentric transitions and validates full range of motion (ROM) before incrementing rep counts.
+- Delivers real-time audio and visual posture warnings (e.g., *"Depth insufficient (<90°)"*, *"Elbow flare detected"*).
 
 ---
 
-## 🖥️ Desktop Admin ERP (Tauri + Rust)
+## 🖥️ Desktop ERP — 36 Lazy-Loaded Admin Stages
 
-The GymDeck Desktop Shell provides front-desk gym staff and gym owners with an offline-resilient, military-grade administrative ERP:
-
-### ⚡ Rust Backend Engine (`src-tauri/`)
-- **SQLCipher AES-256 Storage:** All member records, financial ledgers, and attendance logs are encrypted at rest with keys derived from `GYMDECK_DB_KEY`.
-- **Dedicated Write Worker (`AsyncDbManager`):** Writes are serialized through an asynchronous `tokio::sync::mpsc` channel to a dedicated OS thread, completely eliminating `SQLITE_BUSY` lock contention.
-- **High-Performance Read Pool:** Managed pool of 15 simultaneous read connections via `r2d2`.
-- **Argon2id Key Derivation:** Industry-standard password hashing (64 MB memory, 3 iterations, 4 parallelism).
-- **Automated Health Monitor:** Background daemon running every 60 seconds performing passive WAL checkpoints and 50-page incremental vacuums.
-- **Automated 3:00 AM Backup:** Online `VACUUM INTO` creates non-blocking `.gymdeckbackup` snapshots with SHA-256 integrity checksums.
-- **Device Trust Engine:** Generates SHA-256 machine hardware fingerprints to bind administrative sessions to authorized hardware.
-
-### 🎛️ 36 Lazy-Loaded Admin Stages (`frontend/`)
-The desktop frontend employs an optimized stage-based lazy loading architecture (47 code-split chunks):
+The front-desk desktop application features 36 modular administrative stages loaded on-demand via the Vite chunk splitter:
 
 ```
 DashboardWidgets      CollectFees           MemberDocuments       TrainerPerformance
@@ -254,36 +260,7 @@ AttendanceTrends      IDProofs              PTPackages            SessionTrackin
 BackupRestore         ManualEntry           FreezePause           StaffRoles
 ```
 
----
-
-## ☁️ Cloud Gateway & Microservices
-
-The cloud gateway (`backend/`) enables secure synchronization between desktop instances and member mobile devices:
-
-- **Turnstile Concurrency Engine (`backend/services/owner/ownerAttendanceService.ts`):** Serializes high-throughput member check-ins with database row-level locking, preventing fraudulent double-entries.
-- **Sync Microservice (`backend/services/sync/syncService.ts`):** Bidirectional delta replication supporting both 3-argument and 4-argument sync protocols with timestamp-based conflict resolution.
-- **Payment Gateway Orchestrator (`backend/gateway/src/routes/paymentConfig.ts`):** Centralized webhook handlers and checkout sessions for Razorpay, Stripe, and UPI QR codes.
-- **Multi-Tenant Scoping:** Full database-level multi-gym isolation via enforced `gym_id` foreign keys and role-based access control (RBAC).
-
----
-
-## 🔒 Security & Cryptography
-
-| Security Domain | Mechanism | Implementation Details |
-|---|---|---|
-| **Database Encryption** | AES-256 (SQLCipher) | 256-bit CBC encryption with HMAC per page. Hard purge prohibited on key mismatch. |
-| **Password Storage** | Argon2id & scrypt | Desktop: Argon2id (64MB/3/4). Cloud: scrypt (N=16384, r=8, p=1). Constant-time comparisons. |
-| **Pass Generation** | HMAC-SHA256 Dynamic QR | Single-use time-bound tokens refreshed every 30s with anti-replay cryptographic nonces. |
-| **Session Security** | OS Keyring + Keychains | Tokens stored in macOS Keychain, Windows Credential Manager, or Linux Secret Service. |
-| **Memory Protection** | Zeroize on Drop | `SecureString` and cryptographic tokens zeroize their memory allocations when dropped. |
-| **Brute-Force Guard** | Token-Bucket Limiter | Exponential penalty multipliers on failed attempts across auth and sensitive endpoints. |
-| **Safe Error Handling** | Sanitized Serializers | Strips internal paths, queries, and cryptographic keys before error delivery. |
-
----
-
-## 📦 Document Compression Pipeline
-
-GymDeck features a two-stage document compression pipeline:
+### 📦 5-Phase Document Compression Pipeline
 
 ```
 [User Selects Document / ID / Photo]
@@ -312,7 +289,69 @@ GymDeck features a two-stage document compression pipeline:
 
 ---
 
-## 📂 Monorepo Directory Structure
+## 🔒 Security, Cryptography & Compliance Matrix
+
+| Security Domain | Mechanism | Implementation Details |
+|---|---|---|
+| **Database Encryption** | AES-256 (SQLCipher) | 256-bit CBC encryption with HMAC per page. Hard purge prohibited on key mismatch. |
+| **Password Storage** | Argon2id & scrypt | Desktop: Argon2id (64MB/3/4). Cloud: scrypt (N=16384, r=8, p=1). Constant-time comparisons. |
+| **Pass Generation** | HMAC-SHA256 Dynamic QR | Single-use time-bound tokens refreshed every 30s with anti-replay cryptographic nonces. |
+| **Session Security** | OS Keyring + Keychains | Tokens stored in macOS Keychain, Windows Credential Manager, or Linux Secret Service. |
+| **Memory Protection** | Zeroize on Drop | `SecureString` and cryptographic tokens zeroize their memory allocations when dropped. |
+| **Brute-Force Guard** | Token-Bucket Limiter | Exponential penalty multipliers on failed attempts across auth and sensitive endpoints. |
+| **Safe Error Handling** | Sanitized Serializers | Strips internal paths, queries, and cryptographic keys before error delivery. |
+
+---
+
+## 🧪 Automated Testing & Verification
+
+GymDeck enforces strict quality criteria across the monorepo:
+
+### 📱 Member Mobile App TypeScript Verification
+```bash
+cd apps/member-mobile
+pnpm run typecheck
+# Output: $ tsc --noEmit (0 errors)
+```
+
+### 🦀 Rust Security & Chaos Tests (23/23 Passing)
+```bash
+cd src-tauri
+cargo test
+```
+
+```
+23/23 tests passed (9.72s)
+├── 13 Security & Enterprise Tests
+│   ├── test_rate_limiter_prevents_bruteforce ............ PASSED
+│   ├── test_rate_limiter_penalty_logic .................. PASSED
+│   ├── test_rate_limiter_refill ......................... PASSED
+│   ├── test_device_trust_fingerprint_determinism ........ PASSED
+│   ├── test_trust_engine_drift_classification .......... PASSED
+│   ├── test_session_create_and_revoke ................... PASSED
+│   ├── test_session_lock ................................ PASSED
+│   ├── test_argon2_hash_and_verify ...................... PASSED
+│   ├── test_secure_string_zeroize_on_drop ............... PASSED
+│   ├── test_app_config_defaults ......................... PASSED
+│   ├── test_schema_migration_version_tracking ........... PASSED
+│   └── test_concurrent_rate_limiter_thread_safety ....... PASSED
+│
+└── 10 Chaos & Resilience Tests
+    ├── test_corrupted_backup_import_rejection ........... PASSED
+    ├── test_schema_downgrade_detection .................. PASSED
+    ├── test_incremental_vacuum_does_not_block ........... PASSED
+    ├── test_panic_hook_sanitization ..................... PASSED
+    ├── test_error_serialization_safety .................. PASSED
+    ├── test_database_corruption_error ................... PASSED
+    ├── test_rapid_fire_auth_rejection ................... PASSED
+    ├── test_multi_factor_kdf_produces_different_keys .... PASSED
+    ├── test_wal_mode_pragma_applies_correctly ........... PASSED
+    └── test_config_production_mode_detection ............ PASSED
+```
+
+---
+
+## 📂 Monorepo Directory Blueprint
 
 ```
 GYMDECK/
@@ -356,7 +395,7 @@ GYMDECK/
 │
 ├── authentication/                 # Standalone Express Auth Pages (Legacy / Dev)
 ├── docs/                           # Architecture specifications & system docs
-│   └── assets/screenshots/         # Verified application screenshots
+│   └── assets/                     # Ethnocentric banner and verified screenshots
 ├── infrastructure/                 # Docker, Traefik, and deployment configurations
 ├── package.json                    # Workspace root scripts
 └── pnpm-workspace.yaml             # pnpm workspace definition
@@ -364,15 +403,15 @@ GYMDECK/
 
 ---
 
-## 🚀 Setup & Quickstart Guide
+## 🚀 Quickstart & Developer Cockpit
 
 ### Prerequisites
-- **Node.js:** `v20.0.0` or later
-- **pnpm:** `v9.0.0` or later (`npm install -g pnpm`)
-- **Rust & Cargo:** `1.77+` (for Tauri desktop compilation: [rustup.rs](https://rustup.rs/))
-- **Mobile Environment:** [Expo Go](https://expo.dev/go) on iOS/Android, Xcode (iOS Simulator), or Android Studio (Pixel Emulator)
+- **Node.js:** `v20.0.0+` or `v22 LTS`
+- **pnpm:** `v9.0.0+` (`npm install -g pnpm`)
+- **Rust & Cargo:** `1.77+` ([rustup.rs](https://rustup.rs/))
+- **Mobile Environment:** [Expo Go](https://expo.dev/go) on iOS/Android, Xcode, or Android Studio
 
-### 1. Repository Installation
+### 1. Monorepo Installation
 ```bash
 # Clone the repository
 git clone https://github.com/epicstudiohelpdesk-arch/GYMDECK.git
@@ -382,7 +421,7 @@ cd GYMDECK
 pnpm install
 ```
 
-### 2. Running Member Mobile App (Expo)
+### 2. Launch Member Mobile App (Expo)
 ```bash
 cd apps/member-mobile
 
@@ -396,109 +435,31 @@ npx expo start --android
 npx expo start --ios
 ```
 
-### 3. Running Desktop ERP (Tauri + Rust)
+### 3. Launch Desktop ERP (Tauri + Rust)
 ```bash
 # Set your local database encryption key
 export GYMDECK_DB_KEY=$(openssl rand -hex 32)
 
-# Start Vite dev server and Tauri desktop window
+# Start Vite dev server and native Tauri desktop window
 pnpm run tauri dev
 ```
 
-### 4. Running Cloud Gateway
+### 4. Launch Cloud Gateway
 ```bash
 cd backend/gateway
 
 # Configure environment
 cp .env.example .env
 
-# Start gateway server
+# Start gateway in dev watch mode
 pnpm run dev
 ```
 
 ---
 
-## 🧪 Automated Testing & Verification
-
-GymDeck enforces strict quality criteria across the monorepo:
-
-### 📱 Member Mobile App TypeScript Verification
-```bash
-cd apps/member-mobile
-pnpm run typecheck
-# Output: $ tsc --noEmit (0 errors)
-```
-
-### 🦀 Rust Security & Chaos Tests (23 Passing)
-```bash
-cd src-tauri
-cargo test
-```
-
-```
-23/23 tests passed (9.72s)
-├── 13 Security & Enterprise Tests
-│   ├── test_rate_limiter_prevents_bruteforce ............ PASSED
-│   ├── test_rate_limiter_penalty_logic .................. PASSED
-│   ├── test_rate_limiter_refill ......................... PASSED
-│   ├── test_device_trust_fingerprint_determinism ........ PASSED
-│   ├── test_trust_engine_drift_classification .......... PASSED
-│   ├── test_session_create_and_revoke ................... PASSED
-│   ├── test_session_lock ................................ PASSED
-│   ├── test_argon2_hash_and_verify ...................... PASSED
-│   ├── test_secure_string_zeroize_on_drop ............... PASSED
-│   ├── test_app_config_defaults ......................... PASSED
-│   ├── test_schema_migration_version_tracking ........... PASSED
-│   └── test_concurrent_rate_limiter_thread_safety ....... PASSED
-│
-└── 10 Chaos & Resilience Tests
-    ├── test_corrupted_backup_import_rejection ........... PASSED
-    ├── test_schema_downgrade_detection .................. PASSED
-    ├── test_incremental_vacuum_does_not_block ........... PASSED
-    ├── test_panic_hook_sanitization ..................... PASSED
-    ├── test_error_serialization_safety .................. PASSED
-    ├── test_database_corruption_error ................... PASSED
-    ├── test_rapid_fire_auth_rejection ................... PASSED
-    ├── test_multi_factor_kdf_produces_different_keys .... PASSED
-    ├── test_wal_mode_pragma_applies_correctly ........... PASSED
-    └── test_config_production_mode_detection ............ PASSED
-```
-
----
-
-## ⚙️ Environment Variables
-
-Copy `.env.example` to `.env` in respective application directories:
-
-| Variable | Target | Purpose | Generation |
-|---|---|---|---|
-| `GYMDECK_DB_KEY` | Desktop (Rust) | SQLCipher AES-256 database encryption key | `openssl rand -hex 32` |
-| `SESSION_SECRET` | Backend / Express | Session cookie encryption & HMAC signing | `openssl rand -hex 64` |
-| `EXPO_PUBLIC_API_URL` | Member Mobile | Base URL for GymDeck Cloud Gateway | `https://api.gymdeck.app` |
-| `EXPO_PUBLIC_AI_API_KEY` | Member Mobile | Fallback cloud API key for AI vision | *Optional for cloud vision* |
-| `RAZORPAY_KEY_ID` | Backend | Online membership payment processor | From Razorpay Dashboard |
-| `STRIPE_SECRET_KEY` | Backend | International subscription billing | From Stripe Dashboard |
-
----
-
-## 🚀 CI/CD & Production Build Targets
-
-Automated build matrices via GitHub Actions (`.github/workflows/`):
-
-| Platform | Target Artifact | Compiler Profile | Code Signing |
-|---|---|---|---|
-| **macOS (Apple Silicon)** | `.dmg` | `opt-level = "z"`, `lto = true` | Apple Developer ID |
-| **macOS (Intel x64)** | `.dmg` | `opt-level = "z"`, `lto = true` | Apple Developer ID |
-| **Windows 10/11** | `.msi` + `.exe` | `opt-level = "z"`, `lto = true` | Windows Authenticode |
-| **Linux (Ubuntu)** | `.AppImage` | `opt-level = "z"`, `lto = true` | GPG signature |
-| **Android** | `.apk` / `.aab` | Expo EAS / Gradle Release | Android Keystore |
-| **iOS** | `.ipa` (TestFlight / App Store) | Expo EAS / Xcode Archive | Apple Distribution Certificate |
-
----
-
 <div align="center">
 
-### Built with ❤️ for modern gym owners and fitness communities worldwide.
+### Built with precision for modern athletic facilities, gym owners, and fitness communities worldwide.
 
 **GymDeck Engineering Team** • [Report Issues](https://github.com/epicstudiohelpdesk-arch/GYMDECK/issues) • [View Architecture Docs](docs/architecture/SYSTEM-SPECIFICATION.md)
 
