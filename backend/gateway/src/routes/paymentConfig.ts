@@ -29,7 +29,7 @@ router.get('/config', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     if (!gymId) {
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         data: {
           receivingMode: 'UPI',
@@ -46,6 +46,7 @@ router.get('/config', async (req: Request, res: Response, next: NextFunction) =>
           soundboxEnabled: true,
         },
       });
+      return;
     }
 
     const config = await billingService.getPaymentConfig(gymId);
@@ -76,7 +77,8 @@ router.post('/config', async (req: Request, res: Response, next: NextFunction) =
     }
 
     if (!gymId) {
-      return res.status(400).json({ success: false, message: 'No registered gym found.' });
+      res.status(400).json({ success: false, message: 'No registered gym found.' });
+      return;
     }
 
     const updated = await billingService.savePaymentConfig(gymId, req.body);
@@ -96,7 +98,7 @@ router.post('/config', async (req: Request, res: Response, next: NextFunction) =
  */
 router.post('/simulate-otp', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phone, bankName, bankId, accountData } = req.body;
+    const { phone, bankId, accountData } = req.body;
     const cleanPhone = (phone || '9876500123').replace(/\D/g, '').slice(-10);
     const otp = '984201'; // Standard deterministic verification OTP for demo / instant testing
     const senderHeader = bankId === 'sbi' ? 'AX-SBIINB' : bankId === 'icici' ? 'VM-ICICIB' : 'VM-HDFCBK';
@@ -139,10 +141,11 @@ router.post('/verify-otp', async (req: Request, res: Response, next: NextFunctio
 
     // Accept session OTP or demo code
     if (otp !== '984201' && (!session || session.otp !== otp)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Invalid OTP code. Please enter 984201 or check your SMS.'
       });
+      return;
     }
 
     const pool = getDatabasePool();
