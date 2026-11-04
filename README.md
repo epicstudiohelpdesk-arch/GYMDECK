@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏋️‍♂️ GYMDECK
+#  GYMDECK
 
 ### **Unified Offline-First + Cloud-Synchronized Gym Management ERP & AI Mobile Ecosystem**
 
