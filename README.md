@@ -13,41 +13,41 @@
 
 <p align="center">
   <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-macos.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-macos.yml?branch=main&label=macOS%20DMG&style=for-the-badge&logo=apple&logoColor=white&color=000000" alt="macOS Build"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-linux.yml?branch=main&label=Linux%20AppImage&style=for-the-badge&logo=linux&logoColor=white&color=FCC624" alt="Linux Build"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-windows.yml?branch=main&label=Windows%20MSI&style=for-the-badge&logo=windows&logoColor=white&color=0078D6" alt="Windows Build"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/backend-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/backend-ci.yml?branch=main&label=Backend%20CI&style=for-the-badge&logo=docker&logoColor=white&color=2496ED" alt="Backend CI"></a>
-  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/mobile-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/mobile-ci.yml?branch=main&label=Mobile%20CI&style=for-the-badge&logo=expo&logoColor=white&color=4630EB" alt="Mobile CI"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-linux.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-linux.yml?branch=main&label=Linux%20AppImage&style=for-the-badge&logo=linux&logoColor=white&color=18181b" alt="Linux Build"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/build-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/build-windows.yml?branch=main&label=Windows%20MSI&style=for-the-badge&logo=windows&logoColor=white&color=27272a" alt="Windows Build"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/backend-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/backend-ci.yml?branch=main&label=Backend%20CI&style=for-the-badge&logo=docker&logoColor=white&color=0f172a" alt="Backend CI"></a>
+  <a href="https://github.com/epicstudiohelpdesk-arch/GYMDECK/actions/workflows/mobile-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/epicstudiohelpdesk-arch/GYMDECK/mobile-ci.yml?branch=main&label=Mobile%20CI&style=for-the-badge&logo=expo&logoColor=white&color=09090b" alt="Mobile CI"></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Security_Tests-23%2F23_Passed-success?style=for-the-badge&logo=rust&logoColor=white&color=10B981" alt="Security Tests">
-  <img src="https://img.shields.io/badge/TypeScript-Strict_Clean-blue?style=for-the-badge&logo=typescript&logoColor=white&color=3178C6" alt="TypeScript Strict">
-  <img src="https://img.shields.io/badge/Database-SQLCipher_AES--256-critical?style=for-the-badge&logo=sqlite&logoColor=white&color=991B1B" alt="SQLCipher AES-256">
-  <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge&logo=shield&logoColor=white" alt="Proprietary License">
-  <img src="https://img.shields.io/badge/Status-Production_Grade-purple?style=for-the-badge&logo=checkmarx&logoColor=white&color=7C3AED" alt="Production Grade">
+  <img src="https://img.shields.io/badge/Security_Tests-23%2F23_Passed-000000?style=for-the-badge&logo=rust&logoColor=white" alt="Security Tests">
+  <img src="https://img.shields.io/badge/TypeScript-Strict_Clean-18181b?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript Strict">
+  <img src="https://img.shields.io/badge/Database-SQLCipher_AES--256-27272a?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLCipher AES-256">
+  <img src="https://img.shields.io/badge/License-Proprietary-000000?style=for-the-badge&logo=shield&logoColor=white" alt="Proprietary License">
+  <img src="https://img.shields.io/badge/Status-Production_Grade-18181b?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Production Grade">
 </p>
 
 ---
 
-> 🏛️ **System Specification Invariant:**  
+> **System Specification Invariant:**  
 > *"Local-first. Cloud-synchronized. Server-authorized."*  
 > 
-> ⚡ **Core Operational Law:**  
+> **Core Operational Law:**  
 > *"The gym creates the member. The member creates the digital account. GymDeck Cloud securely links the two."*  
 > 
-> 📄 **Architectural Blueprint:** [`docs/architecture/SYSTEM-SPECIFICATION.md`](docs/architecture/SYSTEM-SPECIFICATION.md)
+> **Architectural Blueprint:** [`docs/architecture/SYSTEM-SPECIFICATION.md`](docs/architecture/SYSTEM-SPECIFICATION.md)
 
 </div>
 
 ---
 
-## 🎛️ Tri-Platform Command Center Showcase
+## Tri-Platform Command Center Showcase
 
 <div align="center">
   <p><b>GymDeck delivers an integrated, real-time control cockpit across native Desktop ERP, Owner Mobile Management, and Member Mobile Bento apps.</b></p>
 </div>
 
-### 1. 🖥️ Desktop ERP Operations Hub (Tauri v2 + Rust Core + React 19)
+### 1. Desktop ERP Operations Hub (Tauri v2 + Rust Core + React 19)
 The high-throughput mission control center for front-desk operators and gym managers. Operates with zero cloud latency via **SQLCipher AES-256** local database with background multi-threaded delta sync.
 
 <div align="center">
@@ -59,11 +59,11 @@ The high-throughput mission control center for front-desk operators and gym mana
   <table>
     <tr>
       <td align="center" width="50%">
-        <b>🖥️ Desktop Live Operations Dashboard</b><br/><br/>
+        <b>Desktop Live Operations Dashboard</b><br/><br/>
         <img src="docs/assets/screenshots/desktop-erp-dashboard.png" alt="Desktop Dashboard" width="100%"/>
       </td>
       <td align="center" width="50%">
-        <b>🔐 Desktop Biometric & Keyring Security Gate</b><br/><br/>
+        <b>Desktop Biometric & Keyring Security Gate</b><br/><br/>
         <img src="docs/assets/screenshots/desktop-auth-login.png" alt="Desktop Login" width="100%"/>
       </td>
     </tr>
@@ -72,55 +72,55 @@ The high-throughput mission control center for front-desk operators and gym mana
 
 ---
 
-### 2. 📱 Owner Mobile Management Suite vs. 🏋️ Member Mobile Bento Experience
+### 2. Owner Mobile Management Suite vs. Member Mobile Bento Experience
 
 <div align="center">
   <table>
     <tr>
-      <th colspan="2" align="center" style="background-color: #EA4303; color: white;">
-        <b>📱 GYMDECK OWNER MOBILE MANAGEMENT SUITE</b>
+      <th colspan="2" align="center" style="background-color: #0F172A; color: #F8FAFC;">
+        <b>GYMDECK OWNER MOBILE MANAGEMENT SUITE</b>
       </th>
-      <th colspan="2" align="center" style="background-color: #4F75E3; color: white;">
-        <b>🏋️ GYMDECK MEMBER MOBILE BENTO APP</b>
+      <th colspan="2" align="center" style="background-color: #1E293B; color: #F8FAFC;">
+        <b>GYMDECK MEMBER MOBILE BENTO APP</b>
       </th>
     </tr>
     <tr>
       <td align="center" width="25%">
-        <b>⚡ Floor Command & Cash Pulse</b><br/>
+        <b>Floor Command & Cash Pulse</b><br/>
         <sub>Live turnstile headcounts & daily cash</sub><br/><br/>
         <img src="docs/assets/screenshots/owner-mobile-dashboard.png" alt="Owner Mobile Dashboard" width="220"/>
       </td>
       <td align="center" width="25%">
-        <b>🔐 Biometric Swipe-to-Auth</b><br/>
+        <b>Biometric Swipe-to-Auth</b><br/>
         <sub>Curved brand header & staff auth</sub><br/><br/>
         <img src="docs/assets/screenshots/owner-mobile-auth.png" alt="Owner Mobile Auth" width="220"/>
       </td>
       <td align="center" width="25%">
-        <b>🏠 Bento Home Experience</b><br/>
+        <b>Bento Home Experience</b><br/>
         <sub>Live occupancy & macro trackers</sub><br/><br/>
         <img src="docs/assets/screenshots/mobile-home-bento.png" alt="Member Bento Home" width="220"/>
       </td>
       <td align="center" width="25%">
-        <b>🎟️ Dynamic Turnstile QR Pass</b><br/>
+        <b>Dynamic Turnstile QR Pass</b><br/>
         <sub>30-second HMAC anti-replay pass</sub><br/><br/>
         <img src="docs/assets/screenshots/mobile-floor-pass.png" alt="Member Turnstile Pass" width="220"/>
       </td>
     </tr>
     <tr>
       <td align="center">
-        <b>👥 Member Roster & Dues</b><br/>
+        <b>Member Roster & Dues</b><br/>
         <sub>Direct check-out, fee collection</sub>
       </td>
       <td align="center">
-        <b>🛡️ Vault Isolation</b><br/>
+        <b>Vault Isolation</b><br/>
         <sub>Tenant encrypted key verification</sub>
       </td>
       <td align="center">
-        <b>🤖 AI Workouts & Pose Coach</b><br/>
+        <b>AI Workouts & Pose Coach</b><br/>
         <sub>Edge CV 33-point form analysis</sub>
       </td>
       <td align="center">
-        <b>💳 Active Plan Ledger</b><br/>
+        <b>Active Plan Ledger</b><br/>
         <sub>Tier benefits & renewal status</sub>
       </td>
     </tr>
@@ -129,18 +129,18 @@ The high-throughput mission control center for front-desk operators and gym mana
 
 ---
 
-### 3. 🧠 Member Mobile Edge AI & Lifestyle Modules
+### 3. Member Mobile Edge AI & Lifestyle Modules
 
 <div align="center">
   <table>
     <tr>
       <td align="center" width="50%">
-        <b>💪 AI Workout Suite & Pose Kinematics</b><br/>
+        <b>AI Workout Suite & Pose Kinematics</b><br/>
         <sub>33 skeletal landmark angle tracking • Rep cadence count</sub><br/><br/>
         <img src="docs/assets/screenshots/mobile-workouts.png" alt="Workouts & AI Pose Coach" width="280"/>
       </td>
       <td align="center" width="50%">
-        <b>💳 Digital Membership Ledger & Benefits</b><br/>
+        <b>Digital Membership Ledger & Benefits</b><br/>
         <sub>Tier status • Grace period tracker • Instant digital renewal</sub><br/><br/>
         <img src="docs/assets/screenshots/mobile-membership.png" alt="Membership Details & Plan" width="280"/>
       </td>
@@ -150,7 +150,7 @@ The high-throughput mission control center for front-desk operators and gym mana
 
 ---
 
-## 🛠️ The Engineered Tech Desk (Full Technology Matrix)
+## Engineered Tech Desk (Technology Matrix)
 
 <div align="center">
 
@@ -162,55 +162,55 @@ The high-throughput mission control center for front-desk operators and gym mana
 
 </div>
 
-### 1. 🦀 Core Native Systems & Desktop Runtime
+### 1. Core Native Systems & Desktop Runtime
 | Technology | Role & Architecture | Version / Spec | Status |
 |:---|:---|:---|:---:|
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/rust/rust-original.svg" width="18"/> **Rust** | Zero-cost abstractions, multi-threaded write engine, memory safety | `1.77+` | `● Active` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/tauri/tauri-original.svg" width="18"/> **Tauri v2** | Native desktop window shell, cross-platform IPC bridge | `v2.10.3` | `● Verified` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/sqlite/sqlite-original.svg" width="18"/> **SQLCipher** | AES-256 encrypted local database, WAL mode, 15-connection pool | `0.31` | `● Production` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/cplusplus/cplusplus-original.svg" width="18"/> **OpenSSL 3.0** | Vendored cryptographic primitives for SQLCipher CBC encryption | `v3.0.x` | `● Secured` |
-| ⚡ **Tokio Async** | Multi-threaded async runtime, mpsc channel write workers | `v1.37` | `● Active` |
-| 🛡️ **Argon2id** | Memory-hard password hashing (64MB RAM, 3 iterations, 4 parallelism) | `v0.5.3` | `● Enforced` |
-| 🔒 **Zeroize** | Cryptographic memory wiper for passwords and tokens on `Drop` | `v1.8` | `● Enforced` |
-| 📄 **lopdf + flate2** | 5-phase server-side PDF stream deduplication and image downscaler | `v0.33` | `● Production` |
+| <img src="https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white" height="20"/> | Zero-cost abstractions, multi-threaded write engine, memory safety | `1.77+` | `● Active` |
+| <img src="https://img.shields.io/badge/Tauri_v2-000000?style=flat-square&logo=tauri&logoColor=white" height="20"/> | Native desktop window shell, cross-platform IPC bridge | `v2.10.3` | `● Verified` |
+| <img src="https://img.shields.io/badge/SQLCipher-000000?style=flat-square&logo=sqlite&logoColor=white" height="20"/> | AES-256 encrypted local database, WAL mode, 15-connection pool | `0.31` | `● Production` |
+| <img src="https://img.shields.io/badge/OpenSSL-000000?style=flat-square&logo=openssl&logoColor=white" height="20"/> | Vendored cryptographic primitives for SQLCipher CBC encryption | `v3.0.x` | `● Secured` |
+| <img src="https://img.shields.io/badge/Tokio-000000?style=flat-square&logo=rust&logoColor=white" height="20"/> | Multi-threaded async runtime, mpsc channel write workers | `v1.37` | `● Active` |
+| <img src="https://img.shields.io/badge/Argon2id-000000?style=flat-square&logo=auth0&logoColor=white" height="20"/> | Memory-hard password hashing (64MB RAM, 3 iterations, 4 parallelism) | `v0.5.3` | `● Enforced` |
+| <img src="https://img.shields.io/badge/Zeroize-000000?style=flat-square&logo=securityscorecard&logoColor=white" height="20"/> | Cryptographic memory wiper for passwords and tokens on `Drop` | `v1.8` | `● Enforced` |
+| <img src="https://img.shields.io/badge/lopdf-000000?style=flat-square&logo=adobeacrobatreader&logoColor=white" height="20"/> | 5-phase server-side PDF stream deduplication and image downscaler | `v0.33` | `● Production` |
 
-### 2. 📱 Mobile Engineering Suite (Owner & Member)
+### 2. Mobile Engineering Suite (Owner & Member)
 | Technology | Role & Architecture | Version / Spec | Status |
 |:---|:---|:---|:---:|
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg" width="18"/> **React Native** | High-performance native mobile UI rendering framework | `0.88.1` | `● Active` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/apple/apple-original.svg" width="18"/> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/android/android-original.svg" width="18"/> **Expo SDK 58** | Cross-platform managed native runtime with Expo Router v4 | `SDK 58` | `● Verified` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" width="18"/> **TypeScript** | Strict compile-time typing across routes, stores, and AI models | `v5.3+` | `● 0 Errors` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/tailwindcss/tailwindcss-original.svg" width="18"/> **NativeWind** | Utility-first Bento design system styling for React Native | `v4.0` | `● Active` |
-| 🐻 **Zustand** | Micro-state management for theme, nutrition logs, and user auth | `v4.5` | `● Active` |
-| 🛡️ **Safe Area Context** | Edge-to-edge scaling for Dynamic Island, notch, and Android bars | `v5.10` | `● Responsive` |
-| 🎟️ **HMAC QR Engine** | Dynamic turnstile pass generation with 30s auto-refresh cycles | `crypto-js` | `● Secured` |
+| <img src="https://img.shields.io/badge/React_Native-000000?style=flat-square&logo=react&logoColor=white" height="20"/> | High-performance native mobile UI rendering framework | `0.88.1` | `● Active` |
+| <img src="https://img.shields.io/badge/Expo_SDK_58-000000?style=flat-square&logo=expo&logoColor=white" height="20"/> | Cross-platform managed native runtime with Expo Router v4 | `SDK 58` | `● Verified` |
+| <img src="https://img.shields.io/badge/TypeScript-000000?style=flat-square&logo=typescript&logoColor=white" height="20"/> | Strict compile-time typing across routes, stores, and AI models | `v5.3+` | `● 0 Errors` |
+| <img src="https://img.shields.io/badge/TailwindCSS-000000?style=flat-square&logo=tailwindcss&logoColor=white" height="20"/> | Utility-first Bento design system styling for React Native | `v4.0` | `● Active` |
+| <img src="https://img.shields.io/badge/Zustand-000000?style=flat-square&logo=redux&logoColor=white" height="20"/> | Micro-state management for theme, nutrition logs, and user auth | `v4.5` | `● Active` |
+| <img src="https://img.shields.io/badge/Safe_Area-000000?style=flat-square&logo=apple&logoColor=white" height="20"/> | Edge-to-edge scaling for Dynamic Island, notch, and Android bars | `v5.10` | `● Responsive` |
+| <img src="https://img.shields.io/badge/HMAC_QR-000000?style=flat-square&logo=fastly&logoColor=white" height="20"/> | Dynamic turnstile pass generation with 30s auto-refresh cycles | `crypto-js` | `● Secured` |
 
-### 3. 🧠 Edge AI / ML Computer Vision Engine
+### 3. Edge AI / ML Computer Vision Engine
 | Technology | Role & Architecture | Version / Spec | Status |
 |:---|:---|:---|:---:|
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg" width="18"/> **Python** | Model training, ONNX graph export, and dataset preprocessing | `3.11+` | `● Active` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/pytorch/pytorch-original.svg" width="18"/> **PyTorch** | Deep neural network training for equipment & food classification | `v2.2` | `● Verified` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/google/google-original.svg" width="18"/> **MediaPipe** | Real-time 33-point skeletal landmark detection on device | `v0.10` | `● Edge Ready` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/opencv/opencv-original.svg" width="18"/> **OpenCV** | Frame normalization, bounding-box cropping, perspective correction | `v4.9` | `● Active` |
-| 🥗 **Calorie Vision** | Semantic food item segmentation, macro & micronutrient estimation | `In-house` | `● Active` |
-| 🏋️ **Gym Classifier** | Machine identification, targeted muscle maps, safety & alternative cues | `In-house` | `● Active` |
-| 📐 **Pose Kinematics** | Real-time trigonometric joint angle calculation and rep cadence counting | `In-house` | `● Active` |
-| 📚 **ExerciseDB API** | 1,300+ indexed strength exercises categorized by body part & equipment | `v1.2` | `● Integrated` |
+| <img src="https://img.shields.io/badge/Python-000000?style=flat-square&logo=python&logoColor=white" height="20"/> | Model training, ONNX graph export, and dataset preprocessing | `3.11+` | `● Active` |
+| <img src="https://img.shields.io/badge/PyTorch-000000?style=flat-square&logo=pytorch&logoColor=white" height="20"/> | Deep neural network training for equipment & food classification | `v2.2` | `● Verified` |
+| <img src="https://img.shields.io/badge/MediaPipe-000000?style=flat-square&logo=google&logoColor=white" height="20"/> | Real-time 33-point skeletal landmark detection on device | `v0.10` | `● Edge Ready` |
+| <img src="https://img.shields.io/badge/OpenCV-000000?style=flat-square&logo=opencv&logoColor=white" height="20"/> | Frame normalization, bounding-box cropping, perspective correction | `v4.9` | `● Active` |
+| <img src="https://img.shields.io/badge/Calorie_Vision-000000?style=flat-square&logo=scikitlearn&logoColor=white" height="20"/> | Semantic food item segmentation, macro & micronutrient estimation | `In-house` | `● Active` |
+| <img src="https://img.shields.io/badge/Gym_Classifier-000000?style=flat-square&logo=tensorflow&logoColor=white" height="20"/> | Machine identification, targeted muscle maps, safety & alternative cues | `In-house` | `● Active` |
+| <img src="https://img.shields.io/badge/Pose_Kinematics-000000?style=flat-square&logo=scipy&logoColor=white" height="20"/> | Real-time trigonometric joint angle calculation and rep cadence counting | `In-house` | `● Active` |
+| <img src="https://img.shields.io/badge/ExerciseDB_API-000000?style=flat-square&logo=fastapi&logoColor=white" height="20"/> | 1,300+ indexed strength exercises categorized by body part & equipment | `v1.2` | `● Integrated` |
 
-### 4. ☁️ Cloud Gateway, Microservices & Synchronization
+### 4. Cloud Gateway, Microservices & Synchronization
 | Technology | Role & Architecture | Version / Spec | Status |
 |:---|:---|:---|:---:|
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original.svg" width="18"/> **Node.js** | High-throughput asynchronous backend runtime | `v22 LTS` | `● Active` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/express/express-original.svg" width="18"/> **Express.js** | Enterprise REST gateway and route coordination | `v5.2` | `● Active` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original.svg" width="18"/> **PostgreSQL** | Cloud database with row-level locks for turnstile gate serialization | `v16 Alpine` | `● Scalable` |
-| <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/docker/docker-original.svg" width="18"/> **Docker** | Multi-stage production container build with minimal attack surface | `v26+` | `● Containerized` |
-| 🛡️ **Zod** | Runtime request body and query schema contract enforcement | `v3.23` | `● Enforced` |
-| 🔄 **Delta Sync** | Bi-directional offline reconciliation supporting 3-arg & 4-arg handshakes | `Custom` | `● Operational` |
-| 💳 **NPCI / UPI Switch** | Direct bank settlement, simulated SMS OTP verification, and VPA routing | `Custom` | `● Integrated` |
+| <img src="https://img.shields.io/badge/Node.js-000000?style=flat-square&logo=nodedotjs&logoColor=white" height="20"/> | High-throughput asynchronous backend runtime | `v22 LTS` | `● Active` |
+| <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" height="20"/> | Enterprise REST gateway and route coordination | `v5.2` | `● Active` |
+| <img src="https://img.shields.io/badge/PostgreSQL-000000?style=flat-square&logo=postgresql&logoColor=white" height="20"/> | Cloud database with row-level locks for turnstile gate serialization | `v16 Alpine` | `● Scalable` |
+| <img src="https://img.shields.io/badge/Docker-000000?style=flat-square&logo=docker&logoColor=white" height="20"/> | Multi-stage production container build with minimal attack surface | `v26+` | `● Containerized` |
+| <img src="https://img.shields.io/badge/Zod-000000?style=flat-square&logo=zod&logoColor=white" height="20"/> | Runtime request body and query schema contract enforcement | `v3.23` | `● Enforced` |
+| <img src="https://img.shields.io/badge/Delta_Sync-000000?style=flat-square&logo=git&logoColor=white" height="20"/> | Bi-directional offline reconciliation supporting 3-arg & 4-arg handshakes | `Custom` | `● Operational` |
+| <img src="https://img.shields.io/badge/NPCI_UPI-000000?style=flat-square&logo=visa&logoColor=white" height="20"/> | Direct bank settlement, simulated SMS OTP verification, and VPA routing | `Custom` | `● Integrated` |
 
 ---
 
-## 🏛️ Tri-Tier Engineering Architecture
+## Tri-Tier Engineering Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
@@ -252,7 +252,7 @@ The high-throughput mission control center for front-desk operators and gym mana
 
 ---
 
-## 🎨 Bento Light-Theme Color Geometry
+## Bento Light-Theme Color Geometry
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -273,7 +273,7 @@ The high-throughput mission control center for front-desk operators and gym mana
 
 ---
 
-## 🤖 Edge AI & Computer Vision Kinematics
+## Edge AI & Computer Vision Kinematics
 
 The GymDeck AI engine (`apps/member-mobile/src/services/ai/`) delivers edge computer vision directly onto mobile hardware:
 
@@ -293,14 +293,14 @@ The GymDeck AI engine (`apps/member-mobile/src/services/ai/`) delivers edge comp
 └──────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
 ```
 
-1. **🥗 AI Calorie & Macro Vision (`calorieVisionService.ts`)**: Instant multi-item meal plate segmentation and macro tracking into reactive stores.
-2. **🏋️ AI Gym Machine Classifier (`gymMachineService.ts`)**: Autonomous recognition of gym equipment with 3D anatomical target muscle mapping.
-3. **📐 Real-Time Pose Coach (`poseCoachService.ts`)**: 33-point skeletal landmark detection tracking joint angles:
+1. **AI Calorie & Macro Vision (`calorieVisionService.ts`)**: Instant multi-item meal plate segmentation and macro tracking into reactive stores.
+2. **AI Gym Machine Classifier (`gymMachineService.ts`)**: Autonomous recognition of gym equipment with 3D anatomical target muscle mapping.
+3. **Real-Time Pose Coach (`poseCoachService.ts`)**: 33-point skeletal landmark detection tracking joint angles:
    $$\theta = \arccos\left(\frac{\vec{BA} \cdot \vec{BC}}{|\vec{BA}| |\vec{BC}|}\right)$$
 
 ---
 
-## 🖥️ Desktop ERP — 36 Lazy-Loaded Admin Stages
+## Desktop ERP — 36 Lazy-Loaded Admin Stages
 
 ```
 DashboardWidgets      CollectFees           MemberDocuments       TrainerPerformance
@@ -312,7 +312,7 @@ AttendanceTrends      IDProofs              PTPackages            SessionTrackin
 BackupRestore         ManualEntry           FreezePause           StaffRoles
 ```
 
-### 📦 5-Phase Document Compression Pipeline
+### 5-Phase Document Compression Pipeline
 ```
 [User Selects Document / ID / Photo]
                   │
@@ -340,7 +340,7 @@ BackupRestore         ManualEntry           FreezePause           StaffRoles
 
 ---
 
-## 🔒 Security, Cryptography & Compliance Matrix
+## Security, Cryptography & Compliance Matrix
 
 | Security Domain | Mechanism | Implementation Details |
 |---|---|---|
@@ -354,11 +354,11 @@ BackupRestore         ManualEntry           FreezePause           StaffRoles
 
 ---
 
-## 🧪 Automated Testing & Verification
+## Automated Testing & Verification
 
 GymDeck enforces strict quality criteria across the monorepo:
 
-### 📱 Mobile Apps TypeScript Verification
+### Mobile Apps TypeScript Verification
 ```bash
 # Member Mobile App
 cd apps/member-mobile && pnpm run typecheck
@@ -369,7 +369,7 @@ cd apps/owner-mobile && pnpm run typecheck
 # Output: $ tsc --noEmit (0 errors)
 ```
 
-### 🦀 Rust Security & Chaos Tests (23/23 Passing)
+### Rust Security & Chaos Tests (23/23 Passing)
 ```bash
 cd src-tauri && cargo test
 ```
@@ -405,7 +405,7 @@ cd src-tauri && cargo test
 
 ---
 
-## 📂 Monorepo Directory Blueprint
+## Monorepo Directory Blueprint
 
 ```
 GYMDECK/
@@ -449,7 +449,7 @@ GYMDECK/
 
 ---
 
-## 🚀 Quickstart & Developer Cockpit
+## Quickstart & Developer Cockpit
 
 ### Prerequisites
 - **Node.js:** `v20.0.0+` or `v22 LTS`
