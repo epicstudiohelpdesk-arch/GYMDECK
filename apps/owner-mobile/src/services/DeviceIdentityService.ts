@@ -16,7 +16,44 @@ import { generateUUID } from '../database/utils';
 import { LocalDatabaseManager } from '../database/LocalDatabaseManager';
 import { Logger } from '../observability';
 
-const storage = new MMKV({ id: 'gymdeck_device_identity' });
+let mmkvInstance: MMKV | null = null;
+const memoryStore = new Map<string, string>();
+
+function getStorage() {
+  if (!mmkvInstance) {
+    try {
+      mmkvInstance = new MMKV({ id: 'gymdeck_device_identity' });
+    } catch {
+      mmkvInstance = null;
+    }
+  }
+  return {
+    getString: (key: string): string | null => {
+      try {
+        return mmkvInstance ? mmkvInstance.getString(key) ?? null : (memoryStore.get(key) ?? null);
+      } catch {
+        return memoryStore.get(key) ?? null;
+      }
+    },
+    set: (key: string, value: string) => {
+      try {
+        if (mmkvInstance) mmkvInstance.set(key, value);
+        else memoryStore.set(key, value);
+      } catch {
+        memoryStore.set(key, value);
+      }
+    },
+    delete: (key: string) => {
+      try {
+        if (mmkvInstance) mmkvInstance.delete(key);
+        else memoryStore.delete(key);
+      } catch {
+        memoryStore.delete(key);
+      }
+    },
+  };
+}
+
 const STORAGE_KEY = 'vault_device_id';
 
 export class DeviceIdentityService {
@@ -31,7 +68,7 @@ export class DeviceIdentityService {
     }
 
     // 1. Check MMKV fast persistent storage
-    const stored = storage.getString(STORAGE_KEY);
+    const stored = getStorage().getString(STORAGE_KEY);
     if (stored && stored.trim().length > 0) {
       this.cachedDeviceId = stored;
       return stored;
@@ -46,7 +83,7 @@ export class DeviceIdentityService {
         );
         const vaultDeviceId = result.rows?.[0]?.device_id as string | undefined;
         if (vaultDeviceId && vaultDeviceId.trim().length > 0) {
-          storage.set(STORAGE_KEY, vaultDeviceId);
+          getStorage().set(STORAGE_KEY, vaultDeviceId);
           this.cachedDeviceId = vaultDeviceId;
           return vaultDeviceId;
         }
@@ -57,7 +94,7 @@ export class DeviceIdentityService {
 
     // 3. Generate a permanent device identifier
     const newDeviceId = `dev_${generateUUID()}`;
-    storage.set(STORAGE_KEY, newDeviceId);
+    getStorage().set(STORAGE_KEY, newDeviceId);
     this.cachedDeviceId = newDeviceId;
 
     // Persist into vault_metadata if open
@@ -86,13 +123,13 @@ export class DeviceIdentityService {
     if (this.cachedDeviceId) {
       return this.cachedDeviceId;
     }
-    const stored = storage.getString(STORAGE_KEY);
+    const stored = getStorage().getString(STORAGE_KEY);
     if (stored && stored.trim().length > 0) {
       this.cachedDeviceId = stored;
       return stored;
     }
     const newId = `dev_${generateUUID()}`;
-    storage.set(STORAGE_KEY, newId);
+    getStorage().set(STORAGE_KEY, newId);
     this.cachedDeviceId = newId;
     return newId;
   }
@@ -102,10 +139,10 @@ export class DeviceIdentityService {
    */
   public static setDeviceIdForTesting(id: string | null): void {
     if (id === null) {
-      storage.delete(STORAGE_KEY);
+      getStorage().delete(STORAGE_KEY);
       this.cachedDeviceId = null;
     } else {
-      storage.set(STORAGE_KEY, id);
+      getStorage().set(STORAGE_KEY, id);
       this.cachedDeviceId = id;
     }
   }

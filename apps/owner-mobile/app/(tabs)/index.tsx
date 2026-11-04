@@ -674,10 +674,10 @@ export default function OwnerHomeScreen() {
     : (attendanceStats?.todayCheckIns ?? 0);
 
   const recentMembers: GymMemberSummary[] = recentMembersData?.members ?? [];
-  const totalRevenue = overview?.metrics.financial.netPaid ?? 0;
-  const transactionCount = overview?.metrics.financial.transactionCount ?? 0;
-  const expiringSoon = overview?.metrics.memberships.expiringSoon ?? 0;
-  const expiredMembers = overview?.metrics.members.expired ?? 0;
+  const totalRevenue = overview?.metrics?.financial?.netPaid ?? 0;
+  const transactionCount = overview?.metrics?.financial?.transactionCount ?? 0;
+  const expiringSoon = (overview?.metrics as any)?.memberships?.expiringSoon ?? 0;
+  const expiredMembers = overview?.metrics?.members?.expired ?? 0;
 
   const handleCategoryPress = (catId: string) => {
     setActiveCategory(catId);

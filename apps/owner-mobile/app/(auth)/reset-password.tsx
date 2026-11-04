@@ -144,7 +144,7 @@ export default function ResetPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#EA4303" />
+      <StatusBar barStyle="light-content" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

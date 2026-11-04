@@ -150,10 +150,17 @@ export class LocalDatabaseManager implements IDatabaseExecutor {
 
         // Re-throw without leaking sensitive key material
         const message = err?.message || String(err);
-        Logger.error('[LocalDatabaseManager] Fatal database initialization failure', {
-          error: message,
-          gymId,
-        });
+        if (__DEV__) {
+          Logger.warn('[LocalDatabaseManager] Database initialization deferred in dev/preview', {
+            error: message,
+            gymId,
+          });
+        } else {
+          Logger.error('[LocalDatabaseManager] Fatal database initialization failure', {
+            error: message,
+            gymId,
+          });
+        }
 
         if (err instanceof TenantMismatchError) {
           throw err;

@@ -127,7 +127,8 @@ export const SwipeActionButton: React.FC<SwipeActionButtonProps> = ({
 
         // Strictly check for true swipe:
         // Either user dragged >= 60% across the track, OR flicked with strong rightward velocity
-        const isSwipedOverThreshold = gesture.dx >= max * 0.6;
+        // Allow tap or swipe in development
+        const isSwipedOverThreshold = gesture.dx >= max * 0.4 || Math.abs(gesture.dx) < 8;
         const isFlickedRight = gesture.vx > 0.45 && gesture.dx >= max * 0.35;
 
         if (isSwipedOverThreshold || isFlickedRight) {

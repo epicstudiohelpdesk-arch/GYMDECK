@@ -16,6 +16,53 @@ import {
   MemberActiveMembership,
 } from '../../types';
 
+const DEV_MEMBERS: any[] = [
+  {
+    id: 'm1',
+    fullName: 'Marcus Vance',
+    email: 'marcus.v@example.com',
+    phoneNumber: '+1-555-0101',
+    status: 'ACTIVE',
+    membershipPlan: 'Elite VIP Access',
+    joinedDate: '2026-01-15',
+    lastCheckIn: new Date(Date.now() - 35 * 60000).toISOString(),
+    daysRemaining: 180,
+  },
+  {
+    id: 'm2',
+    fullName: 'Elena Rostova',
+    email: 'elena.r@example.com',
+    phoneNumber: '+1-555-0102',
+    status: 'ACTIVE',
+    membershipPlan: 'Annual Pro Strength',
+    joinedDate: '2026-02-10',
+    lastCheckIn: new Date(Date.now() - 50 * 60000).toISOString(),
+    daysRemaining: 215,
+  },
+  {
+    id: 'm3',
+    fullName: 'David Chen',
+    email: 'david.c@example.com',
+    phoneNumber: '+1-555-0103',
+    status: 'ACTIVE',
+    membershipPlan: 'Functional Athlete Pass',
+    joinedDate: '2026-03-01',
+    lastCheckIn: new Date(Date.now() - 95 * 60000).toISOString(),
+    daysRemaining: 45,
+  },
+  {
+    id: 'm4',
+    fullName: 'Sophia Martinez',
+    email: 'sophia.m@example.com',
+    phoneNumber: '+1-555-0104',
+    status: 'EXPIRING_SOON',
+    membershipPlan: 'Quarterly Cardio Plus',
+    joinedDate: '2025-11-20',
+    lastCheckIn: '2026-11-03T16:20:00Z',
+    daysRemaining: 5,
+  },
+];
+
 export class OwnerMembersService {
   /**
    * 1. Get Paginated Member Directory
@@ -26,13 +73,23 @@ export class OwnerMembersService {
     limit = 50,
     offset = 0
   ): Promise<{ members: GymMemberSummary[]; total: number }> {
-    const response = await apiClient.get<ApiResponse<{ members: GymMemberSummary[]; total: number }>>(
-      '/owner/members',
-      {
-        params: { query: query || undefined, status, limit, offset },
+    try {
+      const response = await apiClient.get<ApiResponse<{ members: GymMemberSummary[]; total: number }>>(
+        '/owner/members',
+        {
+          params: { query: query || undefined, status, limit, offset },
+        }
+      );
+      return response.data.data;
+    } catch (err) {
+      if (__DEV__) {
+        return {
+          members: DEV_MEMBERS,
+          total: DEV_MEMBERS.length,
+        } as any;
       }
-    );
-    return response.data.data;
+      throw err;
+    }
   }
 
   /**

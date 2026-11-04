@@ -53,27 +53,25 @@
       </feMerge>
     </filter>
 
-    <!-- Ethnocentric Styled Font Import -->
+    <!-- Self-Contained Native System Typography -->
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&amp;family=Rajdhani:wght@600;700&amp;family=Space+Grotesk:wght@500;700&amp;display=swap');
-
       .ethnocentric-title {
-        font-family: 'Orbitron', -apple-system, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 0.18em;
+        letter-spacing: 16px;
       }
 
       .tech-mono {
-        font-family: 'Space Grotesk', monospace;
-        letter-spacing: 0.22em;
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        letter-spacing: 3px;
         text-transform: uppercase;
       }
 
       .sub-badge {
-        font-family: 'Rajdhani', sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-weight: 700;
-        letter-spacing: 0.15em;
+        letter-spacing: 1.5px;
         text-transform: uppercase;
       }
     </style>
@@ -84,7 +82,7 @@
   <rect width="1200" height="340" rx="16" fill="url(#techGrid)" />
   <rect width="1200" height="340" rx="16" fill="url(#scanlines)" />
 
-  <!-- Outer Engineered Border & Chamfered Frame -->
+  <!-- Outer Engineered Border &amp; Chamfered Frame -->
   <path d="M 30 16 L 1170 16 A 16 16 0 0 1 1186 32 L 1186 280 L 1150 324 L 30 324 A 16 16 0 0 1 14 308 L 14 32 A 16 16 0 0 1 30 16 Z"
         fill="none" stroke="#334155" stroke-width="1.5" stroke-opacity="0.6" />
   
@@ -116,15 +114,13 @@
         class="ethnocentric-title"
         font-size="82"
         fill="url(#ethnoGrad)"
-        filter="url(#neonGlow)"
-        letter-spacing="14px">
+        filter="url(#neonGlow)">
     GYMDECK
   </text>
   <text x="600" y="190" text-anchor="middle"
         class="ethnocentric-title"
         font-size="82"
         fill="url(#metalGrad)"
-        letter-spacing="14px"
         opacity="0.95">
     GYMDECK
   </text>
@@ -136,14 +132,13 @@
   <circle cx="760" cy="215" r="3" fill="#F472B6" />
   <circle cx="600" cy="215" r="2.5" fill="#FFFFFF" />
 
-  <!-- Subtitle: Engineered Desk Definition -->
+  <!-- Subtitle: Engineered Desk Definition (Using valid XML entity &#8226;) -->
   <text x="600" y="254" text-anchor="middle"
         class="tech-mono"
-        font-size="13"
+        font-size="12"
         fill="#94A3B8"
-        font-weight="700"
-        letter-spacing="5px">
-    ENGINEERED OPERATIONAL DESK &bull; LOCAL-FIRST ERP &bull; EDGE AI VISION &bull; CLOUD GATEWAY
+        font-weight="700">
+    ENGINEERED OPERATIONAL DESK &#8226; LOCAL-FIRST ERP &#8226; EDGE AI VISION &#8226; CLOUD GATEWAY
   </text>
 
   <!-- Bottom Telemetry Chips / Badges -->

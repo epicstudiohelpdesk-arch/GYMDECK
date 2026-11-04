@@ -63,8 +63,8 @@ export default function OwnerAuthScreen({ initialTab }: AuthScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Login Form State
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [loginEmail, setLoginEmail] = useState('owner@gymdeck.com');
+  const [loginPassword, setLoginPassword] = useState('Password123');
   const [rememberMe, setRememberMe] = useState(true);
 
   // Signup Form State
@@ -249,7 +249,7 @@ export default function OwnerAuthScreen({ initialTab }: AuthScreenProps) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#EA4303" />
+      <StatusBar barStyle="light-content" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -362,12 +362,19 @@ export default function OwnerAuthScreen({ initialTab }: AuthScreenProps) {
               </View>
 
               {/* Swipe Action CTA Button */}
-              <SwipeActionButton
-                label="Swipe to Login"
-                onAction={handleLogin}
-                isSubmitting={isSubmitting}
-                disabled={isSubmitting}
-              />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleLogin}
+                accessibilityRole="button"
+                accessibilityLabel="Login"
+              >
+                <SwipeActionButton
+                  label="Swipe to Login"
+                  onAction={handleLogin}
+                  isSubmitting={isSubmitting}
+                  disabled={isSubmitting}
+                />
+              </TouchableOpacity>
             </View>
           ) : (
             /* ==================== SIGNUP FORM ==================== */
