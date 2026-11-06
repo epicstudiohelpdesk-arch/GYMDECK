@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
+import BrandFooter from "./BrandFooter.jsx";
 import { 
   Database, 
   Shield, 
@@ -834,6 +835,9 @@ const BackupRestore = () => {
           </div>
         </div>
       </section>
+
+      {/* BRAND SIGNATURE FOOTER */}
+      <BrandFooter />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
+import BrandFooter from "./BrandFooter.jsx";
 import { 
   Settings, 
   Search, 
@@ -46,6 +47,13 @@ import {
   BarChart3,
   ShieldCheck,
   Sparkles,
+  Users,
+  Calendar,
+  FileCheck,
+  Layers,
+  Check,
+  Trash2,
+  FolderArchive,
   Search as SearchIcon
 } from "lucide-react";
 
@@ -67,12 +75,14 @@ const AppSettings = () => {
       region: "India",
       timezone: "Asia/Kolkata (GMT+05:30)",
       currency: "INR (₹)",
-      dateFormat: "DD/MM/YYYY"
+      dateFormat: "DD/MM/YYYY",
+      firstDayOfWeek: "Monday"
     },
     appearance: {
       theme: "system",
       density: "comfortable",
       sidebarMode: "hover-expand",
+      typography: "standard",
       animations: "cinematic"
     },
     notifications: {
@@ -87,63 +97,42 @@ const AppSettings = () => {
       renewalReminders: true,
       autoFreeze: false,
       ptBillingTriggers: true,
-      leadFollowups: true
+      leadFollowups: true,
+      attendanceAutoCheckin: true,
+      attendanceGraceMinutes: "30",
+      billingInvoiceAutopilot: true,
+      billingRetryFailed: true
     },
     security: {
       twoFactor: false,
       sessionTimeout: "30",
       deviceControl: true,
-      ipRestriction: false
+      ipRestriction: false,
+      rolePermissions: "manager-restricted",
+      accessLogsRetention: "90"
     },
     performance: {
       cacheManagement: "aggressive",
       syncFrequency: "real-time",
-      imageOptimization: true
+      imageOptimization: true,
+      workerThreads: "4",
+      backgroundQueue: true
+    },
+    backup: {
+      localAutoBackup: true,
+      localBackupFormat: "sqlite",
+      cloudSyncSchedule: "daily",
+      exportFormat: "json"
     }
   });
 
-  const tabs = [
-    "General", "Appearance", "Notifications", "Automation", 
-    "Security", "Integrations", "Performance", "Data & Backup", "Advanced"
-  ];
-
-  const sidebarCategories = [
-    { 
-      label: "GENERAL", 
-      icon: Settings,
-      items: ["Language", "Region", "Date & Time", "Currency"] 
-    },
-    { 
-      label: "APPEARANCE", 
-      icon: Layout,
-      items: ["Theme", "Layout Density", "Typography", "Sidebar Settings"] 
-    },
-    { 
-      label: "NOTIFICATIONS", 
-      icon: Bell,
-      items: ["Push Alerts", "WhatsApp", "SMS", "Email"] 
-    },
-    { 
-      label: "AUTOMATION", 
-      icon: Zap,
-      items: ["Membership", "Attendance", "PT Sessions", "Billing"] 
-    },
-    { 
-      label: "SECURITY", 
-      icon: Shield,
-      items: ["Permissions", "Session Control", "2FA", "Access Logs"] 
-    },
-    { 
-      label: "PERFORMANCE", 
-      icon: Cpu,
-      items: ["Cache", "Sync Frequency", "Background Tasks"] 
-    },
-    { 
-      label: "BACKUP", 
-      icon: Database,
-      items: ["Local Backup", "Cloud Sync", "Export Data"] 
-    }
-  ];
+  const tabs = useMemo(() => [
+    { id: "General", label: "General", icon: Globe },
+    { id: "Appearance", label: "Appearance", icon: Layout },
+    { id: "Notifications", label: "Notifications", icon: Bell },
+    { id: "Automation", label: "Automation", icon: Zap },
+    { id: "Security", label: "Security", icon: Shield }
+  ], []);
 
   const handleInputChange = (section, field, value) => {
     setSettings(prev => ({
@@ -264,46 +253,49 @@ const AppSettings = () => {
         </div>
       </section>
 
-      {/* 7. SETTINGS NAVIGATION TABS */}
+      {/* 7. SETTINGS NAVIGATION TABS (REMAINS BELOW THE BANNER) */}
       <div className="max-w-[1600px] mx-auto px-8 -mt-7 relative z-20">
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-2 shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {tabs.map(tab => (
-            <button 
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`h-11 px-6 rounded-xl text-xs font-bold transition-all whitespace-nowrap
-                ${activeTab === tab ? 'bg-[#111827] text-white shadow-lg' : 'text-[#6B7280] hover:bg-[#F3F4F6]'}`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-1.5 shadow-sm flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <motion.button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                whileTap={{ scale: 0.97 }}
+                className={`relative flex-1 h-12 px-5 lg:px-6 rounded-xl text-xs transition-colors whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer select-none group
+                  ${isActive 
+                    ? 'text-[#111827] font-semibold' 
+                    : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]/80 font-medium'}`}
+                role="tab"
+                aria-selected={isActive}
+              >
+                {isActive && (
+                  <motion.div 
+                    layoutId="activeSettingsTabPill"
+                    className="absolute inset-0 bg-[#F1F5F9] rounded-xl border border-[#CBD5E1]/80 shadow-xs"
+                    transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Icon 
+                    size={16} 
+                    strokeWidth={isActive ? 2 : 1.75} 
+                    className={`transition-colors shrink-0 ${isActive ? 'text-[#2563EB]' : 'text-[#9CA3AF] group-hover:text-[#4B5563]'}`} 
+                  />
+                  <span>{tab.label}</span>
+                </span>
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto p-8 pt-10 grid grid-cols-12 gap-8 items-start">
+      <div className="max-w-[1600px] mx-auto p-8 pt-10">
         
-        {/* 8. LEFT SIDEBAR → SETTINGS CATEGORIES */}
-        <aside className="col-span-2 sticky top-24 space-y-8">
-          {sidebarCategories.map(cat => (
-            <section key={cat.label}>
-              <div className="flex items-center gap-2 mb-4">
-                <cat.icon size={14} className="text-[#9CA3AF]" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9CA3AF]">{cat.label}</h3>
-              </div>
-              <div className="space-y-1">
-                {cat.items.map(item => (
-                  <button key={item} className="w-full text-left px-3 py-2.5 rounded-xl text-[13px] font-bold text-[#4B5563] hover:bg-white hover:text-[#111827] hover:shadow-sm transition-all group flex items-center justify-between">
-                    {item}
-                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </aside>
-
-        {/* 9. MAIN CONFIGURATION WORKSPACE */}
-        <main className="col-span-7 space-y-8">
+        {/* MAIN CONFIGURATION WORKSPACE (Spans full width - sidebars removed for maximum clarity & workspace) */}
+        <main className="w-full space-y-8">
           
           <AnimatePresence mode="wait">
             {activeTab === "General" && (
@@ -342,17 +334,42 @@ const AppSettings = () => {
                       </select>
                     </div>
                     <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Operating Region & Country</label>
+                      <select 
+                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
+                        value={settings.general.region || "India"}
+                        onChange={(e) => handleInputChange('general', 'region', e.target.value)}
+                      >
+                        <option value="India">India (IN - GST / PAN / ₹)</option>
+                        <option value="United States">United States (US - EIN / $)</option>
+                        <option value="United Kingdom">United Kingdom (UK - VAT / £)</option>
+                        <option value="United Arab Emirates">United Arab Emirates (UAE - TRN / د.إ)</option>
+                        <option value="Canada">Canada (CA - HST / $)</option>
+                        <option value="Australia">Australia (AU - ABN / $)</option>
+                        <option value="Singapore">Singapore (SG - UEN / $)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Time Zone</label>
-                      <select className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none">
+                      <select 
+                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
+                        value={settings.general.timezone}
+                        onChange={(e) => handleInputChange('general', 'timezone', e.target.value)}
+                      >
                         <option>Asia/Kolkata (GMT+05:30)</option>
                         <option>UTC (GMT+00:00)</option>
                         <option>America/New_York (GMT-05:00)</option>
                         <option>Europe/London (GMT+00:00)</option>
+                        <option>Asia/Dubai (GMT+04:00)</option>
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Primary Currency</label>
-                      <select className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none">
+                      <select 
+                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
+                        value={settings.general.currency}
+                        onChange={(e) => handleInputChange('general', 'currency', e.target.value)}
+                      >
                         <option>INR (₹)</option>
                         <option>USD ($)</option>
                         <option>EUR (€)</option>
@@ -362,11 +379,26 @@ const AppSettings = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Date Format</label>
-                      <select className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none">
+                      <select 
+                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
+                        value={settings.general.dateFormat}
+                        onChange={(e) => handleInputChange('general', 'dateFormat', e.target.value)}
+                      >
                         <option>DD/MM/YYYY</option>
                         <option>MM/DD/YYYY</option>
                         <option>YYYY-MM-DD</option>
                         <option>DD-MMM-YYYY</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">First Day of Week</label>
+                      <select 
+                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
+                        value={settings.general.firstDayOfWeek || "Monday"}
+                        onChange={(e) => handleInputChange('general', 'firstDayOfWeek', e.target.value)}
+                      >
+                        <option value="Monday">Monday (ISO 8601 Standard)</option>
+                        <option value="Sunday">Sunday</option>
                       </select>
                     </div>
                   </div>
@@ -443,6 +475,50 @@ const AppSettings = () => {
                                 ${settings.appearance.animations === a.toLowerCase() ? 'bg-white text-[#111827] shadow-sm' : 'text-[#9CA3AF] hover:text-[#4B5563]'}`}
                             >
                               {a}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Typography & Sidebar Settings (Moved from left side into Appearance page) */}
+                    <div className="grid grid-cols-2 gap-10 pt-6 border-t border-[#F3F4F6]">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Typography & Font System</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { id: 'standard', label: 'Inter 14px', desc: 'Standard UI' },
+                            { id: 'compact', label: 'Dense 13px', desc: 'Data heavy' },
+                            { id: 'large', label: 'Large 15px', desc: 'High legibility' }
+                          ].map(f => (
+                            <button 
+                              key={f.id}
+                              type="button"
+                              onClick={() => handleInputChange('appearance', 'typography', f.id)}
+                              className={`p-3.5 rounded-xl border-2 text-left transition-all ${settings.appearance.typography === f.id ? 'border-[#111827] bg-[#F9FAFB]' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}
+                            >
+                              <div className="text-xs font-bold text-[#111827] mb-0.5">{f.label}</div>
+                              <div className="text-[9px] text-[#6B7280]">{f.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Navigation Sidebar Mode</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { id: 'hover-expand', label: 'Hover Expand', desc: 'Auto-flyout' },
+                            { id: 'always-expanded', label: 'Expanded', desc: 'Fixed 240px' },
+                            { id: 'compact', label: 'Icon Rail', desc: 'Minimal strip' }
+                          ].map(s => (
+                            <button 
+                              key={s.id}
+                              type="button"
+                              onClick={() => handleInputChange('appearance', 'sidebarMode', s.id)}
+                              className={`p-3.5 rounded-xl border-2 text-left transition-all ${settings.appearance.sidebarMode === s.id ? 'border-[#111827] bg-[#F9FAFB]' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}
+                            >
+                              <div className="text-xs font-bold text-[#111827] mb-0.5">{s.label}</div>
+                              <div className="text-[9px] text-[#6B7280]">{s.desc}</div>
                             </button>
                           ))}
                         </div>
@@ -561,39 +637,189 @@ const AppSettings = () => {
                       <Zap size={24} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black tracking-tight">System Autopilot</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Configure intelligent operational workflows and triggers</p>
+                      <h2 className="text-xl font-black tracking-tight">System Autopilot & Operational Workflows</h2>
+                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Configure intelligent triggers for memberships, attendance, PT sessions, and billing</p>
                     </div>
                   </div>
 
-                  <div className="space-y-6">
-                    {[
-                      { id: 'renewalReminders', label: 'Membership Renewal Reminders', desc: 'Auto-send WhatsApp and SMS 3 days before expiry', icon: RefreshCw },
-                      { id: 'autoFreeze', label: 'Auto-Freeze Inactive Members', desc: 'Automatically freeze accounts after 15 days of non-attendance', icon: Minimize },
-                      { id: 'ptBillingTriggers', label: 'PT Session Billing Triggers', desc: 'Generate invoices immediately after PT session completion', icon: CreditCard },
-                      { id: 'leadFollowups', label: 'Lead Management Autopilot', desc: 'Schedule follow-up tasks for staff after new inquiries', icon: UserCheck }
-                    ].map(rule => (
-                      <div key={rule.id} className="p-6 rounded-2xl border border-[#F3F4F6] hover:border-[#E5E7EB] transition-all flex items-center justify-between group">
-                        <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 rounded-xl bg-[#F9FAFB] flex items-center justify-center text-[#9CA3AF] group-hover:bg-[#111827] group-hover:text-white transition-all">
-                            <rule.icon size={22} />
-                          </div>
-                          <div>
-                            <div className="text-sm font-black text-[#111827] mb-1">{rule.label}</div>
-                            <div className="text-[11px] font-bold text-[#6B7280]">{rule.desc}</div>
-                          </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Membership Automation */}
+                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
+                          <RefreshCw size={18} />
                         </div>
-                        <button 
-                          onClick={() => handleInputChange('automation', rule.id, !settings.automation[rule.id])}
-                          className={`w-12 h-6 rounded-full transition-all relative ${settings.automation[rule.id] ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation[rule.id] ? 'left-7' : 'left-1'}`} />
-                        </button>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Membership Automation</h3>
+                          <p className="text-[10px] text-[#9CA3AF] font-bold">Lifecycle & renewal policies</p>
+                        </div>
                       </div>
-                    ))}
+
+                      <div className="space-y-3 pt-2">
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Renewal Reminders</div>
+                            <div className="text-[10px] text-[#6B7280]">WhatsApp & SMS 3 days prior to expiry</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleInputChange('automation', 'renewalReminders', !settings.automation.renewalReminders)}
+                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.renewalReminders ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.renewalReminders ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Auto-Freeze Inactive Members</div>
+                            <div className="text-[10px] text-[#6B7280]">Freeze memberships after 15 days non-attendance</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleInputChange('automation', 'autoFreeze', !settings.automation.autoFreeze)}
+                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.autoFreeze ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.autoFreeze ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Attendance Automation */}
+                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
+                          <UserCheck size={18} />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Attendance Automation</h3>
+                          <p className="text-[10px] text-[#9CA3AF] font-bold">Biometrics & check-in gates</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 pt-2">
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Auto-Approve Check-ins</div>
+                            <div className="text-[10px] text-[#6B7280]">Instant QR & biometric gate pass validation</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleInputChange('automation', 'attendanceAutoCheckin', !settings.automation.attendanceAutoCheckin)}
+                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.attendanceAutoCheckin ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.attendanceAutoCheckin ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Check-in Grace Window</div>
+                            <div className="text-[10px] text-[#6B7280]">Tolerance before shift/session marked late</div>
+                          </div>
+                          <select 
+                            value={settings.automation.attendanceGraceMinutes || "30"}
+                            onChange={(e) => handleInputChange('automation', 'attendanceGraceMinutes', e.target.value)}
+                            className="h-8 px-2.5 text-xs font-bold bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg"
+                          >
+                            <option value="15">15 Mins</option>
+                            <option value="30">30 Mins</option>
+                            <option value="60">60 Mins</option>
+                            <option value="all-day">Unrestricted</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PT Sessions Automation */}
+                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
+                          <Activity size={18} />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">PT Sessions Automation</h3>
+                          <p className="text-[10px] text-[#9CA3AF] font-bold">Trainer allocations & session deductions</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 pt-2">
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Auto Session Deductions</div>
+                            <div className="text-[10px] text-[#6B7280]">Decrement credit balance immediately after workout</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleInputChange('automation', 'ptBillingTriggers', !settings.automation.ptBillingTriggers)}
+                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.ptBillingTriggers ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.ptBillingTriggers ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Lead Management Autopilot</div>
+                            <div className="text-[10px] text-[#6B7280]">Schedule trainer consultation follow-ups</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleInputChange('automation', 'leadFollowups', !settings.automation.leadFollowups)}
+                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.leadFollowups ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.leadFollowups ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Billing Automation */}
+                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
+                          <CreditCard size={18} />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Billing Automation</h3>
+                          <p className="text-[10px] text-[#9CA3AF] font-bold">Invoices & payment recovery</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 pt-2">
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Recurring Invoicing Autopilot</div>
+                            <div className="text-[10px] text-[#6B7280]">Generate digital GST receipts upon renewal</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleInputChange('automation', 'billingInvoiceAutopilot', !settings.automation.billingInvoiceAutopilot)}
+                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.billingInvoiceAutopilot ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.billingInvoiceAutopilot ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                          <div className="pr-3">
+                            <div className="text-xs font-bold text-[#111827]">Retry Failed Payments</div>
+                            <div className="text-[10px] text-[#6B7280]">Daily automated re-attempt for UPI & card mandates</div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleInputChange('automation', 'billingRetryFailed', !settings.automation.billingRetryFailed)}
+                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.billingRetryFailed ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
+                          >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.billingRetryFailed ? 'left-6' : 'left-1'}`} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="mt-10 p-8 rounded-3xl bg-[#111827] text-white overflow-hidden relative group cursor-pointer">
+                  <div className="mt-8 p-8 rounded-3xl bg-[#111827] text-white overflow-hidden relative group cursor-pointer">
                     <div className="relative z-10 flex items-center justify-between">
                       <div className="max-w-md">
                         <div className="flex items-center gap-2 mb-4">
@@ -638,57 +864,109 @@ const AppSettings = () => {
                       <Shield size={24} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black tracking-tight">Security & Infrastructure</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Protect your gym data and control platform access</p>
+                      <h2 className="text-xl font-black tracking-tight">Security & Access Governance</h2>
+                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Manage staff permissions, session limits, 2FA, and audit trails</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-12 gap-10">
                     <div className="col-span-8 space-y-8">
-                      <div className="space-y-6">
+                      {/* 2FA & Session Control Toggles */}
+                      <div className="space-y-5">
                         {[
-                          { id: 'twoFactor', label: 'Two-Factor Authentication (2FA)', desc: 'Add an extra layer of security for all admin accounts', icon: Fingerprint },
-                          { id: 'deviceControl', label: 'Device Login Control', desc: 'Notify when account is accessed from a new device', icon: Smartphone },
-                          { id: 'ipRestriction', label: 'Office IP Restriction', desc: 'Only allow dashboard access from verified static IPs', icon: Lock }
+                          { id: 'twoFactor', label: 'Two-Factor Authentication (2FA)', desc: 'Enforce TOTP authenticator app or WhatsApp OTP for all admin accounts', icon: Fingerprint },
+                          { id: 'deviceControl', label: 'Device & Session Control', desc: 'Notify on unrecognized hardware logins and terminate stale sessions', icon: Smartphone },
+                          { id: 'ipRestriction', label: 'Office IP Restriction', desc: 'Restrict front-desk and cashier dashboard access to registered static IPs', icon: Lock }
                         ].map(rule => (
-                          <div key={rule.id} className="flex items-start justify-between">
-                            <div className="flex gap-4">
-                              <div className="w-10 h-10 rounded-xl bg-[#F9FAFB] flex items-center justify-center text-[#111827] mt-1">
+                          <div key={rule.id} className="p-4 rounded-2xl bg-[#FAFAFA] border border-[#F3F4F6] flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
                                 <rule.icon size={20} />
                               </div>
                               <div>
-                                <div className="text-sm font-black mb-1">{rule.label}</div>
-                                <p className="text-[11px] font-bold text-[#6B7280] max-w-sm">{rule.desc}</p>
+                                <div className="text-sm font-black text-[#111827]">{rule.label}</div>
+                                <p className="text-[11px] font-bold text-[#6B7280] max-w-md">{rule.desc}</p>
                               </div>
                             </div>
                             <button 
+                              type="button"
                               onClick={() => handleInputChange('security', rule.id, !settings.security[rule.id])}
-                              className={`w-12 h-6 rounded-full transition-all relative ${settings.security[rule.id] ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'}`}
+                              className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.security[rule.id] ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'}`}
                             >
-                              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.security[rule.id] ? 'left-7' : 'left-1'}`} />
+                              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.security[rule.id] ? 'left-6' : 'left-1'}`} />
                             </button>
                           </div>
                         ))}
                       </div>
 
-                      <div className="pt-8 border-t border-[#F3F4F6]">
-                        <div className="flex items-center justify-between mb-6">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Session Timeout</label>
-                          <span className="text-[10px] font-black text-[#111827] uppercase bg-[#F3F4F6] px-2 py-1 rounded-md">{settings.security.sessionTimeout} Minutes</span>
+                      {/* Staff Role Permissions */}
+                      <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
+                              <Users size={18} />
+                            </div>
+                            <div>
+                              <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Role Permissions & Access Control</h3>
+                              <p className="text-[10px] text-[#9CA3AF] font-bold">Configure staff privilege tiers</p>
+                            </div>
+                          </div>
+                          <button className="text-[10px] font-black uppercase tracking-wider text-[#2563EB] hover:underline">
+                            Edit Matrix
+                          </button>
                         </div>
-                        <input 
-                          type="range" 
-                          min="5" 
-                          max="120" 
-                          step="5"
-                          value={settings.security.sessionTimeout}
-                          onChange={(e) => handleInputChange('security', 'sessionTimeout', e.target.value)}
-                          className="w-full h-2 bg-[#F3F4F6] rounded-lg appearance-none cursor-pointer accent-[#111827]"
-                        />
-                        <div className="flex justify-between mt-2 text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest px-1">
-                          <span>5 min</span>
-                          <span>60 min</span>
-                          <span>120 min</span>
+
+                        <div className="grid grid-cols-4 gap-2.5 pt-1">
+                          {[
+                            { role: 'Owner', desc: 'Full Superadmin' },
+                            { role: 'Branch Manager', desc: 'Ops & Staff' },
+                            { role: 'Trainer', desc: 'Assigned Clients' },
+                            { role: 'Front Desk', desc: 'Check-in & POS' }
+                          ].map(r => (
+                            <div key={r.role} className="p-3 bg-white border border-[#E5E7EB] rounded-xl text-center">
+                              <div className="text-xs font-black text-[#111827]">{r.role}</div>
+                              <div className="text-[9px] font-bold text-[#6B7280] mt-0.5">{r.desc}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Session Timeout & Access Logs */}
+                      <div className="grid grid-cols-2 gap-6 pt-4 border-t border-[#F3F4F6]">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">Session Inactivity Timeout</label>
+                            <span className="text-[10px] font-black text-[#111827] uppercase bg-[#F3F4F6] px-2 py-0.5 rounded-md">{settings.security.sessionTimeout} Min</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="5" 
+                            max="120" 
+                            step="5"
+                            value={settings.security.sessionTimeout}
+                            onChange={(e) => handleInputChange('security', 'sessionTimeout', e.target.value)}
+                            className="w-full h-2 bg-[#F3F4F6] rounded-lg appearance-none cursor-pointer accent-[#111827]"
+                          />
+                          <div className="flex justify-between text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest px-1">
+                            <span>5 min</span>
+                            <span>60 min</span>
+                            <span>120 min</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">Access Logs Retention</label>
+                          <select 
+                            value={settings.security.accessLogsRetention || "90"}
+                            onChange={(e) => handleInputChange('security', 'accessLogsRetention', e.target.value)}
+                            className="w-full h-10 px-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-bold"
+                          >
+                            <option value="30">30 Days (Compliance Baseline)</option>
+                            <option value="90">90 Days (Recommended)</option>
+                            <option value="180">180 Days (Extended)</option>
+                            <option value="365">365 Days (Full Fiscal Year)</option>
+                          </select>
+                          <div className="text-[9px] text-[#6B7280] font-bold">1,248 actions recorded • Zero unauthorized breaches</div>
                         </div>
                       </div>
                     </div>
@@ -728,415 +1006,12 @@ const AppSettings = () => {
               </motion.div>
             )}
 
-            {activeTab === "Integrations" && (
-              <motion.div 
-                key="integrations"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                {/* 15. INTEGRATION SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Zap size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">External Ecosystem</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Connect third-party services and biometric infrastructure</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-6">
-                    {[
-                      { name: 'WhatsApp API', status: 'Connected', health: 'Healthy', icon: MessageSquare, color: 'text-[#10B981]', bg: 'bg-[#ECFDF5]' },
-                      { name: 'Razorpay', status: 'Active', health: 'Healthy', icon: CreditCard, color: 'text-[#3B82F6]', bg: 'bg-[#EFF6FF]' },
-                      { name: 'Biometric Access', status: 'Warning', health: 'Sync Latency', icon: Fingerprint, color: 'text-[#F59E0B]', bg: 'bg-[#FFFBEB]' },
-                      { name: 'Stripe Global', status: 'Inactive', health: 'Not Linked', icon: Globe, color: 'text-[#9CA3AF]', bg: 'bg-[#F9FAFB]' },
-                      { name: 'QR Attendance', status: 'Active', health: 'Healthy', icon: QrCode, color: 'text-[#8B5CF6]', bg: 'bg-[#F5F3FF]' },
-                      { name: 'Email SMTP', status: 'Connected', health: 'Healthy', icon: Mail, color: 'text-[#EF4444]', bg: 'bg-[#FEF2F2]' }
-                    ].map(integration => (
-                      <div key={integration.name} className="p-6 rounded-3xl border border-[#F3F4F6] hover:shadow-md transition-all group">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className={`w-12 h-12 rounded-2xl ${integration.bg} ${integration.color} flex items-center justify-center`}>
-                            <integration.icon size={24} />
-                          </div>
-                          <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest 
-                            ${integration.status === 'Connected' || integration.status === 'Active' ? 'bg-[#10B981]/10 text-[#10B981]' : 
-                              integration.status === 'Warning' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : 'bg-[#9CA3AF]/10 text-[#9CA3AF]'}`}>
-                            {integration.status}
-                          </div>
-                        </div>
-                        <h4 className="text-sm font-black mb-1">{integration.name}</h4>
-                        <p className="text-[10px] font-bold text-[#9CA3AF] mb-6">{integration.health}</p>
-                        <button className="w-full h-9 rounded-xl bg-[#F3F4F6] text-[10px] font-black uppercase tracking-widest hover:bg-[#111827] hover:text-white transition-all">
-                          Configure
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </motion.div>
-            )}
-
-            {activeTab === "Performance" && (
-              <motion.div 
-                key="performance"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                {/* 16. PERFORMANCE SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Cpu size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">System Optimization</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Tune platform responsiveness and data processing</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-10">
-                    <div className="space-y-8">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Cache Management</label>
-                        <div className="grid grid-cols-3 gap-3 p-1 bg-[#F3F4F6] rounded-2xl">
-                          {['None', 'Balanced', 'Aggressive'].map(c => (
-                            <button 
-                              key={c}
-                              onClick={() => handleInputChange('performance', 'cacheManagement', c.toLowerCase())}
-                              className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
-                                ${settings.performance.cacheManagement === c.toLowerCase() ? 'bg-white text-[#111827] shadow-sm' : 'text-[#9CA3AF] hover:text-[#4B5563]'}`}
-                            >
-                              {c}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Data Sync Frequency</label>
-                        <select className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none">
-                          <option>Real-time Sync</option>
-                          <option>Every 5 Minutes</option>
-                          <option>Every 30 Minutes</option>
-                          <option>Daily at Midnight</option>
-                        </select>
-                      </div>
-
-                      <div className="p-6 rounded-2xl bg-[#F9FAFB] border border-[#E5E7EB] flex items-center justify-between">
-                        <div className="flex gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#111827] shadow-sm">
-                            <Smartphone size={20} />
-                          </div>
-                          <div>
-                            <div className="text-sm font-black mb-0.5">Image Optimization</div>
-                            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Active</div>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => handleInputChange('performance', 'imageOptimization', !settings.performance.imageOptimization)}
-                          className={`w-12 h-6 rounded-full transition-all relative ${settings.performance.imageOptimization ? 'bg-[#111827]' : 'bg-[#E5E7EB]'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.performance.imageOptimization ? 'left-7' : 'left-1'}`} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#111827] rounded-3xl p-8 text-white">
-                      <div className="flex items-center justify-between mb-8">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">Performance Monitor</h4>
-                        <div className="flex items-center gap-1.5 text-[#10B981]">
-                          <Activity size={12} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Optimal</span>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-8">
-                        {[
-                          { label: 'Memory Usage', value: '42%', color: 'bg-blue-500' },
-                          { label: 'CPU Load', value: '18%', color: 'bg-green-500' },
-                          { label: 'DB Latency', value: '12ms', color: 'bg-purple-500' }
-                        ].map(stat => (
-                          <div key={stat.label} className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-white/60">{stat.label}</span>
-                              <span className="text-[11px] font-black">{stat.value}</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                              <div className={`h-full ${stat.color} rounded-full`} style={{ width: stat.value.includes('%') ? stat.value : '20%' }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="mt-10 p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
-                        <div className="text-[9px] font-black uppercase tracking-widest text-white/40">Engine Uptime</div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-[#10B981]">1,428 Hours</div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </motion.div>
-            )}
-
-            {activeTab === "Data & Backup" && (
-              <motion.div 
-                key="backup"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                {/* 17. DATA & BACKUP SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Database size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">Data Management & Resilience</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Safeguard your gym records with automated backups</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-10">
-                    <div className="space-y-6">
-                      <div className="p-8 rounded-3xl bg-[#F9FAFB] border border-[#E5E7EB] group hover:border-[#111827] transition-all">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center text-[#111827] shadow-sm border border-[#F3F4F6] group-hover:bg-[#111827] group-hover:text-white transition-all">
-                            <HardDrive size={28} />
-                          </div>
-                          <div>
-                            <h4 className="text-lg font-black tracking-tight">Cloud Sync & Backup</h4>
-                            <p className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-widest">AWS Enterprise S3</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between py-4 border-y border-[#F3F4F6] mb-6">
-                          <span className="text-xs font-bold text-[#6B7280]">Last Backup</span>
-                          <span className="text-xs font-black text-[#111827]">Today, 11:42 PM</span>
-                        </div>
-                        <div className="flex gap-3">
-                          <button className="flex-1 h-11 rounded-xl bg-[#111827] text-white text-[10px] font-black uppercase tracking-widest hover:shadow-lg transition-all">Backup Now</button>
-                          <button className="h-11 px-4 rounded-xl border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F3F4F6] transition-all">
-                            <RotateCcw size={18} />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <button className="p-6 rounded-3xl border border-[#F3F4F6] hover:border-[#E5E7EB] text-center transition-all group">
-                          <Download size={24} className="mx-auto mb-3 text-[#9CA3AF] group-hover:text-[#111827] transition-all" />
-                          <div className="text-[10px] font-black uppercase tracking-widest">Export All</div>
-                        </button>
-                        <button className="p-6 rounded-3xl border border-[#F3F4F6] hover:border-[#E5E7EB] text-center transition-all group">
-                          <Upload size={24} className="mx-auto mb-3 text-[#9CA3AF] group-hover:text-[#111827] transition-all" />
-                          <div className="text-[10px] font-black uppercase tracking-widest">Restore Data</div>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-8">
-                      <div className="bg-white border border-[#E5E7EB] rounded-3xl p-8 shadow-sm">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] mb-6 ml-2">Backup Schedule</h4>
-                        <div className="space-y-4">
-                          {[
-                            { day: 'Monday', time: '02:00 AM', status: 'Success' },
-                            { day: 'Tuesday', time: '02:00 AM', status: 'Success' },
-                            { day: 'Wednesday', time: '02:00 AM', status: 'Success' },
-                            { day: 'Thursday', time: '02:00 AM', status: 'Scheduled' }
-                          ].map(log => (
-                            <div key={log.day} className="flex items-center justify-between p-3 rounded-xl hover:bg-[#F9FAFB] transition-all">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${log.status === 'Success' ? 'bg-[#10B981]' : 'bg-[#9CA3AF]'}`} />
-                                <span className="text-xs font-bold text-[#111827]">{log.day}</span>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <span className="text-[11px] font-bold text-[#6B7280]">{log.time}</span>
-                                <span className={`text-[10px] font-black uppercase tracking-widest ${log.status === 'Success' ? 'text-[#10B981]' : 'text-[#9CA3AF]'}`}>{log.status}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <button className="w-full mt-8 h-10 rounded-xl bg-white border border-[#E5E7EB] text-[10px] font-black uppercase tracking-widest hover:bg-[#F3F4F6] transition-all">
-                          Configure Schedule
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </motion.div>
-            )}
-
-            {activeTab === "Advanced" && (
-              <motion.div 
-                key="advanced"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                {/* 18. ADVANCED SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Code size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">Developer & System Core</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Low-level platform controls and experimental features</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-8">
-                    <div className="p-8 rounded-3xl bg-[#111827] text-white flex items-center justify-between group">
-                      <div className="flex gap-6">
-                        <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-white border border-white/10 group-hover:bg-[#6366F1] transition-all">
-                          <Terminal size={28} />
-                        </div>
-                        <div>
-                          <h4 className="text-lg font-black mb-1">Developer Mode</h4>
-                          <p className="text-[11px] font-bold text-white/40 max-w-sm">Enable API access, webhook logs, and experimental feature flags.</p>
-                        </div>
-                      </div>
-                      <button className="h-11 px-8 rounded-2xl bg-white text-[#111827] text-[10px] font-black uppercase tracking-widest hover:bg-[#6366F1] hover:text-white transition-all">Enable Mode</button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-8">
-                      <div className="p-6 rounded-3xl border border-[#F3F4F6] hover:border-[#E5E7EB] transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                          <Database size={18} className="text-[#9CA3AF]" />
-                          <h5 className="text-[11px] font-black uppercase tracking-widest text-[#111827]">Database Explorer</h5>
-                        </div>
-                        <p className="text-[10px] font-bold text-[#6B7280] leading-relaxed mb-6">Inspect local database schemas and collection health.</p>
-                        <button className="text-[9px] font-black uppercase tracking-widest text-[#111827] underline underline-offset-4">Open Explorer</button>
-                      </div>
-                      <div className="p-6 rounded-3xl border border-[#F3F4F6] hover:border-[#E5E7EB] transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                          <RefreshCw size={18} className="text-[#9CA3AF]" />
-                          <h5 className="text-[11px] font-black uppercase tracking-widest text-[#111827]">Offline Engine</h5>
-                        </div>
-                        <p className="text-[10px] font-bold text-[#6B7280] leading-relaxed mb-6">Configure IndexedDB persistence and sync resolution strategies.</p>
-                        <button className="text-[9px] font-black uppercase tracking-widest text-[#111827] underline underline-offset-4">Configure Engine</button>
-                      </div>
-                    </div>
-
-                    <div className="mt-10 p-8 rounded-3xl border-2 border-dashed border-[#FEE2E2] bg-[#FFF5F5]">
-                      <div className="flex items-center gap-4 mb-4">
-                        <AlertTriangle className="text-[#EF4444]" size={24} />
-                        <h4 className="text-sm font-black text-[#B91C1C] uppercase tracking-tight">Danger Zone</h4>
-                      </div>
-                      <p className="text-[11px] font-bold text-[#B91C1C]/70 mb-8 max-w-xl">
-                        Actions in this section can cause permanent data loss or system instability. 
-                        Only authorized personnel should access these controls.
-                      </p>
-                      <div className="flex gap-4">
-                        <button className="h-10 px-6 rounded-xl bg-[#EF4444] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#DC2626] transition-all">Factory Reset</button>
-                        <button className="h-10 px-6 rounded-xl border border-[#FEE2E2] bg-white text-[#B91C1C] text-[10px] font-black uppercase tracking-widest hover:bg-[#FEE2E2] transition-all">Purge Cache</button>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </motion.div>
-            )}
           </AnimatePresence>
         </main>
-
-        {/* 19. RIGHT SIDE FLOATING INSIGHT PANEL */}
-        <aside className="col-span-3 sticky top-24 space-y-8">
-          <section className="bg-white rounded-3xl border border-[#E5E7EB] p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xs font-black uppercase tracking-widest text-[#9CA3AF]">System Intelligence</h3>
-              <div className="w-8 h-8 rounded-full bg-[#F5F3FF] flex items-center justify-center text-[#6366F1]">
-                <Sparkles size={16} />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="p-4 rounded-2xl bg-[#F8FAF8] border border-[#F3F4F6]">
-                <div className="flex gap-3 mb-2">
-                  <BarChart3 size={16} className="text-[#10B981]" />
-                  <p className="text-[11px] font-black text-[#111827]">Performance Score</p>
-                </div>
-                <div className="flex items-end gap-2 mb-3">
-                  <span className="text-3xl font-black text-[#111827]">98</span>
-                  <span className="text-xs font-bold text-[#10B981] mb-1">/ 100</span>
-                </div>
-                <p className="text-[10px] font-bold text-[#6B7280] leading-relaxed">
-                  Your platform is currently optimized for maximum responsiveness.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#F5F3FF] border border-[#EDE9FE]">
-                <div className="flex gap-3 mb-2">
-                  <ShieldCheck size={16} className="text-[#6366F1]" />
-                  <p className="text-[11px] font-black text-[#111827]">Security Grade</p>
-                </div>
-                <div className="flex items-end gap-2 mb-3">
-                  <span className="text-3xl font-black text-[#111827]">A+</span>
-                  <span className="text-xs font-bold text-[#6366F1] mb-1">Enterprise</span>
-                </div>
-                <p className="text-[10px] font-bold text-[#6B7280] leading-relaxed">
-                  Enabling 2FA would increase your security score by 12 points.
-                </p>
-              </div>
-
-              <div className="p-5 rounded-3xl bg-[#111827] text-white">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles size={14} className="text-[#6366F1]" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">AI Recommendation</span>
-                </div>
-                <p className="text-[11px] font-bold leading-relaxed text-white/80">
-                  "Enabling automated WhatsApp reminders can improve member renewal rates by 24% based on similar gym profiles."
-                </p>
-                <button className="mt-4 text-[9px] font-black uppercase tracking-widest text-[#6366F1] hover:text-white transition-all underline underline-offset-4">Apply Auto-Fix</button>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white rounded-3xl border border-[#E5E7EB] p-8 shadow-sm">
-            <h3 className="text-xs font-black uppercase tracking-widest text-[#9CA3AF] mb-6">Recent Activity</h3>
-            <div className="space-y-6">
-              {[
-                { action: 'Theme changed', time: '2 mins ago', user: 'Admin' },
-                { action: 'WhatsApp API sync', time: '1 hour ago', user: 'System' },
-                { action: 'Backup successful', time: '2 hours ago', user: 'Engine' }
-              ].map((log, i) => (
-                <div key={i} className="flex gap-4 group">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#E5E7EB] mt-1.5 group-hover:bg-[#111827] transition-all" />
-                  <div>
-                    <div className="text-[11px] font-black text-[#111827] mb-0.5">{log.action}</div>
-                    <div className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-widest">
-                      {log.time} • {log.user}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="w-full mt-8 h-10 rounded-xl bg-[#F3F4F6] text-[10px] font-black uppercase tracking-widest hover:bg-[#111827] hover:text-white transition-all">
-              View Audit Logs
-            </button>
-          </section>
-
-          <div className="p-6 rounded-3xl bg-gradient-to-br from-[#6366F1] to-[#4F46E5] text-white relative overflow-hidden shadow-xl shadow-indigo-500/20">
-            <div className="relative z-10">
-              <HelpCircle className="mb-4 opacity-60" size={28} />
-              <h4 className="text-sm font-black mb-2 uppercase tracking-tight">Need Assistance?</h4>
-              <p className="text-[11px] font-semibold opacity-80 leading-relaxed mb-6">
-                Our infrastructure experts are available 24/7 to help you configure your platform.
-              </p>
-              <button className="h-10 px-6 rounded-xl bg-white text-[#111827] text-[10px] font-black uppercase tracking-widest hover:bg-[#111827] hover:text-white transition-all">
-                Contact Support
-              </button>
-            </div>
-            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
-          </div>
-        </aside>
       </div>
+
+      {/* BRAND SIGNATURE FOOTER */}
+      <BrandFooter />
 
       {/* 21. STICKY BOTTOM SAVE BAR */}
       <AnimatePresence>

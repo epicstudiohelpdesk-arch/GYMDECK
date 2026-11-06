@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
+import BrandFooter from "./BrandFooter.jsx";
 import { 
   User, 
   Mail, 
@@ -734,6 +735,9 @@ const Profile = () => {
           </div>
         </aside>
       </div>
+
+      {/* BRAND SIGNATURE FOOTER */}
+      <BrandFooter />
 
       {/* 18. STICKY BOTTOM SAVE BAR */}
       <AnimatePresence>
