@@ -14010,3 +14010,23 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   color: #64748b !important;
   line-height: 1.35 !important;
 }
+
+/* ==========================================================================
+   GYMDECK • MODERN EXECUTIVE TACTICAL DASHBOARD
+   ========================================================================== */
+.dashboard-stage {
+  display: block !important;
+  grid-template-columns: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  background: #f4f7fb !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 0 !important;
+}
+
+.dashboard-stage.is-hidden {
+  display: none !important;
+}
+

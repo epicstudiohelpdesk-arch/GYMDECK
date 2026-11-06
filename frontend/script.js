@@ -37,6 +37,7 @@ const canonicalKeys = {
 };
 
 const stageRegistry = [
+  { stages: ["dashboard"], load: () => import("./DashboardWidgets.jsx"), mount: "mountDashboard", argKey: "dashboardStage" },
   { stages: ["membership-plans"], load: () => import("./MembershipPlans.jsx"), mount: "mountMembershipPlans" },
   { stages: ["expiring-memberships"], load: () => import("./ExpiringMemberships.jsx"), mount: "mountExpiringMemberships" },
   { stages: ["freeze-pause"], load: () => import("./FreezePause.jsx"), mount: "mountFreezePause" },
@@ -749,6 +750,7 @@ let cachedMembers = [];
 
 // Create a DOM cache for frequently accessed dynamic stages
 const DOM = {
+  get dashboardStage() { return document.getElementById("dashboard-stage-root") || document.querySelector('[data-stage="dashboard"]'); },
   get membershipPlansStage() { return document.querySelector('[data-stage="membership-plans"]'); },
   get expiringMembershipsStage() { return document.querySelector('[data-stage="expiring-memberships"]'); },
   get freezePauseStage() { return document.querySelector('[data-stage="freeze-pause"]'); },
