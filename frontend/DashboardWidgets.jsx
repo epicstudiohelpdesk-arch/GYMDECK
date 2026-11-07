@@ -9,11 +9,7 @@ import {
   UserPlus, 
   Users, 
   Search, 
-  ArrowUpRight, 
-  ShieldCheck, 
   Wifi, 
-  RotateCcw, 
-  Sliders, 
   Calendar, 
   Bell, 
   TrendingUp, 
@@ -24,8 +20,9 @@ import BrandFooter from "./BrandFooter.jsx";
 
 /**
  * GYMDECK • EXECUTIVE COMMAND CENTER
- * Professional Light Theme (Enterprise SaaS Standard)
- * Precision 5-Card Layout Faithfully Matched to Wireframe Architecture
+ * Authentic GymDeck Design System (Light Theme)
+ * Rich Tactile Componentry, Warm Depth, High-Fidelity Data Visualization
+ * Strictly Following the 5-Card Layout Geometry & 100% Window Fit
  */
 
 export const Dashboard = () => {
@@ -91,9 +88,9 @@ export const Dashboard = () => {
 
   // Occupancy metrics based on shift
   const occupancyData = {
-    morning: { count: 68, max: 80, pct: 85, label: "Morning Shift", sub: "Peak: 08:30" },
-    live: { count: 43, max: 60, pct: 74, label: "Live Headcount", sub: "Peak in 38m" },
-    evening: { count: 87, max: 90, pct: 96, label: "Evening Shift", sub: "Capacity Limit" }
+    morning: { count: 68, max: 80, pct: 85, label: "Morning Shift", sub: "Recorded at 08:30 AM" },
+    live: { count: 43, max: 60, pct: 74, label: "Live Headcount", sub: "Peak expected in 38 min" },
+    evening: { count: 87, max: 90, pct: 96, label: "Evening Shift", sub: "Tracking near ceiling" }
   };
   const activeOccupancy = occupancyData[occupancyShift] || occupancyData.live;
 
@@ -105,7 +102,7 @@ export const Dashboard = () => {
       checkins: "186",
       checkinsDelta: "+24.2%",
       capacity: "43",
-      capacityMax: "/ 60",
+      capacityMax: "60",
       capacityPct: "74% Load",
       points: [
         { label: "06:00", value: 32, prev: 24 },
@@ -168,100 +165,101 @@ export const Dashboard = () => {
   const currentHero = heroDatasets[timeframe];
 
   return (
-    <div className="w-full min-h-screen bg-[#f8fafc] text-slate-800 font-sans selection:bg-blue-600 selection:text-white flex flex-col pb-8">
+    <div className="w-full min-h-screen bg-[#f4f7fb] text-slate-800 font-sans selection:bg-blue-600 selection:text-white flex flex-col pb-6">
       
       {/* ─────────────────────────────────────────────────────────────
           TOP EXECUTIVE OPERATIONS BAR
+          Prominent, beautifully aligned, elevated header with proper spacing
       ───────────────────────────────────────────────────────────── */}
-      <header className="px-5 py-2 border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <header className="h-[60px] px-6 border-b border-[#e2e8f0] bg-white sticky top-0 z-30 flex items-center justify-between gap-4 shadow-[0_2px_8px_-2px_rgba(15,23,42,0.04)]">
         
-        {/* Search Operations */}
-        <div className="relative flex-1 min-w-[260px] max-w-lg">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        {/* Left: Global Search Operations (Perfect Flex Alignment & Spacing) */}
+        <div className="flex items-center flex-1 max-w-lg h-[42px] bg-[#f8fafc] hover:bg-white focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/15 transition-all shadow-2xs px-3.5 gap-2.5">
+          <Search size={16} strokeWidth={2.2} className="text-slate-400 shrink-0 select-none pointer-events-none" />
           <input 
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search members, dues, check-ins, floor telemetry... (Press / to focus)"
-            className="w-full h-8 pl-8.5 pr-10 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all font-normal"
+            placeholder="Search members, dues, check-ins, trainers..."
+            className="w-full h-full bg-transparent border-0 outline-none text-xs font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
           />
-          <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-slate-200/60 text-slate-500 border border-slate-300/80 pointer-events-none">
+          <kbd className="h-5 px-1.5 flex items-center justify-center text-[10px] font-mono font-bold rounded bg-slate-200/70 text-slate-500 border border-slate-300/70 select-none shrink-0">
             /
           </kbd>
         </div>
 
-        {/* Status Indicators & Quick Actions */}
-        <div className="flex items-center gap-2">
-          {/* Shift & Date Pill */}
-          <div className="h-7.5 px-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center gap-1.5 text-[11px] font-medium text-slate-700">
-            <Calendar size={12} className="text-blue-600" />
-            <span>Fri, 06 Nov • Evening Shift</span>
+        {/* Right: Telemetry, Date, Status & Quick Action Controls */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Clean Date Pill (EVENING SHIFT removed per user specification) */}
+          <div className="h-[38px] px-3.5 rounded-xl bg-[#f8fafc] border border-slate-200/90 flex items-center gap-2.5 text-xs font-black text-slate-700 shadow-2xs">
+            <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Calendar size={14} strokeWidth={2.2} />
+            </div>
+            <span>Fri, 06 Nov</span>
           </div>
 
-          {/* Sync Status Badge */}
+          {/* Cloud Sync Status Badge */}
           <div 
             onClick={handleForceSync}
-            className="h-7.5 px-2.5 rounded-lg bg-emerald-50 border border-emerald-200/80 hover:bg-emerald-100/60 cursor-pointer flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 transition-colors"
+            className="h-[38px] px-3.5 rounded-xl bg-emerald-50 border border-emerald-200/90 hover:bg-emerald-100/70 cursor-pointer flex items-center gap-2 text-xs font-black text-emerald-800 transition-all shadow-2xs active:scale-[0.98]"
             title="Click to trigger instant biometric & cloud sync"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20" />
             <span>Cloud Synced</span>
           </div>
 
-          {/* Refresh Action */}
-          <button 
-            type="button"
-            onClick={() => showToast("Floor telemetry refreshed.")}
-            className="w-7.5 h-7.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-            title="Refresh Telemetry"
-          >
-            <RefreshCw size={12} />
-          </button>
+          {/* Action Toolbar */}
+          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-[#f1f5f9] border border-slate-200/80">
+            {/* Refresh Action */}
+            <button 
+              type="button"
+              onClick={() => showToast("Floor telemetry refreshed.")}
+              className="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
+              title="Refresh Telemetry"
+            >
+              <RefreshCw size={13} strokeWidth={2.2} />
+            </button>
 
-          {/* Notifications */}
-          <button 
-            type="button"
-            onClick={() => showToast("No urgent manager escalations.")}
-            className="w-7.5 h-7.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer relative"
-            title="Alerts"
-          >
-            <Bell size={12} />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-blue-600 rounded-full" />
-          </button>
+            {/* Notifications Action */}
+            <button 
+              type="button"
+              onClick={() => showToast("No urgent manager escalations.")}
+              className="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 relative"
+              title="Alerts"
+            >
+              <Bell size={13} strokeWidth={2.2} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white" />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* ─────────────────────────────────────────────────────────────
-          MASTER 5-CARD WIREFRAME GRID (Executive Precision Edition)
+          MASTER 5-CARD WIREFRAME GRID
           Row 1: Card 1 (Span 8) + Card 2 (Span 4)
           Row 2: Card 3 (Span 5) + Card 4 (Span 3) + Card 5 (Span 4)
       ───────────────────────────────────────────────────────────── */}
-      <main className="p-4 max-w-[1560px] w-full mx-auto space-y-3">
+      <main className="p-3.5 max-w-[1560px] w-full mx-auto space-y-3.5">
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
 
           {/* ══════════════════════════════════════════════════════════
               CARD 1: TOP-LEFT HERO ANALYTICS & OPERATIONS PULSE
-              (Wireframe: 1 pill top-left, 4 pills top-right, large canvas)
+              (User-friendly, bold, crystal clear telemetry, exactly h-[365px])
           ══════════════════════════════════════════════════════════ */}
-          <section className="lg:col-span-8 bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] relative flex flex-col justify-between min-h-[310px]">
+          <section className="lg:col-span-8 bg-white border border-[#e2e8f0] rounded-[22px] p-4 shadow-[0_4px_20px_-4px_rgba(69,79,97,0.06)] relative flex flex-col justify-between h-[365px]">
             
-            {/* Header: Clean Title with Icon + 4 Timeframe Segmented Tabs (Matching Wireframe!) */}
-            <div className="flex items-center justify-between gap-3 relative z-10 mb-1">
-              <div className="flex items-center gap-2">
-                <div className="w-6.5 h-6.5 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/60">
-                  <Activity size={13} />
-                </div>
-                <div>
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    Live Command Pulse
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                  </h2>
-                </div>
+            {/* Header: Clean, Bold Title & 4 Timeframe Pills */}
+            <div className="flex items-center justify-between gap-3 relative z-10">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse ring-4 ring-blue-500/15 shrink-0" />
+                <h2 className="text-base font-black text-slate-900 tracking-tight leading-none">
+                  Today's Floor & Revenue Pulse
+                </h2>
               </div>
 
-              {/* Timeframe Segmented Control (Matching Wireframe: 4 Tabs in a Row!) */}
-              <div className="flex items-center p-0.5 rounded-lg bg-slate-100 border border-slate-200/70">
+              {/* Timeframe Segmented Control (Wireframe 4 Pills) */}
+              <div className="flex items-center p-0.5 rounded-xl bg-[#f1f5f9] border border-slate-200/80">
                 {["24H", "7D", "30D", "1Y"].map((tf) => {
                   const isSelected = timeframe === tf;
                   return (
@@ -269,10 +267,10 @@ export const Dashboard = () => {
                       key={tf}
                       type="button"
                       onClick={() => setTimeframe(tf)}
-                      className={`px-2.5 py-0.5 rounded-md text-[10.5px] font-medium transition-all cursor-pointer ${
+                      className={`px-3 py-1 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                         isSelected 
-                          ? "bg-white text-slate-900 shadow-xs font-semibold" 
-                          : "text-slate-500 hover:text-slate-800"
+                          ? "bg-white text-slate-900 shadow-2xs font-black" 
+                          : "text-slate-500 hover:text-slate-900"
                       }`}
                     >
                       {tf}
@@ -282,66 +280,57 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            {/* Metrics High-Level Overlay: 3 Executive KPIs */}
-            <div className="grid grid-cols-3 gap-2.5 my-1.5 relative z-10">
+            {/* Metrics Row: Clean, Bold, High-Contrast 3-Column Strip (Not Clumsy or Over-Boxed) */}
+            <div className="grid grid-cols-3 divide-x divide-slate-100 bg-[#f8fafc] border border-slate-200/80 rounded-2xl p-2.5 my-1 relative z-10 shadow-2xs">
               
-              {/* Metric 1 */}
-              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                    Floor Headcount
-                  </span>
-                  <span className="text-[9.5px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100/60">
+              {/* Metric 1: Floor Occupancy */}
+              <div className="px-3.5 first:pl-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-0.5">
+                  Floor Headcount
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <strong className="text-2xl font-black text-slate-900 tracking-tight">{currentHero.capacity}</strong>
+                  <span className="text-xs font-bold text-slate-400">/ {currentHero.capacityMax}</span>
+                  <span className="ml-auto text-[10px] font-black text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200/60">
                     {currentHero.capacityPct}
                   </span>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-semibold tracking-tight text-slate-900">{currentHero.capacity}</span>
-                  <span className="text-xs font-medium text-slate-400">{currentHero.capacityMax}</span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-normal">Safe threshold 60</span>
               </div>
 
-              {/* Metric 2 */}
-              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                    Inflow Collections
-                  </span>
-                  <span className="text-[9.5px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100/60">
+              {/* Metric 2: Collections Inflow */}
+              <div className="px-3.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-0.5">
+                  Collections Today
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <strong className="text-2xl font-black text-slate-900 tracking-tight">{currentHero.collections}</strong>
+                  <span className="ml-auto text-[10px] font-black text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200/60">
                     {currentHero.collectionsDelta}
                   </span>
                 </div>
-                <div className="flex items-baseline">
-                  <span className="text-xl font-semibold tracking-tight text-slate-900">{currentHero.collections}</span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-normal">Daily run-rate target</span>
               </div>
 
-              {/* Metric 3 */}
-              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                    Turnstile Check-ins
-                  </span>
-                  <span className="text-[9.5px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200/60">
+              {/* Metric 3: Turnstile Check-ins */}
+              <div className="px-3.5 last:pr-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-0.5">
+                  Turnstile Check-ins
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <strong className="text-2xl font-black text-slate-900 tracking-tight">{currentHero.checkins}</strong>
+                  <span className="ml-auto text-[10px] font-black text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-full border border-indigo-200/60">
                     {currentHero.checkinsDelta}
                   </span>
                 </div>
-                <div className="flex items-baseline">
-                  <span className="text-xl font-semibold tracking-tight text-slate-900">{currentHero.checkins}</span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-normal">Peak hour: 18:00 (87)</span>
               </div>
 
             </div>
 
-            {/* ─── Large Interactive Telemetry Canvas with Professional Graphing ─── */}
-            <div className="w-full flex-1 min-h-[135px] relative z-10 flex flex-col justify-end">
+            {/* ─── Expansive High-Fidelity Area Chart Canvas ─── */}
+            <div className="w-full flex-1 relative z-10 flex flex-col justify-end pt-1">
               
-              <div className="relative w-full h-28 flex gap-1.5">
-                {/* Y-Axis Reference Scale (Clean HTML typography) */}
-                <div className="w-5 h-full flex flex-col justify-between text-[8.5px] font-mono text-slate-400 select-none pb-1 shrink-0 text-right pr-0.5">
+              <div className="relative w-full h-[145px] flex gap-2">
+                {/* Y-Axis Reference Scale */}
+                <div className="w-6 h-full flex flex-col justify-between text-[9px] font-mono font-bold text-slate-400 select-none pb-1 text-right pr-0.5 shrink-0">
                   <span>100</span>
                   <span>75</span>
                   <span>50</span>
@@ -350,62 +339,67 @@ export const Dashboard = () => {
 
                 {/* SVG Graph Canvas */}
                 <div className="relative flex-1 h-full">
-                  <svg className="w-full h-full overflow-visible" viewBox="0 0 660 110" preserveAspectRatio="none">
+                  <svg className="w-full h-full overflow-visible" viewBox="0 0 660 130" preserveAspectRatio="none">
                     <defs>
-                      <linearGradient id="execAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.14" />
-                        <stop offset="60%" stopColor="#2563eb" stopOpacity="0.04" />
-                        <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
+                      <linearGradient id="richAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.28" />
+                        <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.08" />
+                        <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.0" />
+                      </linearGradient>
+                      <linearGradient id="richLineGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#1d4ed8" />
+                        <stop offset="60%" stopColor="#2563eb" />
+                        <stop offset="100%" stopColor="#4f46e5" />
                       </linearGradient>
                     </defs>
 
-                    {/* Horizontal Guide Gridlines with Precise Alignment */}
-                    <line x1="0" y1="12" x2="660" y2="12" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1" />
-                    <line x1="0" y1="42" x2="660" y2="42" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1" />
-                    <line x1="0" y1="74" x2="660" y2="74" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1" />
-                    <line x1="0" y1="105" x2="660" y2="105" stroke="#e2e8f0" strokeWidth="1" />
+                    {/* Horizontal Guide Gridlines with Soft Tint */}
+                    <line x1="0" y1="12" x2="660" y2="12" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+                    <line x1="0" y1="46" x2="660" y2="46" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+                    <line x1="0" y1="84" x2="660" y2="84" stroke="#f1f5f9" strokeDasharray="3 3" strokeWidth="1.2" />
+                    <line x1="0" y1="122" x2="660" y2="122" stroke="#e2e8f0" strokeWidth="1.5" />
 
-                    {/* Area Gradient Fill under Primary Spline */}
+                    {/* Rich Area Gradient Fill */}
                     <path
-                      d="M 0,82 C 90,75 150,38 230,48 C 310,58 380,68 450,56 C 510,44 560,14 600,16 C 630,18 650,50 660,56 L 660,105 L 0,105 Z"
-                      fill="url(#execAreaGrad)"
+                      d="M 0,88 C 90,80 150,38 230,50 C 310,60 380,72 450,58 C 510,44 560,14 600,16 C 630,20 650,54 660,60 L 660,122 L 0,122 Z"
+                      fill="url(#richAreaGrad)"
                     />
 
-                    {/* Secondary Benchmark Curve (Previous Period - Dashed Slate Line) */}
+                    {/* Secondary Benchmark Curve (Previous Day / Baseline) */}
                     <path
-                      d="M 0,94 C 90,88 150,60 230,65 C 310,70 380,82 450,72 C 510,62 560,34 600,32 C 630,30 650,65 660,68"
+                      d="M 0,100 C 90,92 150,66 230,72 C 310,76 380,90 450,78 C 510,66 560,36 600,34 C 630,32 650,70 660,74"
                       fill="none"
                       stroke="#94a3b8"
-                      strokeWidth="1.5"
+                      strokeWidth="1.8"
                       strokeDasharray="4 4"
                       strokeLinecap="round"
                     />
 
-                    {/* Primary Spline Line (Current Period - Solid Blue Curve) */}
+                    {/* Primary Spline Line (Current Period - Vibrant Blue) */}
                     <path
-                      d="M 0,82 C 90,75 150,38 230,48 C 310,58 380,68 450,56 C 510,44 560,14 600,16 C 630,18 650,50 660,56"
+                      d="M 0,88 C 90,80 150,38 230,50 C 310,60 380,72 450,58 C 510,44 560,14 600,16 C 630,20 650,54 660,60"
                       fill="none"
-                      stroke="#2563eb"
-                      strokeWidth="2.5"
+                      stroke="url(#richLineGrad)"
+                      strokeWidth="3.2"
                       strokeLinecap="round"
                     />
 
                     {/* Vertical Guideline at Peak (18:00) */}
-                    <line x1="600" y1="16" x2="600" y2="105" stroke="#94a3b8" strokeDasharray="2 2" strokeWidth="1" />
+                    <line x1="600" y1="16" x2="600" y2="122" stroke="#3b82f6" strokeDasharray="2 2" strokeWidth="1.2" />
 
-                    {/* Key Peak Precision Radar Node */}
+                    {/* Key Peak Radar Node */}
                     <g transform="translate(600, 16)">
-                      <circle r="7" fill="none" stroke="rgba(37,99,235,0.25)" className="animate-ping" />
-                      <circle r="4" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
+                      <circle r="9" fill="none" stroke="rgba(37,99,235,0.3)" className="animate-ping" />
+                      <circle r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
                     </g>
                   </svg>
 
                   {/* Floating Precision Tooltip Badge at Peak */}
                   <div 
                     className="absolute pointer-events-none"
-                    style={{ top: "-4px", right: "24px" }}
+                    style={{ top: "-8px", right: "20px" }}
                   >
-                    <div className="bg-slate-900 text-white text-[10px] font-medium px-2 py-0.5 rounded-md shadow-md flex items-center gap-1.5 border border-slate-800">
+                    <div className="bg-[#0f172a] text-white text-[10.5px] font-black px-3 py-1 rounded-lg shadow-lg flex items-center gap-1.5 border border-slate-700">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       <span>18:00 Peak • 87 Check-ins (+24%)</span>
                     </div>
@@ -414,19 +408,19 @@ export const Dashboard = () => {
               </div>
 
               {/* X-Axis Time Labels & Legend */}
-              <div className="flex justify-between items-center text-[9.5px] text-slate-400 pt-1.5 border-t border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <span className="w-2.5 h-0.5 bg-blue-600 rounded-full" />
-                    <span className="text-slate-600 font-medium">Today</span>
+              <div className="flex justify-between items-center text-[10.5px] font-bold text-slate-500 pt-1.5 border-t border-slate-100">
+                <div className="flex items-center gap-3.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-1 bg-blue-600 rounded-full" />
+                    <span className="text-slate-800 font-black">Today</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-2.5 h-0.5 border-t border-dashed border-slate-400" />
-                    <span className="text-slate-400">Baseline</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-0.5 border-t-2 border-dashed border-slate-400" />
+                    <span className="text-slate-500 font-bold">Baseline</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6 font-mono">
+                <div className="flex items-center gap-6 font-mono text-slate-500 font-bold">
                   {currentHero.points.map((pt, i) => (
                     <span key={i} className="hover:text-blue-600 transition-colors">
                       {pt.label}
@@ -444,89 +438,96 @@ export const Dashboard = () => {
               (Wireframe: top title pill + indicator, 2 items, 
                prominent middle pill slider, 1 item, bottom full button)
           ══════════════════════════════════════════════════════════ */}
-          <section className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] relative flex flex-col justify-between min-h-[310px]">
+          <section className="lg:col-span-4 bg-white border border-[#e2e8f0] rounded-[22px] p-3.5 shadow-[0_4px_20px_-4px_rgba(69,79,97,0.06)] relative flex flex-col justify-between h-[365px]">
             
             {/* Header: Title + Status Pill (Matching Wireframe!) */}
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-2">
-                <div className="w-6.5 h-6.5 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/60">
-                  <Users size={13} />
-                </div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                  Active Roster & Queue
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-0.5">
+                  Staff Load & Queue
+                </span>
+                <h3 className="text-sm font-black text-slate-900 tracking-tight leading-tight">
+                  Active Roster
                 </h3>
               </div>
 
-              <div className="h-5.5 px-2 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-[9.5px] font-medium flex items-center gap-1">
+              <div className="h-[22px] px-2.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[9.5px] font-black tracking-wider uppercase flex items-center gap-1.5 shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                 <span>3 Pending</span>
               </div>
             </div>
 
-            {/* Item 1: Circle avatar + 2 lines + right status (Matching Wireframe!) */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/70 hover:bg-slate-100/80 border border-slate-100 transition-colors">
+            {/* Item 1: Ankit Kumar */}
+            <div className="flex items-center justify-between py-1 px-2.5 rounded-xl bg-[#f8fafc] hover:bg-slate-100/80 border border-slate-100 transition-colors">
               <div className="flex items-center gap-2">
-                <div className="w-7.5 h-7.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center justify-center">
+                <div 
+                  className="w-[28px] h-[28px] rounded-full text-white font-black text-[11px] flex items-center justify-center shadow-xs shrink-0"
+                  style={{ background: "linear-gradient(135deg, #2563eb, #4f46e5)" }}
+                >
                   AK
                 </div>
                 <div>
-                  <h4 className="text-[11.5px] font-semibold text-slate-900 leading-tight">Ankit Kumar</h4>
-                  <p className="text-[10px] text-slate-500 font-normal">Head Coach • 4 PT Sessions</p>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Ankit Kumar</h4>
+                  <p className="text-[10px] text-slate-600 font-bold leading-none mt-0.5">Head Coach • 4 PT Sessions</p>
                 </div>
               </div>
-              <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-[9.5px] font-medium uppercase tracking-wide">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9px] font-black uppercase tracking-wider">
                 On Floor
               </span>
             </div>
 
-            {/* Item 2: Circle avatar + 2 lines + right status (Matching Wireframe!) */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/70 hover:bg-slate-100/80 border border-slate-100 transition-colors mt-1">
+            {/* Item 2: Sneha Patel */}
+            <div className="flex items-center justify-between py-1 px-2.5 rounded-xl bg-[#f8fafc] hover:bg-slate-100/80 border border-slate-100 transition-colors">
               <div className="flex items-center gap-2">
-                <div className="w-7.5 h-7.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center justify-center">
+                <div 
+                  className="w-[28px] h-[28px] rounded-full text-white font-black text-[11px] flex items-center justify-center shadow-xs shrink-0"
+                  style={{ background: "linear-gradient(135deg, #8b5cf6, #ec4899)" }}
+                >
                   SP
                 </div>
                 <div>
-                  <h4 className="text-[11.5px] font-semibold text-slate-900 leading-tight">Sneha Patel</h4>
-                  <p className="text-[10px] text-slate-500 font-normal">Nutrition Consult • 2 Clients</p>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Sneha Patel</h4>
+                  <p className="text-[10px] text-slate-600 font-bold leading-none mt-0.5">Nutrition Consult • 2 Clients</p>
                 </div>
               </div>
-              <span className="px-1.5 py-0.2 rounded-md bg-slate-100 border border-slate-200/80 text-slate-600 text-[9.5px] font-medium tracking-wide">
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-[9px] font-black uppercase tracking-wider">
                 7:30 PM
               </span>
             </div>
 
-            {/* ─── FEATURED ITEM 3: PROMINENT HARDWARE TURNSTILE CONTROLLER IN WIREFRAME! ─── */}
+            {/* ─── FEATURED ITEM 3: PROMINENT HARDWARE TURNSTILE SLIDER PILL IN WIREFRAME! ─── */}
             <div 
               onClick={() => {
                 const nextState = !autoGateActive;
                 setAutoGateActive(nextState);
                 showToast(nextState ? "Auto-Turnstile Gate: ACTIVE (RFID auto-accept)" : "Turnstile Gate switched to MANUAL check-in.");
               }}
-              className="my-1 p-2 rounded-xl bg-slate-50/90 hover:bg-slate-100/80 border border-slate-200/90 transition-all cursor-pointer select-none flex items-center justify-between group"
+              className="py-1.5 px-2.5 rounded-xl border border-blue-200/90 hover:border-blue-300 transition-all cursor-pointer select-none flex items-center justify-between group shadow-xs"
+              style={{ background: "linear-gradient(135deg, rgba(37,99,235,0.06), rgba(99,102,241,0.06))" }}
               title="Click to toggle between Auto-Turnstile Pass and Manual Gate"
             >
               <div className="flex items-center gap-2">
-                <div className="w-6.5 h-6.5 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/60">
-                  <Wifi size={12} />
+                <div className="w-[26px] h-[26px] rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                  <Wifi size={13} strokeWidth={2.2} />
                 </div>
                 <div>
-                  <span className="text-[11.5px] font-semibold text-slate-900 block leading-tight">
+                  <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-900 block leading-tight">
                     {autoGateActive ? "Auto-Turnstile Gate" : "Manual Gate Pass"}
                   </span>
-                  <span className="text-[9.5px] text-slate-500 font-normal">
-                    {autoGateActive ? "43 Passes Auto-Verified Today" : "Manual Staff Override"}
+                  <span className="text-[9.5px] text-slate-600 font-bold leading-none">
+                    {autoGateActive ? "43 Passes Auto-Verified Today" : "Manual Override Mode"}
                   </span>
                 </div>
               </div>
 
-              {/* iOS-Style Toggle Switch */}
+              {/* iOS-Style Tactile Toggle Switch */}
               <div className="flex items-center gap-1.5">
-                <span className={`text-[9.5px] font-semibold tracking-wide ${autoGateActive ? "text-blue-600" : "text-slate-400"}`}>
+                <span className={`text-[8.5px] font-black uppercase tracking-wider ${autoGateActive ? "text-blue-700" : "text-slate-400"}`}>
                   {autoGateActive ? "ONLINE" : "OFF"}
                 </span>
-                <div className={`w-7.5 h-4 rounded-full p-0.5 transition-colors ${autoGateActive ? "bg-blue-600" : "bg-slate-300"}`}>
+                <div className={`w-7 h-3.5 rounded-full p-0.5 transition-colors ${autoGateActive ? "bg-blue-600" : "bg-slate-300"}`}>
                   <motion.div 
-                    className="w-3 h-3 rounded-full bg-white shadow-xs"
+                    className="w-2.5 h-2.5 rounded-full bg-white shadow-xs"
                     animate={{ x: autoGateActive ? 14 : 0 }}
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
@@ -534,29 +535,32 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            {/* Item 4: Circle avatar + 2 lines + right status (Matching Wireframe!) */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/70 hover:bg-slate-100/80 border border-slate-100 transition-colors mb-1">
+            {/* Item 4: Rohan Verma */}
+            <div className="flex items-center justify-between py-1 px-2.5 rounded-xl bg-[#f8fafc] hover:bg-slate-100/80 border border-slate-100 transition-colors">
               <div className="flex items-center gap-2">
-                <div className="w-7.5 h-7.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px] flex items-center justify-center">
+                <div 
+                  className="w-[28px] h-[28px] rounded-full text-white font-black text-[11px] flex items-center justify-center shadow-xs shrink-0"
+                  style={{ background: "linear-gradient(135deg, #10b981, #0d9488)" }}
+                >
                   RV
                 </div>
                 <div>
-                  <h4 className="text-[11.5px] font-semibold text-slate-900 leading-tight">Rohan Verma</h4>
-                  <p className="text-[10px] text-slate-500 font-normal">Indiranagar • Annual Member</p>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Rohan Verma</h4>
+                  <p className="text-[10px] text-slate-600 font-bold leading-none mt-0.5">Indiranagar • Annual Member</p>
                 </div>
               </div>
-              <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-[9.5px] font-medium uppercase tracking-wide">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9px] font-black uppercase tracking-wider">
                 Checked In
               </span>
             </div>
 
-            {/* ─── ITEM 5: BOTTOM ACTION BUTTON (Matching Wireframe!) ─── */}
+            {/* ─── ITEM 5: BOTTOM FULL-WIDTH BUTTON (Matching Wireframe!) ─── */}
             <button
               type="button"
               onClick={handleOpenAddMember}
-              className="w-full h-8.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-[0.99]"
+              className="w-full h-[32px] rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white font-black text-[11.5px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-[0.99]"
             >
-              <UserPlus size={13} />
+              <UserPlus size={13} strokeWidth={2.2} />
               <span>+ Quick Add Member</span>
             </button>
           </section>
@@ -576,21 +580,19 @@ export const Dashboard = () => {
               (Wireframe: 2 text pills top-left, 1 switch top-right,
                curve with TWO CALLOUT PINS + leader lines, 3 switches in row at bottom)
           ══════════════════════════════════════════════════════════ */}
-          <section className="lg:col-span-5 bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] relative flex flex-col justify-between min-h-[290px]">
+          <section className="lg:col-span-5 bg-white border border-[#e2e8f0] rounded-[22px] p-3.5 shadow-[0_4px_20px_-4px_rgba(69,79,97,0.06)] relative flex flex-col justify-between h-[300px]">
             
             {/* Header: Title & Subtitle on Left + Forecast Switch on Right (Matching Wireframe!) */}
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60">
-                    <TrendingUp size={12} />
-                  </div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                    Collections Trajectory
-                  </h3>
-                </div>
-                <p className="text-[10.5px] text-slate-500 mt-0.5 pl-7.5">
-                  Target: ₹9,00,000 • <span className="text-emerald-600 font-semibold">93.5% Pace</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 block mb-0.2">
+                  Revenue Pulse
+                </span>
+                <h3 className="text-sm font-black text-slate-900 tracking-tight leading-tight">
+                  Collections Trajectory
+                </h3>
+                <p className="text-[10.5px] text-slate-600 font-bold mt-0.5">
+                  Target: ₹9,00,000 • <span className="text-emerald-600 font-black">93.5% Pace</span>
                 </p>
               </div>
 
@@ -603,10 +605,10 @@ export const Dashboard = () => {
                 className="flex items-center gap-1.5 cursor-pointer select-none"
                 title="Toggle Target Forecast"
               >
-                <span className="text-[9.5px] font-medium uppercase tracking-wider text-slate-400">Forecast</span>
-                <div className={`w-7.5 h-4 rounded-full p-0.5 transition-colors ${forecastActive ? "bg-blue-600" : "bg-slate-300"}`}>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Forecast</span>
+                <div className={`w-8 h-4.5 rounded-full p-0.5 transition-colors ${forecastActive ? "bg-blue-600" : "bg-slate-300"}`}>
                   <motion.div 
-                    className="w-3 h-3 rounded-full bg-white shadow-xs"
+                    className="w-3.5 h-3.5 rounded-full bg-white shadow-xs"
                     animate={{ x: forecastActive ? 14 : 0 }}
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
@@ -615,28 +617,34 @@ export const Dashboard = () => {
             </div>
 
             {/* Canvas Area with TWO CALLOUT PINS WITH LEADER LINES (Directly from Wireframe!) */}
-            <div className="relative w-full h-32 my-1">
+            <div className="relative w-full h-36 my-1">
               
               {/* Telemetry Line Chart Background SVG */}
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 480 110" preserveAspectRatio="none">
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 480 120" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="trajAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
+                    <stop offset="60%" stopColor="#10b981" stopOpacity="0.06" />
                     <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="trajLineGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#059669" />
+                    <stop offset="60%" stopColor="#10b981" />
+                    <stop offset="100%" stopColor="#3b82f6" />
                   </linearGradient>
                 </defs>
 
                 {/* Horizontal Guide Lines */}
-                <line x1="0" y1="20" x2="480" y2="20" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="58" x2="480" y2="58" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="95" x2="480" y2="95" stroke="#e2e8f0" strokeWidth="1" />
+                <line x1="0" y1="20" x2="480" y2="20" stroke="#f1f5f9" strokeWidth="1.2" strokeDasharray="3 3" />
+                <line x1="0" y1="60" x2="480" y2="60" stroke="#f1f5f9" strokeWidth="1.2" strokeDasharray="3 3" />
+                <line x1="0" y1="100" x2="480" y2="100" stroke="#cbd5e1" strokeWidth="1.2" />
 
                 {/* Target Dashed Line if Forecast is ON */}
                 {forecastActive && (
                   <line 
-                    x1="0" y1="30" x2="480" y2="30" 
-                    stroke="#94a3b8" 
-                    strokeWidth="1.2" 
+                    x1="0" y1="32" x2="480" y2="32" 
+                    stroke="#3b82f6" 
+                    strokeWidth="1.8" 
                     strokeDasharray="5 4" 
                   />
                 )}
@@ -644,7 +652,7 @@ export const Dashboard = () => {
                 {/* Soft Area Gradient */}
                 {seriesToggles.collections && (
                   <path
-                    d="M 15,92 C 80,88 130,38 190,38 C 250,38 280,75 350,75 C 400,75 435,24 470,24 L 470,95 L 15,95 Z"
+                    d="M 15,96 C 80,90 130,40 190,40 C 250,40 280,78 350,78 C 400,78 435,26 470,26 L 470,100 L 15,100 Z"
                     fill="url(#trajAreaGrad)"
                   />
                 )}
@@ -652,28 +660,30 @@ export const Dashboard = () => {
                 {/* Trajectory Main Curve (Collections) */}
                 {seriesToggles.collections && (
                   <path
-                    d="M 15,92 C 80,88 130,38 190,38 C 250,38 280,75 350,75 C 400,75 435,24 470,24"
+                    d="M 15,96 C 80,90 130,40 190,40 C 250,40 280,78 350,78 C 400,78 435,26 470,26"
                     fill="none"
-                    stroke="#10b981"
-                    strokeWidth="2.5"
+                    stroke="url(#trajLineGrad)"
+                    strokeWidth="3.2"
                     strokeLinecap="round"
                   />
                 )}
 
                 {/* Leader line for Pin 1 */}
-                <line x1="190" y1="20" x2="190" y2="38" stroke="#10b981" strokeWidth="1.2" strokeDasharray="2 2" />
+                <line x1="190" y1="20" x2="190" y2="40" stroke="#10b981" strokeWidth="1.5" strokeDasharray="2 2" />
 
                 {/* Peak Point Node (under Pin 1) */}
-                <g transform="translate(190, 38)">
-                  <circle r="4" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
+                <g transform="translate(190, 40)">
+                  <circle r="7" fill="none" stroke="rgba(16,185,129,0.3)" className="animate-ping" />
+                  <circle r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="2.5" />
                 </g>
 
                 {/* Leader line for Pin 2 */}
-                <line x1="350" y1="75" x2="350" y2="92" stroke="#f59e0b" strokeWidth="1.2" strokeDasharray="2 2" />
+                <line x1="350" y1="78" x2="350" y2="98" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="2 2" />
 
                 {/* Dip Point Node (under Pin 2) */}
-                <g transform="translate(350, 75)">
-                  <circle r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" />
+                <g transform="translate(350, 78)">
+                  <circle r="7" fill="none" stroke="rgba(245,158,11,0.3)" className="animate-ping" />
+                  <circle r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="2.5" />
                 </g>
               </svg>
 
@@ -682,10 +692,12 @@ export const Dashboard = () => {
                 className="absolute pointer-events-auto"
                 style={{ top: "0px", left: "39.58%", transform: "translateX(-50%)", zIndex: 10 }}
               >
-                <div className="px-2 py-0.5 rounded-lg bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-sm flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-[11px] font-semibold text-slate-900 leading-none">₹8,42,000</span>
-                  <span className="text-[9px] text-emerald-600 font-medium">Peak (+18%)</span>
+                <div className="px-3 py-1 rounded-xl bg-white border border-emerald-200 shadow-md flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <div>
+                    <span className="text-xs font-black text-slate-900 leading-none block">₹8,42,000</span>
+                    <span className="text-[10px] text-emerald-600 font-black leading-none">Peak Inflow (+18%)</span>
+                  </div>
                 </div>
               </div>
 
@@ -694,10 +706,12 @@ export const Dashboard = () => {
                 className="absolute pointer-events-auto"
                 style={{ bottom: "0px", left: "72.9%", transform: "translateX(-50%)", zIndex: 10 }}
               >
-                <div className="px-2 py-0.5 rounded-lg bg-white/95 backdrop-blur-sm border border-slate-200/90 shadow-sm flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <span className="text-[11px] font-semibold text-slate-900 leading-none">₹64,500</span>
-                  <span className="text-[9px] text-amber-600 font-medium">12 Overdue</span>
+                <div className="px-3 py-1 rounded-xl bg-white border border-amber-200 shadow-md flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <div>
+                    <span className="text-xs font-black text-slate-900 leading-none block">₹64,500</span>
+                    <span className="text-[10px] text-amber-600 font-black leading-none">12 Overdue</span>
+                  </div>
                 </div>
               </div>
 
@@ -709,16 +723,16 @@ export const Dashboard = () => {
               {/* Switch 1: Collections */}
               <div 
                 onClick={() => setSeriesToggles({ ...seriesToggles, collections: !seriesToggles.collections })}
-                className="flex items-center justify-between gap-1 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100/80 border border-slate-200/70 cursor-pointer select-none flex-1 transition-colors"
+                className="flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-xl bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/80 cursor-pointer select-none flex-1 transition-colors shadow-2xs"
               >
-                <div className="flex items-center gap-1 truncate">
+                <div className="flex items-center gap-1.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-[10.5px] font-medium text-slate-700 truncate">Collections</span>
+                  <span className="text-[11px] font-black text-slate-800 truncate">Collections</span>
                 </div>
-                <div className={`w-5.5 h-3.2 rounded-full p-0.5 transition-colors ${seriesToggles.collections ? "bg-emerald-500" : "bg-slate-300"}`}>
+                <div className={`w-6 h-3.5 rounded-full p-0.5 transition-colors ${seriesToggles.collections ? "bg-emerald-500" : "bg-slate-300"}`}>
                   <motion.div 
-                    className="w-2.2 h-2.2 rounded-full bg-white shadow-xs"
-                    animate={{ x: seriesToggles.collections ? 9 : 0 }}
+                    className="w-2.5 h-2.5 rounded-full bg-white shadow-xs"
+                    animate={{ x: seriesToggles.collections ? 10 : 0 }}
                   />
                 </div>
               </div>
@@ -726,16 +740,16 @@ export const Dashboard = () => {
               {/* Switch 2: Renewals */}
               <div 
                 onClick={() => setSeriesToggles({ ...seriesToggles, renewals: !seriesToggles.renewals })}
-                className="flex items-center justify-between gap-1 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100/80 border border-slate-200/70 cursor-pointer select-none flex-1 transition-colors"
+                className="flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-xl bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/80 cursor-pointer select-none flex-1 transition-colors shadow-2xs"
               >
-                <div className="flex items-center gap-1 truncate">
+                <div className="flex items-center gap-1.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                  <span className="text-[10.5px] font-medium text-slate-700 truncate">Renewals</span>
+                  <span className="text-[11px] font-black text-slate-800 truncate">Renewals</span>
                 </div>
-                <div className={`w-5.5 h-3.2 rounded-full p-0.5 transition-colors ${seriesToggles.renewals ? "bg-blue-600" : "bg-slate-300"}`}>
+                <div className={`w-6 h-3.5 rounded-full p-0.5 transition-colors ${seriesToggles.renewals ? "bg-blue-600" : "bg-slate-300"}`}>
                   <motion.div 
-                    className="w-2.2 h-2.2 rounded-full bg-white shadow-xs"
-                    animate={{ x: seriesToggles.renewals ? 9 : 0 }}
+                    className="w-2.5 h-2.5 rounded-full bg-white shadow-xs"
+                    animate={{ x: seriesToggles.renewals ? 10 : 0 }}
                   />
                 </div>
               </div>
@@ -743,16 +757,16 @@ export const Dashboard = () => {
               {/* Switch 3: Overdue */}
               <div 
                 onClick={() => setSeriesToggles({ ...seriesToggles, dues: !seriesToggles.dues })}
-                className="flex items-center justify-between gap-1 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100/80 border border-slate-200/70 cursor-pointer select-none flex-1 transition-colors"
+                className="flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-xl bg-[#f8fafc] hover:bg-slate-100 border border-slate-200/80 cursor-pointer select-none flex-1 transition-colors shadow-2xs"
               >
-                <div className="flex items-center gap-1 truncate">
+                <div className="flex items-center gap-1.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                  <span className="text-[10.5px] font-medium text-slate-700 truncate">Overdue</span>
+                  <span className="text-[11px] font-black text-slate-800 truncate">Overdue</span>
                 </div>
-                <div className={`w-5.5 h-3.2 rounded-full p-0.5 transition-colors ${seriesToggles.dues ? "bg-amber-500" : "bg-slate-300"}`}>
+                <div className={`w-6 h-3.5 rounded-full p-0.5 transition-colors ${seriesToggles.dues ? "bg-amber-500" : "bg-slate-300"}`}>
                   <motion.div 
-                    className="w-2.2 h-2.2 rounded-full bg-white shadow-xs"
-                    animate={{ x: seriesToggles.dues ? 9 : 0 }}
+                    className="w-2.5 h-2.5 rounded-full bg-white shadow-xs"
+                    animate={{ x: seriesToggles.dues ? 10 : 0 }}
                   />
                 </div>
               </div>
@@ -766,54 +780,64 @@ export const Dashboard = () => {
               (Wireframe: top pill + indicator, stats, 
                sub-section with 2 lines + 1 switch, bottom wide pill slider)
           ══════════════════════════════════════════════════════════ */}
-          <section className="lg:col-span-3 bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] relative flex flex-col justify-between min-h-[290px]">
+          <section className="lg:col-span-3 bg-white border border-[#e2e8f0] rounded-[22px] p-3.5 shadow-[0_4px_20px_-4px_rgba(69,79,97,0.06)] relative flex flex-col justify-between h-[300px]">
             
             {/* Header: Title on Left + Online Indicator on Right (Matching Wireframe!) */}
             <div className="flex items-center justify-between gap-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/60">
-                  <Zap size={12} />
-                </div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                  System Sync
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 block mb-0.2">
+                  Local System
+                </span>
+                <h3 className="text-sm font-black text-slate-900 tracking-tight leading-tight">
+                  Sync Status
                 </h3>
               </div>
 
-              <span className="px-2 py-0.2 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-[9.5px] font-medium flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[9.5px] font-black tracking-wider uppercase flex items-center gap-1 shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>99.8%</span>
+                <span>Online</span>
               </span>
             </div>
 
-            {/* Sync Telemetry Details */}
-            <div className="my-1 space-y-1.5">
-              <div className="p-2 rounded-xl bg-slate-50/70 border border-slate-100">
-                <div className="flex justify-between items-center text-[10px] text-slate-500 font-medium mb-1">
-                  <span>SQLite Buffer Health</span>
-                  <span className="text-slate-900 font-semibold font-mono">42 / 500 Queue</span>
+            {/* Sync Telemetry Details: Progress Bar + Rich Rows */}
+            <div className="my-1.5 space-y-2">
+              <div className="p-2.5 rounded-xl bg-[#f8faff] border border-blue-100/80">
+                <div className="flex justify-between items-center text-[10px] font-bold mb-1">
+                  <span className="text-slate-600 font-extrabold uppercase tracking-wider">Data Integrity</span>
+                  <span className="text-blue-700 font-mono font-black text-xs">97% Buffer</span>
                 </div>
-                <div className="w-full h-1.2 rounded-full bg-slate-200 overflow-hidden">
-                  <div className="h-full bg-blue-600 rounded-full w-[92%]" />
+                <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full w-[97%]" />
                 </div>
               </div>
 
-              <div className="space-y-1 pl-0.5">
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-700 font-normal">
-                  <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
-                  <span>2 Biometric turnstiles linked</span>
+              <div className="space-y-1.5 pl-0.5">
+                <div className="flex items-center gap-2 text-xs text-slate-800 font-bold">
+                  <div className="w-5.5 h-5.5 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <Zap size={12} strokeWidth={2.2} />
+                  </div>
+                  <span><strong className="font-black text-slate-900">42</strong> records queued locally</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10.5px] text-slate-400 font-normal">
-                  <Clock size={12} className="text-slate-400 shrink-0" />
+                <div className="flex items-center gap-2 text-xs text-slate-800 font-bold">
+                  <div className="w-5.5 h-5.5 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={12} strokeWidth={2.2} />
+                  </div>
+                  <span><strong className="font-black text-slate-900">2</strong> biometric turnstiles linked</span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-slate-600 font-bold">
+                  <div className="w-5.5 h-5.5 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                    <Clock size={12} strokeWidth={2.2} />
+                  </div>
                   <span>Cloud handshake: 32s ago</span>
                 </div>
               </div>
             </div>
 
             {/* ─── SUB-SECTION: TWO LINES + TOGGLE SWITCH ON RIGHT (Matching Wireframe!) ─── */}
-            <div className="p-2 rounded-xl bg-slate-50/70 border border-slate-100 flex items-center justify-between gap-2">
+            <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-slate-200/80 flex items-center justify-between gap-2">
               <div>
-                <h4 className="text-[11.5px] font-semibold text-slate-900 leading-tight">Auto-Sync Daemon</h4>
-                <p className="text-[10px] text-slate-500 mt-0.2 font-normal">&lt; 40ms local failover pipe</p>
+                <h4 className="text-xs font-black text-slate-900 leading-tight">Auto-Sync Daemon</h4>
+                <p className="text-[10px] text-slate-600 mt-0.2 font-bold">&lt; 40ms local failover pipe</p>
               </div>
 
               {/* Right Toggle Switch */}
@@ -838,16 +862,16 @@ export const Dashboard = () => {
             {/* ─── BOTTOM WIDE ACTION BUTTON (Matching Wireframe!) ─── */}
             <div 
               onClick={handleForceSync}
-              className="h-8.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 flex items-center justify-between px-3 cursor-pointer select-none transition-all group active:scale-[0.99]"
+              className="h-8.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200/90 flex items-center justify-between px-3 cursor-pointer select-none transition-all group active:scale-[0.99]"
               title="Click to force immediate sync"
             >
               <div className="flex items-center gap-2">
-                <RefreshCw size={11} className={`text-slate-600 ${isSyncing ? "animate-spin text-blue-600" : ""}`} />
-                <span className="text-[11px] font-semibold text-slate-800">
-                  {isSyncing ? "Syncing..." : "Force Instant Sync"}
+                <RefreshCw size={12} strokeWidth={2.2} className={`text-slate-800 ${isSyncing ? "animate-spin text-blue-600" : ""}`} />
+                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  {isSyncing ? "Syncing..." : "Force Sync Now"}
                 </span>
               </div>
-              <span className="text-[10.5px] font-medium text-blue-600 group-hover:translate-x-0.5 transition-transform">
+              <span className="text-xs font-black text-blue-600 group-hover:translate-x-0.5 transition-transform">
                 Instant →
               </span>
             </div>
@@ -860,52 +884,55 @@ export const Dashboard = () => {
                large circular orbital dial in center, 
                central knob flanked by 2 pill buttons at bottom)
           ══════════════════════════════════════════════════════════ */}
-          <section className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-4.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] relative flex flex-col justify-between min-h-[290px]">
+          <section className="lg:col-span-4 bg-white border border-[#e2e8f0] rounded-[22px] p-3.5 shadow-[0_4px_20px_-4px_rgba(69,79,97,0.06)] relative flex flex-col justify-between h-[300px]">
             
-            {/* Header: Two Lines on Left + Toggle Switch on Right (Matching Wireframe!) */}
+            {/* Header: Title on Left, Capacity % + Sensors Switch on Right */}
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/60">
-                    <Gauge size={12} />
-                  </div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                    Live Occupancy
-                  </h3>
-                </div>
-                <p className="text-[10.5px] text-slate-500 font-normal mt-0.5 pl-7.5">
-                  Capacity: <strong className="text-slate-900 font-semibold">{activeOccupancy.count}</strong> / {activeOccupancy.max} Members
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-0.2">
+                  Live Occupancy
+                </span>
+                <h3 className="text-sm font-black text-slate-900 tracking-tight leading-tight">
+                  Capacity Used
+                </h3>
+                <p className="text-[10.5px] text-slate-600 font-bold mt-0.5">
+                  Max: <strong className="text-slate-900 font-black">{activeOccupancy.count}</strong> / {activeOccupancy.max} Members
                 </p>
               </div>
 
-              {/* Right Toggle Switch (Matching Wireframe!) */}
-              <div 
-                onClick={() => {
-                  setSensorsLive(!sensorsLive);
-                  showToast(!sensorsLive ? "Occupancy sensors connected." : "Occupancy sensors paused.");
-                }}
-                className="flex items-center gap-1.5 cursor-pointer select-none"
-                title="Toggle Sensor Feed"
-              >
-                <span className="text-[9.5px] font-medium uppercase tracking-wider text-slate-400">Sensors</span>
-                <div className={`w-7.5 h-4 rounded-full p-0.5 transition-colors ${sensorsLive ? "bg-blue-600" : "bg-slate-300"}`}>
-                  <motion.div 
-                    className="w-3 h-3 rounded-full bg-white shadow-xs"
-                    animate={{ x: sensorsLive ? 14 : 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
+              <div className="flex items-center gap-2">
+                <span className="text-base font-black text-blue-600 tracking-tight">
+                  {activeOccupancy.pct}%
+                </span>
+                
+                {/* Sensors Toggle */}
+                <div 
+                  onClick={() => {
+                    setSensorsLive(!sensorsLive);
+                    showToast(!sensorsLive ? "Occupancy sensors connected." : "Occupancy sensors paused.");
+                  }}
+                  className="flex items-center cursor-pointer select-none"
+                  title="Toggle Sensor Feed"
+                >
+                  <div className={`w-7.5 h-4 rounded-full p-0.5 transition-colors ${sensorsLive ? "bg-blue-600" : "bg-slate-300"}`}>
+                    <motion.div 
+                      className="w-3 h-3 rounded-full bg-white shadow-xs"
+                      animate={{ x: sensorsLive ? 14 : 0 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* ─── CENTER: THE ORBITAL RADIAL DIAL & GAUGE (Matching Wireframe!) ─── */}
+            {/* ─── CENTER: THE ORBITAL RADIAL DIAL & GAUGE (Substantial & Vibrant!) ─── */}
             <div className="relative w-full flex items-center justify-center py-0.5">
               <div className="relative w-32 h-32 flex items-center justify-center">
                 
                 {/* SVG Orbital Track & Radial Gauge */}
                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 176 176">
                   <defs>
-                    <linearGradient id="orbitalArcGradLight" x1="0" y1="0" x2="1" y2="1">
+                    <linearGradient id="orbitalArcGradRich" x1="0" y1="0" x2="1" y2="1">
                       <stop offset="0%" stopColor="#38bdf8" />
                       <stop offset="50%" stopColor="#2563eb" />
                       <stop offset="100%" stopColor="#4f46e5" />
@@ -914,30 +941,30 @@ export const Dashboard = () => {
 
                   {/* Outer Fine Track Ring (Matching Wireframe!) */}
                   <circle
-                    cx="88" cy="88" r="82"
+                    cx="88" cy="88" r="80"
                     fill="none"
-                    stroke="#e2e8f0"
-                    strokeWidth="1"
-                    strokeDasharray="3 3"
+                    stroke="#cbd5e1"
+                    strokeWidth="1.2"
+                    strokeDasharray="4 4"
                   />
 
                   {/* Inner Track Background */}
                   <circle
-                    cx="88" cy="88" r="64"
+                    cx="88" cy="88" r="62"
                     fill="none"
                     stroke="#f1f5f9"
-                    strokeWidth="8"
+                    strokeWidth="11"
                   />
 
                   {/* Inner Glowing Progress Arc */}
                   <motion.circle
-                    cx="88" cy="88" r="64"
+                    cx="88" cy="88" r="62"
                     fill="none"
-                    stroke="url(#orbitalArcGradLight)"
-                    strokeWidth="8"
+                    stroke="url(#orbitalArcGradRich)"
+                    strokeWidth="11"
                     strokeLinecap="round"
-                    strokeDasharray="402"
-                    animate={{ strokeDashoffset: 402 - (402 * activeOccupancy.pct) / 100 }}
+                    strokeDasharray="390"
+                    animate={{ strokeDashoffset: 390 - (390 * activeOccupancy.pct) / 100 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   />
                 </svg>
@@ -948,35 +975,35 @@ export const Dashboard = () => {
                   animate={{ rotate: sensorsLive ? 360 : 45 }}
                   transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
                 >
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-blue-600 shadow-xs border-2 border-white" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-blue-600 shadow-md border-2 border-white" />
                 </motion.div>
 
-                {/* Center Dial Core Information (Matching Wireframe!) */}
+                {/* Center Dial Core Information (Bold & Punchy!) */}
                 <div className="text-center z-10 flex flex-col items-center">
-                  <span className="text-[9.5px] font-medium uppercase tracking-wider text-slate-400 leading-none">
-                    {activeOccupancy.pct}% Load
-                  </span>
-                  <span className="text-2xl font-semibold text-slate-900 tracking-tight my-0.5 leading-none">
+                  <strong className="text-3xl font-black text-slate-900 tracking-tight leading-none">
                     {activeOccupancy.count}
-                  </span>
-                  <span className="text-[9.5px] font-medium text-blue-600">
+                  </strong>
+                  <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 mt-0.5">
                     Inside Floor
+                  </span>
+                  <span className="text-[10px] font-black text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200/80 mt-1">
+                    Safe Load
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* ─── BOTTOM CONTROLS: CENTRAL KNOB FLANKED BY 2 PILLS (Directly from Wireframe!) ─── */}
+            {/* ─── BOTTOM CONTROLS: 3 SHIFT BLOCKS (Directly from Wireframe & GymDeck standard!) ─── */}
             <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 select-none">
               
               {/* Left Pill: Morning */}
               <button
                 type="button"
                 onClick={() => setOccupancyShift("morning")}
-                className={`h-6.5 px-2.5 rounded-lg text-[10.5px] font-medium transition-all cursor-pointer ${
+                className={`h-7 px-3.5 rounded-xl text-[11.5px] font-black transition-all cursor-pointer ${
                   occupancyShift === "morning"
-                    ? "bg-slate-900 text-white shadow-xs font-semibold"
-                    : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80"
+                    ? "bg-[#0f172a] text-white shadow-xs"
+                    : "bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200/80"
                 }`}
               >
                 Morning 68
@@ -986,24 +1013,24 @@ export const Dashboard = () => {
               <button
                 type="button"
                 onClick={() => setOccupancyShift("live")}
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+                className={`w-7.5 h-7.5 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
                   occupancyShift === "live"
                     ? "bg-blue-600 text-white ring-4 ring-blue-500/20 scale-105"
                     : "bg-slate-100 text-slate-500 hover:bg-slate-200/80"
                 }`}
                 title="Switch to Live Headcount"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+                <span className="w-2 h-2 rounded-full bg-white shadow-xs" />
               </button>
 
               {/* Right Pill: Evening */}
               <button
                 type="button"
                 onClick={() => setOccupancyShift("evening")}
-                className={`h-6.5 px-2.5 rounded-lg text-[10.5px] font-medium transition-all cursor-pointer ${
+                className={`h-7 px-3.5 rounded-xl text-[11.5px] font-black transition-all cursor-pointer ${
                   occupancyShift === "evening"
-                    ? "bg-slate-900 text-white shadow-xs font-semibold"
-                    : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80"
+                    ? "bg-[#0f172a] text-white shadow-xs"
+                    : "bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200/80"
                 }`}
               >
                 Evening 87
@@ -1030,9 +1057,9 @@ export const Dashboard = () => {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
-            className="fixed bottom-6 right-8 z-[300] bg-slate-900 text-white px-3.5 py-2 rounded-xl shadow-xl border border-slate-800 flex items-center gap-2 text-xs font-medium"
+            className="fixed bottom-6 right-8 z-[300] bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl border border-slate-800 flex items-center gap-2.5 text-xs font-bold"
           >
-            <CheckCircle2 size={14} className="text-emerald-400" />
+            <CheckCircle2 size={16} className="text-emerald-400" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
