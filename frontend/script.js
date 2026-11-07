@@ -27,13 +27,16 @@ const spellcheckObserver = new MutationObserver((mutations) => {
 
 spellcheckObserver.observe(document.body, { childList: true, subtree: true });
 
-// Lazy loaded component mounting system with memory management
+// Lazy loaded component mounting system with memory management & instant 0ms switching
 let activeRoots = new Map();
+const mountingStages = new Set();
 
 const canonicalKeys = {
   "membership-plans": "membership-plans-shared",
   "daily-checkin": "daily-checkin-shared",
   "attendance": "daily-checkin-shared",
+  "account": "profile",
+  "profile": "profile",
 };
 
 const stageRegistry = [
@@ -61,7 +64,7 @@ const stageRegistry = [
   { stages: ["trainer-performance"], load: () => import("./TrainerPerformance.jsx"), mount: "mountTrainerPerformance", argKey: "trainerPerformanceStage" },
   { stages: ["gym-profile"], load: () => import("./GymProfile.jsx"), mount: "mountGymProfile", argKey: "gymProfileStage" },
   { stages: ["app-settings"], load: () => import("./AppSettings.jsx"), mount: "mountAppSettings", argKey: "appSettingsStage" },
-  { stages: ["account"], load: () => import("./Profile.jsx"), mount: "mountProfile", argKey: "profileStage" },
+  { stages: ["account", "profile"], load: () => import("./Profile.jsx"), mount: "mountProfile", argKey: "profileStage" },
   { stages: ["past-members"], load: () => import("./PastMembers.jsx"), mount: "mountPastMembers" },
 ];
 
@@ -76,11 +79,12 @@ const getCanonicalKey = (stage) => canonicalKeys[stage] || stage;
 
 const mountStageLazy = async (stage) => {
   const canonicalKey = getCanonicalKey(stage);
-  if (activeRoots.has(canonicalKey)) return;
+  if (activeRoots.has(canonicalKey) || mountingStages.has(canonicalKey)) return;
 
   const entry = stageMap.get(stage);
   if (!entry) return;
 
+  mountingStages.add(canonicalKey);
   try {
     const mod = await entry.load();
     const mountFn = mod[entry.mount];
@@ -88,27 +92,35 @@ const mountStageLazy = async (stage) => {
       console.warn(`GymDeck: Mount function ${entry.mount} not found`);
       return;
     }
-    const root = entry.argKey ? await mountFn(DOM[entry.argKey]) : await mountFn();
-    if (root) activeRoots.set(canonicalKey, root);
+    const targetElement = entry.argKey ? DOM[entry.argKey] : undefined;
+    const root = targetElement ? await mountFn(targetElement) : await mountFn();
+    if (root) {
+      activeRoots.set(canonicalKey, root);
+      console.log(`GymDeck: Stage ${stage} [${canonicalKey}] mounted and preserved`);
+    }
   } catch (err) {
     console.error(`GymDeck: Error mounting stage ${stage}:`, err);
+  } finally {
+    mountingStages.delete(canonicalKey);
   }
 };
 
 const unmountInactiveStages = (currentStage) => {
-  const currentCanonicalKey = getCanonicalKey(currentStage);
+  // Stages remain preserved in activeRoots for instant 0ms switching
+};
 
-  for (const [stage, root] of activeRoots.entries()) {
-    if (stage !== currentCanonicalKey && stage !== "dashboard") {
+// Pre-load all stage chunks during idle time for 0ms cold starts
+const preloadAllStages = () => {
+  const scheduleIdle = window.requestIdleCallback || ((cb) => setTimeout(cb, 800));
+  scheduleIdle(() => {
+    stageRegistry.forEach((entry) => {
       try {
-        root.unmount();
-        activeRoots.delete(stage);
+        entry.load().catch(() => {});
       } catch (err) {
-        console.warn(`GymDeck: Failed to unmount ${stage}:`, err);
+        // silent
       }
-    }
-  }
-
+    });
+  });
 };
 
 // Pre-load critical modules for instant transitions
@@ -130,11 +142,13 @@ const initWelcome = () => {
         
         // Initialize dashboard widgets after welcome overlay
         dashboardWidgetsPromise.then(m => m.mountDashboardWidgets());
+        preloadAllStages();
       });
     }).catch(err => {
       console.error("GymDeck: Welcome overlay failed, revealing dashboard", err);
       document.documentElement.classList.add("dashboard-enter-active");
       dashboardWidgetsPromise.then(m => m.mountDashboardWidgets());
+      preloadAllStages();
     });
   } else if (document.documentElement.classList.contains("dashboard-enter")) {
     requestAnimationFrame(() => {
@@ -142,8 +156,11 @@ const initWelcome = () => {
         document.documentElement.classList.add("dashboard-enter-active");
         // Initialize dashboard widgets for direct entries
         dashboardWidgetsPromise.then(m => m.mountDashboardWidgets());
+        preloadAllStages();
       });
     });
+  } else {
+    preloadAllStages();
   }
 };
 
@@ -809,7 +826,7 @@ const viewLabels = {
 const previewOrder = Object.keys(viewLabels).filter((view) => view !== "dashboard");
 const MEMBER_DELETED_STORAGE_KEY = "gymdeck-deleted-member-ids";
 let lastFocusedElement = null;
-let activeView = "dashboard";
+let activeView = sessionStorage.getItem("gymdeck-active-view") || "dashboard";
 let activeMemberFilter = "all";
 let lastDocumentTrigger = null;
 let lastAddMemberTrigger = null;
@@ -3541,14 +3558,20 @@ const setActiveView = (viewName) => {
   console.log(`GymDeck: Switching to view: ${viewName}`);
   const isCompactNavigation = window.matchMedia("(max-width: 1180px)").matches;
   const safeView = viewLabels[viewName] ? viewName : "dashboard";
-  if (activeView === safeView && activeRoots.has(safeView)) return;
+  const canonicalKey = getCanonicalKey(safeView);
+  const activeStage = stageAliases[safeView] || safeView;
+
+  // 1. Instantly switch visual stage visibility first for 0ms transition!
+  setStageVisibility(activeStage);
+
+  if (activeView === safeView && activeRoots.has(canonicalKey)) return;
   
   activeView = safeView;
+  try { sessionStorage.setItem("gymdeck-active-view", safeView); } catch {}
   console.log(`GymDeck: Active roots before mount:`, Array.from(activeRoots.keys()));
 
-  // Lazy mount the required stage
+  // 2. Lazy mount the required stage (keeps active roots alive)
   mountStageLazy(safeView);  
-  // Unmount other heavy stages to free up memory
   unmountInactiveStages(safeView);
 
   const allSidebarLinks = Array.from(sidebar?.querySelectorAll("[data-view]") || []);
@@ -3580,8 +3603,6 @@ const setActiveView = (viewName) => {
     comingSoonFeature.textContent = viewLabels[safeView] || "Workspace";
   }
 
-  const activeStage = stageAliases[safeView] || safeView;
-  setStageVisibility(activeStage);
   if (safeView === "members") {
     loadMembersFromBackend().then(() => updateMemberResults());
   }
@@ -4645,6 +4666,20 @@ sidebar?.addEventListener("click", (event) => {
     setActiveView(link.dataset.view || "dashboard");
   }
 });
+
+// Warm up chunk on hover for true 0ms navigation
+sidebar?.addEventListener("pointerover", (event) => {
+  const link = event.target.closest("[data-view]");
+  if (link && !link.closest(".nav-subitem.logout")) {
+    const targetView = link.dataset.view;
+    if (targetView) {
+      const entry = stageMap.get(targetView);
+      if (entry) {
+        entry.load().catch(() => {});
+      }
+    }
+  }
+}, { passive: true });
 
 // Remove the old static loop
 // overviewLinks.forEach((link) => { ... });

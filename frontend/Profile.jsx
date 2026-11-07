@@ -948,8 +948,11 @@ const Profile = () => {
 // MOUNT UTILITY
 // ─────────────────────────────────────────
 export function mountProfile(container) {
-  const root = createRoot(container);
+  const target = container || document.querySelector('[data-stage="profile"]');
+  if (!target) return null;
+  const root = createRoot(target);
   root.render(<Profile />);
+  return root;
 }
 
 export default Profile;

@@ -69,7 +69,10 @@ import {
   Link2,
   User,
   Quote,
-  ChevronDown
+  ChevronDown,
+  PhoneCall,
+  MessageSquare,
+  Send
 } from "lucide-react";
 import jsPDF from "jspdf";
 
@@ -214,6 +217,60 @@ const CustomDropdown = ({
 };
 
 /**
+ * REUSABLE TOGGLE SWITCH & CHECK BUTTON COMPONENTS
+ * Modern controls for managing communication channel activation & member permissions
+ */
+const ToggleSwitch = ({ checked, onChange, disabled }) => (
+  <button 
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    disabled={disabled}
+    onClick={onChange}
+    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+      checked ? 'bg-zinc-900' : 'bg-zinc-200'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+  >
+    <span 
+      aria-hidden="true" 
+      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+        checked ? 'translate-x-5' : 'translate-x-0'
+      }`} 
+    />
+  </button>
+);
+
+const CheckButton = ({ checked, onChange, label, description, icon: Icon, disabled = false }) => (
+  <button
+    type="button"
+    disabled={disabled}
+    onClick={onChange}
+    className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 select-none ${
+      disabled 
+        ? 'opacity-40 cursor-not-allowed bg-zinc-50 border-zinc-200 text-zinc-400' 
+        : checked 
+          ? 'bg-zinc-900/5 border-zinc-900/40 text-zinc-900 cursor-pointer shadow-2xs' 
+          : 'bg-zinc-50/60 border-zinc-200/80 hover:border-zinc-300 text-zinc-600 cursor-pointer'
+    }`}
+  >
+    <div className={`w-5 h-5 mt-0.5 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
+      checked ? 'bg-zinc-900 text-white shadow-2xs' : 'border border-zinc-300 bg-white'
+    }`}>
+      {checked && <Check size={12} strokeWidth={2.5} />}
+    </div>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-1.5">
+        {Icon && <Icon size={13} className={checked ? 'text-zinc-900' : 'text-zinc-400'} />}
+        <span className={`text-xs font-semibold ${checked ? 'text-zinc-900' : 'text-zinc-700'}`}>{label}</span>
+      </div>
+      {description && (
+        <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">{description}</p>
+      )}
+    </div>
+  </button>
+);
+
+/**
  * GYMDECK • GYM PROFILE & OPERATIONAL CONFIGURATION
  * Professional Monochromatic Enterprise Edition
  */
@@ -274,10 +331,27 @@ const GymProfile = () => {
     foundedYear: "",
     businessType: "",
     
-    // Contact & Location
+    // Contact & Member Communication Channels
     primaryPhone: "",
+    mobileForMembers: true,
+    mobileSmsAllowed: true,
+    mobileCallsAllowed: true,
+    mobilePromosAllowed: false,
+
     whatsapp: "",
+    whatsappForMembers: true,
+    whatsappReceiptsAllowed: true,
+    whatsappRemindersAllowed: true,
+    whatsappSupportAllowed: true,
+    whatsappPromosAllowed: false,
+
     email: "",
+    emailForMembers: true,
+    emailInvoicesAllowed: true,
+    emailAlertsAllowed: true,
+    emailNewsletterAllowed: false,
+
+    // Facility Location & Coordinates
     website: "",
     address: "",
     city: "",
@@ -361,12 +435,21 @@ const GymProfile = () => {
   // Focused List of Tabs in the Horizontal Navigation Row
   const tabs = useMemo(() => [
     { id: "General", label: "General", icon: Building2 },
-    { id: "Business Information", label: "Business Information", icon: FileText },
+    { id: "Contact & Communication", label: "Contact & Communication", icon: MessageSquare },
     { id: "Branches", label: "Branches", icon: MapPin },
     { id: "Operational Settings", label: "Operational Settings", icon: Clock },
     { id: "Digital & Apps", label: "Digital & Apps", icon: Smartphone },
     { id: "Social Media", label: "Social Media", icon: Share2 }
   ], []);
+
+  // Verified Enterprise badge appears only after all placeholder details in the header are entered by the user
+  const isAllDetailsEntered = useMemo(() => Boolean(
+    gymData.name?.trim() &&
+    gymData.tagline?.trim() &&
+    (gymData.city?.trim() || gymData.state?.trim()) &&
+    gymData.businessType?.trim() &&
+    gymData.foundedYear?.trim()
+  ), [gymData.name, gymData.tagline, gymData.city, gymData.state, gymData.businessType, gymData.foundedYear]);
 
   // Auto-switch to tab if search query matches a tab name or keyword
   useEffect(() => {
@@ -803,117 +886,121 @@ const GymProfile = () => {
             />
           </div>
 
-          {/* 2B. PROFILE HEADER ROW */}
-          <div className="px-8 pb-7 sm:pb-8 pt-1 sm:pt-2 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          {/* 2B. PROFILE HEADER ROW - Strict fixed dimension and fixed positioning anchor */}
+          <div className="px-8 pt-0 flex flex-col sm:flex-row sm:items-start gap-6 h-[148px] sm:h-[152px] overflow-visible">
             
-            <div className="flex flex-col sm:flex-row sm:items-end gap-5">
-              
-              {/* Overlapping Profile Photo with Monochromatic Mock Avatar - slightly shifted up to overlap banner bottom */}
-              <div className="relative -mt-14 sm:-mt-16 -top-5 sm:-top-7 lg:-top-8 flex-shrink-0 z-20">
-                <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-zinc-900 relative group">
-                  {gymData.logoUrl ? (
-                    <>
-                      <img 
-                        src={gymData.logoUrl} 
-                        alt="Gym Profile Logo" 
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
-                      />
-                      {/* Monochromatic Hover Overlay on Profile Avatar */}
-                      <div 
-                        onClick={() => logoInputRef.current?.click()}
-                        className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white backdrop-blur-[1px]"
-                      >
-                        <Camera size={16} strokeWidth={1.5} className="mb-0.5" />
-                        <span className="text-[10px] font-medium">Change</span>
-                      </div>
-                    </>
-                  ) : (
-                    /* Monochromatic Mock Placeholder for Avatar */
+            {/* Overlapping Profile Photo with Monochromatic Mock Avatar - fixed anchor half-on-banner half-on-card */}
+            <div className="relative -mt-14 sm:-mt-16 lg:-mt-20 flex-shrink-0 z-20">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-zinc-900 relative group">
+                {gymData.logoUrl ? (
+                  <>
+                    <img 
+                      src={gymData.logoUrl} 
+                      alt="Gym Profile Logo" 
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                    />
+                    {/* Monochromatic Hover Overlay on Profile Avatar */}
                     <div 
                       onClick={() => logoInputRef.current?.click()}
-                      className="w-full h-full flex flex-col items-center justify-center text-center p-2 cursor-pointer bg-zinc-800 hover:bg-zinc-750 transition-colors group select-none"
-                      title="Upload Profile Photo / Logo (512 × 512 px)"
+                      className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white backdrop-blur-[1px]"
                     >
-                      <div className="w-9 h-9 rounded-full bg-zinc-700/80 border border-zinc-600/60 flex items-center justify-center text-zinc-300 mb-1 group-hover:scale-105 transition-transform shadow-sm">
-                        <Camera size={16} strokeWidth={1.5} />
-                      </div>
-                      <span className="text-[10px] font-semibold text-zinc-200 leading-tight">
-                        Add Logo
-                      </span>
-                      <span className="text-[8px] font-mono text-zinc-400 leading-tight mt-0.5">
-                        512 × 512
-                      </span>
+                      <Camera size={16} strokeWidth={1.5} className="mb-0.5" />
+                      <span className="text-[10px] font-medium">Change</span>
                     </div>
-                  )}
-                </div>
-
-                {/* Monochromatic Profile Pic Upload Button */}
-                <button 
-                  onClick={() => logoInputRef.current?.click()}
-                  className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 shadow-md flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 z-30"
-                  title={gymData.logoUrl ? "Change Profile Photo" : "Upload Profile Photo (512 × 512 px)"}
-                >
-                  <Camera size={14} strokeWidth={1.75} />
-                </button>
-
-                {/* Remove Profile Pic Action when an image is uploaded */}
-                {gymData.logoUrl && (
-                  <button 
-                    onClick={handleRemoveLogo}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-zinc-900/80 hover:bg-zinc-900 text-zinc-300 hover:text-white border border-white/20 shadow-md flex items-center justify-center cursor-pointer transition-transform hover:scale-105 z-30"
-                    title="Remove Profile Photo"
+                  </>
+                ) : (
+                  /* Monochromatic Mock Placeholder for Avatar */
+                  <div 
+                    onClick={() => logoInputRef.current?.click()}
+                    className="w-full h-full flex flex-col items-center justify-center text-center p-2 cursor-pointer bg-zinc-800 hover:bg-zinc-750 transition-colors group select-none"
+                    title="Upload Profile Photo / Logo (512 × 512 px)"
                   >
-                    <X size={11} strokeWidth={2} />
-                  </button>
+                    <div className="w-9 h-9 rounded-full bg-zinc-700/80 border border-zinc-600/60 flex items-center justify-center text-zinc-300 mb-1 group-hover:scale-105 transition-transform shadow-sm">
+                      <Camera size={16} strokeWidth={1.5} />
+                    </div>
+                    <span className="text-[10px] font-semibold text-zinc-200 leading-tight">
+                      Add Logo
+                    </span>
+                    <span className="text-[8px] font-mono text-zinc-400 leading-tight mt-0.5">
+                      512 × 512
+                    </span>
+                  </div>
                 )}
-
-                <input 
-                  type="file" 
-                  ref={logoInputRef} 
-                  onChange={handleLogoUpload} 
-                  accept="image/*" 
-                  className="hidden" 
-                />
               </div>
 
-              {/* Gym Brand Name & Tagline */}
-              <div className="pt-1.5 sm:pt-2">
-                <div className="flex items-center gap-3 flex-wrap">
-                  {gymData.name?.trim() ? (
-                    <div className="flex items-center gap-3">
-                      <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight">
-                        {gymData.name}
-                      </h1>
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-100 text-zinc-800 border border-zinc-200 text-[11px] font-semibold tracking-wide">
+              {/* Monochromatic Profile Pic Upload Button */}
+              <button 
+                onClick={() => logoInputRef.current?.click()}
+                className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-200 shadow-md flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 z-30"
+                title={gymData.logoUrl ? "Change Profile Photo" : "Upload Profile Photo (512 × 512 px)"}
+              >
+                <Camera size={14} strokeWidth={1.75} />
+              </button>
+
+              {/* Remove Profile Pic Action when an image is uploaded */}
+              {gymData.logoUrl && (
+                <button 
+                  onClick={handleRemoveLogo}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-zinc-900/80 hover:bg-zinc-900 text-zinc-300 hover:text-white border border-white/20 shadow-md flex items-center justify-center cursor-pointer transition-transform hover:scale-105 z-30"
+                  title="Remove Profile Photo"
+                >
+                  <X size={11} strokeWidth={2} />
+                </button>
+              )}
+
+              <input 
+                type="file" 
+                ref={logoInputRef} 
+                onChange={handleLogoUpload} 
+                accept="image/*" 
+                className="hidden" 
+              />
+            </div>
+
+            {/* Gym Brand Name & Tagline - Fixed dimension and position container */}
+            <div className="pt-2 sm:pt-2.5 flex flex-col justify-start flex-1 min-w-0">
+              
+              {/* Line 1: Fixed-height Brand Name Container */}
+              <div className="h-[48px] sm:h-[52px] flex items-center">
+                {gymData.name?.trim() ? (
+                  <div className="flex items-center gap-3 max-w-full">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight truncate" title={gymData.name}>
+                      {gymData.name}
+                    </h1>
+                    {isAllDetailsEntered && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-800 border border-zinc-200 text-[11px] font-semibold tracking-wide flex-shrink-0 animate-in fade-in duration-200">
                         <BadgeCheck size={13} strokeWidth={1.75} className="text-zinc-800" />
                         <span>Verified Enterprise</span>
                       </div>
-                    </div>
-                  ) : (
-                    /* Dotted Outlined Faded Greyish Placeholder for Gym Brand Name */
-                    <div 
-                      onClick={() => {
-                        setActiveTab("General");
-                        setTimeout(() => {
-                          const input = document.getElementById("gym-brand-name-input");
-                          if (input) {
-                            input.focus();
-                            input.scrollIntoView({ behavior: "smooth", block: "center" });
-                          }
-                        }, 50);
-                      }}
-                      className="inline-flex items-center px-3.5 py-1.5 rounded-xl border-2 border-dotted border-zinc-300 bg-zinc-50/70 hover:bg-zinc-100/80 hover:border-zinc-400 transition-all cursor-pointer group/ph select-none"
-                      title="Click to enter your Gym Brand Name"
-                    >
-                      <span className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-400 group-hover/ph:text-zinc-500">
-                        Gym Brand Name
-                      </span>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Dotted Outlined Faded Greyish Placeholder for Gym Brand Name */
+                  <div 
+                    onClick={() => {
+                      setActiveTab("General");
+                      setTimeout(() => {
+                        const input = document.getElementById("gym-brand-name-input");
+                        if (input) {
+                          input.focus();
+                          input.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }
+                      }, 50);
+                    }}
+                    className="h-[46px] inline-flex items-center px-4 rounded-xl border-2 border-dotted border-zinc-300 bg-zinc-50/70 hover:bg-zinc-100/80 hover:border-zinc-400 transition-all cursor-pointer group/ph select-none"
+                    title="Click to enter your Gym Brand Name"
+                  >
+                    <span className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-400 group-hover/ph:text-zinc-500">
+                      Gym Brand Name
+                    </span>
+                  </div>
+                )}
+              </div>
 
+              {/* Line 2: Fixed-height Tagline Container */}
+              <div className="h-[26px] flex items-center mt-1">
                 {gymData.tagline?.trim() ? (
-                  <p className="text-xs sm:text-sm font-medium text-zinc-500 mt-1 italic">
+                  <p className="text-xs sm:text-sm font-medium text-zinc-500 italic truncate max-w-[550px]" title={gymData.tagline}>
                     {gymData.tagline}
                   </p>
                 ) : (
@@ -929,68 +1016,75 @@ const GymProfile = () => {
                         }
                       }, 50);
                     }}
-                    className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded-md border border-dotted border-zinc-300 text-zinc-400 hover:text-zinc-500 hover:border-zinc-400 text-xs italic bg-zinc-50/50 cursor-pointer transition-all"
+                    className="h-[24px] inline-flex items-center px-2 rounded-md border border-dotted border-zinc-300 text-zinc-400 hover:text-zinc-500 hover:border-zinc-400 text-xs italic bg-zinc-50/50 cursor-pointer transition-all"
                     title="Click to enter Tagline / Slogan"
                   >
                     <span>Add brand tagline / motto...</span>
                   </div>
                 )}
+              </div>
 
-                <div className="flex items-center gap-4 mt-2.5 flex-wrap text-xs font-medium text-zinc-500">
-                  <span className="flex items-center gap-1.5">
-                    <MapPin size={13} strokeWidth={1.5} className="text-zinc-400" />
-                    {gymData.city || gymData.state ? (
-                      `${gymData.city || ""}${gymData.city && gymData.state ? ", " : ""}${gymData.state || ""}`
-                    ) : (
-                      <span 
-                        onClick={() => {
-                          setActiveTab("General");
-                          setTimeout(() => document.getElementById("gym-city-input")?.focus(), 50);
-                        }}
-                        className="border border-dotted border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 px-1.5 py-0.5 rounded text-[11px] cursor-pointer"
-                        title="Click to set city & state"
-                      >
-                        City, State
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-zinc-300">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <Building2 size={13} strokeWidth={1.5} className="text-zinc-400" />
-                    {gymData.businessType ? (
-                      gymData.businessType
-                    ) : (
-                      <span 
-                        onClick={() => {
-                          setActiveTab("General");
-                          setTimeout(() => document.getElementById("gym-businesstype-input")?.focus(), 50);
-                        }}
-                        className="border border-dotted border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 px-1.5 py-0.5 rounded text-[11px] cursor-pointer"
-                        title="Click to select business type"
-                      >
-                        Facility Type
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-zinc-300">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <Calendar size={13} strokeWidth={1.5} className="text-zinc-400" />
-                    {gymData.foundedYear ? (
-                      `Est. ${gymData.foundedYear}`
-                    ) : (
-                      <span 
-                        onClick={() => {
-                          setActiveTab("General");
-                          setTimeout(() => document.getElementById("gym-founded-input")?.focus(), 50);
-                        }}
-                        className="border border-dotted border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 px-1.5 py-0.5 rounded text-[11px] cursor-pointer"
-                        title="Click to enter founding year"
-                      >
-                        Est. Year
-                      </span>
-                    )}
-                  </span>
-                </div>
+              {/* Line 3: Fixed-height Metadata Badges Container */}
+              <div className="h-[26px] flex items-center gap-3.5 mt-2 text-xs font-medium text-zinc-500">
+                <span className="inline-flex items-center gap-1.5 h-[24px]">
+                  <MapPin size={13} strokeWidth={1.5} className="text-zinc-400 flex-shrink-0" />
+                  {gymData.city || gymData.state ? (
+                    <span className="text-zinc-700 font-semibold truncate max-w-[200px]">
+                      {`${gymData.city || ""}${gymData.city && gymData.state ? ", " : ""}${gymData.state || ""}`}
+                    </span>
+                  ) : (
+                    <span 
+                      onClick={() => {
+                        setActiveTab("General");
+                        setTimeout(() => document.getElementById("gym-city-input")?.focus(), 50);
+                      }}
+                      className="border border-dotted border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 px-1.5 py-0.5 rounded text-[11px] cursor-pointer inline-flex items-center h-[22px]"
+                      title="Click to set city & state"
+                    >
+                      City, State
+                    </span>
+                  )}
+                </span>
+                <span className="text-zinc-300 select-none">•</span>
+                <span className="inline-flex items-center gap-1.5 h-[24px]">
+                  <Building2 size={13} strokeWidth={1.5} className="text-zinc-400 flex-shrink-0" />
+                  {gymData.businessType ? (
+                    <span className="text-zinc-700 font-semibold truncate max-w-[150px]">
+                      {gymData.businessType}
+                    </span>
+                  ) : (
+                    <span 
+                      onClick={() => {
+                        setActiveTab("General");
+                        setTimeout(() => document.getElementById("gym-businesstype-input")?.focus(), 50);
+                      }}
+                      className="border border-dotted border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 px-1.5 py-0.5 rounded text-[11px] cursor-pointer inline-flex items-center h-[22px]"
+                      title="Click to select business type"
+                    >
+                      Facility Type
+                    </span>
+                  )}
+                </span>
+                <span className="text-zinc-300 select-none">•</span>
+                <span className="inline-flex items-center gap-1.5 h-[24px]">
+                  <Calendar size={13} strokeWidth={1.5} className="text-zinc-400 flex-shrink-0" />
+                  {gymData.foundedYear ? (
+                    <span className="text-zinc-700 font-semibold">
+                      {`Est. ${gymData.foundedYear}`}
+                    </span>
+                  ) : (
+                    <span 
+                      onClick={() => {
+                        setActiveTab("General");
+                        setTimeout(() => document.getElementById("gym-founded-input")?.focus(), 50);
+                      }}
+                      className="border border-dotted border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 px-1.5 py-0.5 rounded text-[11px] cursor-pointer inline-flex items-center h-[22px]"
+                      title="Click to enter founding year"
+                    >
+                      Est. Year
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
 
@@ -1146,65 +1240,36 @@ const GymProfile = () => {
                   </div>
                 </section>
 
-                {/* Contact & Location */}
+                {/* Facility Address & Location */}
                 <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
                   <div className="flex items-center gap-3.5 mb-6">
                     <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                      <Phone size={20} strokeWidth={1.5} />
+                      <MapPin size={20} strokeWidth={1.5} />
                     </div>
                     <div>
-                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Contact & Location Details</h2>
-                      <p className="text-xs text-zinc-500 font-normal">Direct communication channels and facility coordinates</p>
+                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Facility Address & Location</h2>
+                      <p className="text-xs text-zinc-500 font-normal">Physical establishment coordinates and web domain</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Primary Phone</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Phone size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.primaryPhone} 
-                          placeholder="e.g. +91 98765 43210 (Main facility phone)"
-                          onChange={(e) => handleInputChange('primaryPhone', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
+                    {/* Cross-tab shortcut banner */}
+                    <div className="col-span-2 p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 flex items-center justify-between shadow-2xs">
+                      <div className="flex items-center gap-2.5 text-xs text-zinc-600">
+                        <MessageSquare size={15} className="text-zinc-500 flex-shrink-0" />
+                        <span>Looking for Mobile, WhatsApp, and Email? Configure them with member communication rules in <strong>Contact & Communication</strong>.</span>
                       </div>
+                      <button 
+                        type="button" 
+                        onClick={() => setActiveTab("Contact & Communication")} 
+                        className="text-xs font-semibold text-zinc-900 hover:text-zinc-700 underline underline-offset-2 cursor-pointer flex items-center gap-1 flex-shrink-0 ml-4"
+                      >
+                        <span>Open Tab</span>
+                        <ArrowRight size={12} />
+                      </button>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">WhatsApp Support</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Smartphone size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.whatsapp} 
-                          placeholder="e.g. +91 98765 43210 (Direct WhatsApp helpline)"
-                          onChange={(e) => handleInputChange('whatsapp', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Official Email</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Mail size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.email} 
-                          placeholder="e.g. contact@yourgym.com (Primary inquiries email)"
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
+
+                    <div className="col-span-2 space-y-1.5">
                       <label className="text-[11px] font-semibold text-zinc-600">Official Website</label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -1288,156 +1353,274 @@ const GymProfile = () => {
               </motion.div>
             )}
 
-            {/* ──────── TAB 3: BUSINESS INFORMATION ──────── */}
-            {activeTab === "Business Information" && (
+            {/* ──────── TAB 2: CONTACT & COMMUNICATION ──────── */}
+            {activeTab === "Contact & Communication" && (
               <motion.div 
-                key="tab-business"
+                key="tab-communication"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="space-y-8"
               >
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-center gap-3.5 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                      <FileText size={20} strokeWidth={1.5} />
+                {/* Intro Banner */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <MessageSquare size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Official Contact & Member Communication</h2>
+                        <p className="text-xs text-zinc-500 font-normal mt-0.5">Configure facility mobile, WhatsApp, and email channels and set permissions for member communication</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Legal & Tax Identifiers</h2>
-                      <p className="text-xs text-zinc-500 font-normal">Compliance numbers, GST details, and corporate registration</p>
+                    <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold flex-shrink-0">
+                      <ShieldCheck size={13} strokeWidth={1.75} />
+                      <span>Zero-Spam Compliant</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CHANNEL 1: MOBILE & VOICE CALLS */}
+                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between pb-5 border-b border-zinc-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <Phone size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-zinc-900">Mobile Phone Channel</h3>
+                        <p className="text-[11px] text-zinc-500">Primary phone line for facility outreach, calls, and transactional SMS</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[11px] font-semibold ${gymData.mobileForMembers ? 'text-emerald-600' : 'text-zinc-400'}`}>
+                        {gymData.mobileForMembers ? 'Enabled for Members' : 'Disabled for Members'}
+                      </span>
+                      <ToggleSwitch 
+                        checked={gymData.mobileForMembers} 
+                        onChange={() => handleInputChange('mobileForMembers', !gymData.mobileForMembers)} 
+                      />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">GSTIN / Tax ID</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <FileText size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.gst} 
-                          placeholder="e.g. 29AAAAA0000A1Z5 (15-digit GST identification number)"
-                          onChange={(e) => handleInputChange('gst', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans" 
-                        />
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">Official Mobile Number</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                        <Phone size={15} strokeWidth={1.75} />
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Registration / Trade License No</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <FileBadge size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.regNo} 
-                          placeholder="e.g. REG-2024-0891 (Commercial trade license or establishment number)"
-                          onChange={(e) => handleInputChange('regNo', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans" 
-                        />
-                      </div>
-                    </div>
-                    <div className="col-span-2 space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Registered Legal Entity Name</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Building2 size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.legalName} 
-                          placeholder="e.g. Iron Temple Fitness Private Limited (Official registered legal entity name)"
-                          onChange={(e) => handleInputChange('legalName', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Corporate PAN / Tax File</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <CreditCard size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.pan} 
-                          placeholder="e.g. AAACI1234K (Permanent Account Number)"
-                          onChange={(e) => handleInputChange('pan', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Corporate Legal Structure</label>
-                      <CustomDropdown 
-                        id="gym-entitytype-input"
-                        icon={Building2}
-                        value={gymData.entityType} 
-                        placeholder="Select corporate legal structure..."
-                        onChange={(val) => handleInputChange('entityType', val)}
-                        options={[
-                          { value: "Private Limited Company", label: "Private Limited Company (Pvt Ltd)", description: "Registered corporate entity with limited liability & shareholder equity" },
-                          { value: "Sole Proprietorship", label: "Sole Proprietorship", description: "Individual owner unregistered or MSME commercial firm" },
-                          { value: "Partnership / LLP", label: "Partnership / Limited Liability (LLP)", description: "Multi-partner registered deed or LLP corporate entity" },
-                          { value: "Public Limited Company", label: "Public Limited Company", description: "Publicly listed or large multi-shareholder corporate entity" },
-                          { value: "One Person Company (OPC)", label: "One Person Company (OPC)", description: "Single-promoter incorporated private limited structure" },
-                          { value: "Trust / Non-Profit Society", label: "Trust / Non-Profit Society", description: "Section 8 non-profit or athletic promotion foundation" }
-                        ]}
+                      <input 
+                        type="text" 
+                        value={gymData.primaryPhone} 
+                        placeholder="e.g. +91 98765 43210 (Main facility mobile number)"
+                        onChange={(e) => handleInputChange('primaryPhone', e.target.value)}
+                        className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
                       />
                     </div>
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-100">
-                      <label className="text-[11px] font-semibold text-zinc-600">Billing Currency</label>
-                      <CustomDropdown 
-                        id="gym-currency-input"
-                        icon={CreditCard}
-                        value={gymData.billingCurrency || "INR (₹)"} 
-                        placeholder="Select billing currency..."
-                        onChange={(val) => handleInputChange('billingCurrency', val)}
-                        options={[
-                          { value: "INR (₹)", label: "INR (₹) - Indian Rupee", badge: "INR", description: "Default currency for Indian domestic facilities & GST invoices" },
-                          { value: "USD ($)", label: "USD ($) - US Dollar", badge: "USD", description: "United States Dollar & global memberships" },
-                          { value: "EUR (€)", label: "EUR (€) - Euro", badge: "EUR", description: "Eurozone standard currency" },
-                          { value: "GBP (£)", label: "GBP (£) - British Pound", badge: "GBP", description: "United Kingdom standard currency" },
-                          { value: "AED (د.إ)", label: "AED (د.إ) - UAE Dirham", badge: "AED", description: "United Arab Emirates Dirham" },
-                          { value: "SGD ($)", label: "SGD ($) - Singapore Dollar", badge: "SGD", description: "Singapore commercial billing currency" }
-                        ]}
+                  </div>
+
+                  {/* Permission Check Buttons for Mobile */}
+                  <div className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 space-y-3">
+                    <div className="text-[11px] font-bold text-zinc-800 uppercase tracking-wider">
+                      Can this Mobile Number be used for communicating with members?
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <CheckButton 
+                        checked={gymData.mobileForMembers && gymData.mobileCallsAllowed}
+                        disabled={!gymData.mobileForMembers}
+                        onChange={() => handleInputChange('mobileCallsAllowed', !gymData.mobileCallsAllowed)}
+                        label="Inbound & Outbound Voice Calls"
+                        description="Allow front desk & trainers to call members for workout sessions, schedule changes, and follow-ups."
+                        icon={PhoneCall}
                       />
-                    </div>
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-100">
-                      <label className="text-[11px] font-semibold text-zinc-600">Tax Invoice Prefix</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Receipt size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.invoicePrefix} 
-                          placeholder="e.g. INV-2026- (Printed prefix on member bills and receipts)"
-                          onChange={(e) => handleInputChange('invoicePrefix', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold font-mono focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 pt-2 border-t border-zinc-100">
-                      <label className="text-[11px] font-semibold text-zinc-600">Applicable Tax Rate</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Percent size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.taxRate} 
-                          placeholder="e.g. 18% GST (Default tax percentage for subscriptions and day passes)"
-                          onChange={(e) => handleInputChange('taxRate', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
+                      <CheckButton 
+                        checked={gymData.mobileForMembers && gymData.mobileSmsAllowed}
+                        disabled={!gymData.mobileForMembers}
+                        onChange={() => handleInputChange('mobileSmsAllowed', !gymData.mobileSmsAllowed)}
+                        label="Transactional SMS Alerts"
+                        description="Send entrance gate check-in alerts, OTP verifications, and payment due notifications via SMS."
+                        icon={Send}
+                      />
+                      <CheckButton 
+                        checked={gymData.mobileForMembers && gymData.mobilePromosAllowed}
+                        disabled={!gymData.mobileForMembers}
+                        onChange={() => handleInputChange('mobilePromosAllowed', !gymData.mobilePromosAllowed)}
+                        label="Promotional & Renewal Offers"
+                        description="Send seasonal offers, subscription discount alerts, and referral program updates."
+                        icon={Sparkles}
+                      />
                     </div>
                   </div>
                 </section>
+
+                {/* CHANNEL 2: WHATSAPP BUSINESS */}
+                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between pb-5 border-b border-zinc-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shadow-2xs">
+                        <Smartphone size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-zinc-900">WhatsApp Business Channel</h3>
+                        <p className="text-[11px] text-zinc-500">Automated invoices, workout reminders, and member support</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[11px] font-semibold ${gymData.whatsappForMembers ? 'text-emerald-600' : 'text-zinc-400'}`}>
+                        {gymData.whatsappForMembers ? 'Enabled for Members' : 'Disabled for Members'}
+                      </span>
+                      <ToggleSwitch 
+                        checked={gymData.whatsappForMembers} 
+                        onChange={() => handleInputChange('whatsappForMembers', !gymData.whatsappForMembers)} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">WhatsApp Number</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                        <Smartphone size={15} strokeWidth={1.75} />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={gymData.whatsapp} 
+                        placeholder="e.g. +91 98765 43210 (Registered WhatsApp Business helpline)"
+                        onChange={(e) => handleInputChange('whatsapp', e.target.value)}
+                        className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Permission Check Buttons for WhatsApp */}
+                  <div className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 space-y-3">
+                    <div className="text-[11px] font-bold text-zinc-800 uppercase tracking-wider">
+                      Can this WhatsApp Number be used for communicating with members?
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <CheckButton 
+                        checked={gymData.whatsappForMembers && gymData.whatsappReceiptsAllowed}
+                        disabled={!gymData.whatsappForMembers}
+                        onChange={() => handleInputChange('whatsappReceiptsAllowed', !gymData.whatsappReceiptsAllowed)}
+                        label="Payment Receipts & Invoices"
+                        description="Automatically send instant PDF receipts and renewal reminders directly to members on WhatsApp."
+                        icon={Receipt}
+                      />
+                      <CheckButton 
+                        checked={gymData.whatsappForMembers && gymData.whatsappRemindersAllowed}
+                        disabled={!gymData.whatsappForMembers}
+                        onChange={() => handleInputChange('whatsappRemindersAllowed', !gymData.whatsappRemindersAllowed)}
+                        label="Workout & Attendance Reminders"
+                        description="Send personal training schedule reminders, attendance milestones, and morning workout alerts."
+                        icon={Clock}
+                      />
+                      <CheckButton 
+                        checked={gymData.whatsappForMembers && gymData.whatsappSupportAllowed}
+                        disabled={!gymData.whatsappForMembers}
+                        onChange={() => handleInputChange('whatsappSupportAllowed', !gymData.whatsappSupportAllowed)}
+                        label="Two-Way Member Chat & Helpline"
+                        description="Allow members to message the front desk for membership freezes, diet queries, and trainer bookings."
+                        icon={MessageSquare}
+                      />
+                      <CheckButton 
+                        checked={gymData.whatsappForMembers && gymData.whatsappPromosAllowed}
+                        disabled={!gymData.whatsappForMembers}
+                        onChange={() => handleInputChange('whatsappPromosAllowed', !gymData.whatsappPromosAllowed)}
+                        label="Announcements & Community Events"
+                        description="Broadcast gym challenge announcements, holiday closures, and exclusive member discounts."
+                        icon={Sparkles}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* CHANNEL 3: OFFICIAL EMAIL */}
+                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between pb-5 border-b border-zinc-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <Mail size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-zinc-900">Official Email Channel</h3>
+                        <p className="text-[11px] text-zinc-500">Official sender address for billing statements, contracts, and security notices</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[11px] font-semibold ${gymData.emailForMembers ? 'text-emerald-600' : 'text-zinc-400'}`}>
+                        {gymData.emailForMembers ? 'Enabled for Members' : 'Disabled for Members'}
+                      </span>
+                      <ToggleSwitch 
+                        checked={gymData.emailForMembers} 
+                        onChange={() => handleInputChange('emailForMembers', !gymData.emailForMembers)} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">Official Facility Email</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                        <Mail size={15} strokeWidth={1.75} />
+                      </div>
+                      <input 
+                        type="email" 
+                        value={gymData.email} 
+                        placeholder="e.g. contact@yourgym.com (Official gym email)"
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Permission Check Buttons for Email */}
+                  <div className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 space-y-3">
+                    <div className="text-[11px] font-bold text-zinc-800 uppercase tracking-wider">
+                      Can this Email Address be used for communicating with members?
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <CheckButton 
+                        checked={gymData.emailForMembers && gymData.emailInvoicesAllowed}
+                        disabled={!gymData.emailForMembers}
+                        onChange={() => handleInputChange('emailInvoicesAllowed', !gymData.emailInvoicesAllowed)}
+                        label="Monthly Statements & GST Invoices"
+                        description="Dispatch official monthly invoices, tax deduction certificates, and membership receipts."
+                        icon={FileBadge}
+                      />
+                      <CheckButton 
+                        checked={gymData.emailForMembers && gymData.emailAlertsAllowed}
+                        disabled={!gymData.emailForMembers}
+                        onChange={() => handleInputChange('emailAlertsAllowed', !gymData.emailAlertsAllowed)}
+                        label="Welcome Packs & Security Bulletins"
+                        description="Send new member onboarding credentials, gym handbook, password resets, and policy alerts."
+                        icon={ShieldCheck}
+                      />
+                      <CheckButton 
+                        checked={gymData.emailForMembers && gymData.emailNewsletterAllowed}
+                        disabled={!gymData.emailForMembers}
+                        onChange={() => handleInputChange('emailNewsletterAllowed', !gymData.emailNewsletterAllowed)}
+                        label="Gym Newsletter & Fitness Insights"
+                        description="Send monthly workout tips, nutrition guides, and member achievements."
+                        icon={Sparkles}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Member Privacy & Governance Card */}
+                <div className="p-5 rounded-2xl border border-zinc-200 bg-zinc-50/50 flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-700 flex-shrink-0 shadow-2xs">
+                    <ShieldCheck size={16} strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-zinc-900">Member Privacy & Anti-Spam Governance</h4>
+                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                      GymDeck enforces zero-spam principles. Only channels explicitly verified and toggled on above will be utilized for automated or broadcast messaging. Members can review and adjust individual notification preferences through their personal portal.
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             )}
 
@@ -2161,8 +2344,11 @@ const GymProfile = () => {
 // MOUNT UTILITY
 // ─────────────────────────────────────────
 export function mountGymProfile(container) {
-  const root = createRoot(container);
+  const target = container || document.querySelector('[data-stage="gym-profile"]');
+  if (!target) return null;
+  const root = createRoot(target);
   root.render(<GymProfile />);
+  return root;
 }
 
 export default GymProfile;

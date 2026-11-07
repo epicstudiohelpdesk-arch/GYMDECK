@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
 import BrandFooter from "./BrandFooter.jsx";
@@ -10,6 +10,8 @@ import {
   FileText, 
   Activity, 
   ChevronRight, 
+  ChevronDown,
+  MapPin,
   Layout, 
   Bell, 
   Zap, 
@@ -40,7 +42,6 @@ import {
   UserCheck,
   Lock,
   Wifi,
-  History,
   Terminal,
   Download,
   Upload,
@@ -54,8 +55,141 @@ import {
   Check,
   Trash2,
   FolderArchive,
-  Search as SearchIcon
+  Sliders,
+  Search as SearchIcon,
+  X
 } from "lucide-react";
+
+/**
+ * REUSABLE CUSTOM SELECT COMPONENT
+ * Professional custom dropdown with animated popover and outside-click dismissal
+ */
+const CustomSelect = ({ 
+  label, 
+  value, 
+  options, 
+  onChange, 
+  icon: Icon, 
+  description,
+  disabled = false,
+  className = "" 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  const currentOption = useMemo(() => {
+    return options.find(o => {
+      const val = typeof o === "object" ? o.value : o;
+      return val === value;
+    }) || options[0];
+  }, [options, value]);
+
+  const displayLabel = typeof currentOption === "object" ? currentOption.label : currentOption;
+
+  return (
+    <div className={`space-y-1.5 ${className}`} ref={dropdownRef}>
+      {label && (
+        <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ml-0.5">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full h-11 px-3.5 bg-white hover:bg-zinc-50/80 border rounded-xl text-xs font-semibold text-zinc-900 flex items-center justify-between gap-2.5 transition-all cursor-pointer shadow-2xs ${
+            isOpen 
+              ? "border-zinc-900 ring-2 ring-zinc-900/10" 
+              : "border-zinc-200 hover:border-zinc-300"
+          } ${disabled ? "opacity-60 cursor-not-allowed bg-zinc-50" : ""}`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            {Icon && <Icon size={14} className="text-zinc-400 shrink-0" />}
+            <span className="truncate">{displayLabel}</span>
+          </div>
+          <ChevronDown 
+            size={14} 
+            className={`text-zinc-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180 text-zinc-900" : ""}`} 
+          />
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+              transition={{ duration: 0.14, ease: "easeOut" }}
+              className="absolute z-50 left-0 right-0 mt-1.5 py-1.5 bg-white rounded-xl border border-zinc-200 shadow-xl max-h-56 overflow-y-auto no-scrollbar"
+            >
+              {options.map((opt) => {
+                const optVal = typeof opt === "object" ? opt.value : opt;
+                const optLabel = typeof opt === "object" ? opt.label : opt;
+                const isSelected = optVal === value;
+                return (
+                  <button
+                    key={optVal}
+                    type="button"
+                    onClick={() => {
+                      onChange(optVal);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                      isSelected 
+                        ? "bg-zinc-100 text-zinc-950 font-semibold" 
+                        : "text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 font-medium"
+                    }`}
+                  >
+                    <span className="truncate">{optLabel}</span>
+                    {isSelected && <Check size={14} className="text-zinc-900 shrink-0 ml-2" />}
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      {description && (
+        <p className="text-[11px] text-zinc-400 font-normal ml-0.5">{description}</p>
+      )}
+    </div>
+  );
+};
+
+/**
+ * REUSABLE TOGGLE SWITCH COMPONENT
+ */
+const ToggleSwitch = ({ checked, onChange, disabled = false }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    disabled={disabled}
+    onClick={onChange}
+    className={`w-11 h-6 rounded-full transition-colors duration-200 ease-in-out relative shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-900/10 ${
+      checked ? "bg-zinc-900" : "bg-zinc-200"
+    } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+  >
+    <span
+      className={`pointer-events-none inline-block w-4.5 h-4.5 rounded-full bg-white shadow-sm transform transition duration-200 ease-in-out absolute top-[3px] ${
+        checked ? "translate-x-5.5" : "translate-x-1"
+      }`}
+    />
+  </button>
+);
 
 /**
  * GYMDECK • APP SETTINGS & SYSTEM CONFIGURATION
@@ -65,8 +199,24 @@ import {
 const AppSettings = () => {
   const [activeTab, setActiveTab] = useState("General");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const searchInputRef = useRef(null);
+
+  // Keyboard shortcut: Cmd+K or Ctrl+K to focus search, Esc to blur
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === 'Escape' && document.activeElement === searchInputRef.current) {
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // --- MOCK SETTINGS STATE ---
   const [settings, setSettings] = useState({
@@ -134,6 +284,79 @@ const AppSettings = () => {
     { id: "Security", label: "Security", icon: Shield }
   ], []);
 
+  // --- CUSTOM SELECT OPTIONS ---
+  const languageOptions = useMemo(() => [
+    { value: "English", label: "English (US & Global)" },
+    { value: "Hindi", label: "Hindi (हिन्दी)" },
+    { value: "Bengali", label: "Bengali (বাংলা)" },
+    { value: "Spanish", label: "Spanish (Español)" },
+    { value: "French", label: "French (Français)" }
+  ], []);
+
+  const regionOptions = useMemo(() => [
+    { value: "India", label: "India (IN • GST / PAN / ₹)" },
+    { value: "United States", label: "United States (US • EIN / $)" },
+    { value: "United Kingdom", label: "United Kingdom (UK • VAT / £)" },
+    { value: "United Arab Emirates", label: "United Arab Emirates (UAE • TRN / د.إ)" },
+    { value: "Canada", label: "Canada (CA • HST / $)" },
+    { value: "Australia", label: "Australia (AU • ABN / $)" },
+    { value: "Singapore", label: "Singapore (SG • UEN / $)" }
+  ], []);
+
+  const timezoneOptions = useMemo(() => [
+    { value: "Asia/Kolkata (GMT+05:30)", label: "Asia/Kolkata (GMT+05:30) • IST" },
+    { value: "UTC (GMT+00:00)", label: "UTC (GMT+00:00) • Coordinated Universal" },
+    { value: "America/New_York (GMT-05:00)", label: "America/New York (GMT-05:00) • EST" },
+    { value: "Europe/London (GMT+00:00)", label: "Europe/London (GMT+00:00) • GMT/BST" },
+    { value: "Asia/Dubai (GMT+04:00)", label: "Asia/Dubai (GMT+04:00) • GST" }
+  ], []);
+
+  const currencyOptions = useMemo(() => [
+    { value: "INR (₹)", label: "INR (₹) • Indian Rupee" },
+    { value: "USD ($)", label: "USD ($) • US Dollar" },
+    { value: "EUR (€)", label: "EUR (€) • Euro" },
+    { value: "GBP (£)", label: "GBP (£) • British Pound" },
+    { value: "AED (د.إ)", label: "AED (د.إ) • UAE Dirham" }
+  ], []);
+
+  const dateFormatOptions = useMemo(() => [
+    { value: "DD/MM/YYYY", label: "DD/MM/YYYY (e.g. 25/12/2026)" },
+    { value: "MM/DD/YYYY", label: "MM/DD/YYYY (e.g. 12/25/2026)" },
+    { value: "YYYY-MM-DD", label: "YYYY-MM-DD (ISO 8601 standard)" },
+    { value: "DD-MMM-YYYY", label: "DD-MMM-YYYY (e.g. 25-Dec-2026)" }
+  ], []);
+
+  const firstDayOfWeekOptions = useMemo(() => [
+    { value: "Monday", label: "Monday (ISO 8601 Standard)" },
+    { value: "Sunday", label: "Sunday (Traditional)" }
+  ], []);
+
+  const typographyOptions = useMemo(() => [
+    { value: "standard", label: "Inter Standard (14px) • Optimal balance" },
+    { value: "compact", label: "Compact Dense (13px) • High data throughput" },
+    { value: "large", label: "Large Legibility (15px) • Enhanced visibility" }
+  ], []);
+
+  const sidebarOptions = useMemo(() => [
+    { value: "hover-expand", label: "Hover Expand • Dynamic auto flyout" },
+    { value: "always-expanded", label: "Expanded Fixed • 240px persistent width" },
+    { value: "compact", label: "Icon Rail • Minimalist icon navigation" }
+  ], []);
+
+  const graceWindowOptions = useMemo(() => [
+    { value: "15", label: "15 Minutes (Strict Tolerance)" },
+    { value: "30", label: "30 Minutes (Recommended)" },
+    { value: "60", label: "60 Minutes (Flexible Window)" },
+    { value: "all-day", label: "Unrestricted (Full Day Access)" }
+  ], []);
+
+  const retentionOptions = useMemo(() => [
+    { value: "30", label: "30 Days (Compliance Baseline)" },
+    { value: "90", label: "90 Days (Recommended Tier)" },
+    { value: "180", label: "180 Days (Extended Regulatory)" },
+    { value: "365", label: "365 Days (Full Fiscal Year)" }
+  ], []);
+
   const handleInputChange = (section, field, value) => {
     setSettings(prev => ({
       ...prev,
@@ -157,105 +380,160 @@ const AppSettings = () => {
     <div className="app-settings-workspace bg-[#F8FAFC] min-h-full font-['Plus_Jakarta_Sans'] text-[#111827] pb-24">
       
       {/* 5. TOP UTILITY HEADER */}
-      <header className="sticky top-0 z-[100] h-16 bg-white backdrop-blur-md border-b border-[#E5E7EB] px-8 flex items-center justify-between">
+      <header className="sticky top-0 z-[100] h-16 bg-white/95 backdrop-blur-md border-b border-zinc-200 px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <nav className="flex items-center text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
-            <span>Settings</span>
-            <ChevronRight size={14} className="mx-2" />
-            <span className="text-[#111827]">App Settings</span>
+          <nav className="flex items-center text-xs font-semibold tracking-wide text-zinc-400">
+            <span className="hover:text-zinc-600 transition-colors">Settings</span>
+            <ChevronRight size={13} className="mx-2 text-zinc-300" />
+            <span className="text-zinc-900 font-bold">App Settings</span>
           </nav>
         </div>
 
-        <div className="flex-1 max-w-xl mx-8">
-          <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" size={18} />
+        {/* Central Search Bar - Consistent with Gym Profile */}
+        <div className="flex-1 max-w-md mx-8">
+          <div 
+            className={`relative flex items-center w-full h-9 rounded-xl transition-all duration-150 ${
+              isSearchFocused 
+                ? 'bg-white border-2 border-zinc-900 shadow-sm' 
+                : 'bg-zinc-100/90 hover:bg-zinc-200/60 border border-zinc-200/90 shadow-2xs'
+            }`}
+          >
+            <div className={`pointer-events-none absolute left-3 flex items-center justify-center transition-colors ${
+              isSearchFocused ? 'text-zinc-900' : 'text-zinc-400'
+            }`}>
+              <SearchIcon size={14} strokeWidth={isSearchFocused ? 2 : 1.75} />
+            </div>
             <input 
+              ref={searchInputRef}
               type="text" 
-              placeholder="Search settings, permissions, integrations, automations..."
-              className="w-full h-10 pl-10 pr-4 bg-[#F3F4F6] border-none rounded-full text-sm focus:ring-2 focus:ring-[#111827] transition-all"
+              placeholder="Search settings, permissions, automations..."
+              style={{ border: "none", outline: "none", boxShadow: "none" }}
+              className="w-full h-full pl-9 pr-14 bg-transparent text-xs font-medium text-zinc-900 placeholder:text-zinc-400 border-none outline-none focus:outline-none focus:ring-0 shadow-none"
               value={searchQuery}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery ? (
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setSearchQuery("");
+                  searchInputRef.current?.focus();
+                }}
+                className="absolute right-2 p-1 rounded-md text-zinc-400 hover:text-zinc-800 hover:bg-zinc-200/70 transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X size={13} strokeWidth={2} />
+              </button>
+            ) : (
+              <div className="pointer-events-none absolute right-2.5 flex items-center">
+                <kbd className="inline-flex items-center justify-center h-4.5 px-1.5 text-[10px] font-semibold text-zinc-400 bg-white border border-zinc-200 rounded shadow-2xs font-mono select-none">
+                  ⌘K
+                </kbd>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="h-10 px-4 rounded-lg border border-[#E5E7EB] text-sm font-bold flex items-center gap-2 hover:bg-[#F9FAFB] transition-colors text-[#4B5563]">
-            <History size={18} />
-            Activity Logs
-          </button>
-          <button className="h-10 px-4 rounded-lg border border-[#E5E7EB] text-sm font-bold flex items-center gap-2 hover:bg-[#F9FAFB] transition-colors text-[#4B5563]">
-            <Activity size={18} />
-            Diagnostics
-          </button>
           <button 
             onClick={handleSave}
             disabled={!hasChanges || isSaving}
-            className={`h-10 px-6 rounded-lg text-sm font-bold transition-all shadow-lg shadow-black/10 flex items-center gap-2
-              ${hasChanges ? 'bg-[#111827] text-white hover:bg-[#1F2937]' : 'bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed shadow-none'}`}
+            className={`h-9 px-4 rounded-lg text-xs font-semibold transition-all shadow-sm flex items-center gap-2 cursor-pointer
+              ${hasChanges ? 'bg-zinc-900 text-white hover:bg-zinc-800' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed shadow-none'}`}
           >
-            {isSaving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
-            {isSaving ? "Saving..." : "Save Settings"}
+            {isSaving ? <Activity size={14} strokeWidth={1.5} className="animate-spin text-white" /> : <Save size={14} strokeWidth={1.5} />}
+            <span>{isSaving ? "Saving..." : "Save Settings"}</span>
           </button>
         </div>
       </header>
 
-      {/* 6. SYSTEM STATUS HERO SECTION */}
-      <section className="relative h-[240px] w-full overflow-hidden bg-[#111827]">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#4F46E5_0%,transparent_50%)]" />
-          <div className="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-        </div>
-        
-        <div className="relative z-10 max-w-[1600px] mx-auto h-full px-8 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                Platform Infrastructure
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-[#10B981]/10 border border-[#10B981]/20 rounded-full text-[10px] font-bold text-[#10B981]">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-                Operational
+      {/* 6. REFINED ARCHITECTURAL BANNER & PLATFORM CARD */}
+      <div className="max-w-[1600px] mx-auto px-8 pt-6">
+        <div className="relative h-[250px] sm:h-[280px] lg:h-[300px] w-full rounded-2xl border border-zinc-800 shadow-sm overflow-hidden mb-5 bg-zinc-950 group">
+          
+          {/* Background Image with Dark Atmospheric Blend */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity scale-105 transition-transform duration-700 ease-out group-hover:scale-100"
+            style={{ 
+              backgroundImage: `url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1920&q=80')` 
+            }}
+          />
+          
+          {/* Dark Vignettes & Moody Gradient Blends */}
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-zinc-950/60" />
+          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/80 to-zinc-950/50" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900/40 via-transparent to-transparent pointer-events-none" />
+
+          {/* Thin Architectural Faded Grid Overlay */}
+          <div 
+            className="absolute inset-0 pointer-events-none z-[5]"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.16) 1px, transparent 1px)
+              `,
+              backgroundSize: '36px 36px',
+              maskImage: 'radial-gradient(ellipse 80% 70% at 50% 50%, rgba(0,0,0,0.9) 25%, transparent 85%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 50%, rgba(0,0,0,0.9) 25%, transparent 85%)'
+            }}
+          />
+
+          {/* Left-Aligned Platform Control Telemetry & Overview */}
+          <div className="w-full h-full flex flex-col justify-center px-8 sm:px-12 select-none relative z-10">
+            
+            {/* Line 1: Title & Badge Container */}
+            <div className="flex flex-wrap items-center gap-3 max-w-full">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                Platform Control Center
+              </h1>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 text-zinc-200 border border-white/15 text-[11px] font-semibold tracking-wide flex-shrink-0 backdrop-blur-md">
+                <ShieldCheck size={13} strokeWidth={1.75} className="text-zinc-200" />
+                <span>Enterprise Infrastructure</span>
               </div>
             </div>
-            <h1 className="text-[44px] font-black text-white leading-tight tracking-tight mb-4">
-              GymDeck Platform <br />
-              <span className="text-white/40">Control Center</span>
-            </h1>
-            <p className="text-white/50 text-sm max-w-xl font-medium leading-relaxed">
+
+            {/* Line 2: Description */}
+            <p className="text-xs sm:text-sm font-medium text-zinc-300 mt-2 max-w-[760px] leading-relaxed drop-shadow-sm">
               Configure platform behavior, automation workflows, notifications, security, and operational preferences across your entire GymDeck ecosystem.
             </p>
-          </div>
 
-          <div className="flex gap-6">
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 min-w-[200px]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
-                  <Wifi size={20} />
-                </div>
-                <div className="text-[10px] font-black text-[#10B981] uppercase tracking-widest">Stable</div>
-              </div>
-              <div className="text-2xl font-black text-white">0.42ms</div>
-              <div className="text-[9px] font-bold uppercase tracking-widest text-white/40">Sync Latency</div>
+            {/* Line 3: Metadata Badges Container */}
+            <div className="flex flex-wrap items-center gap-3.5 mt-5 text-xs font-medium text-zinc-400">
+              <span className="inline-flex items-center gap-1.5 h-[24px]">
+                <Wifi size={13} strokeWidth={1.5} className="text-zinc-400 flex-shrink-0" />
+                <span className="text-white font-semibold">0.42ms</span>
+                <span className="text-zinc-400">Sync Latency</span>
+              </span>
+              <span className="text-zinc-600 select-none">•</span>
+              <span className="inline-flex items-center gap-1.5 h-[24px]">
+                <Smartphone size={13} strokeWidth={1.5} className="text-zinc-400 flex-shrink-0" />
+                <span className="text-white font-semibold">428</span>
+                <span className="text-zinc-400">Active Nodes</span>
+              </span>
+              <span className="text-zinc-600 select-none">•</span>
+              <span className="inline-flex items-center gap-1.5 h-[24px]">
+                <Database size={13} strokeWidth={1.5} className="text-zinc-400 flex-shrink-0" />
+                <span className="text-white font-semibold">SQLite Local</span>
+                <span className="text-zinc-400">Engine</span>
+              </span>
+              <span className="text-zinc-600 select-none">•</span>
+              <span className="inline-flex items-center gap-1.5 h-[24px]">
+                <CheckCircle2 size={13} strokeWidth={1.75} className="text-emerald-400 flex-shrink-0" />
+                <span className="text-emerald-400 font-semibold">Healthy & Operational</span>
+              </span>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 min-w-[200px]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
-                  <Smartphone size={20} />
-                </div>
-                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">v1.2.4-PRO</div>
-              </div>
-              <div className="text-2xl font-black text-white">428</div>
-              <div className="text-[9px] font-bold uppercase tracking-widest text-white/40">Active Nodes</div>
-            </div>
           </div>
+
         </div>
-      </section>
+      </div>
 
-      {/* 7. SETTINGS NAVIGATION TABS (REMAINS BELOW THE BANNER) */}
-      <div className="max-w-[1600px] mx-auto px-8 -mt-7 relative z-20">
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-1.5 shadow-sm flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
+      {/* 7. DEDICATED HORIZONTAL NAVIGATION TABS (OUTSIDE THE HERO CARD - IDENTICAL TO GYM PROFILE) */}
+      <div className="max-w-[1600px] mx-auto px-8 mb-7">
+        <div className="gym-profile-nav-track max-w-full overflow-x-auto no-scrollbar">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -264,25 +542,22 @@ const AppSettings = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 whileTap={{ scale: 0.97 }}
-                className={`relative flex-1 h-12 px-5 lg:px-6 rounded-xl text-xs transition-colors whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer select-none group
-                  ${isActive 
-                    ? 'text-[#111827] font-semibold' 
-                    : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]/80 font-medium'}`}
+                className={`gym-profile-tab-btn ${isActive ? 'is-active' : ''}`}
                 role="tab"
                 aria-selected={isActive}
               >
                 {isActive && (
                   <motion.div 
                     layoutId="activeSettingsTabPill"
-                    className="absolute inset-0 bg-[#F1F5F9] rounded-xl border border-[#CBD5E1]/80 shadow-xs"
+                    className="absolute inset-0 bg-white rounded-[11px] shadow-[0_2px_8px_rgba(15,23,42,0.08),0_1px_2px_rgba(15,23,42,0.04)] border border-zinc-200/90"
                     transition={{ type: "spring", stiffness: 450, damping: 32 }}
                   />
                 )}
                 <span className="relative z-10 flex items-center gap-2">
                   <Icon 
-                    size={16} 
+                    className="tab-icon"
+                    size={15} 
                     strokeWidth={isActive ? 2 : 1.75} 
-                    className={`transition-colors shrink-0 ${isActive ? 'text-[#2563EB]' : 'text-[#9CA3AF] group-hover:text-[#4B5563]'}`} 
                   />
                   <span>{tab.label}</span>
                 </span>
@@ -292,7 +567,7 @@ const AppSettings = () => {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto p-8 pt-10">
+      <div className="max-w-[1600px] mx-auto px-8">
         
         {/* MAIN CONFIGURATION WORKSPACE (Spans full width - sidebars removed for maximum clarity & workspace) */}
         <main className="w-full space-y-8">
@@ -301,106 +576,79 @@ const AppSettings = () => {
             {activeTab === "General" && (
               <motion.div 
                 key="general"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                {/* 10. GENERAL SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Globe size={24} />
+                {/* 10. GENERAL SETTINGS / LOCALIZATION & REGIONAL */}
+                <section className="bg-white rounded-2xl border border-zinc-200/90 p-7 sm:p-8 shadow-xs">
+                  <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200/80 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <Globe size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Localization & Regional</h2>
+                        <p className="text-xs text-zinc-500 font-normal mt-0.5">Configure language, timezone, currency, and date formatting defaults</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">Localization & Regional</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Configure language, time, and currency defaults</p>
+                    <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold">
+                      <CheckCircle2 size={13} strokeWidth={1.75} />
+                      <span>Standard Compliant</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">App Language</label>
-                      <select 
-                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
-                        value={settings.general.language}
-                        onChange={(e) => handleInputChange('general', 'language', e.target.value)}
-                      >
-                        <option>English</option>
-                        <option>Hindi</option>
-                        <option>Bengali</option>
-                        <option>Spanish</option>
-                        <option>French</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Operating Region & Country</label>
-                      <select 
-                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
-                        value={settings.general.region || "India"}
-                        onChange={(e) => handleInputChange('general', 'region', e.target.value)}
-                      >
-                        <option value="India">India (IN - GST / PAN / ₹)</option>
-                        <option value="United States">United States (US - EIN / $)</option>
-                        <option value="United Kingdom">United Kingdom (UK - VAT / £)</option>
-                        <option value="United Arab Emirates">United Arab Emirates (UAE - TRN / د.إ)</option>
-                        <option value="Canada">Canada (CA - HST / $)</option>
-                        <option value="Australia">Australia (AU - ABN / $)</option>
-                        <option value="Singapore">Singapore (SG - UEN / $)</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Time Zone</label>
-                      <select 
-                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
-                        value={settings.general.timezone}
-                        onChange={(e) => handleInputChange('general', 'timezone', e.target.value)}
-                      >
-                        <option>Asia/Kolkata (GMT+05:30)</option>
-                        <option>UTC (GMT+00:00)</option>
-                        <option>America/New_York (GMT-05:00)</option>
-                        <option>Europe/London (GMT+00:00)</option>
-                        <option>Asia/Dubai (GMT+04:00)</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Primary Currency</label>
-                      <select 
-                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
-                        value={settings.general.currency}
-                        onChange={(e) => handleInputChange('general', 'currency', e.target.value)}
-                      >
-                        <option>INR (₹)</option>
-                        <option>USD ($)</option>
-                        <option>EUR (€)</option>
-                        <option>GBP (£)</option>
-                        <option>AED (د.إ)</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Date Format</label>
-                      <select 
-                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
-                        value={settings.general.dateFormat}
-                        onChange={(e) => handleInputChange('general', 'dateFormat', e.target.value)}
-                      >
-                        <option>DD/MM/YYYY</option>
-                        <option>MM/DD/YYYY</option>
-                        <option>YYYY-MM-DD</option>
-                        <option>DD-MMM-YYYY</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">First Day of Week</label>
-                      <select 
-                        className="w-full h-12 px-5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-[#111827] focus:border-transparent transition-all appearance-none"
-                        value={settings.general.firstDayOfWeek || "Monday"}
-                        onChange={(e) => handleInputChange('general', 'firstDayOfWeek', e.target.value)}
-                      >
-                        <option value="Monday">Monday (ISO 8601 Standard)</option>
-                        <option value="Sunday">Sunday</option>
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 border-t border-zinc-100">
+                    <CustomSelect 
+                      label="App Language"
+                      value={settings.general.language}
+                      options={languageOptions}
+                      onChange={(val) => handleInputChange('general', 'language', val)}
+                      icon={Globe}
+                      description="System-wide translations and labels"
+                    />
+                    <CustomSelect 
+                      label="Operating Region & Country"
+                      value={settings.general.region || "India"}
+                      options={regionOptions}
+                      onChange={(val) => handleInputChange('general', 'region', val)}
+                      icon={MapPin}
+                      description="Determines default tax and regulatory rules"
+                    />
+                    <CustomSelect 
+                      label="Time Zone"
+                      value={settings.general.timezone}
+                      options={timezoneOptions}
+                      onChange={(val) => handleInputChange('general', 'timezone', val)}
+                      icon={Clock}
+                      description="Used for session reminders and attendance stamps"
+                    />
+                    <CustomSelect 
+                      label="Primary Currency"
+                      value={settings.general.currency}
+                      options={currencyOptions}
+                      onChange={(val) => handleInputChange('general', 'currency', val)}
+                      icon={CreditCard}
+                      description="Default currency used across invoices and billing"
+                    />
+                    <CustomSelect 
+                      label="Date Format"
+                      value={settings.general.dateFormat}
+                      options={dateFormatOptions}
+                      onChange={(val) => handleInputChange('general', 'dateFormat', val)}
+                      icon={Calendar}
+                      description="Display format for receipts and reports"
+                    />
+                    <CustomSelect 
+                      label="First Day of Week"
+                      value={settings.general.firstDayOfWeek || "Monday"}
+                      options={firstDayOfWeekOptions}
+                      onChange={(val) => handleInputChange('general', 'firstDayOfWeek', val)}
+                      icon={Calendar}
+                      description="Calendar grid starts on this day"
+                    />
                   </div>
                 </section>
               </motion.div>
@@ -409,120 +657,143 @@ const AppSettings = () => {
             {activeTab === "Appearance" && (
               <motion.div 
                 key="appearance"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                {/* 11. APPEARANCE SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Layout size={24} />
+                {/* 11. THEME & VISUAL EXPERIENCE */}
+                <section className="bg-white rounded-2xl border border-zinc-200/90 p-7 sm:p-8 shadow-xs">
+                  <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200/80 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <Layout size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Theme & Visual Experience</h2>
+                        <p className="text-xs text-zinc-500 font-normal mt-0.5">Personalize the interface theme, density, typography, and motion dynamics</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">Theme & Visual Experience</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Personalize the GymDeck interface and layout</p>
+                    <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200 text-xs font-semibold">
+                      <Sparkles size={13} strokeWidth={1.75} />
+                      <span>Real-Time Engine</span>
                     </div>
                   </div>
 
-                  <div className="space-y-10">
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">System Theme</label>
-                      <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-8 pt-6 border-t border-zinc-100">
+                    {/* System Theme Selection */}
+                    <div className="space-y-3">
+                      <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ml-0.5">
+                        Interface Theme
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {[
-                          { id: 'light', label: 'Light Mode', icon: Sun },
-                          { id: 'dark', label: 'Dark Mode', icon: Moon },
-                          { id: 'system', label: 'System Sync', icon: Monitor }
-                        ].map(theme => (
-                          <button 
-                            key={theme.id}
-                            onClick={() => handleInputChange('appearance', 'theme', theme.id)}
-                            className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all
-                              ${settings.appearance.theme === theme.id ? 'border-[#111827] bg-[#F9FAFB]' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}
-                          >
-                            <theme.icon size={24} className={`mb-3 ${settings.appearance.theme === theme.id ? 'text-[#111827]' : 'text-[#9CA3AF]'}`} />
-                            <span className={`text-xs font-bold ${settings.appearance.theme === theme.id ? 'text-[#111827]' : 'text-[#6B7280]'}`}>{theme.label}</span>
-                          </button>
-                        ))}
+                          { id: 'light', label: 'Light Mode', desc: 'Clean, high-contrast daylight palette', icon: Sun },
+                          { id: 'dark', label: 'Dark Mode', desc: 'Low-light tactical midnight theme', icon: Moon },
+                          { id: 'system', label: 'System Sync', desc: 'Follows operating system appearance', icon: Monitor }
+                        ].map(theme => {
+                          const isSel = settings.appearance.theme === theme.id;
+                          return (
+                            <button 
+                              key={theme.id}
+                              type="button"
+                              onClick={() => handleInputChange('appearance', 'theme', theme.id)}
+                              className={`flex flex-col items-start p-5 rounded-xl border text-left transition-all cursor-pointer relative ${
+                                isSel 
+                                  ? 'border-zinc-900 bg-zinc-50/70 ring-2 ring-zinc-900/10 shadow-xs' 
+                                  : 'border-zinc-200 hover:border-zinc-300 bg-white'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between w-full mb-3">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                                  isSel ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600'
+                                }`}>
+                                  <theme.icon size={18} strokeWidth={1.75} />
+                                </div>
+                                {isSel && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-900 text-white text-[10px] font-semibold">
+                                    <Check size={11} strokeWidth={2.5} /> Active
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs font-bold text-zinc-900">{theme.label}</div>
+                              <div className="text-[11px] text-zinc-500 mt-0.5">{theme.desc}</div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-10">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">UI Density</label>
-                        <div className="flex p-1 bg-[#F3F4F6] rounded-xl">
-                          {['Compact', 'Comfortable', 'Spacious'].map(d => (
-                            <button 
-                              key={d}
-                              onClick={() => handleInputChange('appearance', 'density', d.toLowerCase())}
-                              className={`flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all
-                                ${settings.appearance.density === d.toLowerCase() ? 'bg-white text-[#111827] shadow-sm' : 'text-[#9CA3AF] hover:text-[#4B5563]'}`}
-                            >
-                              {d}
-                            </button>
-                          ))}
+                    {/* UI Density & Motion Dynamics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ml-0.5">
+                          UI Density
+                        </label>
+                        <div className="flex p-1 bg-zinc-100 border border-zinc-200/60 rounded-xl gap-1">
+                          {['Compact', 'Comfortable', 'Spacious'].map(d => {
+                            const isSel = settings.appearance.density === d.toLowerCase();
+                            return (
+                              <button 
+                                key={d}
+                                type="button"
+                                onClick={() => handleInputChange('appearance', 'density', d.toLowerCase())}
+                                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                  isSel ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/80' : 'text-zinc-500 hover:text-zinc-900'
+                                }`}
+                              >
+                                {d}
+                              </button>
+                            );
+                          })}
                         </div>
+                        <p className="text-[11px] text-zinc-400 font-normal ml-0.5">Adjusts table row heights, card padding, and font scales</p>
                       </div>
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Animations</label>
-                        <div className="flex p-1 bg-[#F3F4F6] rounded-xl">
-                          {['Disabled', 'Standard', 'Cinematic'].map(a => (
-                            <button 
-                              key={a}
-                              onClick={() => handleInputChange('appearance', 'animations', a.toLowerCase())}
-                              className={`flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all
-                                ${settings.appearance.animations === a.toLowerCase() ? 'bg-white text-[#111827] shadow-sm' : 'text-[#9CA3AF] hover:text-[#4B5563]'}`}
-                            >
-                              {a}
-                            </button>
-                          ))}
+
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ml-0.5">
+                          Motion Dynamics
+                        </label>
+                        <div className="flex p-1 bg-zinc-100 border border-zinc-200/60 rounded-xl gap-1">
+                          {['Disabled', 'Standard', 'Cinematic'].map(a => {
+                            const isSel = settings.appearance.animations === a.toLowerCase();
+                            return (
+                              <button 
+                                key={a}
+                                type="button"
+                                onClick={() => handleInputChange('appearance', 'animations', a.toLowerCase())}
+                                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                  isSel ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/80' : 'text-zinc-500 hover:text-zinc-900'
+                                }`}
+                              >
+                                {a}
+                              </button>
+                            );
+                          })}
                         </div>
+                        <p className="text-[11px] text-zinc-400 font-normal ml-0.5">Page transitions, drawer springs, and modal choreography</p>
                       </div>
                     </div>
 
-                    {/* Typography & Sidebar Settings (Moved from left side into Appearance page) */}
-                    <div className="grid grid-cols-2 gap-10 pt-6 border-t border-[#F3F4F6]">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Typography & Font System</label>
-                        <div className="grid grid-cols-3 gap-3">
-                          {[
-                            { id: 'standard', label: 'Inter 14px', desc: 'Standard UI' },
-                            { id: 'compact', label: 'Dense 13px', desc: 'Data heavy' },
-                            { id: 'large', label: 'Large 15px', desc: 'High legibility' }
-                          ].map(f => (
-                            <button 
-                              key={f.id}
-                              type="button"
-                              onClick={() => handleInputChange('appearance', 'typography', f.id)}
-                              className={`p-3.5 rounded-xl border-2 text-left transition-all ${settings.appearance.typography === f.id ? 'border-[#111827] bg-[#F9FAFB]' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}
-                            >
-                              <div className="text-xs font-bold text-[#111827] mb-0.5">{f.label}</div>
-                              <div className="text-[9px] text-[#6B7280]">{f.desc}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF] ml-2">Navigation Sidebar Mode</label>
-                        <div className="grid grid-cols-3 gap-3">
-                          {[
-                            { id: 'hover-expand', label: 'Hover Expand', desc: 'Auto-flyout' },
-                            { id: 'always-expanded', label: 'Expanded', desc: 'Fixed 240px' },
-                            { id: 'compact', label: 'Icon Rail', desc: 'Minimal strip' }
-                          ].map(s => (
-                            <button 
-                              key={s.id}
-                              type="button"
-                              onClick={() => handleInputChange('appearance', 'sidebarMode', s.id)}
-                              className={`p-3.5 rounded-xl border-2 text-left transition-all ${settings.appearance.sidebarMode === s.id ? 'border-[#111827] bg-[#F9FAFB]' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}
-                            >
-                              <div className="text-xs font-bold text-[#111827] mb-0.5">{s.label}</div>
-                              <div className="text-[9px] text-[#6B7280]">{s.desc}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                    {/* Typography Scale & Sidebar Navigation */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
+                      <CustomSelect 
+                        label="Typography Scale"
+                        value={settings.appearance.typography}
+                        options={typographyOptions}
+                        onChange={(val) => handleInputChange('appearance', 'typography', val)}
+                        icon={Sliders}
+                        description="Global text sizing across analytics and dashboards"
+                      />
+                      <CustomSelect 
+                        label="Navigation Sidebar Behavior"
+                        value={settings.appearance.sidebarMode}
+                        options={sidebarOptions}
+                        onChange={(val) => handleInputChange('appearance', 'sidebarMode', val)}
+                        icon={Layout}
+                        description="Controls primary navigation collapse and expansion"
+                      />
                     </div>
                   </div>
                 </section>
@@ -532,89 +803,127 @@ const AppSettings = () => {
             {activeTab === "Notifications" && (
               <motion.div 
                 key="notifications"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                {/* 12. NOTIFICATION SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Bell size={24} />
+                {/* 12. CHANNEL COMMUNICATION */}
+                <section className="bg-white rounded-2xl border border-zinc-200/90 p-7 sm:p-8 shadow-xs">
+                  <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200/80 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <Bell size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Channel Communication</h2>
+                        <p className="text-xs text-zinc-500 font-normal mt-0.5">Manage broadcast channels, member alerts, and quiet hours delivery windows</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">Channel Communication</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Manage how the platform interacts with members and staff</p>
+                    <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold">
+                      <CheckCircle2 size={13} strokeWidth={1.75} />
+                      <span>Gateways Operational</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8">
+                  {/* 4 Communication Channels */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-6 border-t border-zinc-100">
                     {[
-                      { id: 'push', label: 'Push Notifications', icon: Smartphone, color: 'text-blue-500' },
-                      { id: 'whatsapp', label: 'WhatsApp Alerts', icon: MessageSquare, color: 'text-green-500' },
-                      { id: 'sms', label: 'SMS Notifications', icon: Mail, color: 'text-amber-500' },
-                      { id: 'email', label: 'Email Reports', icon: Mail, color: 'text-red-500' }
-                    ].map(channel => (
-                      <div key={channel.id} className="p-6 rounded-2xl bg-[#F9FAFB] border border-[#E5E7EB] flex items-center justify-between group hover:border-[#D1D5DB] transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl bg-white flex items-center justify-center ${channel.color} shadow-sm border border-[#F3F4F6]`}>
-                            <channel.icon size={20} />
-                          </div>
+                      { id: 'push', label: 'Push Notifications', desc: 'Mobile alerts & instant operational notices', icon: Smartphone, color: 'text-blue-600 bg-blue-50 border-blue-200/60' },
+                      { id: 'whatsapp', label: 'WhatsApp Alerts', desc: 'Automated renewal links & payment receipts', icon: MessageSquare, color: 'text-emerald-600 bg-emerald-50 border-emerald-200/60' },
+                      { id: 'sms', label: 'SMS Notifications', desc: 'Urgent broadcast blasts & OTP confirmations', icon: Mail, color: 'text-amber-600 bg-amber-50 border-amber-200/60' },
+                      { id: 'email', label: 'Email Reports', desc: 'Weekly financial summaries & statements', icon: Mail, color: 'text-purple-600 bg-purple-50 border-purple-200/60' }
+                    ].map(channel => {
+                      const isEnabled = settings.notifications[channel.id];
+                      return (
+                        <div key={channel.id} className="p-5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-white transition-all flex flex-col justify-between">
                           <div>
-                            <div className="text-sm font-black text-[#111827]">{channel.label}</div>
-                            <div className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest">Active Channel</div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${channel.color}`}>
+                                <channel.icon size={18} strokeWidth={1.75} />
+                              </div>
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isEnabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-zinc-100 text-zinc-500'}`}>
+                                {isEnabled ? 'Active' : 'Muted'}
+                              </span>
+                            </div>
+                            <h4 className="text-xs font-bold text-zinc-900">{channel.label}</h4>
+                            <p className="text-[11px] text-zinc-500 mt-1 leading-snug">{channel.desc}</p>
+                          </div>
+                          <div className="pt-4 mt-4 border-t border-zinc-100 flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-zinc-600">Channel Status</span>
+                            <ToggleSwitch 
+                              checked={isEnabled}
+                              onChange={() => handleInputChange('notifications', channel.id, !isEnabled)}
+                            />
                           </div>
                         </div>
-                        <button 
-                          onClick={() => handleInputChange('notifications', channel.id, !settings.notifications[channel.id])}
-                          className={`w-12 h-6 rounded-full transition-all relative ${settings.notifications[channel.id] ? 'bg-[#111827]' : 'bg-[#E5E7EB]'}`}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.notifications[channel.id] ? 'left-7' : 'left-1'}`} />
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
-                  <div className="mt-10 pt-10 border-t border-[#F3F4F6] space-y-8">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9CA3AF] ml-2">Advanced Scheduling</h3>
-                    <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-bold text-[#111827]">Operational Quiet Hours</label>
-                          <div className="text-[10px] font-black text-[#10B981] uppercase">Recommended</div>
+                  {/* Operational Quiet Hours & Health Check */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 mt-6 border-t border-zinc-100">
+                    <div className="p-5 rounded-xl border border-zinc-200 bg-zinc-50/50 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <Clock size={16} className="text-zinc-500" />
+                          <h4 className="text-xs font-bold text-zinc-900">Operational Quiet Hours</h4>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 space-y-1">
-                            <span className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">Start</span>
-                            <input 
-                              type="time" 
-                              value={settings.notifications.quietHoursStart}
-                              onChange={(e) => handleInputChange('notifications', 'quietHoursStart', e.target.value)}
-                              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm font-bold" 
-                            />
-                          </div>
-                          <ChevronRight size={16} className="text-[#D1D5DB] mt-4" />
-                          <div className="flex-1 space-y-1">
-                            <span className="text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest ml-1">End</span>
-                            <input 
-                              type="time" 
-                              value={settings.notifications.quietHoursEnd}
-                              onChange={(e) => handleInputChange('notifications', 'quietHoursEnd', e.target.value)}
-                              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-sm font-bold" 
-                            />
-                          </div>
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">Recommended</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500">Mute promotional and non-essential notifications during overnight hours.</p>
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Window Start</label>
+                          <input 
+                            type="time" 
+                            value={settings.notifications.quietHoursStart}
+                            onChange={(e) => handleInputChange('notifications', 'quietHoursStart', e.target.value)}
+                            className="w-full h-10 px-3 bg-white border border-zinc-200 focus:border-zinc-900 rounded-xl text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 shadow-2xs"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Window End</label>
+                          <input 
+                            type="time" 
+                            value={settings.notifications.quietHoursEnd}
+                            onChange={(e) => handleInputChange('notifications', 'quietHoursEnd', e.target.value)}
+                            className="w-full h-10 px-3 bg-white border border-zinc-200 focus:border-zinc-900 rounded-xl text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 shadow-2xs"
+                          />
                         </div>
                       </div>
-                      <div className="bg-[#F3F4F6] rounded-2xl p-6 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-[#111827] shadow-sm">
-                          <Bell size={24} />
+                    </div>
+
+                    <div className="p-5 rounded-xl border border-zinc-200 bg-zinc-50/50 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <Wifi size={16} className="text-zinc-500" />
+                            <h4 className="text-xs font-bold text-zinc-900">Channel Gateway Health</h4>
+                          </div>
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Telemetry
+                          </span>
                         </div>
-                        <div className="flex-1">
-                          <div className="text-xs font-black mb-1">Channel Health Check</div>
-                          <p className="text-[10px] font-bold text-[#6B7280] leading-relaxed mb-3">Ensure your API connections for WhatsApp and Email are active.</p>
-                          <button className="text-[9px] font-black uppercase tracking-widest text-[#111827] underline underline-offset-4">Send Test Alert</button>
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                          Active persistent connections to Twilio, WhatsApp Cloud API, and transactional SMTP gateways.
+                        </p>
+                        <div className="flex items-center gap-4 text-xs font-medium text-zinc-600 pt-1">
+                          <span>Latency: <strong className="text-zinc-900 font-semibold">142ms</strong></span>
+                          <span>•</span>
+                          <span>Delivery Rate: <strong className="text-emerald-700 font-semibold">99.98%</strong></span>
                         </div>
+                      </div>
+                      <div className="pt-4 border-t border-zinc-200/80 flex items-center justify-between">
+                        <span className="text-[11px] text-zinc-500">Dispatch test message to admin</span>
+                        <button 
+                          type="button"
+                          onClick={() => alert("Test diagnostic alert sent successfully to admin devices.")}
+                          className="h-8 px-3 rounded-lg bg-white hover:bg-zinc-100 border border-zinc-200 text-xs font-semibold text-zinc-900 transition-colors shadow-2xs cursor-pointer"
+                        >
+                          Send Test Alert
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -625,225 +934,211 @@ const AppSettings = () => {
             {activeTab === "Automation" && (
               <motion.div 
                 key="automation"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                {/* 13. AUTOMATION SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Zap size={24} />
+                {/* 13. SYSTEM AUTOPILOT & OPERATIONAL WORKFLOWS */}
+                <section className="bg-white rounded-2xl border border-zinc-200/90 p-7 sm:p-8 shadow-xs">
+                  <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200/80 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <Zap size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">System Autopilot & Operational Workflows</h2>
+                        <p className="text-xs text-zinc-500 font-normal mt-0.5">Configure intelligent triggers for memberships, attendance, PT sessions, and billing</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">System Autopilot & Operational Workflows</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Configure intelligent triggers for memberships, attendance, PT sessions, and billing</p>
+                    <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200 text-xs font-semibold">
+                      <Cpu size={13} strokeWidth={1.75} />
+                      <span>6 Active Triggers</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-6 border-t border-zinc-100">
                     {/* Membership Automation */}
-                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                    <div className="p-5 rounded-xl border border-zinc-200 bg-zinc-50/40 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
-                          <RefreshCw size={18} />
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-900 shadow-2xs">
+                          <RefreshCw size={16} strokeWidth={1.75} />
                         </div>
                         <div>
-                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Membership Automation</h3>
-                          <p className="text-[10px] text-[#9CA3AF] font-bold">Lifecycle & renewal policies</p>
+                          <h3 className="text-xs font-bold text-zinc-900">Membership Automation</h3>
+                          <p className="text-[11px] text-zinc-500">Lifecycle & renewal policies</p>
                         </div>
                       </div>
 
-                      <div className="space-y-3 pt-2">
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                      <div className="space-y-2.5 pt-1">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Renewal Reminders</div>
-                            <div className="text-[10px] text-[#6B7280]">WhatsApp & SMS 3 days prior to expiry</div>
+                            <div className="text-xs font-bold text-zinc-900">Renewal Reminders</div>
+                            <div className="text-[11px] text-zinc-500">WhatsApp & SMS 3 days prior to expiry</div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleInputChange('automation', 'renewalReminders', !settings.automation.renewalReminders)}
-                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.renewalReminders ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.renewalReminders ? 'left-6' : 'left-1'}`} />
-                          </button>
+                          <ToggleSwitch 
+                            checked={settings.automation.renewalReminders}
+                            onChange={() => handleInputChange('automation', 'renewalReminders', !settings.automation.renewalReminders)}
+                          />
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Auto-Freeze Inactive Members</div>
-                            <div className="text-[10px] text-[#6B7280]">Freeze memberships after 15 days non-attendance</div>
+                            <div className="text-xs font-bold text-zinc-900">Auto-Freeze Inactive Members</div>
+                            <div className="text-[11px] text-zinc-500">Freeze memberships after 15 days non-attendance</div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleInputChange('automation', 'autoFreeze', !settings.automation.autoFreeze)}
-                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.autoFreeze ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.autoFreeze ? 'left-6' : 'left-1'}`} />
-                          </button>
+                          <ToggleSwitch 
+                            checked={settings.automation.autoFreeze}
+                            onChange={() => handleInputChange('automation', 'autoFreeze', !settings.automation.autoFreeze)}
+                          />
                         </div>
                       </div>
                     </div>
 
                     {/* Attendance Automation */}
-                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                    <div className="p-5 rounded-xl border border-zinc-200 bg-zinc-50/40 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
-                          <UserCheck size={18} />
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-900 shadow-2xs">
+                          <UserCheck size={16} strokeWidth={1.75} />
                         </div>
                         <div>
-                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Attendance Automation</h3>
-                          <p className="text-[10px] text-[#9CA3AF] font-bold">Biometrics & check-in gates</p>
+                          <h3 className="text-xs font-bold text-zinc-900">Attendance Automation</h3>
+                          <p className="text-[11px] text-zinc-500">Biometrics & check-in gates</p>
                         </div>
                       </div>
 
-                      <div className="space-y-3 pt-2">
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                      <div className="space-y-2.5 pt-1">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Auto-Approve Check-ins</div>
-                            <div className="text-[10px] text-[#6B7280]">Instant QR & biometric gate pass validation</div>
+                            <div className="text-xs font-bold text-zinc-900">Auto-Approve Check-ins</div>
+                            <div className="text-[11px] text-zinc-500">Instant QR & biometric gate pass validation</div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleInputChange('automation', 'attendanceAutoCheckin', !settings.automation.attendanceAutoCheckin)}
-                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.attendanceAutoCheckin ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.attendanceAutoCheckin ? 'left-6' : 'left-1'}`} />
-                          </button>
+                          <ToggleSwitch 
+                            checked={settings.automation.attendanceAutoCheckin}
+                            onChange={() => handleInputChange('automation', 'attendanceAutoCheckin', !settings.automation.attendanceAutoCheckin)}
+                          />
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Check-in Grace Window</div>
-                            <div className="text-[10px] text-[#6B7280]">Tolerance before shift/session marked late</div>
+                            <div className="text-xs font-bold text-zinc-900">Check-in Grace Window</div>
+                            <div className="text-[11px] text-zinc-500">Tolerance before session marked late</div>
                           </div>
-                          <select 
-                            value={settings.automation.attendanceGraceMinutes || "30"}
-                            onChange={(e) => handleInputChange('automation', 'attendanceGraceMinutes', e.target.value)}
-                            className="h-8 px-2.5 text-xs font-bold bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg"
-                          >
-                            <option value="15">15 Mins</option>
-                            <option value="30">30 Mins</option>
-                            <option value="60">60 Mins</option>
-                            <option value="all-day">Unrestricted</option>
-                          </select>
+                          <div className="w-48">
+                            <CustomSelect 
+                              value={settings.automation.attendanceGraceMinutes || "30"}
+                              options={graceWindowOptions}
+                              onChange={(val) => handleInputChange('automation', 'attendanceGraceMinutes', val)}
+                              icon={Clock}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     {/* PT Sessions Automation */}
-                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                    <div className="p-5 rounded-xl border border-zinc-200 bg-zinc-50/40 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
-                          <Activity size={18} />
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-900 shadow-2xs">
+                          <Activity size={16} strokeWidth={1.75} />
                         </div>
                         <div>
-                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">PT Sessions Automation</h3>
-                          <p className="text-[10px] text-[#9CA3AF] font-bold">Trainer allocations & session deductions</p>
+                          <h3 className="text-xs font-bold text-zinc-900">PT Sessions Automation</h3>
+                          <p className="text-[11px] text-zinc-500">Trainer allocations & session deductions</p>
                         </div>
                       </div>
 
-                      <div className="space-y-3 pt-2">
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                      <div className="space-y-2.5 pt-1">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Auto Session Deductions</div>
-                            <div className="text-[10px] text-[#6B7280]">Decrement credit balance immediately after workout</div>
+                            <div className="text-xs font-bold text-zinc-900">Auto Session Deductions</div>
+                            <div className="text-[11px] text-zinc-500">Decrement credit balance immediately after workout</div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleInputChange('automation', 'ptBillingTriggers', !settings.automation.ptBillingTriggers)}
-                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.ptBillingTriggers ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.ptBillingTriggers ? 'left-6' : 'left-1'}`} />
-                          </button>
+                          <ToggleSwitch 
+                            checked={settings.automation.ptBillingTriggers}
+                            onChange={() => handleInputChange('automation', 'ptBillingTriggers', !settings.automation.ptBillingTriggers)}
+                          />
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Lead Management Autopilot</div>
-                            <div className="text-[10px] text-[#6B7280]">Schedule trainer consultation follow-ups</div>
+                            <div className="text-xs font-bold text-zinc-900">Lead Management Autopilot</div>
+                            <div className="text-[11px] text-zinc-500">Schedule trainer consultation follow-ups</div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleInputChange('automation', 'leadFollowups', !settings.automation.leadFollowups)}
-                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.leadFollowups ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.leadFollowups ? 'left-6' : 'left-1'}`} />
-                          </button>
+                          <ToggleSwitch 
+                            checked={settings.automation.leadFollowups}
+                            onChange={() => handleInputChange('automation', 'leadFollowups', !settings.automation.leadFollowups)}
+                          />
                         </div>
                       </div>
                     </div>
 
                     {/* Billing Automation */}
-                    <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                    <div className="p-5 rounded-xl border border-zinc-200 bg-zinc-50/40 space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
-                          <CreditCard size={18} />
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-900 shadow-2xs">
+                          <CreditCard size={16} strokeWidth={1.75} />
                         </div>
                         <div>
-                          <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Billing Automation</h3>
-                          <p className="text-[10px] text-[#9CA3AF] font-bold">Invoices & payment recovery</p>
+                          <h3 className="text-xs font-bold text-zinc-900">Billing Automation</h3>
+                          <p className="text-[11px] text-zinc-500">Invoices & payment recovery</p>
                         </div>
                       </div>
 
-                      <div className="space-y-3 pt-2">
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                      <div className="space-y-2.5 pt-1">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Recurring Invoicing Autopilot</div>
-                            <div className="text-[10px] text-[#6B7280]">Generate digital GST receipts upon renewal</div>
+                            <div className="text-xs font-bold text-zinc-900">Recurring Invoicing Autopilot</div>
+                            <div className="text-[11px] text-zinc-500">Generate digital GST receipts upon renewal</div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleInputChange('automation', 'billingInvoiceAutopilot', !settings.automation.billingInvoiceAutopilot)}
-                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.billingInvoiceAutopilot ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.billingInvoiceAutopilot ? 'left-6' : 'left-1'}`} />
-                          </button>
+                          <ToggleSwitch 
+                            checked={settings.automation.billingInvoiceAutopilot}
+                            onChange={() => handleInputChange('automation', 'billingInvoiceAutopilot', !settings.automation.billingInvoiceAutopilot)}
+                          />
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between">
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 flex items-center justify-between shadow-2xs">
                           <div className="pr-3">
-                            <div className="text-xs font-bold text-[#111827]">Retry Failed Payments</div>
-                            <div className="text-[10px] text-[#6B7280]">Daily automated re-attempt for UPI & card mandates</div>
+                            <div className="text-xs font-bold text-zinc-900">Retry Failed Payments</div>
+                            <div className="text-[11px] text-zinc-500">Automated re-attempt for UPI & card mandates</div>
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => handleInputChange('automation', 'billingRetryFailed', !settings.automation.billingRetryFailed)}
-                            className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.automation.billingRetryFailed ? 'bg-[#6366F1]' : 'bg-[#E5E7EB]'}`}
-                          >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.automation.billingRetryFailed ? 'left-6' : 'left-1'}`} />
-                          </button>
+                          <ToggleSwitch 
+                            checked={settings.automation.billingRetryFailed}
+                            onChange={() => handleInputChange('automation', 'billingRetryFailed', !settings.automation.billingRetryFailed)}
+                          />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-8 p-8 rounded-3xl bg-[#111827] text-white overflow-hidden relative group cursor-pointer">
-                    <div className="relative z-10 flex items-center justify-between">
-                      <div className="max-w-md">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Sparkles size={18} className="text-[#6366F1]" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6366F1]">New Feature</span>
+                  {/* Refined Dark Workflow Banner */}
+                  <div className="mt-8 p-7 rounded-2xl bg-zinc-950 border border-zinc-800 text-white overflow-hidden relative group">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="max-w-xl">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Sparkles size={16} className="text-zinc-400" />
+                          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Visual Workflow Engine</span>
                         </div>
-                        <h3 className="text-xl font-black mb-2">Visual Workflow Builder</h3>
-                        <p className="text-xs font-medium text-white/50 leading-relaxed mb-6">
-                          Create custom automation flows using our drag-and-drop orchestration engine. 
-                          Design complex triggers for billing, retention, and coaching.
+                        <h3 className="text-lg font-bold text-white mb-1.5 tracking-tight">Create Custom Multi-Step Automations</h3>
+                        <p className="text-xs font-normal text-zinc-400 leading-relaxed mb-5">
+                          Chain complex operational triggers across attendance, member renewals, trainer commissions, and billing recovery without writing any code.
                         </p>
-                        <button className="h-10 px-6 rounded-xl bg-white text-[#111827] text-[10px] font-black uppercase tracking-widest hover:bg-[#6366F1] hover:text-white transition-all flex items-center gap-2">
-                          Launch Builder
+                        <button 
+                          type="button"
+                          onClick={() => alert("Visual Workflow Builder workspace is currently in active preview.")}
+                          className="h-9 px-4 rounded-xl bg-white hover:bg-zinc-100 text-zinc-900 text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shadow-sm"
+                        >
+                          <span>Launch Builder</span>
                           <ArrowRight size={14} />
                         </button>
                       </div>
-                      <div className="hidden lg:block">
-                        <div className="w-48 h-48 rounded-full bg-white/5 border border-white/10 flex items-center justify-center relative">
-                          <div className="absolute inset-0 bg-gradient-to-br from-[#6366F1]/20 to-transparent rounded-full animate-pulse" />
-                          <Code size={64} className="text-white opacity-20" />
+                      <div className="hidden lg:flex items-center justify-center">
+                        <div className="w-32 h-32 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md">
+                          <Code size={40} className="text-zinc-500" strokeWidth={1.5} />
                         </div>
                       </div>
                     </div>
-                    <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-[#6366F1]/20 rounded-full blur-3xl group-hover:bg-[#6366F1]/40 transition-all" />
                   </div>
                 </section>
               </motion.div>
@@ -852,91 +1147,99 @@ const AppSettings = () => {
             {activeTab === "Security" && (
               <motion.div 
                 key="security"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                {/* 14. SECURITY SETTINGS SECTION */}
-                <section className="bg-white rounded-3xl border border-[#E5E7EB] p-10 shadow-sm">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F3F4F6] flex items-center justify-center text-[#111827]">
-                      <Shield size={24} />
+                {/* 14. SECURITY & ACCESS GOVERNANCE */}
+                <section className="bg-white rounded-2xl border border-zinc-200/90 p-7 sm:p-8 shadow-xs">
+                  <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200/80 flex items-center justify-center text-zinc-900 shadow-2xs">
+                        <Shield size={18} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Security & Access Governance</h2>
+                        <p className="text-xs text-zinc-500 font-normal mt-0.5">Manage staff permissions, session limits, 2FA, and compliance audit trails</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight">Security & Access Governance</h2>
-                      <p className="text-xs text-[#6B7280] font-medium uppercase tracking-widest">Manage staff permissions, session limits, 2FA, and audit trails</p>
+                    <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold">
+                      <ShieldCheck size={13} strokeWidth={1.75} />
+                      <span>SOC-2 Compliant</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-10">
-                    <div className="col-span-8 space-y-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6 border-t border-zinc-100">
+                    <div className="col-span-12 lg:col-span-8 space-y-6">
                       {/* 2FA & Session Control Toggles */}
-                      <div className="space-y-5">
+                      <div className="space-y-3">
                         {[
                           { id: 'twoFactor', label: 'Two-Factor Authentication (2FA)', desc: 'Enforce TOTP authenticator app or WhatsApp OTP for all admin accounts', icon: Fingerprint },
-                          { id: 'deviceControl', label: 'Device & Session Control', desc: 'Notify on unrecognized hardware logins and terminate stale sessions', icon: Smartphone },
+                          { id: 'deviceControl', label: 'Device & Hardware Lockdown', desc: 'Notify on unrecognized hardware logins and terminate stale sessions', icon: Smartphone },
                           { id: 'ipRestriction', label: 'Office IP Restriction', desc: 'Restrict front-desk and cashier dashboard access to registered static IPs', icon: Lock }
                         ].map(rule => (
-                          <div key={rule.id} className="p-4 rounded-2xl bg-[#FAFAFA] border border-[#F3F4F6] flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
-                                <rule.icon size={20} />
+                          <div key={rule.id} className="p-4 rounded-xl bg-zinc-50/60 border border-zinc-200/80 flex items-center justify-between">
+                            <div className="flex items-center gap-3.5">
+                              <div className="w-9 h-9 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-900 shadow-2xs">
+                                <rule.icon size={17} strokeWidth={1.75} />
                               </div>
                               <div>
-                                <div className="text-sm font-black text-[#111827]">{rule.label}</div>
-                                <p className="text-[11px] font-bold text-[#6B7280] max-w-md">{rule.desc}</p>
+                                <div className="text-xs font-bold text-zinc-900">{rule.label}</div>
+                                <p className="text-[11px] text-zinc-500 mt-0.5 max-w-md">{rule.desc}</p>
                               </div>
                             </div>
-                            <button 
-                              type="button"
-                              onClick={() => handleInputChange('security', rule.id, !settings.security[rule.id])}
-                              className={`w-11 h-6 rounded-full transition-all relative shrink-0 ${settings.security[rule.id] ? 'bg-[#10B981]' : 'bg-[#E5E7EB]'}`}
-                            >
-                              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.security[rule.id] ? 'left-6' : 'left-1'}`} />
-                            </button>
+                            <ToggleSwitch 
+                              checked={settings.security[rule.id]}
+                              onChange={() => handleInputChange('security', rule.id, !settings.security[rule.id])}
+                            />
                           </div>
                         ))}
                       </div>
 
                       {/* Staff Role Permissions */}
-                      <div className="p-6 rounded-2xl border border-[#F3F4F6] bg-[#FAFAFA] space-y-4">
+                      <div className="p-5 rounded-xl border border-zinc-200 bg-zinc-50/40 space-y-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#111827] shadow-2xs">
-                              <Users size={18} />
+                            <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-900 shadow-2xs">
+                              <Users size={16} strokeWidth={1.75} />
                             </div>
                             <div>
-                              <h3 className="text-xs font-black uppercase tracking-wider text-[#111827]">Role Permissions & Access Control</h3>
-                              <p className="text-[10px] text-[#9CA3AF] font-bold">Configure staff privilege tiers</p>
+                              <h3 className="text-xs font-bold text-zinc-900">Role Permissions & Access Matrix</h3>
+                              <p className="text-[11px] text-zinc-500">Configured privilege tiers</p>
                             </div>
                           </div>
-                          <button className="text-[10px] font-black uppercase tracking-wider text-[#2563EB] hover:underline">
+                          <button 
+                            type="button"
+                            onClick={() => alert("Role matrix configuration modal.")}
+                            className="text-xs font-semibold text-zinc-900 hover:text-zinc-600 transition-colors cursor-pointer underline underline-offset-2"
+                          >
                             Edit Matrix
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2.5 pt-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                           {[
                             { role: 'Owner', desc: 'Full Superadmin' },
                             { role: 'Branch Manager', desc: 'Ops & Staff' },
                             { role: 'Trainer', desc: 'Assigned Clients' },
                             { role: 'Front Desk', desc: 'Check-in & POS' }
                           ].map(r => (
-                            <div key={r.role} className="p-3 bg-white border border-[#E5E7EB] rounded-xl text-center">
-                              <div className="text-xs font-black text-[#111827]">{r.role}</div>
-                              <div className="text-[9px] font-bold text-[#6B7280] mt-0.5">{r.desc}</div>
+                            <div key={r.role} className="p-3 bg-white border border-zinc-200/90 rounded-xl text-center shadow-2xs">
+                              <div className="text-xs font-bold text-zinc-900">{r.role}</div>
+                              <div className="text-[10px] text-zinc-500 mt-0.5">{r.desc}</div>
                             </div>
                           ))}
                         </div>
                       </div>
 
                       {/* Session Timeout & Access Logs */}
-                      <div className="grid grid-cols-2 gap-6 pt-4 border-t border-[#F3F4F6]">
-                        <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-zinc-100">
+                        <div className="space-y-2.5">
                           <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">Session Inactivity Timeout</label>
-                            <span className="text-[10px] font-black text-[#111827] uppercase bg-[#F3F4F6] px-2 py-0.5 rounded-md">{settings.security.sessionTimeout} Min</span>
+                            <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Session Inactivity Timeout</label>
+                            <span className="text-[11px] font-bold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200/60">{settings.security.sessionTimeout} Min</span>
                           </div>
                           <input 
                             type="range" 
@@ -945,60 +1248,69 @@ const AppSettings = () => {
                             step="5"
                             value={settings.security.sessionTimeout}
                             onChange={(e) => handleInputChange('security', 'sessionTimeout', e.target.value)}
-                            className="w-full h-2 bg-[#F3F4F6] rounded-lg appearance-none cursor-pointer accent-[#111827]"
+                            className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-900"
                           />
-                          <div className="flex justify-between text-[9px] font-black text-[#9CA3AF] uppercase tracking-widest px-1">
+                          <div className="flex justify-between text-[10px] font-medium text-zinc-400 px-0.5">
                             <span>5 min</span>
                             <span>60 min</span>
                             <span>120 min</span>
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">Access Logs Retention</label>
-                          <select 
+                        <div>
+                          <CustomSelect 
+                            label="Access Logs Retention"
                             value={settings.security.accessLogsRetention || "90"}
-                            onChange={(e) => handleInputChange('security', 'accessLogsRetention', e.target.value)}
-                            className="w-full h-10 px-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-bold"
-                          >
-                            <option value="30">30 Days (Compliance Baseline)</option>
-                            <option value="90">90 Days (Recommended)</option>
-                            <option value="180">180 Days (Extended)</option>
-                            <option value="365">365 Days (Full Fiscal Year)</option>
-                          </select>
-                          <div className="text-[9px] text-[#6B7280] font-bold">1,248 actions recorded • Zero unauthorized breaches</div>
+                            options={retentionOptions}
+                            onChange={(val) => handleInputChange('security', 'accessLogsRetention', val)}
+                            icon={Database}
+                            description="1,248 actions recorded • Zero unauthorized breaches"
+                          />
                         </div>
                       </div>
                     </div>
 
-                    <div className="col-span-4 space-y-6">
-                      <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-2xl p-6">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-[#111827] mb-4">Security Status</h4>
-                        <div className="space-y-4">
+                    <div className="col-span-12 lg:col-span-4 space-y-5">
+                      <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">Security Posture</h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">Optimal</span>
+                        </div>
+                        <div className="space-y-2.5">
                           {[
-                            { label: 'SSL Encryption', status: 'Active', color: 'text-[#10B981]' },
-                            { label: 'Firewall', status: 'Shielded', color: 'text-[#10B981]' },
-                            { label: 'Login Alerts', status: 'Enabled', color: 'text-[#10B981]' },
-                            { label: 'Audit Logging', status: 'Live', color: 'text-[#10B981]' }
+                            { label: 'SSL/TLS 1.3 Encryption', status: 'Active', color: 'text-emerald-700' },
+                            { label: 'Hardware Attestation', status: 'Shielded', color: 'text-emerald-700' },
+                            { label: 'Login Rate Limiter', status: 'Enabled', color: 'text-emerald-700' },
+                            { label: 'Live Audit Telemetry', status: 'Active', color: 'text-emerald-700' }
                           ].map(item => (
-                            <div key={item.label} className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-[#6B7280]">{item.label}</span>
-                              <span className={`text-[10px] font-black uppercase ${item.color}`}>{item.status}</span>
+                            <div key={item.label} className="flex items-center justify-between text-xs py-1 border-b border-zinc-200/40 last:border-b-0">
+                              <span className="text-zinc-600 font-medium">{item.label}</span>
+                              <span className={`font-semibold ${item.color} text-[11px]`}>{item.status}</span>
                             </div>
                           ))}
                         </div>
-                        <button className="w-full mt-6 h-10 rounded-xl bg-white border border-[#E5E7EB] text-[10px] font-black uppercase tracking-widest hover:bg-[#F3F4F6] transition-all">
-                          Security Audit
+                        <button 
+                          type="button"
+                          onClick={() => alert("Security audit report downloaded.")}
+                          className="w-full mt-2 h-9 rounded-xl bg-white hover:bg-zinc-100 border border-zinc-200 text-xs font-semibold text-zinc-900 transition-colors shadow-2xs cursor-pointer"
+                        >
+                          Export Security Audit
                         </button>
                       </div>
 
-                      <div className="p-6 rounded-2xl bg-[#FEF2F2] border border-[#FEE2E2] flex flex-col items-center text-center">
-                        <AlertTriangle className="text-[#EF4444] mb-3" size={24} />
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-[#EF4444] mb-1">Danger Zone</h4>
-                        <p className="text-[10px] font-bold text-[#B91C1C] leading-relaxed mb-4">
+                      <div className="p-5 rounded-xl bg-rose-50/50 border border-rose-200/80 flex flex-col items-center text-center">
+                        <AlertTriangle className="text-rose-600 mb-2" size={20} strokeWidth={1.75} />
+                        <h4 className="text-xs font-bold text-rose-900 mb-1">Danger Zone</h4>
+                        <p className="text-[11px] text-rose-700/90 leading-relaxed mb-3">
                           Sensitive system overrides and permanent data controls.
                         </p>
-                        <button className="text-[9px] font-black uppercase tracking-widest text-[#EF4444] underline underline-offset-4">Advanced Access</button>
+                        <button 
+                          type="button"
+                          onClick={() => alert("Authentication credentials required for Danger Zone.")}
+                          className="h-8 px-3 rounded-lg bg-white hover:bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 transition-colors shadow-2xs cursor-pointer"
+                        >
+                          Advanced Access
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1059,8 +1371,11 @@ const AppSettings = () => {
 // MOUNT UTILITY
 // ─────────────────────────────────────────
 export function mountAppSettings(container) {
-  const root = createRoot(container);
+  const target = container || document.querySelector('[data-stage="app-settings"]');
+  if (!target) return null;
+  const root = createRoot(target);
   root.render(<AppSettings />);
+  return root;
 }
 
 export default AppSettings;

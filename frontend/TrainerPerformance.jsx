@@ -763,13 +763,16 @@ const TrainerPerformance = ({ onBack }) => {
 // MOUNT UTILITY
 // ─────────────────────────────────────────
 export function mountTrainerPerformance(container) {
-  const root = createRoot(container);
+  const target = container || document.querySelector('[data-stage="trainer-performance"]');
+  if (!target) return null;
+  const root = createRoot(target);
   
   const handleBack = () => {
     // This is handled by script.js setActiveView
   };
 
   root.render(<><TrainerPerformance onBack={handleBack} /><BrandFooter /></>);
+  return root;
 }
 
 export default TrainerPerformance;
