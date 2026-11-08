@@ -32,13 +32,16 @@ import {
   Edit3, 
   Trash2, 
   Eye, 
+  EyeOff,
   HelpCircle, 
   Activity, 
   Smartphone, 
   FileText,
   BadgeCheck,
   CheckCircle2,
+  CheckCircle,
   AlertTriangle,
+  AlertCircle,
   Info,
   ExternalLink,
   QrCode,
@@ -74,7 +77,19 @@ import {
   ChevronDown,
   PhoneCall,
   MessageSquare,
-  Send
+  Send,
+  Landmark,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ArrowUpDown,
+  Wallet,
+  Ban,
+  Coins,
+  KeyRound,
+  FileCheck2,
+  ShieldOff,
+  Network,
+  LockKeyhole
 } from "lucide-react";
 import jsPDF from "jspdf";
 
@@ -90,10 +105,16 @@ const CustomDropdown = ({
   options = [],
   onChange,
   disabled = false,
-  className = ""
+  className = "",
+  searchable = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) setSearchTerm("");
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -123,6 +144,16 @@ const CustomDropdown = ({
   const displayLabel = selectedOption 
     ? (typeof selectedOption === "string" ? selectedOption : selectedOption.label)
     : "";
+
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchTerm.trim()) return options;
+    const term = searchTerm.toLowerCase();
+    return options.filter((opt) => {
+      const val = typeof opt === "string" ? opt : (opt.label || opt.value || "");
+      const desc = typeof opt === "object" && opt.description ? opt.description : "";
+      return val.toLowerCase().includes(term) || desc.toLowerCase().includes(term);
+    });
+  }, [options, searchable, searchTerm]);
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
@@ -163,60 +194,216 @@ const CustomDropdown = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.14, ease: "easeOut" }}
-            className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-zinc-200 rounded-xl shadow-xl shadow-zinc-900/10 overflow-hidden py-1.5 max-h-60 overflow-y-auto"
+            className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-zinc-200 rounded-xl shadow-xl shadow-zinc-900/10 overflow-hidden py-1.5 max-h-64 overflow-y-auto"
             style={{ minWidth: "220px" }}
             role="listbox"
           >
-            {options.map((opt, idx) => {
-              const optValue = typeof opt === "string" ? opt : opt.value;
-              const optLabel = typeof opt === "string" ? opt : opt.label;
-              const optDesc = typeof opt === "object" ? opt.description : null;
-              const optBadge = typeof opt === "object" ? opt.badge : null;
-              const isSelected = optValue === value;
+            {searchable && (
+              <div className="px-2 pt-1 pb-2 border-b border-zinc-100">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-zinc-400">
+                    <Search size={13} strokeWidth={1.75} />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search options..."
+                    className="w-full h-8 pl-8 pr-2.5 bg-zinc-50 border border-zinc-200 rounded-md text-xs font-medium focus:bg-white focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+            )}
 
-              return (
-                <div
-                  key={optValue || idx}
-                  role="option"
-                  aria-selected={isSelected}
-                  onClick={() => {
-                    onChange(optValue);
-                    setIsOpen(false);
-                  }}
-                  className={`px-3 py-2 mx-1.5 rounded-lg text-xs cursor-pointer flex items-center justify-between transition-colors ${
-                    isSelected 
-                      ? "bg-zinc-900 text-white font-medium" 
-                      : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-                  }`}
-                >
-                  <div className="flex flex-col min-w-0 pr-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold truncate">{optLabel}</span>
-                      {optBadge && (
-                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${isSelected ? "bg-white/20 text-white" : "bg-zinc-200/70 text-zinc-600"}`}>
-                          {optBadge}
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-zinc-400 font-normal">
+                No matching options found
+              </div>
+            ) : (
+              filteredOptions.map((opt, idx) => {
+                const optValue = typeof opt === "string" ? opt : opt.value;
+                const optLabel = typeof opt === "string" ? opt : opt.label;
+                const optDesc = typeof opt === "object" ? opt.description : null;
+                const optBadge = typeof opt === "object" ? opt.badge : null;
+                const isSelected = optValue === value;
+
+                return (
+                  <div
+                    key={optValue || idx}
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      onChange(optValue);
+                      setIsOpen(false);
+                    }}
+                    className={`px-3 py-2 mx-1.5 rounded-lg text-xs cursor-pointer flex items-center justify-between transition-colors ${
+                      isSelected 
+                        ? "bg-zinc-900 text-white font-medium" 
+                        : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+                    }`}
+                  >
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold truncate">{optLabel}</span>
+                        {optBadge && (
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${isSelected ? "bg-white/20 text-white" : "bg-zinc-200/70 text-zinc-600"}`}>
+                            {optBadge}
+                          </span>
+                        )}
+                      </div>
+                      {optDesc && (
+                        <span className={`text-[10px] leading-tight mt-0.5 truncate ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
+                          {optDesc}
                         </span>
                       )}
                     </div>
-                    {optDesc && (
-                      <span className={`text-[10px] leading-tight mt-0.5 truncate ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
-                        {optDesc}
-                      </span>
+
+                    {isSelected && (
+                      <Check size={14} strokeWidth={2.5} className="shrink-0 text-white ml-2" />
                     )}
                   </div>
-
-                  {isSelected && (
-                    <Check size={14} strokeWidth={2.5} className="shrink-0 text-white ml-2" />
-                  )}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 };
+
+/**
+ * BANKING & SETTLEMENT CONFIGURATION CONSTANTS
+ */
+const BANK_OPTIONS = [
+  { value: "HDFC Bank", label: "HDFC Bank", description: "Scheduled Commercial Bank • Instant IMPS/NEFT/RTGS", badge: "Primary Rail" },
+  { value: "ICICI Bank", label: "ICICI Bank", description: "Scheduled Commercial Bank • Real-time API Settlement", badge: "Primary Rail" },
+  { value: "State Bank of India", label: "State Bank of India (SBI)", description: "Public Sector Scheduled Commercial Bank", badge: "Govt Rail" },
+  { value: "Axis Bank", label: "Axis Bank", description: "Scheduled Commercial Bank • Corporate Banking Portal", badge: "Verified Rail" },
+  { value: "Kotak Mahindra Bank", label: "Kotak Mahindra Bank", description: "Scheduled Commercial Bank • Instant Payouts", badge: "Verified Rail" },
+  { value: "Punjab National Bank", label: "Punjab National Bank (PNB)", description: "Public Sector Scheduled Commercial Bank", badge: "Govt Rail" },
+  { value: "Bank of Baroda", label: "Bank of Baroda", description: "Public Sector Scheduled Commercial Bank", badge: "Govt Rail" },
+  { value: "IndusInd Bank", label: "IndusInd Bank", description: "Scheduled Commercial Bank • Commercial Banking", badge: "Verified Rail" },
+  { value: "Federal Bank", label: "Federal Bank", description: "Scheduled Commercial Bank • Neo-Banking Partner", badge: "Verified Rail" },
+  { value: "Yes Bank", label: "Yes Bank", description: "Scheduled Commercial Bank • High-Volume UPI Rails", badge: "UPI Gateway" },
+  { value: "IDFC FIRST Bank", label: "IDFC FIRST Bank", description: "Scheduled Commercial Bank • Fast IMPS Settlement", badge: "Verified Rail" },
+  { value: "Other Scheduled Bank", label: "Other Scheduled Commercial Bank", description: "Any RBI-regulated Commercial Bank in India", badge: "Standard" }
+];
+
+const ACCOUNT_TYPE_OPTIONS = [
+  { value: "Current Account", label: "Current Account", description: "Recommended for Fitness Centers, Gyms, and LLPs", badge: "Business" },
+  { value: "Savings Account", label: "Savings Account", description: "For Sole Proprietorships and Individual Gym Trainers", badge: "Personal" },
+  { value: "Overdraft (OD) / CC", label: "Overdraft (OD) / Cash Credit (CC)", description: "Commercial facility account for high-volume cashflows", badge: "Credit Line" },
+  { value: "Virtual Escrow Node", label: "Virtual Escrow Node", description: "Sub-merchant routing node for auto-split settlement", badge: "Multi-branch" }
+];
+
+const ROLE_OPTIONS = [
+  { value: "inflow", label: "Member Fee Collection (Inflow)", description: "Where gym members pay subscription dues and packages", badge: "Inflow" },
+  { value: "outflow", label: "Trainer Payroll & Outflow", description: "Account used to disburse trainer salaries and vendor bills", badge: "Outflow" },
+  { value: "both", label: "Dual Purpose (Inflow + Outflow)", description: "Single consolidated account for both receipts and payouts", badge: "Unified" }
+];
+
+/**
+ * PROCEDURAL HIGH-PRECISION NPCI UPI QR CODE SVG
+ */
+const UpiQrCodeSvg = ({ size = 200 }) => (
+  <div className="relative inline-block bg-white p-3.5 rounded-xl border border-zinc-200/90 shadow-sm select-none">
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 200 200" 
+      className="w-full h-auto block"
+    >
+      <rect width="200" height="200" fill="#FFFFFF" />
+      
+      {/* Top-Left Finder Pattern (7x7 outer, 5x5 white, 3x3 core) */}
+      <rect x="14" y="14" width="46" height="46" rx="6" fill="#09090B" />
+      <rect x="20" y="20" width="34" height="34" rx="4" fill="#FFFFFF" />
+      <rect x="27" y="27" width="20" height="20" rx="3" fill="#09090B" />
+
+      {/* Top-Right Finder Pattern */}
+      <rect x="140" y="14" width="46" height="46" rx="6" fill="#09090B" />
+      <rect x="146" y="20" width="34" height="34" rx="4" fill="#FFFFFF" />
+      <rect x="153" y="27" width="20" height="20" rx="3" fill="#09090B" />
+
+      {/* Bottom-Left Finder Pattern */}
+      <rect x="14" y="140" width="46" height="46" rx="6" fill="#09090B" />
+      <rect x="20" y="146" width="34" height="34" rx="4" fill="#FFFFFF" />
+      <rect x="27" y="153" width="20" height="20" rx="3" fill="#09090B" />
+
+      {/* Alignment Pattern */}
+      <rect x="135" y="135" width="28" height="28" rx="4" fill="#09090B" />
+      <rect x="140" y="140" width="18" height="18" rx="2" fill="#FFFFFF" />
+      <rect x="145" y="145" width="8" height="8" rx="1" fill="#09090B" />
+
+      {/* Timing Patterns */}
+      <rect x="68" y="34" width="64" height="6" fill="#09090B" stroke="#FFFFFF" strokeWidth="2" strokeDasharray="6 6" />
+      <rect x="34" y="68" width="6" height="64" fill="#09090B" stroke="#FFFFFF" strokeWidth="2" strokeDasharray="6 6" />
+
+      {/* Data Modules Matrix Grid */}
+      <g fill="#09090B">
+        <rect x="70" y="16" width="8" height="8" rx="1.5" />
+        <rect x="86" y="16" width="16" height="8" rx="1.5" />
+        <rect x="110" y="16" width="8" height="8" rx="1.5" />
+        <rect x="78" y="28" width="16" height="8" rx="1.5" />
+        <rect x="102" y="28" width="16" height="8" rx="1.5" />
+        <rect x="70" y="46" width="24" height="8" rx="1.5" />
+        <rect x="102" y="46" width="8" height="16" rx="1.5" />
+        <rect x="118" y="46" width="14" height="8" rx="1.5" />
+
+        <rect x="16" y="70" width="8" height="16" rx="1.5" />
+        <rect x="28" y="78" width="8" height="8" rx="1.5" />
+        <rect x="46" y="70" width="16" height="8" rx="1.5" />
+        <rect x="16" y="94" width="16" height="8" rx="1.5" />
+        <rect x="40" y="94" width="8" height="24" rx="1.5" />
+        <rect x="16" y="110" width="8" height="16" rx="1.5" />
+        <rect x="28" y="118" width="16" height="8" rx="1.5" />
+        <rect x="48" y="118" width="8" height="14" rx="1.5" />
+
+        <rect x="68" y="68" width="14" height="14" rx="2" />
+        <rect x="90" y="68" width="18" height="8" rx="1.5" />
+        <rect x="116" y="68" width="16" height="16" rx="2" />
+        <rect x="88" y="84" width="20" height="20" rx="3" />
+        <rect x="68" y="90" width="12" height="14" rx="1.5" />
+        <rect x="116" y="92" width="14" height="12" rx="1.5" />
+        <rect x="68" y="112" width="22" height="8" rx="1.5" />
+        <rect x="98" y="112" width="10" height="16" rx="1.5" />
+        <rect x="116" y="112" width="16" height="8" rx="1.5" />
+
+        <rect x="140" y="70" width="16" height="8" rx="1.5" />
+        <rect x="164" y="70" width="20" height="8" rx="1.5" />
+        <rect x="140" y="86" width="8" height="22" rx="1.5" />
+        <rect x="156" y="86" width="16" height="8" rx="1.5" />
+        <rect x="180" y="86" width="8" height="16" rx="1.5" />
+        <rect x="156" y="102" width="8" height="14" rx="1.5" />
+        <rect x="172" y="110" width="16" height="8" rx="1.5" />
+
+        <rect x="68" y="130" width="16" height="8" rx="1.5" />
+        <rect x="92" y="130" width="8" height="16" rx="1.5" />
+        <rect x="108" y="130" width="18" height="8" rx="1.5" />
+        <rect x="68" y="146" width="8" height="20" rx="1.5" />
+        <rect x="84" y="146" width="16" height="8" rx="1.5" />
+        <rect x="108" y="146" width="16" height="20" rx="2" />
+        <rect x="84" y="162" width="16" height="18" rx="2" />
+        <rect x="68" y="174" width="8" height="12" rx="1.5" />
+
+        <rect x="170" y="135" width="16" height="8" rx="1.5" />
+        <rect x="170" y="151" width="8" height="16" rx="1.5" />
+        <rect x="140" y="170" width="22" height="8" rx="1.5" />
+        <rect x="170" y="175" width="16" height="10" rx="1.5" />
+      </g>
+
+      {/* Center UPI Badge Emblem */}
+      <rect x="82" y="82" width="36" height="36" rx="8" fill="#FFFFFF" stroke="#E4E4E7" strokeWidth="2" />
+      <g transform="translate(86, 86)">
+        <rect width="28" height="28" rx="6" fill="#09090B" />
+        <path d="M7 14L14 7L21 14L14 21Z" fill="#FFFFFF" />
+        <circle cx="14" cy="14" r="3" fill="#09090B" />
+      </g>
+    </svg>
+  </div>
+);
 
 /**
  * REUSABLE TOGGLE SWITCH & CHECK BUTTON COMPONENTS
@@ -289,6 +476,30 @@ const GymProfile = () => {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
 
+  // Banking & Settlement State
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [editingAccountId, setEditingAccountId] = useState(null);
+  const [accountFormData, setAccountFormData] = useState({
+    accountHolderName: "",
+    bankName: "HDFC Bank",
+    accountNumber: "",
+    confirmAccountNumber: "",
+    ifscCode: "",
+    branchName: "",
+    accountType: "Current Account",
+    upiId: "",
+    role: "inflow",
+    isPrimaryInflow: false,
+    isPrimaryOutflow: false
+  });
+  const [accountFormErrors, setAccountFormErrors] = useState({});
+  const [isUpiQrModalOpen, setIsUpiQrModalOpen] = useState(false);
+  const [selectedQrAccount, setSelectedQrAccount] = useState(null);
+  const [revealedAccountIds, setRevealedAccountIds] = useState(new Set());
+  const [copiedUpiId, setCopiedUpiId] = useState(null);
+  const [copiedAccNum, setCopiedAccNum] = useState(null);
+  const [accountToDelete, setAccountToDelete] = useState(null);
+
   // Close Export Menu when clicking outside
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -302,14 +513,17 @@ const GymProfile = () => {
     }
   }, [isExportMenuOpen]);
 
-  // Listen for Escape key to close QR pass modal & lock background scroll
+  // Listen for Escape key to close modals & lock background scroll
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         setIsQrModalOpen(false);
+        setIsAccountModalOpen(false);
+        setIsUpiQrModalOpen(false);
+        setAccountToDelete(null);
       }
     };
-    if (isQrModalOpen) {
+    if (isQrModalOpen || isAccountModalOpen || isUpiQrModalOpen || accountToDelete) {
       window.addEventListener("keydown", handleKeyDown);
       const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -318,7 +532,7 @@ const GymProfile = () => {
         document.body.style.overflow = prevOverflow;
       };
     }
-  }, [isQrModalOpen]);
+  }, [isQrModalOpen, isAccountModalOpen, isUpiQrModalOpen, accountToDelete]);
 
   // File Input References
   const bannerInputRef = useRef(null);
@@ -393,14 +607,12 @@ const GymProfile = () => {
     slotDurationMinutes: "",
     autoHolidayClosure: true,
 
-    // Digital & Apps
-    iosAppUrl: "",
-    androidAppUrl: "",
+    // Web Portal & Subdomain (Used for member check-in & passes)
     subdomain: "",
     customDomain: "",
-    qrCheckinEnabled: true,
-    qrTurnstileRelay: true,
-    qrAudibleChime: true,
+
+    // Banking, Settlement & Payout Accounts
+    bankAccounts: [],
 
     // Social Media
     socials: {
@@ -479,7 +691,7 @@ const GymProfile = () => {
     { id: "Branches", label: "Branches", icon: MapPin },
     { id: "QR Passes", label: "QR Passes", icon: QrCode },
     { id: "Operational Settings", label: "Operational Settings", icon: Clock },
-    { id: "Digital & Apps", label: "Digital & Apps", icon: Smartphone },
+    { id: "Banking & Settlement", label: "Banking & Settlement", icon: Landmark },
     { id: "Social Media", label: "Social Media", icon: Share2 }
   ], []);
 
@@ -496,7 +708,14 @@ const GymProfile = () => {
   useEffect(() => {
     if (!searchQuery.trim()) return;
     const q = searchQuery.toLowerCase();
-    const matched = tabs.find(t => t.label.toLowerCase().includes(q) || t.id.toLowerCase().includes(q));
+    const matched = tabs.find(t => 
+      t.label.toLowerCase().includes(q) || 
+      t.id.toLowerCase().includes(q) ||
+      (t.id === "Banking & Settlement" && (
+        q.includes("bank") || q.includes("upi") || q.includes("payout") || 
+        q.includes("settle") || q.includes("salary") || q.includes("fee") || q.includes("account")
+      ))
+    );
     if (matched && matched.id !== activeTab) {
       setActiveTab(matched.id);
     }
@@ -508,6 +727,244 @@ const GymProfile = () => {
       setToastMessage(null);
     }, 3500);
   };
+
+  // Banking Account Actions
+  const handleToggleRevealAccount = (id) => {
+    setRevealedAccountIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleCopyText = (text, type, id) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    if (type === "upi") {
+      setCopiedUpiId(id);
+      setTimeout(() => setCopiedUpiId(null), 2000);
+      showToast("UPI VPA copied to clipboard.");
+    } else {
+      setCopiedAccNum(id);
+      setTimeout(() => setCopiedAccNum(null), 2000);
+      showToast("Account number copied to clipboard.");
+    }
+  };
+
+  const handleSetPrimaryInflow = (id) => {
+    setGymData(prev => ({
+      ...prev,
+      bankAccounts: (prev.bankAccounts || []).map(acc => {
+        const isTarget = acc.id === id;
+        const willBePrimaryInflow = isTarget;
+        const willBePrimaryOutflow = isTarget ? acc.isPrimaryOutflow : (acc.isPrimaryOutflow ? true : false);
+        let newRole = acc.role;
+        if (isTarget) {
+          newRole = willBePrimaryOutflow ? "both" : "inflow";
+        } else if (acc.isPrimaryOutflow) {
+          newRole = "outflow";
+        }
+        return {
+          ...acc,
+          isPrimaryInflow: willBePrimaryInflow,
+          role: newRole
+        };
+      })
+    }));
+    setHasChanges(true);
+    const target = (gymData.bankAccounts || []).find(a => a.id === id);
+    showToast(`Designated ${target?.bankName || "account"} as primary Fee Inflow destination.`);
+  };
+
+  const handleSetPrimaryOutflow = (id) => {
+    setGymData(prev => ({
+      ...prev,
+      bankAccounts: (prev.bankAccounts || []).map(acc => {
+        const isTarget = acc.id === id;
+        const willBePrimaryOutflow = isTarget;
+        const willBePrimaryInflow = isTarget ? acc.isPrimaryInflow : (acc.isPrimaryInflow ? true : false);
+        let newRole = acc.role;
+        if (isTarget) {
+          newRole = willBePrimaryInflow ? "both" : "outflow";
+        } else if (acc.isPrimaryInflow) {
+          newRole = "inflow";
+        }
+        return {
+          ...acc,
+          isPrimaryOutflow: willBePrimaryOutflow,
+          role: newRole
+        };
+      })
+    }));
+    setHasChanges(true);
+    const target = (gymData.bankAccounts || []).find(a => a.id === id);
+    showToast(`Designated ${target?.bankName || "account"} as primary Trainer Payroll source.`);
+  };
+
+  const openAddAccountModal = (defaultRole = "inflow") => {
+    setEditingAccountId(null);
+    setAccountFormData({
+      accountHolderName: gymData.legalName || gymData.name || "",
+      bankName: "HDFC Bank",
+      accountNumber: "",
+      confirmAccountNumber: "",
+      ifscCode: "",
+      branchName: "",
+      accountType: "Current Account",
+      upiId: "",
+      role: defaultRole === "outflow" ? "outflow" : defaultRole === "both" ? "both" : "inflow",
+      isPrimaryInflow: defaultRole !== "outflow" || (gymData.bankAccounts || []).length === 0,
+      isPrimaryOutflow: defaultRole === "outflow" || defaultRole === "both"
+    });
+    setAccountFormErrors({});
+    setIsAccountModalOpen(true);
+  };
+
+  const openEditAccountModal = (account) => {
+    setEditingAccountId(account.id);
+    setAccountFormData({
+      accountHolderName: account.accountHolderName || "",
+      bankName: account.bankName || "HDFC Bank",
+      accountNumber: account.accountNumber || "",
+      confirmAccountNumber: account.accountNumber || "",
+      ifscCode: account.ifscCode || "",
+      branchName: account.branchName || "",
+      accountType: account.accountType || "Current Account",
+      upiId: account.upiId || "",
+      role: account.role || "inflow",
+      isPrimaryInflow: !!account.isPrimaryInflow,
+      isPrimaryOutflow: !!account.isPrimaryOutflow
+    });
+    setAccountFormErrors({});
+    setIsAccountModalOpen(true);
+  };
+
+  const handleSaveAccountForm = () => {
+    const errors = {};
+    if (!accountFormData.accountHolderName.trim()) {
+      errors.accountHolderName = "Account holder name is required";
+    }
+    if (!accountFormData.accountNumber.trim()) {
+      errors.accountNumber = "Account number is required";
+    } else if (accountFormData.accountNumber !== accountFormData.confirmAccountNumber) {
+      errors.confirmAccountNumber = "Account numbers do not match";
+    }
+    if (!accountFormData.ifscCode.trim()) {
+      errors.ifscCode = "IFSC code is required";
+    } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(accountFormData.ifscCode.trim().toUpperCase())) {
+      errors.ifscCode = "Invalid IFSC format (e.g. HDFC0000240)";
+    }
+    if (accountFormData.upiId && !accountFormData.upiId.includes("@")) {
+      errors.upiId = "Invalid UPI VPA (must contain '@', e.g. name@bank)";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setAccountFormErrors(errors);
+      return;
+    }
+
+    const cleanedIfsc = accountFormData.ifscCode.trim().toUpperCase();
+    const isPrimaryInflow = accountFormData.isPrimaryInflow || accountFormData.role === "inflow" || accountFormData.role === "both";
+    const isPrimaryOutflow = accountFormData.isPrimaryOutflow || accountFormData.role === "outflow" || accountFormData.role === "both";
+
+    if (editingAccountId) {
+      setGymData(prev => ({
+        ...prev,
+        bankAccounts: (prev.bankAccounts || []).map(acc => {
+          if (acc.id === editingAccountId) {
+            return {
+              ...acc,
+              accountHolderName: accountFormData.accountHolderName.trim(),
+              bankName: accountFormData.bankName,
+              accountNumber: accountFormData.accountNumber.trim(),
+              ifscCode: cleanedIfsc,
+              branchName: accountFormData.branchName.trim() || `${accountFormData.bankName} Main Branch`,
+              accountType: accountFormData.accountType,
+              upiId: accountFormData.upiId.trim(),
+              role: accountFormData.role,
+              isPrimaryInflow: isPrimaryInflow,
+              isPrimaryOutflow: isPrimaryOutflow
+            };
+          }
+          return {
+            ...acc,
+            isPrimaryInflow: isPrimaryInflow ? false : acc.isPrimaryInflow,
+            isPrimaryOutflow: isPrimaryOutflow ? false : acc.isPrimaryOutflow
+          };
+        })
+      }));
+      showToast("Bank account updated successfully.");
+    } else {
+      const newAcc = {
+        id: `acc_${Date.now()}`,
+        accountHolderName: accountFormData.accountHolderName.trim(),
+        bankName: accountFormData.bankName,
+        accountNumber: accountFormData.accountNumber.trim(),
+        ifscCode: cleanedIfsc,
+        branchName: accountFormData.branchName.trim() || `${accountFormData.bankName} Main Branch`,
+        accountType: accountFormData.accountType,
+        upiId: accountFormData.upiId.trim(),
+        role: accountFormData.role,
+        isPrimaryInflow: isPrimaryInflow,
+        isPrimaryOutflow: isPrimaryOutflow,
+        verificationStatus: "VERIFIED",
+        addedAt: new Date().toISOString().split("T")[0]
+      };
+
+      setGymData(prev => ({
+        ...prev,
+        bankAccounts: [
+          ...(prev.bankAccounts || []).map(acc => ({
+            ...acc,
+            isPrimaryInflow: isPrimaryInflow ? false : acc.isPrimaryInflow,
+            isPrimaryOutflow: isPrimaryOutflow ? false : acc.isPrimaryOutflow
+          })),
+          newAcc
+        ]
+      }));
+      showToast("New bank account verified and connected.");
+    }
+
+    setHasChanges(true);
+    setIsAccountModalOpen(false);
+  };
+
+  const handleDeleteAccount = (id) => {
+    const remaining = (gymData.bankAccounts || []).filter(a => a.id !== id);
+    if (remaining.length === 0) {
+      setGymData(prev => ({ ...prev, bankAccounts: [] }));
+      setHasChanges(true);
+      setAccountToDelete(null);
+      showToast("Financial account disconnected.");
+      return;
+    }
+
+    let updated = [...remaining];
+    const deletedAcc = (gymData.bankAccounts || []).find(a => a.id === id);
+    if (deletedAcc?.isPrimaryInflow && updated.length > 0) {
+      updated[0] = { ...updated[0], isPrimaryInflow: true };
+    }
+    if (deletedAcc?.isPrimaryOutflow && updated.length > 0) {
+      const outflowTarget = updated.find(a => a.role === "outflow" || a.role === "both") || updated[0];
+      outflowTarget.isPrimaryOutflow = true;
+    }
+
+    setGymData(prev => ({ ...prev, bankAccounts: updated }));
+    setHasChanges(true);
+    setAccountToDelete(null);
+    showToast("Financial account disconnected.");
+  };
+
+  const primaryInflowAccount = useMemo(() => {
+    const accounts = gymData.bankAccounts || [];
+    return accounts.find(a => a.isPrimaryInflow) || accounts.find(a => a.role === "inflow" || a.role === "both") || accounts[0] || null;
+  }, [gymData.bankAccounts]);
+
+  const primaryOutflowAccount = useMemo(() => {
+    const accounts = gymData.bankAccounts || [];
+    return accounts.find(a => a.isPrimaryOutflow) || accounts.find(a => a.role === "outflow" || a.role === "both") || accounts[1] || accounts[0] || null;
+  }, [gymData.bankAccounts]);
 
   const handleInputChange = (field, value) => {
     setGymData(prev => ({ ...prev, [field]: value }));
@@ -2239,118 +2696,885 @@ const GymProfile = () => {
               </motion.div>
             )}
 
-            {/* ──────── TAB 6: DIGITAL & APPS ──────── */}
-            {activeTab === "Digital & Apps" && (
+            {/* ──────── TAB 6: BANKING & SETTLEMENT ──────── */}
+            {activeTab === "Banking & Settlement" && (
               <motion.div 
-                key="tab-digital"
+                key="tab-banking"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-8"
+                className="space-y-6 pb-12"
               >
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-center gap-3.5 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                      <Smartphone size={20} strokeWidth={1.5} />
+                {/* 1. EXECUTIVE TITLE BAR & LIVE STATUS */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Landmark size={20} strokeWidth={1.75} />
                     </div>
                     <div>
-                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Member Mobile Apps & QR Codes</h2>
-                      <p className="text-xs text-zinc-500 font-normal">Download endpoints, custom portal domain, and touchless check-in</p>
+                      <div className="flex items-center gap-2.5">
+                        <h2 className="text-base font-bold text-zinc-900 tracking-tight">Banking, Settlement & Payroll</h2>
+                        {(gymData.bankAccounts || []).length > 0 ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold flex items-center gap-1.5 font-mono">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            DIRECT RAILS ACTIVE
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 text-[10px] font-semibold flex items-center gap-1.5 font-mono">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                            SETUP REQUIRED
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-0.5 font-normal">
+                        Manage fee collection destinations for member dues and disbursement accounts for trainer salaries.
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">iOS App Store URL</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Apple size={15} strokeWidth={1.5} />
+                  <div className="flex items-center gap-3">
+                    <span className="hidden sm:inline-flex text-xs font-mono font-medium text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-lg border border-zinc-200">
+                      {(gymData.bankAccounts || []).length} {(gymData.bankAccounts || []).length === 1 ? "Account Connected" : "Accounts Connected"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openAddAccountModal("both")}
+                      className="h-9 px-4 rounded-xl bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-2 cursor-pointer shadow-xs border border-zinc-900 shrink-0"
+                    >
+                      <Plus size={14} strokeWidth={2} />
+                      <span>Add Bank Account</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. ACTIVE MONETARY RAILS (SIDE-BY-SIDE INFLOW & OUTFLOW WITH EASY ACCOUNT SWITCHER) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* INCOMING MEMBER FEES CARD */}
+                  <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-colors">
+                    <div className="space-y-4">
+                      {/* Card Top Pill & Header */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0">
+                            <ArrowDownLeft size={18} strokeWidth={2.5} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Member Fee Collections</h3>
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold font-mono">
+                                INFLOW DESTINATION
+                              </span>
+                            </div>
+                            <p className="text-xs text-zinc-500 mt-0.5">
+                              Receiving account for member subscriptions, package renewals, and POS payments.
+                            </p>
+                          </div>
                         </div>
-                        <input 
-                          type="text" 
-                          value={gymData.iosAppUrl} 
-                          placeholder="e.g. https://apps.apple.com/app/your-gym/id123456789"
-                          onChange={(e) => handleInputChange('iosAppUrl', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Google Play Store URL</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Play size={15} strokeWidth={1.5} />
+
+                      {primaryInflowAccount ? (
+                        <>
+                          {/* Account Selector Dropdown (Guided & Easy) */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-semibold text-zinc-700">Designated Receiving Account</label>
+                              <span className="text-[10px] text-zinc-400 font-mono">Switch account anytime</span>
+                            </div>
+                            <CustomDropdown
+                              id="inflow-account-selector"
+                              icon={Building2}
+                              value={primaryInflowAccount.id}
+                              options={(gymData.bankAccounts || []).map(acc => ({
+                                value: acc.id,
+                                label: `${acc.bankName} (•••• ${acc.accountNumber?.slice(-4) || "0000"})`,
+                                description: `${acc.accountType} · ${acc.accountHolderName}`,
+                                badge: acc.isPrimaryInflow ? "Active Inflow" : undefined
+                              }))}
+                              onChange={(selectedId) => handleSetPrimaryInflow(selectedId)}
+                            />
+                          </div>
+
+                          {/* Active Inflow Account Preview Card */}
+                          <div className="p-4 rounded-xl bg-zinc-50/80 border border-zinc-200/80 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs text-zinc-900">{primaryInflowAccount.bankName}</span>
+                                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white text-zinc-600 border border-zinc-200">
+                                    {primaryInflowAccount.accountType?.replace(" Account", "") || "Current"}
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 flex items-center gap-1 font-mono">
+                                    <ShieldCheck size={10} strokeWidth={2} />
+                                    Verified
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-zinc-500 font-medium mt-0.5">
+                                  {primaryInflowAccount.accountHolderName}
+                                </div>
+                              </div>
+
+                              {primaryInflowAccount.upiId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedQrAccount(primaryInflowAccount);
+                                    setIsUpiQrModalOpen(true);
+                                  }}
+                                  className="h-7 px-2.5 rounded-lg bg-zinc-900 text-white text-[11px] font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs border border-zinc-900 shrink-0"
+                                >
+                                  <QrCode size={12} strokeWidth={2} />
+                                  <span>View Standee QR</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Coordinates Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-zinc-200/60 text-xs">
+                              <div>
+                                <span className="text-[10px] text-zinc-400 font-medium block">Account Number</span>
+                                <div className="font-mono font-bold text-zinc-900 flex items-center gap-1.5 mt-0.5">
+                                  <span>
+                                    {revealedAccountIds.has(primaryInflowAccount.id)
+                                      ? primaryInflowAccount.accountNumber
+                                      : `•••• •••• ${primaryInflowAccount.accountNumber?.slice(-4) || "0000"}`}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleRevealAccount(primaryInflowAccount.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title={revealedAccountIds.has(primaryInflowAccount.id) ? "Mask" : "Reveal"}
+                                  >
+                                    {revealedAccountIds.has(primaryInflowAccount.id) ? <EyeOff size={11} /> : <Eye size={11} />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(primaryInflowAccount.accountNumber, "acc", primaryInflowAccount.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title="Copy"
+                                  >
+                                    {copiedAccNum === primaryInflowAccount.id ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div>
+                                <span className="text-[10px] text-zinc-400 font-medium block">IFSC Code</span>
+                                <div className="font-mono font-semibold text-zinc-900 flex items-center gap-1.5 mt-0.5">
+                                  <span>{primaryInflowAccount.ifscCode}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(primaryInflowAccount.ifscCode, "ifsc", primaryInflowAccount.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title="Copy IFSC"
+                                  >
+                                    <Copy size={11} strokeWidth={2} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* UPI Row */}
+                            {primaryInflowAccount.upiId && (
+                              <div className="pt-2 border-t border-zinc-200/60 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">UPI VPA:</span>
+                                  <span className="font-mono font-bold text-zinc-900">{primaryInflowAccount.upiId}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(primaryInflowAccount.upiId, "upi", primaryInflowAccount.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title="Copy UPI"
+                                  >
+                                    {copiedUpiId === primaryInflowAccount.id ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="p-6 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 flex flex-col items-center justify-center text-center space-y-3">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 shadow-2xs">
+                            <ArrowDownLeft size={18} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-bold text-zinc-900">No Receiving Account Connected</div>
+                            <p className="text-[11px] text-zinc-500 max-w-[280px] leading-relaxed">
+                              Connect your bank account or UPI ID to accept member membership fees, package dues, and digital payments directly.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openAddAccountModal("inflow")}
+                            style={{ border: "1px solid #18181b", backgroundColor: "#18181b" }}
+                            className="h-8 px-3.5 rounded-lg text-white hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          >
+                            <Plus size={13} strokeWidth={2} />
+                            <span>Connect Fee Account</span>
+                          </button>
                         </div>
-                        <input 
-                          type="text" 
-                          value={gymData.androidAppUrl} 
-                          placeholder="e.g. https://play.google.com/store/apps/details?id=com.yourgym.app"
-                          onChange={(e) => handleInputChange('androidAppUrl', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">GymDeck Subdomain</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Globe size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.subdomain} 
-                          placeholder="e.g. yourgym.gymdeck.app (Free GymDeck web portal link)"
-                          onChange={(e) => handleInputChange('subdomain', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Custom Domain</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Link2 size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="text" 
-                          value={gymData.customDomain} 
-                          placeholder="e.g. members.yourgym.com (Custom branded domain)"
-                          onChange={(e) => handleInputChange('customDomain', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans" 
-                        />
-                      </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="mt-6 p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 bg-white rounded-lg border border-zinc-200 flex items-center justify-center text-zinc-800">
-                        <QrCode size={20} strokeWidth={1.5} />
+                  {/* OUTGOING TRAINER PAYROLL CARD */}
+                  <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-colors">
+                    <div className="space-y-4">
+                      {/* Card Top Pill & Header */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <ArrowUpRight size={18} strokeWidth={2.5} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Trainer Payroll & Payouts</h3>
+                              <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200 text-[10px] font-semibold font-mono">
+                                PAYROLL OUTFLOW
+                              </span>
+                            </div>
+                            <p className="text-xs text-zinc-500 mt-0.5">
+                              Disbursal source for trainer base salaries, PT session commissions & stipends.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-zinc-900">Touchless Member QR Check-in</h4>
-                        <p className="text-[11px] text-zinc-500">Allow members to scan and log entry from mobile application</p>
-                      </div>
+
+                      {primaryOutflowAccount ? (
+                        <>
+                          {/* Account Selector Dropdown (Guided & Easy) */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-xs font-semibold text-zinc-700">Designated Disbursing Account</label>
+                              <span className="text-[10px] text-zinc-400 font-mono">Switch account anytime</span>
+                            </div>
+                            <CustomDropdown
+                              id="outflow-account-selector"
+                              icon={Building2}
+                              value={primaryOutflowAccount.id}
+                              options={(gymData.bankAccounts || []).map(acc => ({
+                                value: acc.id,
+                                label: `${acc.bankName} (•••• ${acc.accountNumber?.slice(-4) || "0000"})`,
+                                description: `${acc.accountType} · ${acc.accountHolderName}`,
+                                badge: acc.isPrimaryOutflow ? "Active Payroll" : undefined
+                              }))}
+                              onChange={(selectedId) => handleSetPrimaryOutflow(selectedId)}
+                            />
+                          </div>
+
+                          {/* Active Outflow Account Preview Card */}
+                          <div className="p-4 rounded-xl bg-zinc-50/80 border border-zinc-200/80 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs text-zinc-900">{primaryOutflowAccount.bankName}</span>
+                                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white text-zinc-600 border border-zinc-200">
+                                    {primaryOutflowAccount.accountType?.replace(" Account", "") || "Current"}
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.2 rounded border border-zinc-200 font-mono">
+                                    IMPS / NEFT Rails
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-zinc-500 font-medium mt-0.5">
+                                  {primaryOutflowAccount.accountHolderName}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Coordinates Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-zinc-200/60 text-xs">
+                              <div>
+                                <span className="text-[10px] text-zinc-400 font-medium block">Account Number</span>
+                                <div className="font-mono font-bold text-zinc-900 flex items-center gap-1.5 mt-0.5">
+                                  <span>
+                                    {revealedAccountIds.has(primaryOutflowAccount.id)
+                                      ? primaryOutflowAccount.accountNumber
+                                      : `•••• •••• ${primaryOutflowAccount.accountNumber?.slice(-4) || "0000"}`}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleRevealAccount(primaryOutflowAccount.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title={revealedAccountIds.has(primaryOutflowAccount.id) ? "Mask" : "Reveal"}
+                                  >
+                                    {revealedAccountIds.has(primaryOutflowAccount.id) ? <EyeOff size={11} /> : <Eye size={11} />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(primaryOutflowAccount.accountNumber, "acc", primaryOutflowAccount.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title="Copy"
+                                  >
+                                    {copiedAccNum === primaryOutflowAccount.id ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div>
+                                <span className="text-[10px] text-zinc-400 font-medium block">IFSC Code</span>
+                                <div className="font-mono font-semibold text-zinc-900 flex items-center gap-1.5 mt-0.5">
+                                  <span>{primaryOutflowAccount.ifscCode}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(primaryOutflowAccount.ifscCode, "ifsc", primaryOutflowAccount.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title="Copy IFSC"
+                                  >
+                                    <Copy size={11} strokeWidth={2} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Branch & Disbursal Row */}
+                            <div className="pt-2 border-t border-zinc-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">Branch:</span>
+                                <span className="text-zinc-800 font-medium truncate">{primaryOutflowAccount.branchName || "Main Commercial Branch"}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] text-zinc-600 font-medium shrink-0">
+                                <Lock size={11} className="text-zinc-500" />
+                                <span>Direct IMPS Batch Disbursal</span>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="p-6 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 flex flex-col items-center justify-center text-center space-y-3">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 shadow-2xs">
+                            <ArrowUpRight size={18} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-bold text-zinc-900">No Payroll Account Connected</div>
+                            <p className="text-[11px] text-zinc-500 max-w-[280px] leading-relaxed">
+                              Designate a commercial account to disburse trainer base salaries, PT commissions, and staff stipends.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openAddAccountModal("outflow")}
+                            style={{ border: "1px solid #18181b", backgroundColor: "#18181b" }}
+                            className="h-8 px-3.5 rounded-lg text-white hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          >
+                            <Plus size={13} strokeWidth={2} />
+                            <span>Connect Payroll Account</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3">
+                  </div>
+                </div>
+
+                {/* 3. CONNECTED BANK ACCOUNTS & UPI DIRECTORY (WELL-ALIGNED CARDS + INVITING ADD PROMPT) */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-zinc-100">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Connected Accounts & UPI Identifiers</h3>
+                        <span className="text-xs font-mono font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200">
+                          {(gymData.bankAccounts || []).length} Registered
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Manage all registered bank accounts and easily assign or re-assign routing roles.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openAddAccountModal("both")}
+                      style={{ border: "1px solid #18181b", backgroundColor: "#18181b" }}
+                      className="h-8 px-3.5 rounded-lg text-white hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-auto"
+                    >
+                      <Plus size={13} strokeWidth={2} />
+                      <span>Add Account / UPI</span>
+                    </button>
+                  </div>
+
+                  {(gymData.bankAccounts || []).length === 0 ? (
+                    <div className="p-10 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 flex flex-col items-center justify-center text-center space-y-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-500 flex items-center justify-center shadow-2xs">
+                        <Landmark size={22} strokeWidth={1.75} />
+                      </div>
+                      <div className="space-y-1 max-w-sm">
+                        <h4 className="text-sm font-bold text-zinc-900">No Financial Accounts Added Yet</h4>
+                        <p className="text-xs text-zinc-500 leading-relaxed">
+                          Add your commercial bank accounts and UPI handles. All accounts will appear here with instant controls to configure fee collection and payroll disbursement.
+                        </p>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setActiveTab("QR Passes")}
-                        className="px-2.5 py-1 text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 bg-white border border-zinc-200 rounded-lg hover:border-zinc-300 transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
+                        onClick={() => openAddAccountModal("both")}
+                        style={{ border: "1px solid #18181b", backgroundColor: "#18181b" }}
+                        className="h-9 px-4 rounded-xl text-white hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
                       >
-                        <span>Open QR Passes</span>
-                        <ChevronRight size={12} strokeWidth={2} />
+                        <Plus size={14} strokeWidth={2} />
+                        <span>Add First Bank Account or UPI</span>
                       </button>
-                      <input 
-                        type="checkbox" 
-                        checked={gymData.qrCheckinEnabled} 
-                        onChange={(e) => handleInputChange('qrCheckinEnabled', e.target.checked)}
-                        className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer" 
-                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {(gymData.bankAccounts || []).map((account) => {
+                      const isRevealed = revealedAccountIds.has(account.id);
+                      const isPrimaryInflow = !!account.isPrimaryInflow;
+                      const isPrimaryOutflow = !!account.isPrimaryOutflow;
+
+                      return (
+                        <div 
+                          key={account.id} 
+                          className="rounded-xl border border-zinc-200 bg-white hover:border-zinc-300 transition-all shadow-2xs overflow-hidden"
+                        >
+                          {/* Card Main Body */}
+                          <div className="p-5 space-y-4">
+                            {/* Top row: Bank, Entity Name, and Role Badges */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-800 font-bold text-xs shrink-0 shadow-2xs">
+                                  <Landmark size={18} strokeWidth={1.5} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-bold text-sm text-zinc-900">{account.bankName}</h4>
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200 font-medium">
+                                      {account.accountType || "Current Account"}
+                                    </span>
+                                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 flex items-center gap-1 font-mono">
+                                      <ShieldCheck size={10} strokeWidth={2} />
+                                      Verified
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-zinc-500 font-medium mt-0.5">
+                                    {account.accountHolderName}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Role Badges */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {isPrimaryInflow && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold font-mono flex items-center gap-1.5 shadow-2xs">
+                                    <ArrowDownLeft size={12} strokeWidth={2.5} />
+                                    Member Inflow
+                                  </span>
+                                )}
+                                {isPrimaryOutflow && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-white text-xs font-semibold font-mono flex items-center gap-1.5 shadow-2xs">
+                                    <ArrowUpRight size={12} strokeWidth={2.5} />
+                                    Trainer Payroll
+                                  </span>
+                                )}
+                                {!isPrimaryInflow && !isPrimaryOutflow && (
+                                  <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-600 border border-zinc-200 text-xs font-medium">
+                                    Standby Account
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Coordinates Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-zinc-100 text-xs">
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider font-mono">Account Number</span>
+                                <div className="font-mono font-bold text-zinc-900 flex items-center gap-2">
+                                  <span>
+                                    {isRevealed
+                                      ? account.accountNumber
+                                      : `•••• •••• •••• ${account.accountNumber?.slice(-4) || "0000"}`}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleRevealAccount(account.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title={isRevealed ? "Mask" : "Reveal"}
+                                  >
+                                    {isRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(account.accountNumber, "acc", account.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title="Copy Account Number"
+                                  >
+                                    {copiedAccNum === account.id ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider font-mono">IFSC & Branch</span>
+                                <div className="font-mono font-semibold text-zinc-900 flex items-center gap-2">
+                                  <span>{account.ifscCode}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(account.ifscCode, "ifsc", account.id)}
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    title="Copy IFSC"
+                                  >
+                                    <Copy size={12} strokeWidth={2} />
+                                  </button>
+                                </div>
+                                <div className="text-[11px] text-zinc-500 truncate" title={account.branchName}>
+                                  {account.branchName || "Main Commercial Branch"}
+                                </div>
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider font-mono">UPI VPA Handle</span>
+                                {account.upiId ? (
+                                  <div className="font-mono font-semibold text-zinc-900 flex items-center gap-2">
+                                    <span className="truncate max-w-[180px]">{account.upiId}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyText(account.upiId, "upi", account.id)}
+                                      className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                      title="Copy UPI"
+                                    >
+                                      {copiedUpiId === account.id ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-zinc-400 text-xs">No UPI identifier linked</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card Bottom Action Bar (Contrasted Bar) */}
+                          <div className="bg-zinc-50/90 px-5 py-3 border-t border-zinc-200/70 flex flex-wrap items-center justify-between gap-2.5">
+                            <div className="flex items-center gap-2">
+                              {!isPrimaryInflow && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetPrimaryInflow(account.id)}
+                                  style={{ border: "1px solid #d1fae5", backgroundColor: "#ecfdf5" }}
+                                  className="h-8 px-3 rounded-lg text-emerald-800 hover:text-emerald-900 hover:bg-emerald-100 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                >
+                                  <ArrowDownLeft size={12} strokeWidth={2.5} />
+                                  <span>Set as Fee Inflow</span>
+                                </button>
+                              )}
+                              {!isPrimaryOutflow && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetPrimaryOutflow(account.id)}
+                                  style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
+                                  className="h-8 px-3 rounded-lg hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                >
+                                  <ArrowUpRight size={12} strokeWidth={2.5} />
+                                  <span>Set as Payroll</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 ml-auto">
+                              {account.upiId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedQrAccount(account);
+                                    setIsUpiQrModalOpen(true);
+                                  }}
+                                  style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
+                                  className="h-8 px-3 rounded-lg hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                  title="View QR Standee"
+                                >
+                                  <QrCode size={13} strokeWidth={2} />
+                                  <span>QR Standee</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => openEditAccountModal(account)}
+                                style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
+                                className="h-8 px-3 rounded-lg hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                title="Edit Account Details"
+                              >
+                                <Edit3 size={12} strokeWidth={2} />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAccountToDelete(account)}
+                                style={{ border: "1px solid #fee2e2", backgroundColor: "#ffffff" }}
+                                className="h-8 px-3 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs text-zinc-600 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                                title="Disconnect Account"
+                              >
+                                <Trash2 size={12} strokeWidth={2} />
+                                <span>Disconnect</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* INVITING DASHED CARD: EASILY ADD ANOTHER ACCOUNT */}
+                    <button
+                      type="button"
+                      onClick={() => openAddAccountModal("both")}
+                      style={{ border: "1px dashed #d4d4d8", backgroundColor: "#fafafa" }}
+                      className="w-full p-5 rounded-xl hover:bg-zinc-100 transition-all flex flex-col sm:flex-row items-center justify-between gap-3 text-left cursor-pointer group shadow-2xs"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div 
+                          style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
+                          className="w-9 h-9 rounded-lg text-zinc-700 group-hover:text-zinc-900 group-hover:border-zinc-400 flex items-center justify-center transition-colors shadow-2xs shrink-0"
+                        >
+                          <Plus size={16} strokeWidth={2} />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-zinc-900 group-hover:text-black">
+                            Link Another Commercial Bank Account or UPI Handle
+                          </div>
+                          <div className="text-[11px] text-zinc-500 mt-0.5">
+                            Add supplementary accounts for multi-branch dues, pro-shop POS, or secondary business entities.
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-semibold text-zinc-800 group-hover:text-zinc-950 flex items-center gap-1.5 shrink-0 font-mono">
+                        <span>Add Account / UPI</span>
+                        <ArrowRight size={13} strokeWidth={2} />
+                      </span>
+                    </button>
+                  </div>
+                  )}
+                </div>
+
+                {/* 4. SECURITY, GOVERNANCE & NON-CUSTODIAL SAFEGUARDS */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-7 shadow-xs space-y-6">
+                  {/* Top Bar: Title, Badges, and Security Overview */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <ShieldCheck size={22} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-bold text-zinc-900 tracking-tight">Security & Non-Custodial Data Policy</h3>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200 font-medium">
+                            RBI & NPCI Compliant
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-1 max-w-2xl leading-relaxed">
+                          GymDeck operates strictly as a zero-custody infrastructure layer. Your business maintains 100% direct bank ownership—funds and credentials are never intercepted, pooled, or stored.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </section>
+
+                  {/* 1. SYMMETRICAL 2-COLUMN SAFEGUARD CARDS (VISUAL STRUCTURED TILES) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {/* COLUMN 1: WHAT GYMDECK DOES (PERMITTED CAPABILITIES) */}
+                    <div className="p-5 rounded-xl bg-zinc-50/70 border border-zinc-200/80 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-zinc-200/70">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                            <CheckCircle2 size={14} strokeWidth={2.5} />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-zinc-900">How Your Bank Data Is Used</h4>
+                            <div className="text-[10px] text-zinc-400 font-medium">Permitted and automated software operations</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          3 Core Operations
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Item 1 */}
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 shadow-2xs flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shrink-0 mt-0.5">
+                            <Wallet size={15} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900">Direct Fee Settlement</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">
+                                Inflow Rail
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed">
+                              Member dues, package renewals, and QR payments route directly to your bank account with zero intermediate escrow holding or settlement delay.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Item 2 */}
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 shadow-2xs flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shrink-0 mt-0.5">
+                            <Users size={15} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900">Trainer Salary Payouts</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">
+                                Outflow Rail
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed">
+                              Generates batch IMPS and NEFT salary instructions executed exclusively following your explicit administrative OTP or biometric authorization.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Item 3 */}
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 shadow-2xs flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shrink-0 mt-0.5">
+                            <FileCheck2 size={15} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900">Automated Reconciliation</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">
+                                GST Compliant
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed">
+                              Correlates incoming bank UTR reference numbers against outstanding member invoices to balance ledgers and produce tax-ready financial books.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* COLUMN 2: WHAT GYMDECK NEVER DOES (STRICT STATUTORY BOUNDARIES) */}
+                    <div className="p-5 rounded-xl bg-zinc-50/70 border border-zinc-200/80 space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-zinc-200/70">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-lg bg-zinc-200 text-zinc-800 flex items-center justify-center shrink-0">
+                            <Ban size={14} strokeWidth={2.5} />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-zinc-900">What GymDeck Strictly Never Does</h4>
+                            <div className="text-[10px] text-zinc-400 font-medium">Enforced non-custodial boundaries & safeguards</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-zinc-200 text-zinc-800 border border-zinc-300">
+                          3 Absolute Safeguards
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Item 1 */}
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 shadow-2xs flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-800 border border-zinc-200 flex items-center justify-center shrink-0 mt-0.5">
+                            <ShieldAlert size={15} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900">Zero Capital Custody</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">
+                                Non-Custodial
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed">
+                              We never hold, pool, or touch your money. Funds move directly bank-to-bank through RBI-regulated commercial rails without proprietary wallets.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Item 2 */}
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 shadow-2xs flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-800 border border-zinc-200 flex items-center justify-center shrink-0 mt-0.5">
+                            <LockKeyhole size={15} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900">Zero Auto-Debit Authority</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">
+                                No Standing Mandates
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed">
+                              No standing debit mandates on your account. Funds can never be transferred out without your explicit biometric or OTP confirmation.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Item 3 */}
+                        <div className="p-3.5 rounded-lg bg-white border border-zinc-200/80 shadow-2xs flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-800 border border-zinc-200 flex items-center justify-center shrink-0 mt-0.5">
+                            <KeyRound size={15} strokeWidth={2} />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900">Zero Credential Storage</span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200 font-semibold">
+                                Zero Secret Retention
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed">
+                              We strictly never request or store corporate Net Banking passwords, debit card PINs, CVVs, or UPI MPIN credentials.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. TECHNICAL SECURITY & REGULATORY CREDENTIALS GRID */}
+                  <div className="pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                      {/* Badge 1 */}
+                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Lock size={15} strokeWidth={2} />
+                        </div>
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate">256-Bit Hardware AES</div>
+                          <div className="text-[10px] text-zinc-400 font-mono">FIPS 140-2 Level 3 HSM</div>
+                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
+                            Bank account coordinates encrypted at rest using dedicated hardware security modules.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Badge 2 */}
+                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Network size={15} strokeWidth={2} />
+                        </div>
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate">TLS 1.3 Strict Tunnel</div>
+                          <div className="text-[10px] text-zinc-400 font-mono">Perfect Forward Secrecy</div>
+                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
+                            End-to-end cryptographic transit tunneling protecting every API and banking handshake.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Badge 3 */}
+                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Landmark size={15} strokeWidth={2} />
+                        </div>
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate">RBI PA/PG Framework</div>
+                          <div className="text-[10px] text-zinc-400 font-mono">Circular RBI/2020-21/79</div>
+                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
+                            Operates under strict non-custodial software guidelines for direct merchant settlement.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Badge 4 */}
+                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
+                          <CheckCircle size={15} strokeWidth={2} />
+                        </div>
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate">NPCI UPI 2.0 Rails</div>
+                          <div className="text-[10px] text-zinc-400 font-mono">Direct Merchant Node</div>
+                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
+                            Native interoperable QR architecture depositing straight into your commercial account.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             )}
 
@@ -2633,6 +3857,446 @@ const GymProfile = () => {
                   <span className="download-tooltip">Download Pass</span>
                 </div>
 
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* 7. ADD / EDIT BANK ACCOUNT & UPI MODAL */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isAccountModalOpen && (
+            <motion.div 
+              key="account-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAccountModalOpen(false)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+              style={{ zIndex: 100000 }}
+            >
+              <motion.div 
+                key="account-modal-card"
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[90vh] my-auto"
+              >
+                {/* Header */}
+                <div className="p-6 border-b border-zinc-100 flex items-start justify-between bg-zinc-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-2xs">
+                      <Landmark size={18} strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
+                        {editingAccountId ? "Edit Financial Account" : "Add Settlement & Disbursement Account"}
+                      </h3>
+                      <p className="text-xs text-zinc-500 font-normal">
+                        Configure bank details and UPI for member fees or trainer salaries.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountModalOpen(false)}
+                    className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer border-0 bg-transparent"
+                  >
+                    <X size={16} strokeWidth={2} />
+                  </button>
+                </div>
+
+                {/* Form Body */}
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                  {/* Account Purpose */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">Account Designation / Monetary Purpose</label>
+                    <CustomDropdown
+                      id="account-role-dropdown"
+                      icon={ArrowUpDown}
+                      value={accountFormData.role}
+                      options={ROLE_OPTIONS}
+                      onChange={(val) => setAccountFormData(prev => ({ ...prev, role: val }))}
+                    />
+                  </div>
+
+                  {/* Beneficiary Name */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">Account Holder / Beneficiary Legal Name</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                        <Building2 size={15} strokeWidth={1.5} />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={accountFormData.accountHolderName} 
+                        placeholder="e.g. Iron Fortress Fitness Pvt Ltd"
+                        onChange={(e) => setAccountFormData(prev => ({ ...prev, accountHolderName: e.target.value }))}
+                        className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal ${
+                          accountFormErrors.accountHolderName ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                        }`}
+                      />
+                    </div>
+                    {accountFormErrors.accountHolderName && (
+                      <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.accountHolderName}</span>
+                    )}
+                  </div>
+
+                  {/* Bank Name & Account Type */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-700">Bank Name</label>
+                      <CustomDropdown
+                        id="account-bank-dropdown"
+                        icon={Landmark}
+                        searchable={true}
+                        value={accountFormData.bankName}
+                        options={BANK_OPTIONS}
+                        onChange={(val) => setAccountFormData(prev => ({ ...prev, bankName: val }))}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-700">Account Type</label>
+                      <CustomDropdown
+                        id="account-type-dropdown"
+                        icon={CreditCard}
+                        value={accountFormData.accountType}
+                        options={ACCOUNT_TYPE_OPTIONS}
+                        onChange={(val) => setAccountFormData(prev => ({ ...prev, accountType: val }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Account Number & Confirm */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-700">Account Number</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                          <CreditCard size={15} strokeWidth={1.5} />
+                        </div>
+                        <input 
+                          type="text" 
+                          value={accountFormData.accountNumber} 
+                          placeholder="e.g. 50200084920193"
+                          onChange={(e) => setAccountFormData(prev => ({ ...prev, accountNumber: e.target.value.replace(/\s+/g, '') }))}
+                          className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
+                            accountFormErrors.accountNumber ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                          }`}
+                        />
+                      </div>
+                      {accountFormErrors.accountNumber && (
+                        <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.accountNumber}</span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-700">Re-enter Account Number</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                          <CreditCard size={15} strokeWidth={1.5} />
+                        </div>
+                        <input 
+                          type="text" 
+                          value={accountFormData.confirmAccountNumber} 
+                          placeholder="Re-type account number"
+                          onChange={(e) => setAccountFormData(prev => ({ ...prev, confirmAccountNumber: e.target.value.replace(/\s+/g, '') }))}
+                          className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
+                            accountFormErrors.confirmAccountNumber ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                          }`}
+                        />
+                      </div>
+                      {accountFormErrors.confirmAccountNumber && (
+                        <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.confirmAccountNumber}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* IFSC Code & Branch */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-zinc-700">IFSC Code</label>
+                        <span className="text-[10px] text-zinc-400 font-mono">11 Characters</span>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                          <Landmark size={15} strokeWidth={1.5} />
+                        </div>
+                        <input 
+                          type="text" 
+                          maxLength={11}
+                          value={accountFormData.ifscCode} 
+                          placeholder="e.g. HDFC0000240"
+                          onChange={(e) => setAccountFormData(prev => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))}
+                          className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans uppercase ${
+                            accountFormErrors.ifscCode ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                          }`}
+                        />
+                      </div>
+                      {accountFormErrors.ifscCode && (
+                        <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.ifscCode}</span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-700">Branch Name & City</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                          <MapPin size={15} strokeWidth={1.5} />
+                        </div>
+                        <input 
+                          type="text" 
+                          value={accountFormData.branchName} 
+                          placeholder="e.g. Indiranagar, Bengaluru"
+                          onChange={(e) => setAccountFormData(prev => ({ ...prev, branchName: e.target.value }))}
+                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* UPI VPA ID */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">Primary UPI ID / VPA Handle</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                        <QrCode size={15} strokeWidth={1.5} />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={accountFormData.upiId} 
+                        placeholder="e.g. gymname.fees@okhdfcbank"
+                        onChange={(e) => setAccountFormData(prev => ({ ...prev, upiId: e.target.value.toLowerCase().trim() }))}
+                        className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
+                          accountFormErrors.upiId ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                        }`}
+                      />
+                    </div>
+                    {accountFormErrors.upiId && (
+                      <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.upiId}</span>
+                    )}
+                    <span className="text-[10px] text-zinc-400 block">
+                      Enables instantaneous member UPI payments and front-desk countertop QR standee generation.
+                    </span>
+                  </div>
+
+                  {/* Primary Routing Checkboxes */}
+                  <div className="pt-2 border-t border-zinc-100 space-y-2.5">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={accountFormData.isPrimaryInflow || accountFormData.role === "inflow" || accountFormData.role === "both"}
+                        onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryInflow: e.target.checked }))}
+                        className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-xs font-semibold text-zinc-900">Set as Primary Member Fee Inflow Destination</div>
+                        <div className="text-[10px] text-zinc-500">All member subscription renewals and packages will settle here.</div>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={accountFormData.isPrimaryOutflow || accountFormData.role === "outflow" || accountFormData.role === "both"}
+                        onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryOutflow: e.target.checked }))}
+                        className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-xs font-semibold text-zinc-900">Set as Primary Trainer Payroll Outflow Source</div>
+                        <div className="text-[10px] text-zinc-500">Account used for automated trainer salary batch disbursements.</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountModalOpen(false)}
+                    className="h-9 px-4 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveAccountForm}
+                    className="h-9 px-4 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm border border-zinc-900"
+                  >
+                    <Check size={14} strokeWidth={2} />
+                    <span>{editingAccountId ? "Save Account Changes" : "Verify & Connect Account"}</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* 8. DYNAMIC NPCI COUNTERTOP UPI QR MODAL */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isUpiQrModalOpen && selectedQrAccount && (
+            <motion.div 
+              key="upi-qr-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsUpiQrModalOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden"
+              style={{ zIndex: 100000 }}
+            >
+              <motion.div 
+                key="upi-qr-card"
+                initial={{ opacity: 0, scale: 0.92, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 15 }}
+                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-sm w-full p-6 text-center relative overflow-hidden select-none"
+              >
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsUpiQrModalOpen(false)}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center transition-colors cursor-pointer border-0"
+                >
+                  <X size={15} strokeWidth={2} />
+                </button>
+
+                {/* Header Badge */}
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold mb-3">
+                  <ShieldCheck size={12} strokeWidth={2} />
+                  <span>Verified NPCI Merchant Node</span>
+                </div>
+
+                <h3 className="text-base font-bold text-zinc-900 tracking-tight">
+                  {gymData.name || selectedQrAccount.accountHolderName || "Official Facility Account"}
+                </h3>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Scan with any UPI app to pay membership fees & subscriptions
+                </p>
+
+                {/* QR Code Graphic */}
+                <div className="my-5 flex justify-center">
+                  <UpiQrCodeSvg size={210} />
+                </div>
+
+                {/* VPA Display Box */}
+                <div className="p-2.5 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between mb-4">
+                  <div className="text-left min-w-0 pr-2">
+                    <span className="text-[9px] text-zinc-400 block font-medium uppercase">Direct VPA</span>
+                    <span className="text-xs font-mono font-bold text-zinc-900 truncate block">
+                      {selectedQrAccount.upiId || ""}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText(selectedQrAccount.upiId, "upi", "modal")}
+                    className="h-7 px-2 rounded-lg bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                  >
+                    {copiedUpiId === "modal" ? (
+                      <Check size={12} strokeWidth={2.5} className="text-emerald-600" />
+                    ) : (
+                      <Copy size={12} strokeWidth={2} />
+                    )}
+                    <span>{copiedUpiId === "modal" ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+
+                {/* Supported Payment Rails */}
+                <div className="text-[10px] text-zinc-400 font-medium mb-4 flex items-center justify-center gap-2">
+                  <span>Google Pay</span>
+                  <span>•</span>
+                  <span>PhonePe</span>
+                  <span>•</span>
+                  <span>Paytm</span>
+                  <span>•</span>
+                  <span>BHIM</span>
+                  <span>•</span>
+                  <span>Cred</span>
+                </div>
+
+                {/* Download / Close Buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      showToast("Countertop Standee PDF generated.");
+                      setIsUpiQrModalOpen(false);
+                    }}
+                    className="flex-1 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-zinc-900 shadow-sm"
+                  >
+                    <Download size={13} strokeWidth={2} />
+                    <span>Download Standee</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsUpiQrModalOpen(false)}
+                    className="h-9 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold transition-colors cursor-pointer border border-zinc-200"
+                  >
+                    Done
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* 9. DISCONNECT CONFIRMATION MODAL */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {accountToDelete && (
+            <motion.div 
+              key="delete-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAccountToDelete(null)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+              style={{ zIndex: 100000 }}
+            >
+              <motion.div 
+                key="delete-modal-card"
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-sm w-full p-6 text-center select-none"
+              >
+                <div className="w-11 h-11 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-3 border border-red-200/60">
+                  <AlertTriangle size={20} strokeWidth={2} />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Disconnect Financial Account?</h3>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                  Are you sure you want to disconnect <span className="font-semibold text-zinc-800">{accountToDelete.bankName}</span> (•••• {accountToDelete.accountNumber?.slice(-4) || "0000"})? Active member fee settlements and trainer payroll will be re-routed.
+                </p>
+                <div className="flex items-center gap-2 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setAccountToDelete(null)}
+                    className="flex-1 h-9 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAccount(accountToDelete.id)}
+                    className="flex-1 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors cursor-pointer shadow-sm border border-red-600"
+                  >
+                    Disconnect
+                  </button>
+                </div>
               </motion.div>
             </motion.div>
           )}
