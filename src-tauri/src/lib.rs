@@ -42,7 +42,8 @@ use commands::sync_commands::{
     apply_pull_batch_command
 };
 use commands::cloud_enroll_commands::{
-    cloud_enroll_command, get_cloud_enrollment_status_command, cloud_sync_now_command, cloud_unenroll_command
+    cloud_enroll_command, get_cloud_enrollment_status_command, cloud_sync_now_command, cloud_unenroll_command,
+    cloud_communications_request_command
 };
 use commands::backup_commands::{
     create_backup_command, list_backups_command, verify_backup_command, verify_restore_command
@@ -221,7 +222,8 @@ pub fn run() {
         cloud_enroll_command,
         get_cloud_enrollment_status_command,
         cloud_sync_now_command,
-        cloud_unenroll_command
+        cloud_unenroll_command,
+        cloud_communications_request_command
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

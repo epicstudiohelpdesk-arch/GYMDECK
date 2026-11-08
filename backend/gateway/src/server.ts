@@ -7,6 +7,7 @@ import { createApp } from './app';
 import { config } from '../../shared/config';
 import { logger } from '../../shared/logging';
 import { closeDatabasePool } from '../../shared/database';
+import { communicationRetentionWorker } from '../../services/communications/retentionWorker';
 
 let server: Server | null = null;
 
@@ -20,6 +21,9 @@ export function startServer(): Server {
       nodeVersion: process.version,
       pid: process.pid,
     });
+    if (config.NODE_ENV !== 'test') {
+      communicationRetentionWorker.start();
+    }
   });
 
   return server;

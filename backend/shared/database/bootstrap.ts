@@ -598,6 +598,77 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_member_memberships_gym_status_end ON member_memberships(gym_id, status, end_date);
     CREATE INDEX IF NOT EXISTS idx_pt_sessions_gym_status_date ON pt_sessions(gym_id, status, session_date);
     CREATE INDEX IF NOT EXISTS idx_trainer_earnings_gym_date ON trainer_earnings(gym_id, created_at);
+
+    -- Mode A: Owner communication settings, consent flags & assisted broadcast audit
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS whatsapp_opt_in BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS email_opt_in BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS marketing_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE gym_members ADD COLUMN IF NOT EXISTS consent_updated_at TIMESTAMPTZ;
+
+    CREATE TABLE IF NOT EXISTS gym_communication_settings (
+      gym_id UUID PRIMARY KEY REFERENCES gyms(id) ON DELETE CASCADE,
+      primary_phone VARCHAR(32),
+      whatsapp_number VARCHAR(32),
+      official_email VARCHAR(255),
+      mobile_for_members BOOLEAN NOT NULL DEFAULT TRUE,
+      mobile_sms_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+      mobile_calls_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+      mobile_promos_allowed BOOLEAN NOT NULL DEFAULT FALSE,
+      whatsapp_for_members BOOLEAN NOT NULL DEFAULT TRUE,
+      whatsapp_receipts_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+      whatsapp_reminders_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+      whatsapp_support_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+      whatsapp_promos_allowed BOOLEAN NOT NULL DEFAULT FALSE,
+      email_for_members BOOLEAN NOT NULL DEFAULT TRUE,
+      email_invoices_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+      email_alerts_allowed BOOLEAN NOT NULL DEFAULT TRUE,
+      email_newsletter_allowed BOOLEAN NOT NULL DEFAULT FALSE,
+      quiet_hours_start VARCHAR(5) NOT NULL DEFAULT '22:00',
+      quiet_hours_end VARCHAR(5) NOT NULL DEFAULT '06:00',
+      updated_by UUID,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    -- __COMM_BROADCASTS__
+    CREATE TABLE IF NOT EXISTS communication_broadcasts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      actor_user_id UUID,
+      channel VARCHAR(16) NOT NULL,
+      message_kind VARCHAR(24) NOT NULL,
+      subject VARCHAR(200),
+      body_sha256 VARCHAR(64) NOT NULL,
+      body_length INTEGER NOT NULL,
+      recipient_count INTEGER NOT NULL DEFAULT 0,
+      queued_count INTEGER NOT NULL DEFAULT 0,
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      skipped_count INTEGER NOT NULL DEFAULT 0,
+      status VARCHAR(24) NOT NULL DEFAULT 'QUEUED',
+      expires_at TIMESTAMPTZ NOT NULL,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    -- __COMM_RECIPIENTS__
+    CREATE TABLE IF NOT EXISTS communication_broadcast_recipients (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      broadcast_id UUID NOT NULL REFERENCES communication_broadcasts(id) ON DELETE CASCADE,
+      gym_id UUID NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL,
+      channel VARCHAR(16) NOT NULL,
+      contact_masked VARCHAR(64),
+      status VARCHAR(16) NOT NULL DEFAULT 'QUEUED',
+      skip_reason VARCHAR(64),
+      sent_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_comm_broadcasts_gym_created ON communication_broadcasts(gym_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_comm_broadcasts_expires ON communication_broadcasts(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_comm_recipients_broadcast ON communication_broadcast_recipients(broadcast_id, status);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_comm_recipients_unique ON communication_broadcast_recipients(broadcast_id, member_id, channel);
   `;
 
   await pool.query(ddl);

@@ -286,3 +286,70 @@ pub async fn cloud_unenroll_command(
     state.cloud_session.revoke_cloud_session().await?;
     Ok(true)
 }
+
+#[derive(Deserialize)]
+pub struct CloudCommunicationsRequest {
+    pub method: String,
+    pub path: String,
+    pub body: Option<serde_json::Value>,
+}
+
+#[derive(Serialize)]
+pub struct CloudCommunicationsResponse {
+    pub status: u16,
+    pub body: serde_json::Value,
+}
+
+/// Authenticated, narrowly-scoped proxy for Mode A communications endpoints.
+/// The access token never leaves the Rust process; only owner communication
+/// paths can be reached.
+#[tauri::command]
+pub async fn cloud_communications_request_command(
+    state: State<'_, AppState>,
+    request: CloudCommunicationsRequest,
+) -> Result<CloudCommunicationsResponse, AppError> {
+    if state.cloud_session.get_metadata().await.is_none() {
+        return Err(AppError::Unauthorized);
+    }
+    let method = request.method.to_uppercase();
+    if !["GET", "POST", "PUT", "PATCH"].contains(&method.as_str()) {
+        return Err(AppError::Unauthorized);
+    }
+    if !request.path.starts_with("/v1/owner/communications") {
+        return Err(AppError::Unauthorized);
+    }
+    if request.path.len() > 512 || request.path.contains("..") || request.path.contains("//") {
+        return Err(AppError::Unauthorized);
+    }
+
+    let cloud_url = get_effective_cloud_url(None);
+    let client = CloudAuthClient::build_http_client();
+    let token = match state.cloud_session.get_access_token().await {
+        Some(t) if !t.is_empty() => t,
+        _ => state.cloud_session.refresh_access_token_single_flight(&client, &cloud_url).await?,
+    };
+    let url = format!("{}{}", cloud_url.trim_end_matches('/'), request.path);
+    let builder = match method.as_str() {
+        "GET" => client.get(&url),
+        "POST" => client.post(&url),
+        "PUT" => client.put(&url),
+        _ => client.patch(&url),
+    };
+
+    let builder = builder
+        .bearer_auth(token)
+        .header("x-request-id", uuid::Uuid::new_v4().to_string());
+    let builder = if let Some(body) = request.body {
+        builder.json(&body)
+    } else {
+        builder
+    };
+    let response = builder.send().await.map_err(|e| {
+        AppError::Network(format!("Cloud communications request failed: {}", e))
+    })?;
+    let status = response.status().as_u16();
+    let body = response.json::<serde_json::Value>().await.unwrap_or_else(|_| {
+        serde_json::json!({ "success": false, "error": { "message": "Invalid cloud response" } })
+    });
+    Ok(CloudCommunicationsResponse { status, body })
+}

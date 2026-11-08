@@ -11,6 +11,7 @@ export * from './workouts';
 export * from './trainers';
 export * from './documents';
 export * from './notifications';
+export * from './communications';
 export * from './progress';
 export * from './audit';
 export * from './sync';

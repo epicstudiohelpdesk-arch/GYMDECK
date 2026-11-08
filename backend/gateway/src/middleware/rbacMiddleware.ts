@@ -20,6 +20,8 @@ export const ALL_PERMISSIONS = [
   'reports.read',
   'settings.read',
   'settings.write',
+  'communications.read',
+  'communications.send',
   'staff.read',
   'staff.write',
   'backup.read',

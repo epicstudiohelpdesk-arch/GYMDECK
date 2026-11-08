@@ -2,7 +2,7 @@
  * GymDeck Cloud Database Schema - Gym Members Identity
  */
 
-import { pgTable, uuid, varchar, text, timestamp, date, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, date, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { gyms } from './gyms';
 
 export const gymMembers = pgTable(
@@ -22,6 +22,12 @@ export const gymMembers = pgTable(
     address: text('address'),
     profilePhotoUrl: text('profile_photo_url'),
     membershipStatus: varchar('membership_status', { length: 32 }).notNull().default('ACTIVE'), // ACTIVE, EXPIRED, FROZEN, INACTIVE
+    // Explicit communication consent (DPDP Act 2023). Transactional messages are
+    // service-related; promotional messages require marketingOptIn = true.
+    whatsappOptIn: boolean('whatsapp_opt_in').notNull().default(true),
+    emailOptIn: boolean('email_opt_in').notNull().default(true),
+    marketingOptIn: boolean('marketing_opt_in').notNull().default(false),
+    consentUpdatedAt: timestamp('consent_updated_at', { withTimezone: true }),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     notes: text('notes'),

@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BrandFooter from "./BrandFooter.jsx";
+import CommunicationBroadcast from "./CommunicationBroadcast.jsx";
+import { communicationsApi } from "./communicationsApi.js";
 import { 
   Building2, 
   Upload, 
@@ -351,6 +353,10 @@ const GymProfile = () => {
     emailAlertsAllowed: true,
     emailNewsletterAllowed: false,
 
+    // Operational quiet hours (used by assisted broadcast policy)
+    quietHoursStart: "22:00",
+    quietHoursEnd: "06:00",
+
     // Facility Location & Coordinates
     website: "",
     address: "",
@@ -431,6 +437,38 @@ const GymProfile = () => {
     autoBackups: true
   });
 
+  // Hydrate persisted communication settings from the cloud tenant record.
+  useEffect(() => {
+    let cancelled = false;
+    communicationsApi.getSettings()
+      .then((res) => {
+        if (cancelled || !res?.data) return;
+        const s = res.data;
+        setGymData((prev) => ({
+          ...prev,
+          primaryPhone: s.primaryPhone || "",
+          whatsapp: s.whatsappNumber || "",
+          email: s.officialEmail || "",
+          mobileForMembers: s.mobileForMembers,
+          mobileSmsAllowed: s.mobileSmsAllowed,
+          mobileCallsAllowed: s.mobileCallsAllowed,
+          mobilePromosAllowed: s.mobilePromosAllowed,
+          whatsappForMembers: s.whatsappForMembers,
+          whatsappReceiptsAllowed: s.whatsappReceiptsAllowed,
+          whatsappRemindersAllowed: s.whatsappRemindersAllowed,
+          whatsappSupportAllowed: s.whatsappSupportAllowed,
+          whatsappPromosAllowed: s.whatsappPromosAllowed,
+          emailForMembers: s.emailForMembers,
+          emailInvoicesAllowed: s.emailInvoicesAllowed,
+          emailAlertsAllowed: s.emailAlertsAllowed,
+          emailNewsletterAllowed: s.emailNewsletterAllowed,
+          quietHoursStart: s.quietHoursStart || "22:00",
+          quietHoursEnd: s.quietHoursEnd || "06:00",
+        }));
+      })
+      .catch(() => { /* Offline / unenrolled: keep local defaults. */ });
+    return () => { cancelled = true; };
+  }, []);
 
   // Focused List of Tabs in the Horizontal Navigation Row
   const tabs = useMemo(() => [
@@ -526,13 +564,44 @@ const GymProfile = () => {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      const res = await communicationsApi.saveSettings({
+        primaryPhone: gymData.primaryPhone,
+        whatsappNumber: gymData.whatsapp,
+        officialEmail: gymData.email,
+        mobileForMembers: gymData.mobileForMembers,
+        mobileSmsAllowed: gymData.mobileSmsAllowed,
+        mobileCallsAllowed: gymData.mobileCallsAllowed,
+        mobilePromosAllowed: gymData.mobilePromosAllowed,
+        whatsappForMembers: gymData.whatsappForMembers,
+        whatsappReceiptsAllowed: gymData.whatsappReceiptsAllowed,
+        whatsappRemindersAllowed: gymData.whatsappRemindersAllowed,
+        whatsappSupportAllowed: gymData.whatsappSupportAllowed,
+        whatsappPromosAllowed: gymData.whatsappPromosAllowed,
+        emailForMembers: gymData.emailForMembers,
+        emailInvoicesAllowed: gymData.emailInvoicesAllowed,
+        emailAlertsAllowed: gymData.emailAlertsAllowed,
+        emailNewsletterAllowed: gymData.emailNewsletterAllowed,
+        quietHoursStart: gymData.quietHoursStart,
+        quietHoursEnd: gymData.quietHoursEnd,
+      });
+      if (res?.data) {
+        setGymData((prev) => ({
+          ...prev,
+          primaryPhone: res.data.primaryPhone || "",
+          whatsapp: res.data.whatsappNumber || "",
+          email: res.data.officialEmail || "",
+        }));
+      }
       setHasChanges(false);
-      showToast("Settings saved successfully.");
-    }, 800);
+      showToast("Communication settings saved to the cloud.");
+    } catch (err) {
+      showToast(err?.message || "Could not save settings. Cloud session required.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Official Certificate Export Generator
@@ -1608,6 +1677,9 @@ const GymProfile = () => {
                     </div>
                   </div>
                 </section>
+
+                {/* ASSISTED BROADCAST (MODE A) */}
+                <CommunicationBroadcast showToast={showToast} />
 
                 {/* Member Privacy & Governance Card */}
                 <div className="p-5 rounded-2xl border border-zinc-200 bg-zinc-50/50 flex items-start gap-3.5">
