@@ -399,6 +399,8 @@ const GymProfile = () => {
     subdomain: "",
     customDomain: "",
     qrCheckinEnabled: true,
+    qrTurnstileRelay: true,
+    qrAudibleChime: true,
 
     // Social Media
     socials: {
@@ -475,6 +477,7 @@ const GymProfile = () => {
     { id: "General", label: "General", icon: Building2 },
     { id: "Contact & Communication", label: "Contact & Communication", icon: MessageSquare },
     { id: "Branches", label: "Branches", icon: MapPin },
+    { id: "QR Passes", label: "QR Passes", icon: QrCode },
     { id: "Operational Settings", label: "Operational Settings", icon: Clock },
     { id: "Digital & Apps", label: "Digital & Apps", icon: Smartphone },
     { id: "Social Media", label: "Social Media", icon: Share2 }
@@ -1198,11 +1201,9 @@ const GymProfile = () => {
         </div>
       </div>
 
-      {/* 3. MAIN WORKSPACE (8-column workspace + 4-column live preview) */}
-      <div className="max-w-[1600px] mx-auto px-8 grid grid-cols-12 gap-8 items-start">
-        
-        {/* 3A. MAIN CONFIGURATION WORKSPACE (Spans 8 columns on large screens) */}
-        <main className="col-span-12 lg:col-span-7 xl:col-span-8 space-y-8">
+      {/* 3. MAIN WORKSPACE */}
+      <div className="max-w-[1600px] mx-auto px-8">
+        <main className="w-full space-y-8">
           
           <AnimatePresence mode="wait">
             {/* ──────── TAB 1: GENERAL ──────── */}
@@ -1786,7 +1787,347 @@ const GymProfile = () => {
               </motion.div>
             )}
 
-            {/* ──────── TAB 5: OPERATIONAL SETTINGS ──────── */}
+            {/* ──────── TAB 4: QR PASSES & RECEPTION ──────── */}
+            {activeTab === "QR Passes" && (
+              <motion.div 
+                key="tab-qr-passes"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-8"
+              >
+                {/* 1. Header Overview & Live Portal Strip */}
+                <section className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-7 shadow-sm">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shadow-md shrink-0">
+                        <QrCode size={24} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+                          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Touchless Reception Pass & Portal QR</h2>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Live Check-in Active
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                            <ShieldCheck size={11} className="text-zinc-500" />
+                            Encrypted 256-Bit AES
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 max-w-2xl leading-relaxed">
+                          Deploy high-resolution QR entrance cards for member self-check-in, turnstile scanners, and front-desk kiosk hardware. Members scan with smartphone cameras or handheld laser units.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quick Portal URL Box */}
+                    <div className="flex items-center gap-2 p-2 bg-zinc-50 rounded-xl border border-zinc-200 lg:max-w-md w-full">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-200/70 text-zinc-600 flex items-center justify-center shrink-0">
+                        <Globe size={15} strokeWidth={1.75} />
+                      </div>
+                      <div className="min-w-0 flex-1 px-1">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Public Portal URL</div>
+                        <div className="text-xs font-mono font-semibold text-zinc-800 truncate" title={`https://${gymData.subdomain || "yourgym.gymdeck.app"}`}>
+                          https://{gymData.subdomain || "yourgym.gymdeck.app"}
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const url = gymData.subdomain ? `https://${gymData.subdomain}` : "https://yourgym.gymdeck.app";
+                          navigator.clipboard?.writeText(url);
+                          showToast("Public profile link copied to clipboard.");
+                        }}
+                        className="h-8 px-3 rounded-lg bg-white border border-zinc-200 hover:border-zinc-300 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer hover:bg-zinc-100/60 active:scale-95"
+                      >
+                        <Copy size={12} strokeWidth={1.75} />
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 2. Main 2-Column Responsive Workspace */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  
+                  {/* Left Column (5 Cols): The Star Touchless Reception Pass */}
+                  <div className="lg:col-span-5 space-y-6">
+                    <section 
+                      className="text-white rounded-3xl p-6 sm:p-8 border relative overflow-hidden shadow-2xl flex flex-col items-center select-none"
+                      style={{
+                        background: 'radial-gradient(circle at 50% 28%, #163a65 0%, #0d2544 38%, #08172c 70%, #030814 100%)',
+                        borderColor: 'rgba(255, 255, 255, 0.12)',
+                        boxShadow: '0 25px 60px -15px rgba(3, 8, 20, 0.7), 0 0 40px -10px rgba(56, 189, 248, 0.25)'
+                      }}
+                    >
+                      {/* Subtle Ambient Radial Lighting */}
+                      <div 
+                        className="absolute top-0 right-0 w-72 h-72 rounded-full blur-[90px] -mr-20 -mt-20 pointer-events-none" 
+                        style={{ background: 'rgba(56, 189, 248, 0.18)' }}
+                      />
+                      <div 
+                        className="absolute bottom-0 left-0 w-64 h-64 rounded-full blur-[80px] -ml-20 -mb-20 pointer-events-none" 
+                        style={{ background: 'rgba(99, 102, 241, 0.12)' }}
+                      />
+
+                      {/* Header Badge & Brand Meta */}
+                      <div className="relative z-10 w-full flex items-center justify-between mb-6">
+                        <div 
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
+                          style={{
+                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                            background: 'rgba(14, 165, 233, 0.12)',
+                            color: '#7dd3fc'
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                          Public Profile QR
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <Shield size={12} className="text-cyan-400" />
+                          <span>Encrypted</span>
+                        </div>
+                      </div>
+
+                      {/* Centerpiece High-Definition QR Code Card */}
+                      <div 
+                        onClick={() => setIsQrModalOpen(true)}
+                        className="relative z-10 p-5 bg-white rounded-2xl shadow-2xl border-2 border-white/95 group/qrpass cursor-pointer transition-all duration-300 hover:scale-[1.03] active:scale-95"
+                        title="Click to expand luxury full-screen pass"
+                      >
+                        <QrCode size={190} strokeWidth={1.8} className="text-zinc-950 group-hover/qrpass:scale-[0.98] transition-transform" />
+                        
+                        {/* Hover Overlay with Eye */}
+                        <div className="absolute inset-0 bg-blue-600/10 rounded-2xl opacity-0 group-hover/qrpass:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="px-3 py-1.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-lg">
+                            <Eye size={13} strokeWidth={2.5} />
+                            <span>Preview Pass</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Subdomain Label */}
+                      <div className="relative z-10 text-center mt-3 mb-1">
+                        <span className="text-xs font-mono font-medium text-cyan-300 tracking-tight">
+                          {gymData.subdomain ? gymData.subdomain : "yourgym.gymdeck.app"}
+                        </span>
+                      </div>
+
+                      {/* Card Title & Operational Descriptor */}
+                      <div className="relative z-10 text-center mt-2 max-w-xs">
+                        <h3 className="text-base font-bold text-white tracking-tight">
+                          Touchless Reception Pass
+                        </h3>
+                        <p className="text-xs text-slate-400 font-normal mt-1 leading-relaxed">
+                          Front-desk kiosk & member web check-in. Instant scanning for entry validation and profile lookup.
+                        </p>
+                      </div>
+
+                      {/* Primary Actions Row */}
+                      <div className="relative z-10 w-full grid grid-cols-2 gap-2.5 mt-6">
+                        <button 
+                          type="button"
+                          onClick={handleDownloadPass}
+                          className="h-10 px-3 text-white text-xs font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-blue-600/25 cursor-pointer"
+                          style={{ 
+                            background: '#1b64f2',
+                            color: '#ffffff',
+                            border: 'none'
+                          }}
+                        >
+                          <Download size={14} strokeWidth={2.2} />
+                          <span>Download QR</span>
+                        </button>
+
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const url = gymData.subdomain ? `https://${gymData.subdomain}` : "https://yourgym.gymdeck.app";
+                            navigator.clipboard?.writeText(url);
+                            showToast("Public profile link copied to clipboard.");
+                          }}
+                          className="h-10 px-3 text-slate-200 hover:text-white text-xs font-semibold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer border border-white/15 hover:border-white/30 bg-white/[0.06] hover:bg-white/[0.12]"
+                        >
+                          <Copy size={13} strokeWidth={2} />
+                          <span>Copy URL</span>
+                        </button>
+                      </div>
+
+                      {/* Secondary Luxury Modal Trigger */}
+                      <button 
+                        type="button"
+                        onClick={() => setIsQrModalOpen(true)}
+                        className="relative z-10 w-full mt-3 h-8 text-[11px] font-medium text-slate-400 hover:text-cyan-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Eye size={13} strokeWidth={1.75} />
+                        <span>Open Full-Screen Presentation Pass</span>
+                      </button>
+
+                    </section>
+                  </div>
+
+                  {/* Right Column (7 Cols): Settings, Deployment Guide & Kiosk Diagnostics */}
+                  <div className="lg:col-span-7 space-y-6">
+                    
+                    {/* Access & Automation Settings */}
+                    <section className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-7 shadow-sm">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
+                          <Sliders size={18} strokeWidth={1.5} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Kiosk & Check-in Preferences</h3>
+                          <p className="text-xs text-zinc-500 font-normal">Automate turnstiles, attendance policies, and guest discovery</p>
+                        </div>
+                      </div>
+
+                      <div className="divide-y divide-zinc-100">
+                        {/* Setting 1: Touchless Member QR Check-in */}
+                        <div className="py-4 first:pt-0 flex items-center justify-between gap-4">
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-semibold text-zinc-900">Touchless Member QR Check-in</div>
+                            <div className="text-[11px] text-zinc-500 leading-relaxed">
+                              Allow members to scan this QR code using their mobile camera or app to log session attendance.
+                            </div>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={gymData.qrCheckinEnabled} 
+                            onChange={(e) => handleInputChange('qrCheckinEnabled', e.target.checked)}
+                            className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer shrink-0" 
+                          />
+                        </div>
+
+                        {/* Setting 2: Turnstile Relay Automation */}
+                        <div className="py-4 flex items-center justify-between gap-4">
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-semibold text-zinc-900">Turnstile & Barrier Relay Trigger</div>
+                            <div className="text-[11px] text-zinc-500 leading-relaxed">
+                              Send electronic pulse to turnstile or magnetic door strike upon verified member QR check-in.
+                            </div>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={gymData.qrTurnstileRelay ?? true} 
+                            onChange={(e) => handleInputChange('qrTurnstileRelay', e.target.checked)}
+                            className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer shrink-0" 
+                          />
+                        </div>
+
+                        {/* Setting 3: Audible Reception Chime */}
+                        <div className="py-4 flex items-center justify-between gap-4">
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-semibold text-zinc-900">Audible Verification Chime</div>
+                            <div className="text-[11px] text-zinc-500 leading-relaxed">
+                              Play acoustic sound confirmation through front-desk speaker when attendance scan succeeds.
+                            </div>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={gymData.qrAudibleChime ?? true} 
+                            onChange={(e) => handleInputChange('qrAudibleChime', e.target.checked)}
+                            className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer shrink-0" 
+                          />
+                        </div>
+
+                        {/* Setting 4: Public Guest Discovery */}
+                        <div className="py-4 last:pb-0 flex items-center justify-between gap-4">
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-semibold text-zinc-900">Guest Discovery & Day Pass Mode</div>
+                            <div className="text-[11px] text-zinc-500 leading-relaxed">
+                              Allow non-members scanning the pass to view facility highlights, trainers, and purchase trial passes.
+                            </div>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={gymData.isPubliclyActive} 
+                            onChange={(e) => handleInputChange('isPubliclyActive', e.target.checked)}
+                            className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer shrink-0" 
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Quick Deployment Guide (3 Steps) */}
+                    <section className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-7 shadow-sm">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
+                          <FileBadge size={18} strokeWidth={1.5} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Front-Desk Deployment Guide</h3>
+                          <p className="text-xs text-zinc-500 font-normal">Fast 3-step setup for reception counters and entry lanes</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                        <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80">
+                          <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white font-bold text-xs flex items-center justify-center mb-2">
+                            1
+                          </div>
+                          <div className="text-xs font-bold text-zinc-900">Print Standee</div>
+                          <div className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                            Download the high-res vector SVG or PDF and place on an acrylic A5/A4 countertop standee.
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80">
+                          <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white font-bold text-xs flex items-center justify-center mb-2">
+                            2
+                          </div>
+                          <div className="text-xs font-bold text-zinc-900">Position & Angle</div>
+                          <div className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                            Position at 45° angle near entrance turnstiles under clear ambient illumination.
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80">
+                          <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white font-bold text-xs flex items-center justify-center mb-2">
+                            3
+                          </div>
+                          <div className="text-xs font-bold text-zinc-900">Multi-Device Ready</div>
+                          <div className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                            Fully compatible with iOS/Android cameras and standard 2D laser barcode turnstiles.
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Operational Readiness Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-center">
+                        <div className="text-[10px] uppercase font-semibold text-zinc-400">Scanner Engine</div>
+                        <div className="text-xs font-bold text-zinc-900 mt-0.5 flex items-center justify-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Operational
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-center">
+                        <div className="text-[10px] uppercase font-semibold text-zinc-400">Response Latency</div>
+                        <div className="text-xs font-bold text-zinc-900 mt-0.5">0.24 ms</div>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-center">
+                        <div className="text-[10px] uppercase font-semibold text-zinc-400">Encryption</div>
+                        <div className="text-xs font-bold text-zinc-900 mt-0.5">AES-256</div>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-center">
+                        <div className="text-[10px] uppercase font-semibold text-zinc-400">Offline Sync</div>
+                        <div className="text-xs font-bold text-emerald-600 mt-0.5">SQLite Cache</div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </motion.div>
+            )}
             {activeTab === "Operational Settings" && (
               <motion.div 
                 key="tab-operations"
@@ -1992,12 +2333,22 @@ const GymProfile = () => {
                         <p className="text-[11px] text-zinc-500">Allow members to scan and log entry from mobile application</p>
                       </div>
                     </div>
-                    <input 
-                      type="checkbox" 
-                      checked={gymData.qrCheckinEnabled} 
-                      onChange={(e) => handleInputChange('qrCheckinEnabled', e.target.checked)}
-                      className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer" 
-                    />
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("QR Passes")}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 bg-white border border-zinc-200 rounded-lg hover:border-zinc-300 transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Open QR Passes</span>
+                        <ChevronRight size={12} strokeWidth={2} />
+                      </button>
+                      <input 
+                        type="checkbox" 
+                        checked={gymData.qrCheckinEnabled} 
+                        onChange={(e) => handleInputChange('qrCheckinEnabled', e.target.checked)}
+                        className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer" 
+                      />
+                    </div>
                   </div>
                 </section>
               </motion.div>
@@ -2096,125 +2447,6 @@ const GymProfile = () => {
           </AnimatePresence>
 
         </main>
-
-        {/* 3B. RIGHT SIDE WIDGET PANEL (Spans 4 columns on large screens) */}
-        <aside id="sidebar-widget-panel" className="col-span-12 lg:col-span-5 xl:col-span-4 sticky top-24 space-y-6">
-
-          {/* COMPACT DARK TOUCHLESS QR PASS CARD */}
-          <section 
-            className="text-white rounded-2xl p-4 sm:p-5 border relative overflow-hidden shadow-xl"
-            style={{
-              background: '#090d16',
-              borderColor: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '20px',
-              color: '#ffffff'
-            }}
-          >
-            {/* Ambient Glow Graphic Elements */}
-            <div 
-              className="absolute top-0 right-0 w-56 h-56 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none" 
-              style={{ background: 'rgba(99, 102, 241, 0.09)' }}
-            />
-            <div 
-              className="absolute bottom-0 left-0 w-44 h-44 rounded-full blur-[70px] -ml-16 -mb-16 pointer-events-none" 
-              style={{ background: 'rgba(16, 185, 129, 0.04)' }}
-            />
-
-            <div className="relative z-10 flex flex-col gap-3">
-              
-              {/* Header Badge & Security Indicator */}
-              <div className="flex items-center justify-between">
-                <div 
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider"
-                  style={{
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    background: 'rgba(99, 102, 241, 0.1)',
-                    color: '#818cf8'
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                  Public Profile QR
-                </div>
-
-                <div className="flex items-center gap-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                  <Shield size={10} className="text-slate-500" />
-                  <span>Encrypted</span>
-                </div>
-              </div>
-
-              {/* Main Side-by-Side Content: QR on Left, Details & Actions on Right */}
-              <div className="flex items-start gap-3.5">
-                
-                {/* Left Column: QR Code Container (Clickable -> Opens Member-Directory-Style Profile Card) */}
-                <div 
-                  onClick={() => setIsQrModalOpen(true)}
-                  className="shrink-0 flex flex-col items-center cursor-pointer group/qr transition-all active:scale-95"
-                  title="Click to preview luxury profile pass"
-                >
-                  <div className="p-2 bg-white rounded-xl shadow-md border border-zinc-200 group-hover/qr:border-blue-400 group-hover/qr:shadow-blue-500/25 group-hover/qr:shadow-lg transition-all relative overflow-hidden">
-                    <QrCode size={78} strokeWidth={1.75} className="text-zinc-900 group-hover/qr:scale-[0.98] transition-transform" />
-                    <div className="absolute inset-0 bg-blue-600/10 rounded-xl opacity-0 group-hover/qr:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
-                        <Eye size={12} strokeWidth={2.5} />
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-mono text-slate-400 mt-1.5 font-medium tracking-tight truncate max-w-[88px] text-center block group-hover/qr:text-blue-400 transition-colors">
-                    {gymData.subdomain ? gymData.subdomain : "yourgym.app"}
-                  </span>
-                </div>
-
-                {/* Right Column: Title, Description, and Action Buttons */}
-                <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch">
-                  <div>
-                    <h3 
-                      onClick={() => setIsQrModalOpen(true)}
-                      className="text-xs font-bold text-white tracking-tight leading-snug cursor-pointer hover:text-blue-400 transition-colors"
-                    >
-                      Touchless Reception Pass
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-normal leading-relaxed mt-0.5">
-                      Front-desk kiosk & member web check-in.
-                    </p>
-                  </div>
-
-                  {/* Actions Row / Stack */}
-                  <div className="flex flex-col gap-1.5 mt-2">
-                    <button 
-                      onClick={handleDownloadPass}
-                      className="w-full h-7 px-2.5 text-white text-[9px] font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 cursor-pointer"
-                      style={{ 
-                        background: '#1b64f2',
-                        color: '#ffffff',
-                        border: 'none'
-                      }}
-                    >
-                      <Download size={11} strokeWidth={2} />
-                      <span>Download QR</span>
-                    </button>
-
-                    <button 
-                      onClick={() => {
-                        const url = gymData.subdomain ? `https://${gymData.subdomain}` : "https://yourgym.gymdeck.app";
-                        navigator.clipboard?.writeText(url);
-                        showToast("Public profile link copied to clipboard.");
-                      }}
-                      className="w-full h-7 px-2.5 text-slate-300 hover:text-white text-[9px] font-semibold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-white/10 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.05]"
-                    >
-                      <ExternalLink size={10} strokeWidth={1.75} />
-                      <span>Copy Portal URL</span>
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </section>
-
-
-
-        </aside>
       </div>
 
       {/* BRAND SIGNATURE FOOTER */}

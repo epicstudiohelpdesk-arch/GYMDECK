@@ -17,6 +17,13 @@ import {
   LayoutGrid,
   List,
   MoreVertical,
+  Printer,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+  Sparkles,
+  Building2,
+  Share2,
   QrCode,
   Search,
   ShieldAlert,
@@ -89,99 +96,554 @@ function StatTile({ label, value, tone = "slate", icon: Icon, change }) {
 }
 
 // ─────────────────────────────────────────
-// CHECK-IN GATEWAY
+// DETERMINISTIC 2D QR MATRIX GENERATOR
 // ─────────────────────────────────────────
-function InstantCheckIn({ onCheckIn }) {
-  const [inputValue, setInputValue] = useState("");
-  const [status, setStatus] = useState("idle");
+function getQRMatrix(code = "GDK-8821") {
+  const size = 25;
+  const matrix = Array.from({ length: size }, () => Array(size).fill(false));
 
-  const handleScan = (e) => {
-    e.preventDefault();
-    if (!inputValue) return;
-    if (inputValue.toLowerCase().includes("fail")) {
-      setStatus("error");
-    } else {
-      setStatus("success");
-      onCheckIn(inputValue);
+  const fillSquare = (r, c, s, val) => {
+    for (let i = 0; i < s; i++) {
+      for (let j = 0; j < s; j++) {
+        if (r + i < size && c + j < size) {
+          matrix[r + i][c + j] = val;
+        }
+      }
     }
-    setTimeout(() => {
-      setStatus("idle");
-      setInputValue("");
-    }, 2500);
   };
 
-  return (
-    <div className="bg-slate-900 rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between h-full border border-slate-800">
-      <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl -mr-12 -mt-12" />
+  const drawFinder = (r, c) => {
+    fillSquare(r, c, 7, true);
+    fillSquare(r + 1, c + 1, 5, false);
+    fillSquare(r + 2, c + 2, 3, true);
+  };
+
+  drawFinder(0, 0);
+  drawFinder(0, 18);
+  drawFinder(18, 0);
+
+  for (let i = 8; i < 17; i++) {
+    matrix[6][i] = i % 2 === 0;
+    matrix[i][6] = i % 2 === 0;
+  }
+
+  fillSquare(16, 16, 5, true);
+  fillSquare(17, 17, 3, false);
+  matrix[18][18] = true;
+
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = (hash << 5) - hash + code.charCodeAt(i);
+    hash |= 0;
+  }
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const isTL = r < 8 && c < 8;
+      const isTR = r < 8 && c >= 17;
+      const isBL = r >= 17 && c < 8;
+      const isTiming = (r === 6 && c >= 8 && c < 17) || (c === 6 && r >= 8 && r < 17);
+      const isAlign = r >= 16 && r <= 20 && c >= 16 && c <= 20;
+
+      if (!isTL && !isTR && !isBL && !isTiming && !isAlign) {
+        const pseudo = Math.abs(Math.sin((r * size + c + 1) * (hash || 12345)) * 10000);
+        matrix[r][c] = (pseudo - Math.floor(pseudo)) > 0.46;
+      }
+    }
+  }
+
+  return matrix;
+}
+
+// ─────────────────────────────────────────
+// FACILITY DAILY ATTENDANCE QR GATEWAY
+// ─────────────────────────────────────────
+function InstantCheckIn({ onCheckIn }) {
+  const [gymInfo, setGymInfo] = useState(() => {
+    let savedName = typeof localStorage !== 'undefined' ? localStorage.getItem('gymdeck_gym_name') || localStorage.getItem('gymdeck_gym_brand_name') : null;
+    let savedCode = typeof localStorage !== 'undefined' ? localStorage.getItem('gymdeck_gym_code') : null;
+    let savedId = typeof localStorage !== 'undefined' ? localStorage.getItem('gymdeck_gym_id') : null;
+    
+    if (!savedCode) {
+      savedCode = "GDK-" + Math.floor(1000 + Math.random() * 9000);
+      try { localStorage.setItem('gymdeck_gym_code', savedCode); } catch (e) {}
+    }
+    if (!savedId) {
+      savedId = "gym_" + Math.random().toString(36).substring(2, 10);
+      try { localStorage.setItem('gymdeck_gym_id', savedId); } catch (e) {}
+    }
+    if (!savedName) {
+      savedName = "Iron Temple Fitness";
+      try { localStorage.setItem('gymdeck_gym_name', savedName); } catch (e) {}
+    }
+    return { name: savedName, code: savedCode, id: savedId };
+  });
+
+  const [copied, setCopied] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  // Sync with native cloud session / enrollment metadata if available
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.__TAURI__?.core?.invoke) {
+      window.__TAURI__.core.invoke("get_cloud_enrollment_status_command")
+        .then((res) => {
+          if (res) {
+            setGymInfo((prev) => {
+              const updated = {
+                name: res.gymName || prev.name,
+                code: res.gymCode || prev.code,
+                id: res.gymId || prev.id,
+              };
+              try {
+                if (res.gymName) localStorage.setItem("gymdeck_gym_name", res.gymName);
+                if (res.gymCode) localStorage.setItem("gymdeck_gym_code", res.gymCode);
+                if (res.gymId) localStorage.setItem("gymdeck_gym_id", res.gymId);
+              } catch (e) {}
+              return updated;
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const qrMatrix = useMemo(() => getQRMatrix(gymInfo.code), [gymInfo.code]);
+
+  const showNotification = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleCopyLink = () => {
+    const url = `https://yourgym.gymdeck.app/checkin?gym_id=${gymInfo.id}&code=${gymInfo.code}`;
+    navigator.clipboard?.writeText(url);
+    setCopied(true);
+    showNotification("Unique gym check-in portal link copied to clipboard.");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadStandee = () => {
+    const gymName = gymInfo.name || "GymDeck Fitness";
+    const gymCode = gymInfo.code || "GDK-8821";
+    const fileName = `${gymName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-attendance-standee.svg`;
+
+    const cellSize = 360 / 25;
+    let qrRects = "";
+    qrMatrix.forEach((row, r) => {
+      row.forEach((filled, c) => {
+        if (filled) {
+          qrRects += `<rect x="${220 + c * cellSize}" y="${270 + r * cellSize}" width="${cellSize + 0.3}" height="${cellSize + 0.3}" fill="#0f172a" rx="1.5" />\n`;
+        }
+      });
+    });
+
+    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1060" viewBox="0 0 800 1060">
+      <defs>
+        <radialGradient id="bgGrad" cx="50%" cy="28%" r="75%">
+          <stop offset="0%" stop-color="#1e293b" />
+          <stop offset="42%" stop-color="#0f172a" />
+          <stop offset="100%" stop-color="#020617" />
+        </radialGradient>
+      </defs>
       
-      <div>
-        <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 mb-1">
-          <Zap size={16} className="text-indigo-400" /> Instant Access Gateway
-        </h2>
-        <p className="text-[10px] font-bold text-slate-400">Scan QR, RFID, or enter Member ID for live validation</p>
-      </div>
+      <!-- Outer Card -->
+      <rect width="800" height="1060" rx="36" fill="url(#bgGrad)" />
+      <rect x="24" y="24" width="752" height="1012" rx="28" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
 
-      <AnimatePresence mode="wait">
-        {status === "idle" && (
-          <motion.form 
-            key="idle" 
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            onSubmit={handleScan} className="mt-6"
-          >
-            <div className="relative flex items-center">
-              <div className="absolute left-4 w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center text-slate-400">
-                <QrCode size={14} />
-              </div>
-              <input 
-                autoFocus
-                type="text" 
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Awaiting scan input..." 
-                className="w-full h-16 rounded-xl bg-slate-950 border border-slate-700 pl-14 pr-24 text-base font-bold text-white outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder:text-slate-600 shadow-inner"
-              />
-              <button type="submit" className="absolute right-2 h-12 px-6 rounded-lg bg-indigo-600 text-white text-xs font-black uppercase tracking-wider hover:bg-indigo-500 transition-colors shadow-lg">
-                Verify
-              </button>
-            </div>
-            <div className="mt-4 flex gap-3">
-              <button type="button" className="flex-1 h-10 rounded-xl border border-slate-700 bg-slate-800/50 text-[10px] font-black uppercase tracking-wider text-slate-300 hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                <Smartphone size={14} /> Manual Entry
-              </button>
-              <button type="button" className="flex-1 h-10 rounded-xl border border-slate-700 bg-slate-800/50 text-[10px] font-black uppercase tracking-wider text-slate-300 hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                <Users size={14} /> Batch Entry
-              </button>
-            </div>
-          </motion.form>
-        )}
+      <!-- Top Badge -->
+      <rect x="270" y="65" width="260" height="36" rx="18" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.3)" stroke-width="1.5" />
+      <circle cx="295" cy="83" r="5" fill="#38bdf8" />
+      <text x="312" y="88" fill="#38bdf8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="12" font-weight="800" letter-spacing="2">TOUCHLESS ATTENDANCE</text>
 
-        {status === "success" && (
-          <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="mt-6 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
-              <Check size={28} className="text-white" />
+      <!-- Facility Title -->
+      <text x="400" y="150" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="34" font-weight="900" letter-spacing="-0.5">${gymName}</text>
+      <text x="400" y="185" text-anchor="middle" fill="#94a3b8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="15" font-weight="600">DAILY MEMBER CHECK-IN STANDEE</text>
+
+      <!-- QR White Plinth -->
+      <rect x="180" y="230" width="440" height="440" rx="32" fill="#ffffff" />
+      <rect x="180" y="230" width="440" height="440" rx="32" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="3" />
+      
+      <!-- QR Code Modules -->
+      ${qrRects}
+
+      <!-- Code Capsule -->
+      <rect x="260" y="700" width="280" height="46" rx="23" fill="#0f172a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" />
+      <text x="400" y="729" text-anchor="middle" fill="#38bdf8" font-family="monospace" font-size="16" font-weight="800" letter-spacing="3">CODE: ${gymCode}</text>
+
+      <!-- Scanning Instruction -->
+      <text x="400" y="795" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="20" font-weight="800">Scan with GymDeck Member App</text>
+      <text x="400" y="828" text-anchor="middle" fill="#94a3b8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="14" font-weight="500">Open Member App &gt; Check-in &gt; Point camera at this pass to verify attendance</text>
+      
+      <!-- Bottom Security Tag -->
+      <line x1="80" y1="880" x2="720" y2="880" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" />
+      <text x="400" y="920" text-anchor="middle" fill="#64748b" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5">GYMDECK CLOUD ATTENDANCE INFRASTRUCTURE</text>
+      <text x="400" y="945" text-anchor="middle" fill="#475569" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="11" font-weight="600">END-TO-END ENCRYPTED • INSTANT LOCAL &amp; CLOUD SYNCHRONIZATION</text>
+    </svg>`;
+
+    const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotification("Attendance standee SVG downloaded successfully.");
+  };
+
+  const handlePrintStandee = () => {
+    const gymName = gymInfo.name || "GymDeck Fitness";
+    const gymCode = gymInfo.code || "GDK-8821";
+    
+    const cellSize = 240 / 25;
+    let qrRects = "";
+    qrMatrix.forEach((row, r) => {
+      row.forEach((filled, c) => {
+        if (filled) {
+          qrRects += `<rect x="${c * cellSize}" y="${r * cellSize}" width="${cellSize + 0.2}" height="${cellSize + 0.2}" fill="#0f172a" rx="1" />\n`;
+        }
+      });
+    });
+
+    const printWindow = window.open("", "_blank", "width=850,height=1000");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${gymName} - Attendance QR Standee</title>
+          <style>
+            @page { size: A4 portrait; margin: 15mm; }
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              background: #ffffff;
+              color: #0f172a;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+            }
+            .standee-card {
+              width: 100%;
+              max-width: 580px;
+              border: 3px solid #0f172a;
+              border-radius: 28px;
+              padding: 40px 32px;
+              text-align: center;
+              box-sizing: border-box;
+            }
+            .badge {
+              display: inline-block;
+              padding: 6px 16px;
+              border-radius: 9999px;
+              background: #f1f5f9;
+              color: #0f172a;
+              font-size: 11px;
+              font-weight: 800;
+              letter-spacing: 2px;
+              text-transform: uppercase;
+              margin-bottom: 16px;
+            }
+            .title {
+              font-size: 30px;
+              font-weight: 900;
+              margin: 0 0 6px 0;
+              letter-spacing: -0.5px;
+            }
+            .subtitle {
+              font-size: 13px;
+              color: #64748b;
+              font-weight: 600;
+              margin: 0 0 28px 0;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .qr-wrapper {
+              display: inline-block;
+              padding: 24px;
+              background: #ffffff;
+              border: 2px solid #e2e8f0;
+              border-radius: 24px;
+              margin-bottom: 24px;
+            }
+            .code-box {
+              display: inline-block;
+              padding: 8px 24px;
+              background: #0f172a;
+              color: #ffffff;
+              font-family: monospace;
+              font-size: 15px;
+              font-weight: 800;
+              letter-spacing: 3px;
+              border-radius: 12px;
+              margin-bottom: 24px;
+            }
+            .instructions {
+              font-size: 18px;
+              font-weight: 800;
+              color: #0f172a;
+              margin-bottom: 6px;
+            }
+            .instructions-sub {
+              font-size: 13px;
+              color: #64748b;
+              margin: 0 0 28px 0;
+            }
+            .footer {
+              border-top: 1px solid #e2e8f0;
+              padding-top: 18px;
+              font-size: 10px;
+              color: #94a3b8;
+              font-weight: 700;
+              letter-spacing: 1.5px;
+              text-transform: uppercase;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="standee-card">
+            <div class="badge">Official Attendance Pass</div>
+            <h1 class="title">${gymName}</h1>
+            <p class="subtitle">Daily Member Check-In Gateway</p>
+            <div class="qr-wrapper">
+              <svg width="240" height="240" viewBox="0 0 240 240">
+                ${qrRects}
+              </svg>
             </div>
             <div>
-              <h3 className="text-lg font-black text-emerald-400 uppercase tracking-tight leading-none">Access Granted</h3>
-              <p className="text-xs font-bold text-slate-300 mt-1">Rahul Verma · MBR-0211 · Student Basic</p>
+              <div class="code-box">FACILITY CODE: ${gymCode}</div>
             </div>
-          </motion.div>
-        )}
+            <div class="instructions">Scan with GymDeck Member App</div>
+            <div class="instructions-sub">Point your camera at this QR code to instantly log today's workout attendance</div>
+            <div class="footer">GYMDECK ATTENDANCE INFRASTRUCTURE • REAL-TIME VALIDATION</div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 350);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
-        {status === "error" && (
-          <motion.div key="error" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="mt-6 p-5 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex flex-col gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-rose-500 flex items-center justify-center shrink-0 shadow-lg shadow-rose-500/20">
-                <X size={24} className="text-white" />
+  const handleSimulateCheckIn = () => {
+    onCheckIn && onCheckIn(gymInfo.code);
+    showNotification(`Simulated scan: Attendance logged for facility ${gymInfo.code}`);
+  };
+
+  const cellSize = 136 / 25;
+
+  return (
+    <div 
+      className="rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between h-full border"
+      style={{
+        background: 'radial-gradient(circle at 75% 25%, #152747 0%, #0d1b32 38%, #081222 72%, #030712 100%)',
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        boxShadow: '0 24px 60px -15px rgba(2, 6, 23, 0.8), 0 0 35px -10px rgba(56, 189, 248, 0.25)',
+        color: '#ffffff'
+      }}
+    >
+      {/* Background Ambient Glows */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/15 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
+      
+      {/* Card Header */}
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-4 border-b border-white/10">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-glow shadow-emerald-400/50" />
+            <h2 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-1.5">
+              <QrCode size={14} className="text-cyan-400" /> Facility Attendance QR Pass
+            </h2>
+            <span 
+              className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{
+                background: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                color: '#7dd3fc'
+              }}
+            >
+              Permanent
+            </span>
+          </div>
+          <p className="text-[11px] font-normal text-slate-300">
+            Official check-in pass. Members scan using the GymDeck Member App to log daily attendance.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <div 
+            className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-slate-200 flex items-center gap-1.5 shadow-sm"
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)'
+            }}
+          >
+            <ShieldCheck size={12} className="text-emerald-400" />
+            <span>{gymInfo.code}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Body: QR Code Preview on Left, Details & Actions on Right */}
+      <div className="relative z-10 my-4 flex flex-col md:flex-row items-center gap-6">
+        
+        {/* Left: The High-Definition QR Pass */}
+        <div className="shrink-0 flex flex-col items-center">
+          <div 
+            className="p-3 bg-white rounded-2xl relative group/qr flex flex-col items-center justify-center transition-transform hover:scale-[1.02]"
+            style={{
+              boxShadow: '0 16px 36px -8px rgba(0, 0, 0, 0.6), 0 0 24px rgba(56, 189, 248, 0.25)',
+              border: '2px solid rgba(255, 255, 255, 0.95)'
+            }}
+          >
+            {/* Corner Target Markers */}
+            <div className="absolute top-1.5 left-1.5 w-2 h-2 border-t-2 border-l-2 border-slate-900 rounded-tl" />
+            <div className="absolute top-1.5 right-1.5 w-2 h-2 border-t-2 border-r-2 border-slate-900 rounded-tr" />
+            <div className="absolute bottom-1.5 left-1.5 w-2 h-2 border-b-2 border-l-2 border-slate-900 rounded-bl" />
+            <div className="absolute bottom-1.5 right-1.5 w-2 h-2 border-b-2 border-r-2 border-slate-900 rounded-br" />
+
+            <svg width="136" height="136" viewBox="0 0 136 136" className="shrink-0">
+              {qrMatrix.map((row, r) =>
+                row.map((filled, c) =>
+                  filled ? (
+                    <rect
+                      key={`${r}-${c}`}
+                      x={c * cellSize}
+                      y={r * cellSize}
+                      width={cellSize + 0.2}
+                      height={cellSize + 0.2}
+                      fill="#090d16"
+                      rx="0.8"
+                    />
+                  ) : null
+                )
+              )}
+            </svg>
+          </div>
+          <div className="text-[9px] font-mono text-cyan-300 font-bold mt-1.5 tracking-wider truncate max-w-[140px] text-center">
+            {gymInfo.code}
+          </div>
+        </div>
+
+        {/* Right: Facility Profile & Operational Meta */}
+        <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch">
+          <div>
+            <div className="flex items-center gap-2">
+              <Building2 size={14} className="text-cyan-400" />
+              <h3 className="text-sm font-bold text-white tracking-tight truncate" title={gymInfo.name}>
+                {gymInfo.name}
+              </h3>
+            </div>
+            
+            <p className="text-[11px] text-slate-300 font-normal leading-relaxed mt-1">
+              Generated automatically upon gym registration and permanently tied to this facility. Print or display at front-desk turnstiles for instant member check-ins.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 mt-3 text-[10px]">
+              <div 
+                className="p-2 rounded-xl text-slate-200"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                <span className="text-slate-400 font-medium block">Scanner Engine</span>
+                <span className="font-bold text-emerald-400 flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Member App Ready
+                </span>
               </div>
-              <div>
-                <h3 className="text-base font-black text-rose-400 uppercase tracking-tight leading-none">Access Denied</h3>
-                <p className="text-[10px] font-bold text-rose-300 mt-1">Unpaid Dues Conflict (₹2,499)</p>
+              <div 
+                className="p-2 rounded-xl text-slate-200"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                <span className="text-slate-400 font-medium block">Verification Latency</span>
+                <span className="font-bold text-slate-200 mt-0.5 block">&lt; 0.28ms Instant</span>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button className="flex-1 h-10 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 shadow-lg shadow-rose-600/20 transition-all">Settle Fees</button>
-              <button className="px-5 h-10 rounded-xl border border-rose-500/30 text-rose-300 text-[10px] font-black uppercase tracking-widest hover:bg-rose-500/20 transition-all">Staff Override</button>
-            </div>
+          </div>
+
+          {/* Action Buttons Row */}
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <button 
+              type="button"
+              onClick={handleDownloadStandee}
+              className="h-8 px-3 rounded-lg text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+              style={{ 
+                background: '#1b64f2',
+                border: 'none',
+                boxShadow: '0 4px 14px rgba(27, 100, 242, 0.4)'
+              }}
+            >
+              <Download size={12} strokeWidth={2.2} />
+              <span>Download QR</span>
+            </button>
+
+            <button 
+              type="button"
+              onClick={handlePrintStandee}
+              className="h-8 px-3 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.16)'
+              }}
+            >
+              <Printer size={12} strokeWidth={1.75} />
+              <span>Print Standee</span>
+            </button>
+
+            <button 
+              type="button"
+              onClick={handleCopyLink}
+              className="h-8 px-3 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.16)'
+              }}
+            >
+              {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} strokeWidth={1.75} />}
+              <span>{copied ? "Copied" : "Copy Portal"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSimulateCheckIn}
+              className="h-8 px-2.5 text-[10px] font-medium text-slate-400 hover:text-cyan-300 transition-colors ml-auto cursor-pointer"
+              title="Test log an entry in live activity feed"
+            >
+              Test Scan
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Toast Feedback Notification */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute bottom-2 inset-x-6 z-30 py-1.5 px-3 rounded-lg bg-slate-800 text-cyan-300 text-[10px] font-semibold border border-cyan-500/30 flex items-center justify-center gap-2 shadow-lg"
+          >
+            <CheckCircle2 size={12} className="text-cyan-400" />
+            <span>{notification}</span>
           </motion.div>
         )}
       </AnimatePresence>

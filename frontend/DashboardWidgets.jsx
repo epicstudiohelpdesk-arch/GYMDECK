@@ -174,8 +174,8 @@ export const Dashboard = () => {
       <header className="h-[60px] px-6 border-b border-[#e2e8f0] bg-white sticky top-0 z-30 flex items-center justify-between gap-4 shadow-[0_2px_8px_-2px_rgba(15,23,42,0.04)]">
         
         {/* Left: Global Search Operations (Perfect Flex Alignment & Spacing) */}
-        <div className="flex items-center flex-1 max-w-lg h-[42px] bg-[#f8fafc] hover:bg-white focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/15 transition-all shadow-2xs px-3.5 gap-2.5">
-          <Search size={16} strokeWidth={2.2} className="text-slate-400 shrink-0 select-none pointer-events-none" />
+        <div className="flex items-center flex-1 max-w-lg h-[42px] bg-[#f8fafc] hover:bg-white focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-500/15 focus-within:shadow-[0_8px_20px_-4px_rgba(37,99,235,0.18)] active:scale-[0.995] transition-all duration-200 ease-out px-3.5 gap-2.5 group">
+          <Search size={16} strokeWidth={2.4} className="text-slate-400 group-focus-within:text-blue-600 group-focus-within:scale-110 group-focus-within:rotate-[-6deg] transition-all duration-200 ease-out shrink-0 select-none pointer-events-none" />
           <input 
             type="text" 
             value={searchQuery}
@@ -183,7 +183,7 @@ export const Dashboard = () => {
             placeholder="Search members, dues, check-ins, trainers..."
             className="w-full h-full bg-transparent border-0 outline-none text-xs font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
           />
-          <kbd className="h-5 px-1.5 flex items-center justify-center text-[10px] font-mono font-bold rounded bg-slate-200/70 text-slate-500 border border-slate-300/70 select-none shrink-0">
+          <kbd className="h-5 px-1.5 flex items-center justify-center text-[10px] font-mono font-bold rounded bg-slate-200/70 text-slate-500 border border-slate-300/70 select-none shrink-0 group-focus-within:bg-blue-50 group-focus-within:text-blue-600 group-focus-within:border-blue-200 transition-colors">
             /
           </kbd>
         </div>

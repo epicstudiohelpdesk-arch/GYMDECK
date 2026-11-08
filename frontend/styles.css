@@ -14030,3 +14030,24 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   display: none !important;
 }
 
+/* ==========================================================================
+   INTERACTIVE SEARCH FIELD ANIMATION SYSTEM
+   ========================================================================== */
+.search-field-animated {
+  transition: border-color 0.16s ease, 
+              background-color 0.16s ease, 
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.12s ease !important;
+}
+
+.search-field-animated:active {
+  transform: scale(0.995) !important;
+}
+
+.search-field-animated:focus {
+  outline: none !important;
+  background-color: #ffffff !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16), 0 3px 10px -2px rgba(99, 102, 241, 0.10) !important;
+}
+
