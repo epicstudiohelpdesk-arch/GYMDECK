@@ -15,6 +15,7 @@ import { documentService } from '../../../services/documents';
 import { notificationService } from '../../../services/notifications';
 import { progressService } from '../../../services/progress';
 import { validateQuery, validateBody } from '../../../shared/validation';
+import memberPaymentsRouter from './memberPayments';
 
 const router: Router = Router();
 
@@ -72,6 +73,9 @@ const MeasurementLogSchema = z.object({
 
 // All member domain routes require authenticated member context
 router.use(requireAuth);
+
+// Payments V2: invoices, payment requests, UTR submissions
+router.use('/payments', memberPaymentsRouter);
 
 // ==============================================================================
 // 0. Gym Affiliation & Onboarding Linking

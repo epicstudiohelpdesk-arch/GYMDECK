@@ -2,12 +2,13 @@
  * GymDeck Member Mobile - Dues Summary Card Component
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CreditCard, CheckCircle2, AlertTriangle, ArrowUpRight } from 'lucide-react-native';
 import { useTheme } from '../../theme';
 import { OutstandingDues } from '../../types';
 import { memberService } from '../../services/api/memberService';
+import { PaymentAttemptModal } from './PaymentAttemptModal';
 
 export interface DuesSummaryCardProps {
   dues: OutstandingDues;
@@ -15,64 +16,74 @@ export interface DuesSummaryCardProps {
 
 export const DuesSummaryCard: React.FC<DuesSummaryCardProps> = ({ dues }) => {
   const { colors, radii, spacing } = useTheme();
+  const [payModalVisible, setPayModalVisible] = useState(false);
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          borderRadius: radii.lg,
-          padding: spacing.md,
-        },
-      ]}
-    >
-      <View style={styles.contentRow}>
-        <View
-          style={[
-            styles.iconWrapper,
-            {
-              backgroundColor: dues.hasDues
-                ? colors.status.warningBg
-                : colors.status.successBg,
-            },
-          ]}
-        >
+    <>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderRadius: radii.lg,
+            padding: spacing.md,
+          },
+        ]}
+      >
+        <View style={styles.contentRow}>
+          <View
+            style={[
+              styles.iconWrapper,
+              {
+                backgroundColor: dues.hasDues
+                  ? colors.status.warningBg
+                  : colors.status.successBg,
+              },
+            ]}
+          >
+            {dues.hasDues ? (
+              <AlertTriangle size={20} color={colors.status.warning} />
+            ) : (
+              <CheckCircle2 size={20} color={colors.status.success} />
+            )}
+          </View>
+
+          <View style={styles.textWrapper}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>
+              {dues.hasDues ? 'Pending Account Dues' : 'Account Balance Clear'}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {dues.hasDues
+                ? `Outstanding: ${dues.currency}${dues.amount.toFixed(2)}${
+                    dues.dueDate ? ` · Due ${dues.dueDate}` : ''
+                  }`
+                : 'All membership fees and dues are fully settled.'}
+            </Text>
+          </View>
+
           {dues.hasDues ? (
-            <AlertTriangle size={20} color={colors.status.warning} />
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setPayModalVisible(true)}
+              style={[styles.payButton, { backgroundColor: colors.brand.primary, borderRadius: radii.md }]}
+            >
+              <Text style={styles.payButtonText}>Pay Now</Text>
+              <ArrowUpRight size={14} color="#FFF" />
+            </TouchableOpacity>
           ) : (
-            <CheckCircle2 size={20} color={colors.status.success} />
+            <CreditCard size={18} color={colors.textMuted} />
           )}
         </View>
-
-        <View style={styles.textWrapper}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>
-            {dues.hasDues ? 'Pending Account Dues' : 'Account Balance Clear'}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {dues.hasDues
-              ? `Outstanding: ${dues.currency}${dues.amount.toFixed(2)}${
-                  dues.dueDate ? ` · Due ${dues.dueDate}` : ''
-                }`
-              : 'All membership fees and dues are fully settled.'}
-          </Text>
-        </View>
-
-        {dues.hasDues ? (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => memberService.payFeeViaUPI(dues.amount, 'Clear Pending Gym Dues')}
-            style={[styles.payButton, { backgroundColor: colors.brand.primary, borderRadius: radii.md }]}
-          >
-            <Text style={styles.payButtonText}>Pay Now</Text>
-            <ArrowUpRight size={14} color="#FFF" />
-          </TouchableOpacity>
-        ) : (
-          <CreditCard size={18} color={colors.textMuted} />
-        )}
       </View>
-    </View>
+
+      <PaymentAttemptModal
+        visible={payModalVisible}
+        onClose={() => setPayModalVisible(false)}
+        amount={dues.amount}
+        planName="Clear Pending Dues"
+      />
+    </>
   );
 };
 

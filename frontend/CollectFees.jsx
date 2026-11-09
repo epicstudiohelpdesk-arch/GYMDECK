@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { qrcode } from "./qr-lib.js";
+import { paymentsV2Api } from "./paymentsV2Api.js";
 
 // Indian Currency Formatter
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -420,47 +421,49 @@ const CollectFeesPage = () => {
   const [receivingAccount, setReceivingAccount] = useState(() => {
     const saved = localStorage.getItem("gymdeck_active_receiving_account");
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.upiVpa) return parsed;
+      } catch (e) {}
     }
     return {
-      bankId: "sbi",
-      bankName: "State Bank of India",
-      accountHolder: "Indians Gym Fitness",
-      accountNumberMasked: "•••• •••• 7192",
+      bankId: "",
+      bankName: "",
+      accountHolder: "",
+      accountNumberMasked: "",
       accountType: "Current Account",
-      branch: "Main Hub Commercial",
-      ifsc: "SBIN0000421",
-      upiVpa: "indiansgym@oksbi",
-      phone: "+91 98765 00123",
-      isVerified: true
+      branch: "",
+      ifsc: "",
+      upiVpa: "",
+      phone: "",
+      isVerified: false
     };
   });
 
-  // Load from backend database on initial mount
+  // Load authoritative receiving account from cloud database on initial mount
   useEffect(() => {
-    fetch("http://localhost:3001/v1/payments/config")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.success && data?.data) {
-          const cfg = data.data;
+    paymentsV2Api.listAccounts()
+      .then((res) => {
+        if (res?.data?.accounts && res.data.accounts.length > 0) {
+          const primary = res.data.accounts.find(a => a.isPrimary && a.upiVpa) || res.data.accounts.find(a => a.upiVpa) || res.data.accounts.find(a => a.isPrimary) || res.data.accounts[0];
           const mapped = {
-            bankId: cfg.bankId || "sbi",
-            bankName: cfg.bankName || "State Bank of India",
-            accountHolder: cfg.accountHolder || "Indians Gym Fitness",
-            accountNumberMasked: cfg.accountNumberMasked || "•••• •••• 7192",
-            accountType: cfg.accountType || "Current Account",
-            branch: cfg.branch || "Main Hub Commercial",
-            ifsc: cfg.ifscCode || "SBIN0000421",
-            upiVpa: cfg.upiVpa || "indiansgym@oksbi",
-            phone: cfg.phoneNumber || "+91 98765 00123",
-            isVerified: cfg.isVerified ?? true
+            bankId: (primary.bankName || "bank").toLowerCase().replace(/\s+/g, ""),
+            bankName: primary.bankName || "",
+            accountHolder: primary.beneficiaryName || "",
+            accountNumberMasked: primary.accountNumberMasked || "",
+            accountType: primary.accountType || "Current Account",
+            branch: primary.branchName || "",
+            ifsc: primary.ifscCode || "",
+            upiVpa: primary.upiVpa || "",
+            phone: "",
+            isVerified: primary.status === "VERIFIED"
           };
           setReceivingAccount(mapped);
           localStorage.setItem("gymdeck_active_receiving_account", JSON.stringify(mapped));
         }
       })
       .catch((err) => {
-        console.warn("Could not fetch remote payment config, using local cache:", err);
+        console.warn("Could not fetch remote payment accounts, using local cache:", err);
       });
   }, []);
 
@@ -535,18 +538,20 @@ const CollectFeesPage = () => {
 
   // NPCI Standard UPI Intent URI: upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...
   const upiUri = useMemo(() => {
-    const vpa = receivingAccount.upiVpa || "indiansgym@oksbi";
-    const name = encodeURIComponent(receivingAccount.accountHolder || "Indian's Gym");
+    if (!receivingAccount.upiVpa) return "";
+    const vpa = receivingAccount.upiVpa.trim();
+    const name = encodeURIComponent(receivingAccount.accountHolder || "Gym Beneficiary");
     const amount = totalPayable.toFixed(2);
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const note = encodeURIComponent(`Gym Fees ${selectedMember?.name || "Member"}`);
     return `upi://pay?pa=${vpa}&pn=${name}&am=${amount}&cu=INR&tn=${note}&tr=${invoiceNumber}`;
   }, [receivingAccount, totalPayable, selectedMember]);
 
-  // Pure Vector SVG QR Code Engine
+  // Pure Vector SVG QR Code Engine with high error tolerance for center logo
   const qrSvgString = useMemo(() => {
+    if (!upiUri) return null;
     try {
-      const qr = qrcode(0, "M");
+      const qr = qrcode(0, "H");
       qr.addData(upiUri);
       qr.make();
       return qr.createSvgTag({
@@ -1375,38 +1380,52 @@ const CollectFeesPage = () => {
                   {/* QR SVG Render Container */}
                   <div className="bg-white p-3.5 rounded-2xl shadow-xl flex items-center justify-center relative group w-52 h-52">
                     {qrSvgString ? (
-                      <div
-                        className="w-full h-full flex items-center justify-center"
-                        dangerouslySetInnerHTML={{ __html: qrSvgString }}
-                      />
+                      <>
+                        <div
+                          className="w-full h-full flex items-center justify-center"
+                          dangerouslySetInnerHTML={{ __html: qrSvgString }}
+                        />
+                        {/* Centered Brand Mark Badge */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-9 h-9 bg-slate-900 border-2 border-white rounded-lg flex items-center justify-center text-white font-black text-xs shadow-md">
+                            GD
+                          </div>
+                        </div>
+                      </>
                     ) : (
-                      <div className="flex items-center justify-center text-slate-400">
-                        <QrCode size={120} />
+                      <div className="flex flex-col items-center justify-center text-center p-3 text-slate-400">
+                        <QrCode size={40} className="mb-2 text-slate-400 opacity-60" />
+                        <span className="text-[11px] font-bold text-slate-700">No Receiving Account</span>
+                        <span className="text-[9px] text-slate-400 mt-1 leading-tight max-w-[140px]">
+                          Configure receiving UPI in Settings → Banking & Settlement
+                        </span>
                       </div>
                     )}
-                    {/* Centered Brand Mark Badge */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-9 h-9 bg-slate-900 border-2 border-white rounded-lg flex items-center justify-center text-white font-black text-xs shadow-md">
-                        GD
-                      </div>
-                    </div>
                   </div>
 
                   {/* Linked Bank & VPA details */}
                   <div className="mt-3 text-center w-full">
-                    <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold text-white">
-                      <span>{receivingAccount.upiVpa}</span>
-                      <button
-                        onClick={handleCopyLink}
-                        title="Copy UPI Intent URI"
-                        className="text-slate-400 hover:text-indigo-400 p-1 transition-colors"
-                      >
-                        {copiedLink ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">
-                      Settles to: {receivingAccount.bankName} ({receivingAccount.accountNumberMasked.slice(-4)})
-                    </span>
+                    {receivingAccount.upiVpa ? (
+                      <>
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold text-white">
+                          <span>{receivingAccount.upiVpa}</span>
+                          <button
+                            onClick={handleCopyLink}
+                            title="Copy UPI Intent URI"
+                            className="text-slate-400 hover:text-indigo-400 p-1 transition-colors"
+                          >
+                            {copiedLink ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                          </button>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          Settles to: {receivingAccount.bankName || "Direct Bank"} {receivingAccount.accountNumberMasked ? `(${receivingAccount.accountNumberMasked.slice(-4)})` : ""}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 block">
+                        Direct merchant settlement unconfigured
+                      </span>
+                    )}
                   </div>
 
                   {/* Supported UPI Apps Strip */}

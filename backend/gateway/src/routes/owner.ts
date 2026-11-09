@@ -13,6 +13,8 @@ import { notificationService } from '../../../services/notifications/notificatio
 import analyticsRouter from './analytics';
 import communicationsRouter from './communications';
 import { backupRouter } from './backup';
+import paymentAccountsRouter from './paymentAccounts';
+import paymentReconciliationRouter from './paymentReconciliation';
 import { requireAuth } from '../middleware/authMiddleware';
 import { requireRole, requirePermission } from '../middleware/rbacMiddleware';
 import { validateQuery, validateBody } from '../../../shared/validation';
@@ -32,6 +34,10 @@ router.use('/backup', backupRouter);
 
 // Sub-router for owner communications, Mode A (/v1/owner/communications)
 router.use('/communications', communicationsRouter);
+
+// Payments V2: receiving accounts and reconciliation
+router.use('/payment-accounts', paymentAccountsRouter);
+router.use('/payment-reconciliation', paymentReconciliationRouter);
 
 // ==============================================================================
 // Validation Schemas

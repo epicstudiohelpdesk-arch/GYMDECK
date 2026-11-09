@@ -17,6 +17,8 @@ import {
 } from '../../shared/database/schema';
 import { AppError } from '../../shared/errors';
 import { toMinorUnits, fromMinorUnits, minorUnitsToNumber } from '../../shared/utils/money';
+import { getGymPaymentSettings } from '../payments/invoiceService';
+import { paymentAccountService } from '../payments/accountService';
 
 // ==============================================================================
 // DTOs & Interfaces
@@ -102,12 +104,62 @@ export interface MemberBillingSummary {
   totalBilledMinorUnits?: number;
   totalPaidMinorUnits?: number;
   outstandingBalanceMinorUnits?: number;
+  invoices?: any[];
+  outstandingInvoicesMinor?: number;
   activeMembership: any | null;
   recentPayments: any[];
 }
 
-export class BillingService {
-  /**
+type Tx = any;
+
+/** Creates an OPEN invoice inside an existing transaction and returns its id. */
+async function insertInvoiceTx(
+  tx: Tx,
+  gymId: string,
+  memberId: string,
+  membershipId: string,
+  totalMinor: number,
+  description: string
+): Promise<string> {
+  const year = new Date().getFullYear();
+  const countRes = await tx.execute(
+    sql`SELECT COUNT(*)::int AS c FROM invoices WHERE gym_id = ${gymId} AND invoice_number LIKE ${`INV-${year}-%`}`
+  );
+  const seq = Number(countRes.rows?.[0]?.c || 0) + 1;
+  const invoiceNumber = `INV-${year}-${String(seq).padStart(6, '0')}`;
+  const inserted = await tx.execute(
+    sql`INSERT INTO invoices (gym_id, member_id, membership_id, invoice_number, total_minor, status, description)
+        VALUES (${gymId}, ${memberId}, ${membershipId}, ${invoiceNumber}, ${totalMinor}, 'OPEN', ${description})
+        RETURNING id`
+  );
+  return inserted.rows[0].id as string;
+}
+
+/** Allocates a recorded payment to an invoice and recalculates its status. */
+async function allocatePaymentTx(
+  tx: Tx,
+  gymId: string,
+  paymentId: string,
+  invoiceId: string,
+  amountMinor: number
+): Promise<void> {
+  await tx.execute(
+    sql`INSERT INTO payment_allocations (gym_id, payment_id, invoice_id, amount_minor)
+        VALUES (${gymId}, ${paymentId}, ${invoiceId}, ${amountMinor})`
+  );
+  await tx.execute(
+    sql`UPDATE invoices SET
+          paid_minor = paid_minor + ${amountMinor},
+          status = CASE
+            WHEN paid_minor + ${amountMinor} >= total_minor THEN 'PAID'
+            ELSE 'PARTIALLY_PAID'
+          END,
+          updated_at = NOW()
+        WHERE id = ${invoiceId} AND gym_id = ${gymId}`
+  );
+}
+
+export class BillingService {  /**
    * 1. List Membership Plans for a Gym
    */
   public async getPlans(gymId: string, includeInactive = false): Promise<any[]> {
@@ -287,6 +339,12 @@ export class BillingService {
       throw AppError.validation('Payment amount cannot be negative.');
     }
 
+    const paySettings = await getGymPaymentSettings(gymId);
+    const totalMinor = Number(toMinorUnits(priceAtPurchase));
+    const paidMinor = Number(toMinorUnits(paymentAmount));
+    const fullyPaid = paidMinor >= totalMinor;
+    const activate = fullyPaid || paySettings.activate_membership_on_partial;
+
     return await db.transaction(async (tx) => {
       // Create Membership Instance
       const [membership] = await tx
@@ -295,7 +353,7 @@ export class BillingService {
           gymId,
           memberId,
           planId: plan.id,
-          status: 'ACTIVE',
+          status: activate ? 'ACTIVE' : 'PENDING_PAYMENT',
           startDate,
           endDate,
           priceAtPurchase,
@@ -303,15 +361,27 @@ export class BillingService {
         })
         .returning();
 
-      // Update Member Expiration
-      await tx
-        .update(gymMembers)
-        .set({
-          membershipStatus: 'ACTIVE',
-          expiresAt: endDate,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(gymMembers.id, memberId), eq(gymMembers.gymId, gymId)));
+      // Update member access only when the payment policy allows it
+      if (activate) {
+        await tx
+          .update(gymMembers)
+          .set({
+            membershipStatus: 'ACTIVE',
+            expiresAt: endDate,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(gymMembers.id, memberId), eq(gymMembers.gymId, gymId)));
+      }
+
+      // Authoritative invoice for this membership
+      const invoiceId = await insertInvoiceTx(
+        tx,
+        gymId,
+        memberId,
+        membership!.id,
+        totalMinor,
+        `Membership: ${plan.planName}`
+      );
 
       let paymentRecord: any = null;
 
@@ -339,6 +409,7 @@ export class BillingService {
           .returning();
 
         paymentRecord = p;
+        await allocatePaymentTx(tx, gymId, p!.id, invoiceId, paidMinor);
       }
 
       // Record Audit Logs
@@ -475,6 +546,11 @@ export class BillingService {
     const priceAtPurchase = plan.price;
     const paymentAmount = dto.paymentAmount !== undefined ? Number(dto.paymentAmount) : Number(priceAtPurchase);
 
+    const paySettings = await getGymPaymentSettings(gymId);
+    const totalMinor = Number(toMinorUnits(priceAtPurchase));
+    const paidMinor = Number(toMinorUnits(paymentAmount));
+    const activate = paidMinor >= totalMinor || paySettings.activate_membership_on_partial;
+
     return await db.transaction(async (tx) => {
       const [newMembership] = await tx
         .insert(memberMemberships)
@@ -482,7 +558,7 @@ export class BillingService {
           gymId,
           memberId,
           planId: plan.id,
-          status: 'ACTIVE',
+          status: activate ? 'ACTIVE' : 'PENDING_PAYMENT',
           startDate,
           endDate,
           priceAtPurchase,
@@ -490,15 +566,26 @@ export class BillingService {
         })
         .returning();
 
-      // Update Member
-      await tx
-        .update(gymMembers)
-        .set({
-          membershipStatus: 'ACTIVE',
-          expiresAt: endDate,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(gymMembers.id, memberId), eq(gymMembers.gymId, gymId)));
+      // Update member access only when the payment policy allows it
+      if (activate) {
+        await tx
+          .update(gymMembers)
+          .set({
+            membershipStatus: 'ACTIVE',
+            expiresAt: endDate,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(gymMembers.id, memberId), eq(gymMembers.gymId, gymId)));
+      }
+
+      const invoiceId = await insertInvoiceTx(
+        tx,
+        gymId,
+        memberId,
+        newMembership!.id,
+        totalMinor,
+        `Renewal: ${plan.planName}`
+      );
 
       let paymentRecord: any = null;
 
@@ -525,6 +612,7 @@ export class BillingService {
           .returning();
 
         paymentRecord = p;
+        await allocatePaymentTx(tx, gymId, p!.id, invoiceId, paidMinor);
       }
 
       await tx.insert(auditLogs).values({
@@ -912,6 +1000,27 @@ export class BillingService {
       ? totalBilledMinorUnits - totalPaidMinorUnits
       : 0n;
 
+    const invoiceRows = (
+      await getDatabasePool().query(
+        `SELECT id, invoice_number, total_minor, paid_minor, status, due_date
+         FROM invoices WHERE gym_id = $1 AND member_id = $2 ORDER BY created_at DESC LIMIT 100`,
+        [gymId, memberId]
+      )
+    ).rows;
+    const invoices = invoiceRows.map((inv: any) => ({
+      id: inv.id,
+      invoiceNumber: inv.invoice_number,
+      totalMinor: Number(inv.total_minor),
+      paidMinor: Number(inv.paid_minor),
+      outstandingMinor: Math.max(Number(inv.total_minor) - Number(inv.paid_minor), 0),
+      status: inv.status,
+      dueDate: inv.due_date,
+    }));
+    const outstandingInvoicesMinor = invoices.reduce(
+      (sum: number, inv: any) => sum + inv.outstandingMinor,
+      0
+    );
+
     return {
       totalBilled: minorUnitsToNumber(totalBilledMinorUnits),
       totalPaid: minorUnitsToNumber(totalPaidMinorUnits),
@@ -919,6 +1028,8 @@ export class BillingService {
       totalBilledMinorUnits: Number(totalBilledMinorUnits),
       totalPaidMinorUnits: Number(totalPaidMinorUnits),
       outstandingBalanceMinorUnits: Number(outstandingMinorUnits),
+      invoices,
+      outstandingInvoicesMinor,
       activeMembership: allMemberships[0] || null,
       recentPayments: paymentsList,
     };
@@ -1083,6 +1194,28 @@ export class BillingService {
    * Fetch active payment & receiving bank configuration
    */
   async getPaymentConfig(gymId: string) {
+    try {
+      const v2Config = await paymentAccountService.getMemberFacingConfig(gymId);
+      if (v2Config.upi?.vpa || v2Config.bank?.accountNumberMasked) {
+        return {
+          receivingMode: v2Config.upi ? 'UPI' : 'BANK_TRANSFER',
+          bankId: 'bank',
+          bankName: v2Config.bank?.bankName || 'Bank Account',
+          accountHolder: v2Config.upi?.beneficiaryName || v2Config.bank?.beneficiaryName || 'GymDeck Fitness',
+          accountNumberMasked: v2Config.bank?.accountNumberMasked || null,
+          accountType: v2Config.bank?.accountType || 'Current Account',
+          ifscCode: v2Config.bank?.ifscCode || null,
+          branch: v2Config.bank?.branchName || null,
+          upiVpa: v2Config.upi?.vpa || null,
+          phoneNumber: null,
+          isVerified: v2Config.upi?.status === 'VERIFIED' || v2Config.bank?.status === 'VERIFIED',
+          soundboxEnabled: false,
+        };
+      }
+    } catch {
+      // Fallback to legacy single-account query
+    }
+
     const pool = getDatabasePool();
     const result = await pool.query(
       `SELECT * FROM payment_configurations WHERE gym_id = $1 LIMIT 1;`,
@@ -1091,17 +1224,17 @@ export class BillingService {
     if (result.rows.length === 0) {
       return {
         receivingMode: 'UPI',
-        bankId: 'hdfc',
-        bankName: 'HDFC Bank',
-        accountHolder: "Indian's Gym Fitness Studio",
-        accountNumberMasked: '•••• •••• 4182',
+        bankId: 'unconfigured',
+        bankName: '',
+        accountHolder: '',
+        accountNumberMasked: null,
         accountType: 'Current Account',
-        ifscCode: 'HDFC0001248',
-        branch: 'Park Street Commercial',
-        upiVpa: 'indiansgym@okhdfcbank',
-        phoneNumber: '+91 98765 00123',
-        isVerified: true,
-        soundboxEnabled: true,
+        ifscCode: '',
+        branch: '',
+        upiVpa: null,
+        phoneNumber: null,
+        isVerified: false,
+        soundboxEnabled: false,
       };
     }
     const row = result.rows[0];

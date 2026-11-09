@@ -14,12 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Award, CheckCircle, Calendar, ShieldCheck, Sparkles, Zap } from 'lucide-react-native';
 import { useTheme } from '../../../src/theme';
 import { useMembership } from '../../../src/hooks';
-import { SkeletonLoader, PrimaryButton } from '../../../src/components';
+import { SkeletonLoader, PrimaryButton, PaymentAttemptModal } from '../../../src/components';
 import { memberService } from '../../../src/services/api/memberService';
 
 export default function MembershipScreen() {
   const { colors, radii, spacing } = useTheme();
   const { data: membership, isLoading, error, refetch, isRefetching } = useMembership();
+  const [payModalVisible, setPayModalVisible] = React.useState(false);
 
   if (isLoading && !membership) {
     return (
@@ -234,10 +235,18 @@ export default function MembershipScreen() {
 
           <PrimaryButton
             title={`Pay ₹${price.toFixed(0)} via UPI (GPay / PhonePe)`}
-            onPress={() => memberService.payFeeViaUPI(price, `Renewal - ${planName}`)}
+            onPress={() => setPayModalVisible(true)}
             style={{ width: '100%' }}
           />
         </View>
+
+        <PaymentAttemptModal
+          visible={payModalVisible}
+          onClose={() => setPayModalVisible(false)}
+          amount={price}
+          planName={`Renewal - ${planName}`}
+          onSuccess={() => refetch()}
+        />
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>

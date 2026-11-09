@@ -57,6 +57,8 @@ import {
   CreditCard,
   ArrowDownLeft,
   Search,
+  ShieldCheck,
+  XCircle,
 } from 'lucide-react-native';
 
 type PeriodFilter = 'today' | 'this_week' | 'this_month';
@@ -138,6 +140,74 @@ export default function FinanceScreen() {
     status: selectedStatusFilter,
   });
 
+  // E. Pending Online Payment Verifications (Payments V2)
+  const {
+    data: pendingReconciliations = [],
+    isLoading: pendingLoading,
+    refetch: refetchPending,
+  } = useQuery({
+    queryKey: ['owner', 'pending-reconciliations'],
+    queryFn: () => OwnerBillingService.getPendingReconciliations(),
+    enabled: isAuthed,
+  });
+
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  const handleVerifySubmission = async (submissionId: string) => {
+    Alert.alert(
+      'Verify Bank Credit',
+      'Confirm that you have verified this credit in your bank statement. Verifying will activate the membership and issue an official receipt.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Verify & Settle',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setVerifyingId(submissionId);
+              await OwnerBillingService.verifyOnlinePayment(submissionId);
+              Alert.alert('Verified', 'Payment verified and settled successfully.');
+              await Promise.all([refetchPending(), handleRefresh()]);
+            } catch (err: any) {
+              Alert.alert('Verification Error', err?.message || 'Failed to verify payment.');
+            } finally {
+              setVerifyingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRejectSubmission = async (submissionId: string) => {
+    Alert.alert(
+      'Reject Submission',
+      'Reject this submission as not found on bank statement?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setVerifyingId(submissionId);
+              await OwnerBillingService.rejectOnlinePayment(
+                submissionId,
+                'Payment not reflected on bank statement.'
+              );
+              Alert.alert('Rejected', 'Submission rejected.');
+              await Promise.all([refetchPending(), handleRefresh()]);
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to reject submission.');
+            } finally {
+              setVerifyingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // ==============================================================================
   // 2. Computed Metrics & Data Transformations
   // ==============================================================================
@@ -148,11 +218,12 @@ export default function FinanceScreen() {
     await Promise.all([
       refetchOverview().catch(() => {}),
       refetchDashboard().catch(() => {}),
+      refetchPending().catch(() => {}),
       refetchMembers(),
       refetchTransactions(),
     ]);
     setRefreshing(false);
-  }, [refetchOverview, refetchDashboard, refetchMembers, refetchTransactions]);
+  }, [refetchOverview, refetchDashboard, refetchPending, refetchMembers, refetchTransactions]);
 
   // Sourced KPI metrics from real endpoints or local calculated revenue
   const totalCollected = useMemo(() => {
@@ -427,6 +498,104 @@ export default function FinanceScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* 3.5. Pending Online Payment Verifications (Payments V2 Direct Transfers) */}
+      {pendingReconciliations.length > 0 && (
+        <View style={styles.sectionArea}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={[typography.sectionTitle, { color: colors.textPrimary }]}>
+                Pending Online Verifications
+              </Text>
+              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                Member-submitted UTR references awaiting bank credit confirmation
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.countBadge,
+                { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' },
+              ]}
+            >
+              <Text style={[typography.captionBold, { color: '#B45309' }]}>
+                {pendingReconciliations.length} PENDING
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ gap: 10, marginTop: 4 }}>
+            {pendingReconciliations.map((item: any) => (
+              <View
+                key={item.attemptId}
+                style={[
+                  styles.reconciliationCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                  },
+                ]}
+              >
+                <View style={styles.reconciliationTopRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.cardTitle, { color: colors.textPrimary }]}>
+                      {item.member?.name || 'Member'}
+                    </Text>
+                    <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                      {item.member?.code || ''} · Invoice {item.invoice?.number || ''}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[typography.cardTitle, { color: colors.textPrimary, fontWeight: '800' }]}>
+                      {formatCurrency(item.amount)}
+                    </Text>
+                    <Text style={[typography.caption, { color: colors.textMuted }]}>
+                      Claimed via UPI
+                    </Text>
+                  </View>
+                </View>
+
+                {item.submission?.utr && (
+                  <View style={[styles.utrBadgeRow, { backgroundColor: colors.surfaceSubtle }]}>
+                    <Text style={[typography.captionBold, { color: colors.textPrimary, letterSpacing: 0.5 }]}>
+                      UTR: {item.submission.utr}
+                    </Text>
+                    <Text style={[typography.caption, { color: colors.textMuted, fontSize: 10 }]}>
+                      {new Date(item.submission.submittedAt || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.reconciliationActionRow}>
+                  <TouchableOpacity
+                    style={[styles.rejectBtn, { borderColor: colors.dangerBorder }]}
+                    onPress={() => handleRejectSubmission(item.attemptId)}
+                    disabled={verifyingId === item.attemptId}
+                  >
+                    <XCircle size={14} color={colors.danger} />
+                    <Text style={[typography.captionBold, { color: colors.danger }]}>Reject</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.verifyBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => handleVerifySubmission(item.attemptId)}
+                    disabled={verifyingId === item.attemptId}
+                  >
+                    {verifyingId === item.attemptId ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <>
+                        <ShieldCheck size={14} color="#FFF" />
+                        <Text style={[typography.captionBold, { color: '#FFF' }]}>Verify Bank Credit</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* 4. Pending Dues & Expiring Section */}
       <View style={styles.sectionArea}>
@@ -794,6 +963,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
+  },
+  reconciliationCard: {
+    borderWidth: 1,
+    padding: 12,
+    gap: 8,
+  },
+  reconciliationTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  utrBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  reconciliationActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  rejectBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  verifyBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   transactionFiltersRow: {
     marginTop: 8,

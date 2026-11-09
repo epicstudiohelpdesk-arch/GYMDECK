@@ -10,7 +10,13 @@
  */
 
 import { apiClient, normalizeAxiosError } from './client';
-import { ApiResponse, GymPaymentConfig } from './types';
+import {
+  ApiResponse,
+  GymPaymentConfig,
+  MemberDuesSummary,
+  PaymentAttemptResponse,
+  PaymentSubmissionResult,
+} from './types';
 import { Linking, Alert } from 'react-native';
 import {
   MemberDashboardData,
@@ -295,6 +301,95 @@ class MemberService {
           upiVpa: 'indiansgym@oksbi',
         };
       }
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Get member dues summary with open invoices
+   */
+  public async getDuesSummary(): Promise<MemberDuesSummary> {
+    try {
+      const response = await apiClient.get<ApiResponse<MemberDuesSummary>>('/member/payments/summary');
+      return response.data.data;
+    } catch (err) {
+      if (__DEV__) {
+        return {
+          totalDuesMinor: 249900,
+          openInvoicesCount: 1,
+          overdueCount: 0,
+          currency: 'INR',
+          oldestDueDate: '2026-11-15T00:00:00Z',
+          invoices: [
+            {
+              id: 'inv_dev_membership_01',
+              invoiceNumber: 'INV-2026-0001',
+              totalMinor: 249900,
+              paidMinor: 0,
+              balanceMinor: 249900,
+              status: 'ISSUED',
+              dueDate: '2026-11-15T00:00:00Z',
+              lineItems: [{ description: 'Annual Membership Renewal', amountMinor: 249900 }]
+            }
+          ]
+        };
+      }
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Create an authoritative server-side payment attempt
+   */
+  public async createPaymentAttempt(
+    invoiceId: string,
+    amountMinor?: number,
+    provider: 'DIRECT_UPI' | 'DIRECT_BANK_TRANSFER' = 'DIRECT_UPI'
+  ): Promise<PaymentAttemptResponse> {
+    try {
+      const response = await apiClient.post<ApiResponse<PaymentAttemptResponse>>('/member/payments/attempts', {
+        invoiceId,
+        amountMinor,
+        provider,
+      });
+      return response.data.data;
+    } catch (err) {
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Submit payment reference (UTR) after completing transfer in UPI app
+   */
+  public async submitPaymentProof(
+    attemptId: string,
+    utr: string,
+    claimedAmountMinor: number,
+    screenshotDocumentId?: string
+  ): Promise<PaymentSubmissionResult> {
+    try {
+      const response = await apiClient.post<ApiResponse<PaymentSubmissionResult>>(
+        `/member/payments/attempts/${attemptId}/submit`,
+        {
+          utr,
+          claimedAmountMinor,
+          screenshotDocumentId,
+        }
+      );
+      return response.data.data;
+    } catch (err) {
+      throw normalizeAxiosError(err);
+    }
+  }
+
+  /**
+   * Get payment attempt details and verification state
+   */
+  public async getPaymentAttempt(attemptId: string): Promise<any> {
+    try {
+      const response = await apiClient.get<ApiResponse<any>>(`/member/payments/attempts/${attemptId}`);
+      return response.data.data;
+    } catch (err) {
       throw normalizeAxiosError(err);
     }
   }

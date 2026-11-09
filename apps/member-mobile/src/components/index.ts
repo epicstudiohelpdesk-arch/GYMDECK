@@ -11,4 +11,5 @@ export * from './dashboard/MembershipCard';
 export * from './dashboard/AttendanceStreakCard';
 export * from './dashboard/TodayWorkoutCard';
 export * from './dashboard/DuesSummaryCard';
+export * from './dashboard/PaymentAttemptModal';
 export * from './dashboard/QuickActionGrid';

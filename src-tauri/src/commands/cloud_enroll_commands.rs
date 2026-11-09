@@ -312,10 +312,14 @@ pub async fn cloud_communications_request_command(
         return Err(AppError::Unauthorized);
     }
     let method = request.method.to_uppercase();
-    if !["GET", "POST", "PUT", "PATCH"].contains(&method.as_str()) {
+    if !["GET", "POST", "PUT", "PATCH", "DELETE"].contains(&method.as_str()) {
         return Err(AppError::Unauthorized);
     }
-    if !request.path.starts_with("/v1/owner/communications") {
+    if !(request.path.starts_with("/v1/owner/communications")
+        || request.path.starts_with("/v1/owner/payment-accounts")
+        || request.path.starts_with("/v1/owner/payment-reconciliation")
+        || request.path.starts_with("/v1/payments"))
+    {
         return Err(AppError::Unauthorized);
     }
     if request.path.len() > 512 || request.path.contains("..") || request.path.contains("//") {

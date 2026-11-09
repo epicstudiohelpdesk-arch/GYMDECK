@@ -672,4 +672,19 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
   `;
 
   await pool.query(ddl);
+
+  // Payments V2 migration (additive; safe to re-run).
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const candidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0002_payments_v2.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0002_payments_v2.sql'),
+    path.join(__dirname, 'migrations', '0002_payments_v2.sql'),
+  ];
+  for (const file of candidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
 }

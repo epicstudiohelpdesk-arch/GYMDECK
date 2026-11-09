@@ -122,4 +122,42 @@ export class OwnerBillingService {
     );
     return response.data.data.refund;
   }
+
+  /**
+   * 9. Get Pending Online Payment Verifications (UTR Submissions)
+   */
+  public static async getPendingReconciliations(): Promise<any[]> {
+    const response = await apiClient.get<ApiResponse<{ items: any[]; total: number }>>(
+      '/owner/payment-reconciliation/pending'
+    );
+    return response.data.data?.items || [];
+  }
+
+  /**
+   * 10. Verify Online Direct Payment (Matches bank credit, issues receipt & settles invoice)
+   */
+  public static async verifyOnlinePayment(
+    submissionId: string,
+    data?: { amountMinor?: number; note?: string }
+  ): Promise<any> {
+    const response = await apiClient.post<ApiResponse<any>>(
+      `/owner/payment-reconciliation/${submissionId}/verify`,
+      data || {}
+    );
+    return response.data.data;
+  }
+
+  /**
+   * 11. Reject Online Payment Submission
+   */
+  public static async rejectOnlinePayment(
+    submissionId: string,
+    reason: string
+  ): Promise<any> {
+    const response = await apiClient.post<ApiResponse<any>>(
+      `/owner/payment-reconciliation/${submissionId}/reject`,
+      { reason }
+    );
+    return response.data.data;
+  }
 }
