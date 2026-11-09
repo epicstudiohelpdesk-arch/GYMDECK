@@ -426,7 +426,7 @@ const GymProfile = () => {
   const [editingAccountId, setEditingAccountId] = useState(null);
   const [modalStep, setModalStep] = useState(1);
   const [isCardGatewayModalOpen, setIsCardGatewayModalOpen] = useState(false);
-  const [bankingFilter, setBankingFilter] = useState("all"); // "all" | "inflow" | "outflow"
+  const [bankingFilter, setBankingFilter] = useState("inflow"); // "inflow" | "outflow"
   const [accountFormData, setAccountFormData] = useState({
     purpose: "inflow", // "inflow" | "outflow" | "both"
     method: "UPI", // "UPI" | "BANK_TRANSFER" | "COMBINED" | "CARD_GATEWAY"
@@ -2891,15 +2891,6 @@ const GymProfile = () => {
                     <div className="flex items-center bg-zinc-100 p-0.5 rounded-lg border border-zinc-200">
                       <button
                         type="button"
-                        onClick={() => setBankingFilter("all")}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-                          bankingFilter === "all" ? "bg-white text-zinc-900 shadow-2xs font-bold" : "text-zinc-600 hover:text-zinc-900"
-                        }`}
-                      >
-                        All Rails
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => setBankingFilter("inflow")}
                         className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                           bankingFilter === "inflow" ? "bg-white text-emerald-800 shadow-2xs font-bold" : "text-zinc-600 hover:text-zinc-900"
@@ -2932,7 +2923,7 @@ const GymProfile = () => {
                 </div>
 
                 {/* 2. SECTION 1: RECEIVE MONEY (MEMBER INFLOW RAILS) */}
-                {(bankingFilter === "all" || bankingFilter === "inflow") && (
+                {bankingFilter === "inflow" && (
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
                       <div className="flex items-center gap-2.5">
@@ -2951,14 +2942,6 @@ const GymProfile = () => {
                           </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openAddAccountModal("inflow")}
-                        className="h-7 px-3 rounded-lg bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 self-start sm:self-auto"
-                      >
-                        <Plus size={12} strokeWidth={2} />
-                        <span>Add Inflow Method</span>
-                      </button>
                     </div>
 
                     {/* 3 Modular Inflow Cards: Countertop UPI, Direct Bank Transfer, Card Gateway */}
@@ -3211,7 +3194,7 @@ const GymProfile = () => {
                 )}
 
                 {/* 3. SECTION 2: SEND MONEY (TRAINER PAYROLL & OUTFLOW RAILS) */}
-                {(bankingFilter === "all" || bankingFilter === "outflow") && (
+                {bankingFilter === "outflow" && (
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
                       <div className="flex items-center gap-2.5">
@@ -3230,14 +3213,6 @@ const GymProfile = () => {
                           </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openAddAccountModal("outflow", "BANK_TRANSFER")}
-                        className="h-7 px-3 rounded-lg bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 self-start sm:self-auto"
-                      >
-                        <Plus size={12} strokeWidth={2} />
-                        <span>Configure Source Account</span>
-                      </button>
                     </div>
 
                     {/* 2 Outflow Cards: Dedicated Source Account & Preparation Controls */}
@@ -3440,327 +3415,6 @@ const GymProfile = () => {
                   </div>
                 )}
 
-                {/* 4. SECTION 3: ALL CONNECTED PAYMENT METHODS & BANK DIRECTORY */}
-                <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-zinc-100">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-zinc-900 tracking-tight">All Connected Accounts & UPI Identifiers</h3>
-                        <span className="text-xs font-mono font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200">
-                          {(gymData.bankAccounts || []).length} Registered
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        Complete directory of standalone UPI handles, commercial bank accounts, and dual-purpose settlement rails.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => openAddAccountModal("both")}
-                      style={{ border: "1px solid #18181b", backgroundColor: "#18181b" }}
-                      className="h-8 px-3.5 rounded-lg text-white hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-auto"
-                    >
-                      <Plus size={13} strokeWidth={2} />
-                      <span>Add Account / UPI</span>
-                    </button>
-                  </div>
-
-                  {(gymData.bankAccounts || []).length === 0 ? (
-                    <div className="p-10 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 flex flex-col items-center justify-center text-center space-y-3.5">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-500 flex items-center justify-center shadow-2xs">
-                        <Landmark size={22} strokeWidth={1.75} />
-                      </div>
-                      <div className="space-y-1 max-w-sm">
-                        <h4 className="text-sm font-bold text-zinc-900">No Financial Accounts Added Yet</h4>
-                        <p className="text-xs text-zinc-500 leading-relaxed">
-                          Add your commercial bank accounts and UPI handles. All accounts appear here with individual controls to configure fee collections and payroll disbursals.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => openAddAccountModal("both")}
-                        style={{ border: "1px solid #18181b", backgroundColor: "#18181b" }}
-                        className="h-9 px-4 rounded-xl text-white hover:bg-zinc-800 text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
-                      >
-                        <Plus size={14} strokeWidth={2} />
-                        <span>Add First Bank Account or UPI</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {(gymData.bankAccounts || []).map((account) => {
-                        const isRevealed = revealedAccountIds.has(account.id);
-                        const isPrimaryInflow = !!account.isPrimaryInflow;
-                        const isPrimaryOutflow = !!account.isPrimaryOutflow;
-                        const hasBank = Boolean(account.accountNumber);
-                        const hasUpi = Boolean(account.upiId);
-                        const isUpiOnly = hasUpi && !hasBank;
-                        const isBankOnly = hasBank && !hasUpi;
-                        const isCombined = hasBank && hasUpi;
-                        const isDualPurpose = account.role === "both" || (isPrimaryInflow && isPrimaryOutflow);
-
-                        return (
-                          <div 
-                            key={account.id} 
-                            className="rounded-xl border border-zinc-200 bg-white hover:border-zinc-300 transition-all shadow-2xs overflow-hidden"
-                          >
-                            {/* Card Main Body */}
-                            <div className="p-5 space-y-4">
-                              {/* Top row: Icon, Entity Name, Method Badge & Purpose Badges */}
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-800 font-bold text-xs shrink-0 shadow-2xs">
-                                    {isUpiOnly ? (
-                                      <Smartphone size={18} strokeWidth={1.5} className="text-purple-700" />
-                                    ) : (
-                                      <Landmark size={18} strokeWidth={1.5} className="text-zinc-800" />
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <h4 className="font-bold text-sm text-zinc-900">
-                                        {account.bankName || (isUpiOnly ? "Merchant UPI" : "Bank")}
-                                      </h4>
-                                      {/* Method Badge */}
-                                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200 font-medium">
-                                        {isUpiOnly ? "UPI Only" : isBankOnly ? "Bank Account" : "Combined Bank + UPI"}
-                                      </span>
-                                      {/* Verification Status Badge */}
-                                      {account.verificationStatus === "VERIFIED" ? (
-                                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 flex items-center gap-1 font-mono">
-                                          <ShieldCheck size={10} strokeWidth={2} />
-                                          Verified
-                                        </span>
-                                      ) : account.verificationStatus === "DISABLED" ? (
-                                        <span className="text-[10px] font-semibold text-zinc-500 bg-zinc-100 px-1.5 py-0.2 rounded border border-zinc-200 flex items-center gap-1 font-mono">
-                                          Disabled
-                                        </span>
-                                      ) : (
-                                        <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 flex items-center gap-1 font-mono">
-                                          <AlertCircle size={10} strokeWidth={2} />
-                                          Unverified
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-zinc-500 font-medium mt-0.5">
-                                      {account.accountHolderName}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Purpose Badges */}
-                                <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                                  {isDualPurpose ? (
-                                    <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-semibold font-mono flex items-center gap-1.5 shadow-2xs">
-                                      <ArrowDownLeft size={11} strokeWidth={2.5} />
-                                      <ArrowUpRight size={11} strokeWidth={2.5} />
-                                      Dual Purpose (Inflow + Payroll)
-                                    </span>
-                                  ) : (
-                                    <>
-                                      {isPrimaryInflow && (
-                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold font-mono flex items-center gap-1.5 shadow-2xs">
-                                          <ArrowDownLeft size={12} strokeWidth={2.5} />
-                                          Fee Inflow
-                                        </span>
-                                      )}
-                                      {isPrimaryOutflow && (
-                                        <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-white text-xs font-semibold font-mono flex items-center gap-1.5 shadow-2xs">
-                                          <ArrowUpRight size={12} strokeWidth={2.5} />
-                                          Trainer Payroll
-                                        </span>
-                                      )}
-                                      {!isPrimaryInflow && !isPrimaryOutflow && (
-                                        <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-600 border border-zinc-200 text-xs font-medium">
-                                          Standby Account
-                                        </span>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Coordinates Grid */}
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-zinc-100 text-xs">
-                                {hasBank ? (
-                                  <>
-                                    <div className="space-y-0.5">
-                                      <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider font-mono">Account Number</span>
-                                      <div className="font-mono font-bold text-zinc-900 flex items-center gap-2">
-                                        <span>
-                                          {isRevealed
-                                            ? account.accountNumber
-                                            : `•••• •••• •••• ${account.accountNumber?.slice(-4) || "0000"}`}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleToggleRevealAccount(account.id)}
-                                          className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
-                                          title={isRevealed ? "Mask" : "Reveal"}
-                                        >
-                                          {isRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleCopyText(account.accountNumber, "acc", account.id)}
-                                          className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
-                                          title="Copy Account Number"
-                                        >
-                                          {copiedAccNum === account.id ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-0.5">
-                                      <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider font-mono">IFSC & Branch</span>
-                                      <div className="font-mono font-semibold text-zinc-900 flex items-center gap-2">
-                                        <span>{account.ifscCode}</span>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleCopyText(account.ifscCode, "ifsc", account.id)}
-                                          className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
-                                          title="Copy IFSC"
-                                        >
-                                          <Copy size={12} strokeWidth={2} />
-                                        </button>
-                                      </div>
-                                      <div className="text-[11px] text-zinc-500 truncate" title={account.branchName}>
-                                        {account.branchName || "Main Commercial Branch"}
-                                      </div>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="sm:col-span-2 space-y-0.5">
-                                    <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider font-mono">Stand-alone Rail</span>
-                                    <span className="text-xs text-zinc-600 block">
-                                      Direct UPI collection handle. Zero bank account credentials required or stored.
-                                    </span>
-                                  </div>
-                                )}
-
-                                <div className="space-y-0.5">
-                                  <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider font-mono">UPI VPA Handle</span>
-                                  {account.upiId ? (
-                                    <div className="font-mono font-semibold text-zinc-900 flex items-center gap-2">
-                                      <span className="truncate max-w-[180px]">{account.upiId}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleCopyText(account.upiId, "upi", account.id)}
-                                        className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
-                                        title="Copy UPI"
-                                      >
-                                        {copiedUpiId === account.id ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-zinc-400 text-xs">No UPI identifier linked</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Card Bottom Action Bar */}
-                            <div className="bg-zinc-50/90 px-5 py-3 border-t border-zinc-200/70 flex flex-wrap items-center justify-between gap-2.5">
-                              <div className="flex items-center gap-2">
-                                {hasBank && !isPrimaryInflow && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSetPrimaryInflow(account.id)}
-                                    style={{ border: "1px solid #d1fae5", backgroundColor: "#ecfdf5" }}
-                                    className="h-8 px-3 rounded-lg text-emerald-800 hover:text-emerald-900 hover:bg-emerald-100 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                  >
-                                    <ArrowDownLeft size={12} strokeWidth={2.5} />
-                                    <span>Set as Fee Inflow</span>
-                                  </button>
-                                )}
-                                {hasBank && !isPrimaryOutflow && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSetPrimaryOutflow(account.id)}
-                                    style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
-                                    className="h-8 px-3 rounded-lg hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                  >
-                                    <ArrowUpRight size={12} strokeWidth={2.5} />
-                                    <span>Set as Payroll</span>
-                                  </button>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-2 ml-auto">
-                                {account.upiId && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedQrAccount(account);
-                                      setIsUpiQrModalOpen(true);
-                                    }}
-                                    style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
-                                    className="h-8 px-3 rounded-lg hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                    title="View QR Standee"
-                                  >
-                                    <QrCode size={13} strokeWidth={2} />
-                                    <span>QR Standee</span>
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => openEditAccountModal(account)}
-                                  style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
-                                  className="h-8 px-3 rounded-lg hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                  title="Edit Account Details"
-                                >
-                                  <Edit3 size={12} strokeWidth={2} />
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setAccountToDelete(account)}
-                                  style={{ border: "1px solid #fee2e2", backgroundColor: "#ffffff" }}
-                                  className="h-8 px-3 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs text-zinc-600 hover:text-red-600 hover:bg-red-50 cursor-pointer"
-                                  title="Disconnect Account"
-                                >
-                                  <Trash2 size={12} strokeWidth={2} />
-                                  <span>Disconnect</span>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* INVITING DASHED CARD: EASILY ADD ANOTHER METHOD */}
-                      <button
-                        type="button"
-                        onClick={() => openAddAccountModal("both")}
-                        style={{ border: "1px dashed #d4d4d8", backgroundColor: "#fafafa" }}
-                        className="w-full p-5 rounded-xl hover:bg-zinc-100 transition-all flex flex-col sm:flex-row items-center justify-between gap-3 text-left cursor-pointer group shadow-2xs"
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <div 
-                            style={{ border: "1px solid #e4e4e7", backgroundColor: "#ffffff" }}
-                            className="w-9 h-9 rounded-lg text-zinc-700 group-hover:text-zinc-900 group-hover:border-zinc-400 flex items-center justify-center transition-colors shadow-2xs shrink-0"
-                          >
-                            <Plus size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-zinc-900 group-hover:text-black">
-                              Link Another Payment Method, Bank Account, or UPI Handle
-                            </div>
-                            <div className="text-[11px] text-zinc-500 mt-0.5">
-                              Add separate accounts for multi-branch dues, pro-shop POS, or secondary business entities.
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-xs font-semibold text-zinc-800 group-hover:text-zinc-950 flex items-center gap-1.5 shrink-0 font-mono">
-                          <span>Add Method</span>
-                          <ArrowRight size={13} strokeWidth={2} />
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 {/* 4. SECURITY, GOVERNANCE & NON-CUSTODIAL SAFEGUARDS (FAQ ACCORDION) */}
                 <div className="bg-white rounded-2xl border border-zinc-200 p-5 sm:p-6 shadow-xs space-y-5">
                   {/* Top Bar: Title, Badges, and Expand/Collapse Action */}
@@ -3782,13 +3436,6 @@ const GymProfile = () => {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setExpandedFaqId(prev => (prev ? null : "all"))}
-                      className="text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 px-3 py-1 rounded-lg border border-zinc-200 hover:bg-zinc-50 transition-colors self-start sm:self-auto cursor-pointer whitespace-nowrap"
-                    >
-                      {expandedFaqId ? "Collapse All" : "Expand All"}
-                    </button>
                   </div>
 
                   {/* FAQ Interactive Accordion Drop-Boxes */}
