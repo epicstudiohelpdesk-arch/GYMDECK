@@ -237,11 +237,15 @@ async function runVerification() {
   assert.ok(dynamicSvg.startsWith('<svg'), 'Dynamic QR must produce valid SVG');
   console.log(`   -> Scannable Dynamic SVG generated (${dynamicSvg.length} bytes, ECC Level: H)`);
 
-  // Write SVGs to artifacts directory so they can be inspected and scanned
-  const artifactDir = '/Users/subhamdas/.gemini/antigravity-cli/brain/f3aaf78c-12a8-45bb-85e2-f0d1774b3795';
-  fs.writeFileSync(path.join(artifactDir, 'static_merchant_standee_qr.svg'), staticSvg);
-  fs.writeFileSync(path.join(artifactDir, 'dynamic_invoice_payment_qr.svg'), dynamicSvg);
-  console.log('   -> Artifacts saved: static_merchant_standee_qr.svg & dynamic_invoice_payment_qr.svg\n');
+  // Write SVGs to artifacts directory if available so they can be inspected and scanned
+  const artifactDir = process.env.ARTIFACT_DIR || '/Users/subhamdas/.gemini/antigravity-cli/brain/f3aaf78c-12a8-45bb-85e2-f0d1774b3795';
+  if (fs.existsSync(artifactDir)) {
+    fs.writeFileSync(path.join(artifactDir, 'static_merchant_standee_qr.svg'), staticSvg);
+    fs.writeFileSync(path.join(artifactDir, 'dynamic_invoice_payment_qr.svg'), dynamicSvg);
+    console.log('   -> Artifacts saved: static_merchant_standee_qr.svg & dynamic_invoice_payment_qr.svg\n');
+  } else {
+    console.log('   -> Artifact directory not present in CI environment (skipping artifact write)\n');
+  }
 
   // =========================================================================
   // TASK 3: BANK TRANSFER DETAILS VERIFICATION
