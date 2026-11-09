@@ -10,19 +10,10 @@ import { db, closeDatabasePool, getDatabasePool } from '../shared/database';
 import { bootstrapDatabaseSchema } from '../shared/database/bootstrap';
 import { gyms, users, gymMembers } from '../shared/database/schema';
 import { paymentAccountService } from '../services/payments/accountService';
-import { paymentIntentService, buildUpiUri } from '../services/payments/paymentIntentService';
-import { reconciliationService } from '../services/payments/reconciliationService';
+import { paymentIntentService } from '../services/payments/paymentIntentService';
 import { invoiceService } from '../services/payments/invoiceService';
 import { billingService } from '../services/billing/billingService';
 import { hashPassword } from '../shared/security';
-import {
-  isValidAccountNumber,
-  isValidIfsc,
-  isValidVpa,
-  normalizeAccountNumber,
-  normalizeIfsc,
-  normalizeVpa,
-} from '../shared/payments/validators';
 
 const pool = () => getDatabasePool();
 
@@ -70,6 +61,7 @@ async function runVerification() {
     phone: '9820199482',
     membershipStatus: 'ACTIVE',
   }).returning();
+  assert.ok(member, 'Member must be seeded');
 
   console.log(`[SETUP] Seeded verification tenant: "${gymName}" (ID: ${gymId})`);
   console.log(`[SETUP] Seeded member: "${member!.fullName}" (ID: ${member!.id})\n`);
