@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BrandFooter from "./BrandFooter.jsx";
-import CommunicationBroadcast from "./CommunicationBroadcast.jsx";
 import { communicationsApi } from "./communicationsApi.js";
 import { paymentsV2Api } from "./paymentsV2Api.js";
 import { qrcode } from "./qr-lib.js";
@@ -379,26 +378,26 @@ const CheckButton = ({ checked, onChange, label, description, icon: Icon, disabl
     type="button"
     disabled={disabled}
     onClick={onChange}
-    className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 select-none ${
+    className={`group w-full p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 select-none ${
       disabled 
-        ? 'opacity-40 cursor-not-allowed bg-zinc-50 border-zinc-200 text-zinc-400' 
+        ? 'opacity-40 cursor-not-allowed bg-zinc-50/50 border-zinc-200/60 text-zinc-400' 
         : checked 
-          ? 'bg-zinc-900/5 border-zinc-900/40 text-zinc-900 cursor-pointer shadow-2xs' 
-          : 'bg-zinc-50/60 border-zinc-200/80 hover:border-zinc-300 text-zinc-600 cursor-pointer'
+          ? 'bg-zinc-900/[0.03] border-zinc-900/30 text-zinc-900 cursor-pointer shadow-2xs hover:border-zinc-900/50' 
+          : 'bg-zinc-50/60 border-zinc-200/80 hover:border-zinc-300 hover:bg-white text-zinc-600 cursor-pointer'
     }`}
   >
-    <div className={`w-5 h-5 mt-0.5 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
-      checked ? 'bg-zinc-900 text-white shadow-2xs' : 'border border-zinc-300 bg-white'
+    <div className={`w-4 h-4 mt-0.5 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+      checked ? 'bg-zinc-900 text-white shadow-2xs' : 'border border-zinc-300 bg-white group-hover:border-zinc-400'
     }`}>
-      {checked && <Check size={12} strokeWidth={2.5} />}
+      {checked && <Check size={10} strokeWidth={3} />}
     </div>
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-1.5">
-        {Icon && <Icon size={13} className={checked ? 'text-zinc-900' : 'text-zinc-400'} />}
-        <span className={`text-xs font-semibold ${checked ? 'text-zinc-900' : 'text-zinc-700'}`}>{label}</span>
+        {Icon && <Icon size={12} className={checked ? 'text-zinc-900' : 'text-zinc-400'} />}
+        <span className={`text-xs font-semibold leading-tight ${checked ? 'text-zinc-900' : 'text-zinc-700'}`}>{label}</span>
       </div>
       {description && (
-        <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">{description}</p>
+        <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug line-clamp-2">{description}</p>
       )}
     </div>
   </button>
@@ -674,9 +673,7 @@ const GymProfile = () => {
   const tabs = useMemo(() => [
     { id: "General", label: "General", icon: Building2 },
     { id: "Contact & Communication", label: "Contact & Communication", icon: MessageSquare },
-    { id: "Branches", label: "Branches", icon: MapPin },
     { id: "QR Passes", label: "QR Passes", icon: QrCode },
-    { id: "Operational Settings", label: "Operational Settings", icon: Clock },
     { id: "Banking & Settlement", label: "Banking & Settlement", icon: Landmark },
     { id: "Social Media", label: "Social Media", icon: Share2 }
   ], []);
@@ -697,6 +694,10 @@ const GymProfile = () => {
     const matched = tabs.find(t => 
       t.label.toLowerCase().includes(q) || 
       t.id.toLowerCase().includes(q) ||
+      (t.id === "General" && (
+        q.includes("branch") || q.includes("hour") || q.includes("operation") || 
+        q.includes("timing") || q.includes("capacity") || q.includes("slot")
+      )) ||
       (t.id === "Banking & Settlement" && (
         q.includes("bank") || q.includes("upi") || q.includes("payout") || 
         q.includes("settle") || q.includes("salary") || q.includes("fee") || q.includes("account")
@@ -1780,39 +1781,91 @@ const GymProfile = () => {
         </div>
       </div>
 
-      {/* 2C. DEDICATED HORIZONTAL NAVIGATION TABS (OUTSIDE THE GYM DETAILS BOX) */}
+      {/* 2C. INTEGRATED HEADER: HORIZONTAL NAVIGATION TABS COMBINED WITH BANKING & SETTLEMENT TOOLBAR */}
       <div className="max-w-[1600px] mx-auto px-8 mb-7">
-        <div className="gym-profile-nav-track max-w-full overflow-x-auto no-scrollbar">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <motion.button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                whileTap={{ scale: 0.97 }}
-                className={`gym-profile-tab-btn ${isActive ? 'is-active' : ''}`}
-                role="tab"
-                aria-selected={isActive}
-              >
-                {isActive && (
-                  <motion.div 
-                    layoutId="activeProfileTabPill"
-                    className="absolute inset-0 bg-white rounded-[11px] shadow-[0_2px_8px_rgba(15,23,42,0.08),0_1px_2px_rgba(15,23,42,0.04)] border border-zinc-200/90"
-                    transition={{ type: "spring", stiffness: 450, damping: 32 }}
-                  />
-                )}
-                <span className="relative z-10 flex items-center gap-2">
-                  <Icon 
-                    className="tab-icon"
-                    size={15} 
-                    strokeWidth={isActive ? 2 : 1.75} 
-                  />
-                  <span>{tab.label}</span>
-                </span>
-              </motion.button>
-            );
-          })}
+        <div className="bg-white rounded-2xl border border-zinc-200/90 shadow-xs overflow-hidden">
+          {/* Upper Tier: Horizontal Tabs Track */}
+          <div className="p-3 sm:p-3.5 bg-zinc-50/70 border-b border-zinc-200/70 overflow-x-auto no-scrollbar">
+            <div className="gym-profile-nav-track max-w-full overflow-x-auto no-scrollbar">
+              {tabs.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <motion.button 
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    whileTap={{ scale: 0.97 }}
+                    className={`gym-profile-tab-btn ${isActive ? 'is-active' : ''}`}
+                    role="tab"
+                    aria-selected={isActive}
+                  >
+                    {isActive && (
+                      <motion.div 
+                        layoutId="activeProfileTabPill"
+                        className="absolute inset-0 bg-white rounded-[11px] shadow-[0_2px_8px_rgba(15,23,42,0.08),0_1px_2px_rgba(15,23,42,0.04)] border border-zinc-200/90"
+                        transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Icon 
+                        className="tab-icon"
+                        size={15} 
+                        strokeWidth={isActive ? 2 : 1.75} 
+                      />
+                      <span>{tab.label}</span>
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Lower Tier: Integrated Payment Methods, Banking & Settlement Toolbar */}
+          {activeTab === "Banking & Settlement" && (
+            <div className="px-4 py-3 sm:px-6 sm:py-3.5 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3 border-t border-zinc-100">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Landmark size={15} strokeWidth={2} />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight whitespace-nowrap">Banking, Settlements & Payouts</h2>
+                  <p className="text-[11px] text-zinc-500 font-medium truncate hidden sm:block">Direct merchant collections, instant UPI QR & trainer payroll routing</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                {/* Segmented Filter Control */}
+                <div className="flex items-center bg-zinc-100/90 p-1 rounded-xl border border-zinc-200/80 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setBankingFilter("inflow")}
+                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${
+                      bankingFilter === "inflow" 
+                        ? "bg-white text-zinc-900 shadow-xs font-bold" 
+                        : "text-zinc-600 hover:text-zinc-900"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${bankingFilter === "inflow" ? "bg-emerald-500" : "bg-zinc-400"}`} />
+                    <ArrowDownLeft size={13} strokeWidth={2.5} className={`w-3.5 h-3.5 ${bankingFilter === "inflow" ? "text-emerald-600" : "text-zinc-500"}`} />
+                    <span>Receive Money</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBankingFilter("outflow")}
+                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 ${
+                      bankingFilter === "outflow" 
+                        ? "bg-white text-zinc-900 shadow-xs font-bold" 
+                        : "text-zinc-600 hover:text-zinc-900"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${bankingFilter === "outflow" ? "bg-zinc-900" : "bg-zinc-400"}`} />
+                    <ArrowUpRight size={13} strokeWidth={2.5} className={`w-3.5 h-3.5 ${bankingFilter === "outflow" ? "text-zinc-900" : "text-zinc-500"}`} />
+                    <span>Send Money</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2035,293 +2088,109 @@ const GymProfile = () => {
                     </div>
                   </div>
                 </section>
-              </motion.div>
-            )}
 
-            {/* ──────── TAB 2: CONTACT & COMMUNICATION ──────── */}
-            {activeTab === "Contact & Communication" && (
-              <motion.div 
-                key="tab-communication"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-8"
-              >
-                {/* Intro Banner */}
-                <div className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 shadow-2xs">
-                        <MessageSquare size={18} strokeWidth={1.75} />
-                      </div>
-                      <div>
-                        <h2 className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Official Contact & Member Communication</h2>
-                        <p className="text-xs text-zinc-500 font-normal mt-0.5">Configure facility mobile, WhatsApp, and email channels and set permissions for member communication</p>
-                      </div>
+                {/* 3. Facility Hours & Capacity (Operational Settings) */}
+                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
+                  <div className="flex items-center gap-3.5 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
+                      <Clock size={20} strokeWidth={1.5} />
                     </div>
-                    <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold flex-shrink-0">
-                      <ShieldCheck size={13} strokeWidth={1.75} />
-                      <span>Zero-Spam Compliant</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CHANNEL 1: MOBILE & VOICE CALLS */}
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm space-y-6">
-                  <div className="flex items-center justify-between pb-5 border-b border-zinc-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 shadow-2xs">
-                        <Phone size={18} strokeWidth={1.75} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-zinc-900">Mobile Phone Channel</h3>
-                        <p className="text-[11px] text-zinc-500">Primary phone line for facility outreach, calls, and transactional SMS</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[11px] font-semibold ${gymData.mobileForMembers ? 'text-emerald-600' : 'text-zinc-400'}`}>
-                        {gymData.mobileForMembers ? 'Enabled for Members' : 'Disabled for Members'}
-                      </span>
-                      <ToggleSwitch 
-                        checked={gymData.mobileForMembers} 
-                        onChange={() => handleInputChange('mobileForMembers', !gymData.mobileForMembers)} 
-                      />
+                    <div>
+                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Facility Hours & Capacity</h2>
+                      <p className="text-xs text-zinc-500 font-normal">Opening cycles, peak hours, and maximum slot volumes</p>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-zinc-700">Official Mobile Number</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <Phone size={15} strokeWidth={1.75} />
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-6">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-600">Weekday Opening & Closing</label>
+                      <div className="flex items-center gap-2.5">
+                        <input 
+                          type="time" 
+                          value={gymData.openingHours} 
+                          onChange={(e) => handleInputChange('openingHours', e.target.value)}
+                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                        />
+                        <span className="text-xs text-zinc-400 font-medium">to</span>
+                        <input 
+                          type="time" 
+                          value={gymData.closingHours} 
+                          onChange={(e) => handleInputChange('closingHours', e.target.value)}
+                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                        />
                       </div>
-                      <input 
-                        type="text" 
-                        value={gymData.primaryPhone} 
-                        placeholder="e.g. +91 98765 43210 (Main facility mobile number)"
-                        onChange={(e) => handleInputChange('primaryPhone', e.target.value)}
-                        className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-600">Weekend Opening & Closing</label>
+                      <div className="flex items-center gap-2.5">
+                        <input 
+                          type="time" 
+                          value={gymData.weekendOpening} 
+                          onChange={(e) => handleInputChange('weekendOpening', e.target.value)}
+                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                        />
+                        <span className="text-xs text-zinc-400 font-medium">to</span>
+                        <input 
+                          type="time" 
+                          value={gymData.weekendClosing} 
+                          onChange={(e) => handleInputChange('weekendClosing', e.target.value)}
+                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-600">Max Capacity Per Slot</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                          <Users size={15} strokeWidth={1.5} />
+                        </div>
+                        <input 
+                          type="number" 
+                          value={gymData.slotCapacity} 
+                          placeholder="e.g. 50 (Maximum allowed members in one workout batch)"
+                          onChange={(e) => handleInputChange('slotCapacity', e.target.value)}
+                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-600">Standard Slot Duration</label>
+                      <CustomDropdown 
+                        id="gym-slotduration-input"
+                        icon={Timer}
+                        value={gymData.slotDurationMinutes} 
+                        placeholder="Select standard workout slot duration..."
+                        onChange={(val) => handleInputChange('slotDurationMinutes', val)}
+                        options={[
+                          { value: "30", label: "30 Minutes", description: "Express HIIT & quick functional circuits" },
+                          { value: "45", label: "45 Minutes", description: "Standard group class & studio training block" },
+                          { value: "60", label: "60 Minutes (1 Hour)", description: "Standard gym workout session" },
+                          { value: "75", label: "75 Minutes", description: "Extended hypertrophy & personal training session" },
+                          { value: "90", label: "90 Minutes (1.5 Hours)", description: "Heavy strength & powerlifting block" },
+                          { value: "120", label: "120 Minutes (2 Hours)", description: "Open floor workout & athlete competition prep" }
+                        ]}
                       />
                     </div>
                   </div>
 
-                  {/* Permission Check Buttons for Mobile */}
-                  <div className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 space-y-3">
-                    <div className="text-[11px] font-bold text-zinc-800 uppercase tracking-wider">
-                      Can this Mobile Number be used for communicating with members?
+                  <div className="mt-6 p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-zinc-900">National Holiday Closure</h4>
+                      <p className="text-[11px] text-zinc-500">Auto-mark facility closed on recognized national holidays</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <CheckButton 
-                        checked={gymData.mobileForMembers && gymData.mobileCallsAllowed}
-                        disabled={!gymData.mobileForMembers}
-                        onChange={() => handleInputChange('mobileCallsAllowed', !gymData.mobileCallsAllowed)}
-                        label="Inbound & Outbound Voice Calls"
-                        description="Allow front desk & trainers to call members for workout sessions, schedule changes, and follow-ups."
-                        icon={PhoneCall}
-                      />
-                      <CheckButton 
-                        checked={gymData.mobileForMembers && gymData.mobileSmsAllowed}
-                        disabled={!gymData.mobileForMembers}
-                        onChange={() => handleInputChange('mobileSmsAllowed', !gymData.mobileSmsAllowed)}
-                        label="Transactional SMS Alerts"
-                        description="Send entrance gate check-in alerts, OTP verifications, and payment due notifications via SMS."
-                        icon={Send}
-                      />
-                      <CheckButton 
-                        checked={gymData.mobileForMembers && gymData.mobilePromosAllowed}
-                        disabled={!gymData.mobileForMembers}
-                        onChange={() => handleInputChange('mobilePromosAllowed', !gymData.mobilePromosAllowed)}
-                        label="Promotional & Renewal Offers"
-                        description="Send seasonal offers, subscription discount alerts, and referral program updates."
-                        icon={Sparkles}
-                      />
-                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={gymData.autoHolidayClosure} 
+                      onChange={(e) => handleInputChange('autoHolidayClosure', e.target.checked)}
+                      className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer" 
+                    />
                   </div>
                 </section>
 
-                {/* CHANNEL 2: WHATSAPP BUSINESS */}
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm space-y-6">
-                  <div className="flex items-center justify-between pb-5 border-b border-zinc-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shadow-2xs">
-                        <Smartphone size={18} strokeWidth={1.75} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-zinc-900">WhatsApp Business Channel</h3>
-                        <p className="text-[11px] text-zinc-500">Automated invoices, workout reminders, and member support</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[11px] font-semibold ${gymData.whatsappForMembers ? 'text-emerald-600' : 'text-zinc-400'}`}>
-                        {gymData.whatsappForMembers ? 'Enabled for Members' : 'Disabled for Members'}
-                      </span>
-                      <ToggleSwitch 
-                        checked={gymData.whatsappForMembers} 
-                        onChange={() => handleInputChange('whatsappForMembers', !gymData.whatsappForMembers)} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-zinc-700">WhatsApp Number</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <Smartphone size={15} strokeWidth={1.75} />
-                      </div>
-                      <input 
-                        type="text" 
-                        value={gymData.whatsapp} 
-                        placeholder="e.g. +91 98765 43210 (Registered WhatsApp Business helpline)"
-                        onChange={(e) => handleInputChange('whatsapp', e.target.value)}
-                        className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Permission Check Buttons for WhatsApp */}
-                  <div className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 space-y-3">
-                    <div className="text-[11px] font-bold text-zinc-800 uppercase tracking-wider">
-                      Can this WhatsApp Number be used for communicating with members?
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <CheckButton 
-                        checked={gymData.whatsappForMembers && gymData.whatsappReceiptsAllowed}
-                        disabled={!gymData.whatsappForMembers}
-                        onChange={() => handleInputChange('whatsappReceiptsAllowed', !gymData.whatsappReceiptsAllowed)}
-                        label="Payment Receipts & Invoices"
-                        description="Automatically send instant PDF receipts and renewal reminders directly to members on WhatsApp."
-                        icon={Receipt}
-                      />
-                      <CheckButton 
-                        checked={gymData.whatsappForMembers && gymData.whatsappRemindersAllowed}
-                        disabled={!gymData.whatsappForMembers}
-                        onChange={() => handleInputChange('whatsappRemindersAllowed', !gymData.whatsappRemindersAllowed)}
-                        label="Workout & Attendance Reminders"
-                        description="Send personal training schedule reminders, attendance milestones, and morning workout alerts."
-                        icon={Clock}
-                      />
-                      <CheckButton 
-                        checked={gymData.whatsappForMembers && gymData.whatsappSupportAllowed}
-                        disabled={!gymData.whatsappForMembers}
-                        onChange={() => handleInputChange('whatsappSupportAllowed', !gymData.whatsappSupportAllowed)}
-                        label="Two-Way Member Chat & Helpline"
-                        description="Allow members to message the front desk for membership freezes, diet queries, and trainer bookings."
-                        icon={MessageSquare}
-                      />
-                      <CheckButton 
-                        checked={gymData.whatsappForMembers && gymData.whatsappPromosAllowed}
-                        disabled={!gymData.whatsappForMembers}
-                        onChange={() => handleInputChange('whatsappPromosAllowed', !gymData.whatsappPromosAllowed)}
-                        label="Announcements & Community Events"
-                        description="Broadcast gym challenge announcements, holiday closures, and exclusive member discounts."
-                        icon={Sparkles}
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                {/* CHANNEL 3: OFFICIAL EMAIL */}
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm space-y-6">
-                  <div className="flex items-center justify-between pb-5 border-b border-zinc-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 shadow-2xs">
-                        <Mail size={18} strokeWidth={1.75} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-zinc-900">Official Email Channel</h3>
-                        <p className="text-[11px] text-zinc-500">Official sender address for billing statements, contracts, and security notices</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[11px] font-semibold ${gymData.emailForMembers ? 'text-emerald-600' : 'text-zinc-400'}`}>
-                        {gymData.emailForMembers ? 'Enabled for Members' : 'Disabled for Members'}
-                      </span>
-                      <ToggleSwitch 
-                        checked={gymData.emailForMembers} 
-                        onChange={() => handleInputChange('emailForMembers', !gymData.emailForMembers)} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-zinc-700">Official Facility Email</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                        <Mail size={15} strokeWidth={1.75} />
-                      </div>
-                      <input 
-                        type="email" 
-                        value={gymData.email} 
-                        placeholder="e.g. contact@yourgym.com (Official gym email)"
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Permission Check Buttons for Email */}
-                  <div className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 space-y-3">
-                    <div className="text-[11px] font-bold text-zinc-800 uppercase tracking-wider">
-                      Can this Email Address be used for communicating with members?
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <CheckButton 
-                        checked={gymData.emailForMembers && gymData.emailInvoicesAllowed}
-                        disabled={!gymData.emailForMembers}
-                        onChange={() => handleInputChange('emailInvoicesAllowed', !gymData.emailInvoicesAllowed)}
-                        label="Monthly Statements & GST Invoices"
-                        description="Dispatch official monthly invoices, tax deduction certificates, and membership receipts."
-                        icon={FileBadge}
-                      />
-                      <CheckButton 
-                        checked={gymData.emailForMembers && gymData.emailAlertsAllowed}
-                        disabled={!gymData.emailForMembers}
-                        onChange={() => handleInputChange('emailAlertsAllowed', !gymData.emailAlertsAllowed)}
-                        label="Welcome Packs & Security Bulletins"
-                        description="Send new member onboarding credentials, gym handbook, password resets, and policy alerts."
-                        icon={ShieldCheck}
-                      />
-                      <CheckButton 
-                        checked={gymData.emailForMembers && gymData.emailNewsletterAllowed}
-                        disabled={!gymData.emailForMembers}
-                        onChange={() => handleInputChange('emailNewsletterAllowed', !gymData.emailNewsletterAllowed)}
-                        label="Gym Newsletter & Fitness Insights"
-                        description="Send monthly workout tips, nutrition guides, and member achievements."
-                        icon={Sparkles}
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                {/* ASSISTED BROADCAST (MODE A) */}
-                <CommunicationBroadcast showToast={showToast} />
-
-                {/* Member Privacy & Governance Card */}
-                <div className="p-5 rounded-2xl border border-zinc-200 bg-zinc-50/50 flex items-start gap-3.5">
-                  <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-700 flex-shrink-0 shadow-2xs">
-                    <ShieldCheck size={16} strokeWidth={1.75} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-zinc-900">Member Privacy & Anti-Spam Governance</h4>
-                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
-                      GymDeck enforces zero-spam principles. Only channels explicitly verified and toggled on above will be utilized for automated or broadcast messaging. Members can review and adjust individual notification preferences through their personal portal.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ──────── TAB 4: BRANCHES ──────── */}
-            {activeTab === "Branches" && (
-              <motion.div 
-                key="tab-branches"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-8"
-              >
+                {/* 4. Multi-Branch Locations */}
                 <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3.5">
@@ -2402,7 +2271,328 @@ const GymProfile = () => {
               </motion.div>
             )}
 
-            {/* ──────── TAB 4: QR PASSES & RECEPTION ──────── */}
+            {/* ──────── TAB 2: CONTACT & COMMUNICATION ──────── */}
+            {activeTab === "Contact & Communication" && (
+              <motion.div 
+                key="tab-communication"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6 pb-12"
+              >
+                {/* 1. COMPACT OVERVIEW HEADER */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <MessageSquare size={18} strokeWidth={2} />
+                    </div>
+                    <div>
+                      <h2 className="text-sm sm:text-base font-bold text-zinc-900 tracking-tight">Official Contact & Member Communication</h2>
+                      <p className="text-xs text-zinc-500 font-normal mt-0.5">Configure facility channels, communication permissions, and member broadcast rules</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200 text-xs font-semibold font-mono">
+                      <span className={`w-2 h-2 rounded-full ${
+                        ((gymData.mobileForMembers ? 1 : 0) + (gymData.whatsappForMembers ? 1 : 0) + (gymData.emailForMembers ? 1 : 0)) > 0 ? 'bg-emerald-500' : 'bg-zinc-400'
+                      }`} />
+                      <span>{((gymData.mobileForMembers ? 1 : 0) + (gymData.whatsappForMembers ? 1 : 0) + (gymData.emailForMembers ? 1 : 0))} of 3 Channels Active</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold">
+                      <ShieldCheck size={13} strokeWidth={2} />
+                      <span>Zero-Spam Compliant</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. 3-COLUMN COMPACT CHANNELS GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+                  {/* CHANNEL 1: VOICE & SMS LINE */}
+                  <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+                    <div className="space-y-4">
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                            <Phone size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-zinc-900">Phone & Voice Line</h3>
+                            <span className="text-[10px] text-zinc-500 block">Calls & Transactional SMS</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full border ${
+                            gymData.mobileForMembers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'
+                          }`}>
+                            {gymData.mobileForMembers ? 'Active' : 'Muted'}
+                          </span>
+                          <ToggleSwitch 
+                            checked={gymData.mobileForMembers} 
+                            onChange={() => handleInputChange('mobileForMembers', !gymData.mobileForMembers)} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Primary Input */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-zinc-700 flex items-center justify-between">
+                          <span>Official Mobile Number</span>
+                          <span className="text-[10px] text-zinc-400 font-normal">Voice & SMS</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                            <Phone size={14} strokeWidth={1.75} />
+                          </div>
+                          <input 
+                            type="text" 
+                            value={gymData.primaryPhone} 
+                            placeholder="e.g. +91 98765 43210"
+                            onChange={(e) => handleInputChange('primaryPhone', e.target.value)}
+                            className="w-full h-9 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Permission Group */}
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Member Permissions</span>
+                          <span className="text-[10px] font-mono text-zinc-400 font-semibold">
+                            {((gymData.mobileForMembers && gymData.mobileCallsAllowed ? 1 : 0) + (gymData.mobileForMembers && gymData.mobileSmsAllowed ? 1 : 0) + (gymData.mobileForMembers && gymData.mobilePromosAllowed ? 1 : 0))}/3 Enabled
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <CheckButton 
+                            checked={gymData.mobileForMembers && gymData.mobileCallsAllowed}
+                            disabled={!gymData.mobileForMembers}
+                            onChange={() => handleInputChange('mobileCallsAllowed', !gymData.mobileCallsAllowed)}
+                            label="Voice Calls"
+                            description="Front desk & trainer coordination calls"
+                            icon={PhoneCall}
+                          />
+                          <CheckButton 
+                            checked={gymData.mobileForMembers && gymData.mobileSmsAllowed}
+                            disabled={!gymData.mobileForMembers}
+                            onChange={() => handleInputChange('mobileSmsAllowed', !gymData.mobileSmsAllowed)}
+                            label="Transactional SMS"
+                            description="Check-in alerts, OTPs & payment dues"
+                            icon={Send}
+                          />
+                          <CheckButton 
+                            checked={gymData.mobileForMembers && gymData.mobilePromosAllowed}
+                            disabled={!gymData.mobileForMembers}
+                            onChange={() => handleInputChange('mobilePromosAllowed', !gymData.mobilePromosAllowed)}
+                            label="Promotions & Renewals"
+                            description="Early bird discounts & package renewals"
+                            icon={Sparkles}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CHANNEL 2: WHATSAPP BUSINESS */}
+                  <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+                    <div className="space-y-4">
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                            <Smartphone size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-zinc-900">WhatsApp Business</h3>
+                            <span className="text-[10px] text-zinc-500 block">PDF Invoices, Reminders & Chat</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full border ${
+                            gymData.whatsappForMembers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'
+                          }`}>
+                            {gymData.whatsappForMembers ? 'Active' : 'Muted'}
+                          </span>
+                          <ToggleSwitch 
+                            checked={gymData.whatsappForMembers} 
+                            onChange={() => handleInputChange('whatsappForMembers', !gymData.whatsappForMembers)} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Primary Input */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-zinc-700 flex items-center justify-between">
+                          <span>Registered WhatsApp Number</span>
+                          <span className="text-[10px] text-zinc-400 font-normal">Business API</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                            <Smartphone size={14} strokeWidth={1.75} />
+                          </div>
+                          <input 
+                            type="text" 
+                            value={gymData.whatsapp} 
+                            placeholder="e.g. +91 98765 43210"
+                            onChange={(e) => handleInputChange('whatsapp', e.target.value)}
+                            className="w-full h-9 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Permission Group */}
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Member Permissions</span>
+                          <span className="text-[10px] font-mono text-zinc-400 font-semibold">
+                            {((gymData.whatsappForMembers && gymData.whatsappReceiptsAllowed ? 1 : 0) + (gymData.whatsappForMembers && gymData.whatsappRemindersAllowed ? 1 : 0) + (gymData.whatsappForMembers && gymData.whatsappSupportAllowed ? 1 : 0) + (gymData.whatsappForMembers && gymData.whatsappPromosAllowed ? 1 : 0))}/4 Enabled
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <CheckButton 
+                            checked={gymData.whatsappForMembers && gymData.whatsappReceiptsAllowed}
+                            disabled={!gymData.whatsappForMembers}
+                            onChange={() => handleInputChange('whatsappReceiptsAllowed', !gymData.whatsappReceiptsAllowed)}
+                            label="PDF Receipts & Invoices"
+                            description="Instant PDF receipts upon fee payment"
+                            icon={Receipt}
+                          />
+                          <CheckButton 
+                            checked={gymData.whatsappForMembers && gymData.whatsappRemindersAllowed}
+                            disabled={!gymData.whatsappForMembers}
+                            onChange={() => handleInputChange('whatsappRemindersAllowed', !gymData.whatsappRemindersAllowed)}
+                            label="Workout Reminders"
+                            description="PT batch schedule & attendance alerts"
+                            icon={Clock}
+                          />
+                          <CheckButton 
+                            checked={gymData.whatsappForMembers && gymData.whatsappSupportAllowed}
+                            disabled={!gymData.whatsappForMembers}
+                            onChange={() => handleInputChange('whatsappSupportAllowed', !gymData.whatsappSupportAllowed)}
+                            label="Two-Way Member Chat"
+                            description="Front desk helpline for freezes & diet queries"
+                            icon={MessageSquare}
+                          />
+                          <CheckButton 
+                            checked={gymData.whatsappForMembers && gymData.whatsappPromosAllowed}
+                            disabled={!gymData.whatsappForMembers}
+                            onChange={() => handleInputChange('whatsappPromosAllowed', !gymData.whatsappPromosAllowed)}
+                            label="Announcements & Events"
+                            description="Challenges, holiday closures & gym updates"
+                            icon={Sparkles}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CHANNEL 3: OFFICIAL EMAIL */}
+                  <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+                    <div className="space-y-4">
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 border border-violet-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                            <Mail size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-zinc-900">Official Email</h3>
+                            <span className="text-[10px] text-zinc-500 block">GST Invoices & Policy Bulletins</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full border ${
+                            gymData.emailForMembers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'
+                          }`}>
+                            {gymData.emailForMembers ? 'Active' : 'Muted'}
+                          </span>
+                          <ToggleSwitch 
+                            checked={gymData.emailForMembers} 
+                            onChange={() => handleInputChange('emailForMembers', !gymData.emailForMembers)} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Primary Input */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-zinc-700 flex items-center justify-between">
+                          <span>Facility Email Address</span>
+                          <span className="text-[10px] text-zinc-400 font-normal">Sender Identity</span>
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                            <Mail size={14} strokeWidth={1.75} />
+                          </div>
+                          <input 
+                            type="email" 
+                            value={gymData.email} 
+                            placeholder="e.g. contact@yourgym.com"
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            className="w-full h-9 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Permission Group */}
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Member Permissions</span>
+                          <span className="text-[10px] font-mono text-zinc-400 font-semibold">
+                            {((gymData.emailForMembers && gymData.emailInvoicesAllowed ? 1 : 0) + (gymData.emailForMembers && gymData.emailAlertsAllowed ? 1 : 0) + (gymData.emailForMembers && gymData.emailNewsletterAllowed ? 1 : 0))}/3 Enabled
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <CheckButton 
+                            checked={gymData.emailForMembers && gymData.emailInvoicesAllowed}
+                            disabled={!gymData.emailForMembers}
+                            onChange={() => handleInputChange('emailInvoicesAllowed', !gymData.emailInvoicesAllowed)}
+                            label="Monthly GST Invoices"
+                            description="Tax deduction certificates & fee statements"
+                            icon={FileBadge}
+                          />
+                          <CheckButton 
+                            checked={gymData.emailForMembers && gymData.emailAlertsAllowed}
+                            disabled={!gymData.emailForMembers}
+                            onChange={() => handleInputChange('emailAlertsAllowed', !gymData.emailAlertsAllowed)}
+                            label="Welcome Packs & Security"
+                            description="Member credentials, handbook & policy rules"
+                            icon={ShieldCheck}
+                          />
+                          <CheckButton 
+                            checked={gymData.emailForMembers && gymData.emailNewsletterAllowed}
+                            disabled={!gymData.emailForMembers}
+                            onChange={() => handleInputChange('emailNewsletterAllowed', !gymData.emailNewsletterAllowed)}
+                            label="Gym Insights Newsletter"
+                            description="Monthly workout tips & nutrition articles"
+                            icon={Sparkles}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. COMPACT PRIVACY & ANTI-SPAM GOVERNANCE BANNER */}
+                <div className="p-4 rounded-2xl border border-zinc-200 bg-zinc-50/70 flex items-center justify-between gap-4 text-xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-zinc-800 shrink-0 shadow-2xs">
+                      <ShieldCheck size={16} strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="font-bold text-zinc-900 block sm:inline">Member Privacy & Anti-Spam Governance: </span>
+                      <span className="text-[11px] text-zinc-500 leading-relaxed">
+                        GymDeck enforces opt-in consent. Only channels and categories actively toggled above will be utilized for automated triggers or staff broadcasts.
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full bg-zinc-200/80 text-zinc-700 shrink-0 hidden md:inline-block">
+                    Zero-Spam Standard
+                  </span>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ──────── TAB 3: QR PASSES & RECEPTION ──────── */}
             {activeTab === "QR Passes" && (
               <motion.div 
                 key="tab-qr-passes"
@@ -2743,118 +2933,8 @@ const GymProfile = () => {
 
               </motion.div>
             )}
-            {activeTab === "Operational Settings" && (
-              <motion.div 
-                key="tab-operations"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-8"
-              >
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-center gap-3.5 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                      <Clock size={20} strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Facility Hours & Capacity</h2>
-                      <p className="text-xs text-zinc-500 font-normal">Opening cycles, peak hours, and maximum slot volumes</p>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-6">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Weekday Opening & Closing</label>
-                      <div className="flex items-center gap-2.5">
-                        <input 
-                          type="time" 
-                          value={gymData.openingHours} 
-                          onChange={(e) => handleInputChange('openingHours', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                        <span className="text-xs text-zinc-400 font-medium">to</span>
-                        <input 
-                          type="time" 
-                          value={gymData.closingHours} 
-                          onChange={(e) => handleInputChange('closingHours', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Weekend Opening & Closing</label>
-                      <div className="flex items-center gap-2.5">
-                        <input 
-                          type="time" 
-                          value={gymData.weekendOpening} 
-                          onChange={(e) => handleInputChange('weekendOpening', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                        <span className="text-xs text-zinc-400 font-medium">to</span>
-                        <input 
-                          type="time" 
-                          value={gymData.weekendClosing} 
-                          onChange={(e) => handleInputChange('weekendClosing', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Max Capacity Per Slot</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Users size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          type="number" 
-                          value={gymData.slotCapacity} 
-                          placeholder="e.g. 50 (Maximum allowed members in one workout batch)"
-                          onChange={(e) => handleInputChange('slotCapacity', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Standard Slot Duration</label>
-                      <CustomDropdown 
-                        id="gym-slotduration-input"
-                        icon={Timer}
-                        value={gymData.slotDurationMinutes} 
-                        placeholder="Select standard workout slot duration..."
-                        onChange={(val) => handleInputChange('slotDurationMinutes', val)}
-                        options={[
-                          { value: "30", label: "30 Minutes", description: "Express HIIT & quick functional circuits" },
-                          { value: "45", label: "45 Minutes", description: "Standard group class & studio training block" },
-                          { value: "60", label: "60 Minutes (1 Hour)", description: "Standard gym workout session" },
-                          { value: "75", label: "75 Minutes", description: "Extended hypertrophy & personal training session" },
-                          { value: "90", label: "90 Minutes (1.5 Hours)", description: "Heavy strength & powerlifting block" },
-                          { value: "120", label: "120 Minutes (2 Hours)", description: "Open floor workout & athlete competition prep" }
-                        ]}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-semibold text-zinc-900">National Holiday Closure</h4>
-                      <p className="text-[11px] text-zinc-500">Auto-mark facility closed on recognized national holidays</p>
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={gymData.autoHolidayClosure} 
-                      onChange={(e) => handleInputChange('autoHolidayClosure', e.target.checked)}
-                      className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer" 
-                    />
-                  </div>
-                </section>
-              </motion.div>
-            )}
-
-            {/* ──────── TAB 6: BANKING & SETTLEMENT ──────── */}
+            {/* ──────── TAB 4: BANKING & SETTLEMENT ──────── */}
             {activeTab === "Banking & Settlement" && (
               <motion.div 
                 key="tab-banking"
@@ -2864,79 +2944,22 @@ const GymProfile = () => {
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="space-y-6 pb-12"
               >
-                {/* 1. EXECUTIVE TITLE BAR & LIVE STATUS WITH NAVIGATION FILTER */}
-                <div className="bg-white rounded-xl border border-zinc-200 px-4 py-2.5 sm:px-5 sm:py-3 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                      <Landmark size={15} strokeWidth={1.75} />
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap min-w-0">
-                      <h2 className="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight whitespace-nowrap">Payment Methods, Banking & Settlement</h2>
-                      {(gymData.bankAccounts || []).length > 0 ? (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold flex items-center gap-1 font-mono">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          DIRECT RAILS ACTIVE
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 text-[10px] font-semibold flex items-center gap-1 font-mono">
-                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
-                          SETUP REQUIRED
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    {/* Fast Filter Pills */}
-                    <div className="flex items-center bg-zinc-100 p-0.5 rounded-lg border border-zinc-200">
-                      <button
-                        type="button"
-                        onClick={() => setBankingFilter("inflow")}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
-                          bankingFilter === "inflow" ? "bg-white text-emerald-800 shadow-2xs font-bold" : "text-zinc-600 hover:text-zinc-900"
-                        }`}
-                      >
-                        <ArrowDownLeft size={11} strokeWidth={2.5} className="text-emerald-600" />
-                        <span>Receive Money</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBankingFilter("outflow")}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
-                          bankingFilter === "outflow" ? "bg-white text-zinc-900 shadow-2xs font-bold" : "text-zinc-600 hover:text-zinc-900"
-                        }`}
-                      >
-                        <ArrowUpRight size={11} strokeWidth={2.5} className="text-zinc-800" />
-                        <span>Send Money</span>
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => openAddAccountModal("both")}
-                      className="h-8 px-3.5 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs border border-zinc-900 shrink-0 whitespace-nowrap"
-                    >
-                      <Plus size={13} strokeWidth={2} />
-                      <span>Add Payment Method</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. SECTION 1: RECEIVE MONEY (MEMBER INFLOW RAILS) */}
+                {/* 1. SECTION 1: RECEIVE MONEY (MEMBER INFLOW RAILS) */}
                 {bankingFilter === "inflow" && (
                   <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
-                          <ArrowDownLeft size={15} strokeWidth={2.5} />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 py-1">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm ring-4 ring-emerald-50">
+                          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <line x1="17" y1="7" x2="7" y2="17" />
+                            <polyline points="17 17 7 17 7 7" />
+                          </svg>
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Receive Money (Member Collections & Inflow)</h3>
-                            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              ZERO-HOLDING DIRECT RAILS
-                            </span>
-                          </div>
+                          <h3 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
+                            <span>Receive Money (Member Collections & Inflow)</span>
+                          </h3>
                           <p className="text-xs text-zinc-500 mt-0.5">
                             Member dues, package renewals, and POS payments route straight into your designated commercial bank or merchant UPI.
                           </p>
@@ -2947,7 +2970,7 @@ const GymProfile = () => {
                     {/* 3 Modular Inflow Cards: Countertop UPI, Direct Bank Transfer, Card Gateway */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                       {/* CARD 1: COUNTERTOP MERCHANT UPI & STANDEE QR */}
-                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-colors">
+                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
                         <div className="space-y-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2.5">
@@ -2959,19 +2982,15 @@ const GymProfile = () => {
                                 <span className="text-[10px] text-zinc-500 block">Instant QR Fee Collection</span>
                               </div>
                             </div>
-                            {primaryUpiAccount ? (
+                            {primaryUpiAccount && (
                               <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold font-mono">
                                 ACTIVE UPI
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 text-[10px] font-semibold font-mono">
-                                NOT CONFIGURED
                               </span>
                             )}
                           </div>
 
                           {primaryUpiAccount ? (
-                            <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2.5 text-xs">
+                            <div className="p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 space-y-2.5 text-xs">
                               <div>
                                 <span className="text-[10px] text-zinc-400 font-medium block uppercase tracking-wider font-mono">Beneficiary Display Name</span>
                                 <span className="font-bold text-zinc-900 text-xs truncate block">{primaryUpiAccount.accountHolderName}</span>
@@ -2983,30 +3002,30 @@ const GymProfile = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleCopyText(primaryUpiAccount.upiId, "upi", primaryUpiAccount.id)}
-                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                    className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-1 rounded hover:bg-zinc-200/60 transition-colors"
                                     title="Copy UPI VPA"
                                   >
-                                    {copiedUpiId === primaryUpiAccount.id ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                    {copiedUpiId === primaryUpiAccount.id ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
                                   </button>
                                 </div>
                               </div>
                               <div className="pt-2 border-t border-zinc-200/60 flex items-center justify-between text-[11px] text-zinc-500">
-                                <span className="font-mono">Apps: GPay · PhonePe · Paytm</span>
-                                <span className="text-emerald-700 font-semibold font-mono">0% Merchant MDR</span>
+                                <span className="font-mono text-[10px]">GPay · PhonePe · Paytm · Cred</span>
+                                <span className="text-emerald-700 font-semibold font-mono text-[10px]">0% MDR</span>
                               </div>
                             </div>
                           ) : (
-                            <div className="p-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 text-center space-y-2">
+                            <div className="p-5 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 text-center space-y-2.5">
                               <p className="text-[11px] text-zinc-500 leading-relaxed">
                                 Add a standalone UPI VPA to accept instant countertop scan-and-pay collections without entering bank account numbers.
                               </p>
                               <button
                                 type="button"
                                 onClick={() => openAddAccountModal("inflow", "UPI")}
-                                className="h-7 px-3 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors inline-flex items-center gap-1 cursor-pointer shadow-2xs"
+                                className="h-8 px-3.5 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                               >
-                                <Plus size={11} strokeWidth={2} />
-                                <span>Add UPI ID</span>
+                                <Plus size={12} strokeWidth={2.5} />
+                                <span>Add UPI Standee</span>
                               </button>
                             </div>
                           )}
@@ -3020,17 +3039,24 @@ const GymProfile = () => {
                                 setSelectedQrAccount(primaryUpiAccount);
                                 setIsUpiQrModalOpen(true);
                               }}
-                              className="w-full h-8 px-3 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                              className="flex-1 h-8 px-3 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                             >
                               <QrCode size={13} strokeWidth={2} />
                               <span>View Scannable Standee QR</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEditAccountModal(primaryUpiAccount)}
+                              className="h-8 px-3 rounded-lg border border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-50 text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              Edit
                             </button>
                           </div>
                         )}
                       </div>
 
                       {/* CARD 2: DIRECT BANK TRANSFER (NEFT / IMPS / RTGS) */}
-                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-colors">
+                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
                         <div className="space-y-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2.5">
@@ -3042,19 +3068,15 @@ const GymProfile = () => {
                                 <span className="text-[10px] text-zinc-500 block">NEFT / IMPS / RTGS Inflow</span>
                               </div>
                             </div>
-                            {primaryBankInflowAccount ? (
+                            {primaryBankInflowAccount && (
                               <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-semibold font-mono">
                                 DIRECT INFLOW
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 text-[10px] font-semibold font-mono">
-                                NOT CONFIGURED
                               </span>
                             )}
                           </div>
 
                           {primaryBankInflowAccount ? (
-                            <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2.5 text-xs">
+                            <div className="p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 space-y-2.5 text-xs">
                               <div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-[10px] text-zinc-400 font-medium block uppercase tracking-wider font-mono">Bank & Holder</span>
@@ -3070,7 +3092,7 @@ const GymProfile = () => {
                                 <div>
                                   <span className="text-[10px] text-zinc-400 font-medium block uppercase tracking-wider font-mono">Account No</span>
                                   <div className="font-mono font-bold text-zinc-900 flex items-center gap-1 mt-0.5 text-xs">
-                                    <span>
+                                    <span className="truncate">
                                       {revealedAccountIds.has(primaryBankInflowAccount.id)
                                         ? primaryBankInflowAccount.accountNumber
                                         : `•••• ${primaryBankInflowAccount.accountNumber?.slice(-4) || "0000"}`}
@@ -3083,13 +3105,21 @@ const GymProfile = () => {
                                     >
                                       {revealedAccountIds.has(primaryBankInflowAccount.id) ? <EyeOff size={11} /> : <Eye size={11} />}
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyText(primaryBankInflowAccount.accountNumber, "account", primaryBankInflowAccount.id)}
+                                      className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                      title="Copy Account Number"
+                                    >
+                                      {copiedAccNum === primaryBankInflowAccount.id ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                    </button>
                                   </div>
                                 </div>
 
                                 <div>
                                   <span className="text-[10px] text-zinc-400 font-medium block uppercase tracking-wider font-mono">IFSC Code</span>
                                   <div className="font-mono font-semibold text-zinc-900 flex items-center gap-1 mt-0.5 text-xs">
-                                    <span>{primaryBankInflowAccount.ifscCode}</span>
+                                    <span className="truncate">{primaryBankInflowAccount.ifscCode}</span>
                                     <button
                                       type="button"
                                       onClick={() => handleCopyText(primaryBankInflowAccount.ifscCode, "ifsc", primaryBankInflowAccount.id)}
@@ -3104,20 +3134,20 @@ const GymProfile = () => {
 
                               <div className="pt-2 border-t border-zinc-200/60 flex items-center justify-between text-[11px] text-zinc-500">
                                 <span className="truncate">{primaryBankInflowAccount.branchName || "Main Commercial Branch"}</span>
-                                <span className="font-mono font-semibold text-zinc-700 shrink-0">Direct Deposit</span>
+                                <span className="font-mono font-semibold text-zinc-700 shrink-0 text-[10px]">Direct Deposit</span>
                               </div>
                             </div>
                           ) : (
-                            <div className="p-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 text-center space-y-2">
+                            <div className="p-5 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 text-center space-y-2.5">
                               <p className="text-[11px] text-zinc-500 leading-relaxed">
                                 Connect a commercial bank account to accept high-ticket annual memberships, corporate checks, and RTGS wire payments.
                               </p>
                               <button
                                 type="button"
                                 onClick={() => openAddAccountModal("inflow", "BANK_TRANSFER")}
-                                className="h-7 px-3 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors inline-flex items-center gap-1 cursor-pointer shadow-2xs"
+                                className="h-8 px-3.5 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                               >
-                                <Plus size={11} strokeWidth={2} />
+                                <Plus size={12} strokeWidth={2.5} />
                                 <span>Connect Bank Account</span>
                               </button>
                             </div>
@@ -3127,7 +3157,7 @@ const GymProfile = () => {
                         {primaryBankInflowAccount && (
                           <div className="pt-3 mt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
                             <span className="text-[11px] text-zinc-500 flex items-center gap-1">
-                              <ShieldCheck size={12} className="text-emerald-600" />
+                              <ShieldCheck size={13} className="text-emerald-600" />
                               <span>Masked to members</span>
                             </span>
                             <button
@@ -3142,38 +3172,41 @@ const GymProfile = () => {
                       </div>
 
                       {/* CARD 3: CARD PAYMENTS GATEWAY */}
-                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-colors">
+                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
                         <div className="space-y-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2.5">
                               <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
-                                <CreditCard size={16} strokeWidth={2} />
+                                <CreditCard size={16} strokeWidth={2} className="w-4 h-4 text-amber-700" />
                               </div>
                               <div>
                                 <h4 className="text-xs font-bold text-zinc-900">Card Payments Gateway</h4>
                                 <span className="text-[10px] text-zinc-500 block">POS, Debit & Credit Cards</span>
                               </div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold font-mono">
-                              COMING SOON · NOT CONNECTED
-                            </span>
                           </div>
 
-                          <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2.5 text-xs">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-600 font-mono">
-                                Gateway Not Connected
+                          <div className="p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 space-y-2.5 text-xs">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2 py-0.5 rounded bg-zinc-200/70 border border-zinc-200 text-[10px] font-bold text-zinc-700 font-mono">
+                                Visa
                               </span>
-                              <span className="px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-[10px] font-semibold text-amber-800 font-mono">
-                                Card Rails Inactive
+                              <span className="px-2 py-0.5 rounded bg-zinc-200/70 border border-zinc-200 text-[10px] font-bold text-zinc-700 font-mono">
+                                Mastercard
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-zinc-200/70 border border-zinc-200 text-[10px] font-bold text-zinc-700 font-mono">
+                                RuPay
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-zinc-200/70 border border-zinc-200 text-[10px] font-bold text-zinc-700 font-mono">
+                                Amex
                               </span>
                             </div>
                             <p className="text-[11px] text-zinc-500 leading-relaxed">
-                              Card payment gateway integration is currently in development. Debit and credit cards are not currently accepted until an authorized RBI Payment Aggregator (Razorpay / Pine Labs) is connected.
+                              Accept in-person POS swiped card payments at front-desk or connect an authorized RBI Payment Aggregator for automated member subscriptions.
                             </p>
                             <div className="pt-2 border-t border-zinc-200/60 flex items-center justify-between text-[11px] text-zinc-500">
                               <span>Tokenized PCI-DSS Level 1</span>
-                              <span className="text-amber-800 font-semibold font-mono">Zero Card Storage</span>
+                              <span className="text-zinc-700 font-semibold font-mono text-[10px]">Zero Card Storage</span>
                             </div>
                           </div>
                         </div>
@@ -3185,7 +3218,7 @@ const GymProfile = () => {
                             className="w-full h-8 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200"
                           >
                             <Lock size={12} strokeWidth={2} />
-                            <span>Gateway Status: Not Connected (Details)</span>
+                            <span>Gateway Integration Details</span>
                           </button>
                         </div>
                       </div>
@@ -3193,21 +3226,22 @@ const GymProfile = () => {
                   </div>
                 )}
 
-                {/* 3. SECTION 2: SEND MONEY (TRAINER PAYROLL & OUTFLOW RAILS) */}
+                {/* 2. SECTION 2: SEND MONEY (TRAINER PAYROLL & OUTFLOW RAILS) */}
                 {bankingFilter === "outflow" && (
                   <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                          <ArrowUpRight size={15} strokeWidth={2.5} />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 py-1">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm ring-4 ring-zinc-100">
+                          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <line x1="7" y1="17" x2="17" y2="7" />
+                            <polyline points="7 7 17 7 17 17" />
+                          </svg>
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Send Money (Trainer Payroll Preparation & Routing)</h3>
-                            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200">
-                              PAYROLL PREPARATION
-                            </span>
-                          </div>
+                          <h3 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-zinc-800 inline-block shrink-0" />
+                            <span>Send Money (Trainer Payroll & Payouts)</span>
+                          </h3>
                           <p className="text-xs text-zinc-500 mt-0.5">
                             Designated commercial source account for payroll batch file preparation. Actual disbursement is authorized and executed by you through your bank portal.
                           </p>
@@ -3218,7 +3252,7 @@ const GymProfile = () => {
                     {/* 2 Outflow Cards: Dedicated Source Account & Preparation Controls */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                       {/* CARD 1: DESIGNATED DISBURSING COMMERCIAL ACCOUNT */}
-                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-colors">
+                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
                         <div className="space-y-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2.5">
@@ -3230,13 +3264,9 @@ const GymProfile = () => {
                                 <span className="text-[10px] text-zinc-500 block">Designated Source for Salary Batch Files</span>
                               </div>
                             </div>
-                            {primaryPayrollAccount ? (
+                            {primaryPayrollAccount && (
                               <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-white text-[10px] font-semibold font-mono shadow-2xs">
                                 DESIGNATED SOURCE
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200 text-[10px] font-semibold font-mono">
-                                NOT DESIGNATED
                               </span>
                             )}
                           </div>
@@ -3262,7 +3292,7 @@ const GymProfile = () => {
                                 </div>
                               )}
 
-                              <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2.5 text-xs">
+                              <div className="p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 space-y-2.5 text-xs">
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <span className="font-bold text-xs text-zinc-900">{primaryPayrollAccount.bankName}</span>
@@ -3277,7 +3307,7 @@ const GymProfile = () => {
                                   <div>
                                     <span className="text-[10px] text-zinc-400 font-medium block uppercase tracking-wider font-mono">Account Number</span>
                                     <div className="font-mono font-bold text-zinc-900 flex items-center gap-1 mt-0.5 text-xs">
-                                      <span>
+                                      <span className="truncate">
                                         {revealedAccountIds.has(primaryPayrollAccount.id)
                                           ? primaryPayrollAccount.accountNumber
                                           : `•••• ${primaryPayrollAccount.accountNumber?.slice(-4) || "0000"}`}
@@ -3290,13 +3320,21 @@ const GymProfile = () => {
                                       >
                                         {revealedAccountIds.has(primaryPayrollAccount.id) ? <EyeOff size={11} /> : <Eye size={11} />}
                                       </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyText(primaryPayrollAccount.accountNumber, "account", primaryPayrollAccount.id)}
+                                        className="text-zinc-400 hover:text-zinc-700 cursor-pointer p-0.5"
+                                        title="Copy Account Number"
+                                      >
+                                        {copiedAccNum === primaryPayrollAccount.id ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                      </button>
                                     </div>
                                   </div>
 
                                   <div>
                                     <span className="text-[10px] text-zinc-400 font-medium block uppercase tracking-wider font-mono">IFSC Code</span>
                                     <div className="font-mono font-semibold text-zinc-900 flex items-center gap-1 mt-0.5 text-xs">
-                                      <span>{primaryPayrollAccount.ifscCode}</span>
+                                      <span className="truncate">{primaryPayrollAccount.ifscCode}</span>
                                       <button
                                         type="button"
                                         onClick={() => handleCopyText(primaryPayrollAccount.ifscCode, "ifsc", primaryPayrollAccount.id)}
@@ -3311,21 +3349,21 @@ const GymProfile = () => {
 
                                 <div className="pt-2 border-t border-zinc-200/60 flex items-center justify-between text-[11px] text-zinc-500">
                                   <span className="truncate">{primaryPayrollAccount.branchName || "Main Commercial Branch"}</span>
-                                  <span className="text-zinc-900 font-semibold font-mono">Batch File Source Only</span>
+                                  <span className="text-zinc-900 font-semibold font-mono text-[10px]">Batch File Source Only</span>
                                 </div>
                               </div>
                             </>
                           ) : (
-                            <div className="p-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 text-center space-y-2">
+                            <div className="p-5 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 text-center space-y-2.5">
                               <p className="text-[11px] text-zinc-500 leading-relaxed">
                                 Designate a commercial bank account to disburse trainer base salaries, PT commissions, and staff stipends.
                               </p>
                               <button
                                 type="button"
                                 onClick={() => openAddAccountModal("outflow", "BANK_TRANSFER")}
-                                className="h-7 px-3 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors inline-flex items-center gap-1 cursor-pointer shadow-2xs"
+                                className="h-8 px-3.5 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                               >
-                                <Plus size={11} strokeWidth={2} />
+                                <Plus size={12} strokeWidth={2.5} />
                                 <span>Connect Source Account</span>
                               </button>
                             </div>
@@ -3335,7 +3373,7 @@ const GymProfile = () => {
                         {primaryPayrollAccount && (
                           <div className="pt-3 mt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
                             <span className="text-[11px] text-zinc-500 flex items-center gap-1">
-                              <Lock size={11} className="text-zinc-600" />
+                              <Lock size={12} className="text-zinc-600" />
                               <span>Requires Bank Portal / 2FA Execution</span>
                             </span>
                             <button
@@ -3350,7 +3388,7 @@ const GymProfile = () => {
                       </div>
 
                       {/* CARD 2: PAYROLL PREPARATION VS ACTUAL BANK DISBURSEMENT */}
-                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-colors">
+                      <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
                         <div className="space-y-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2.5">
@@ -3358,18 +3396,15 @@ const GymProfile = () => {
                                 <ShieldCheck size={16} strokeWidth={2} />
                               </div>
                               <div>
-                                <h4 className="text-xs font-bold text-zinc-900">Payroll Preparation vs Disbursement</h4>
-                                <span className="text-[10px] text-zinc-500 block">Strict Non-Custodial Boundaries</span>
+                                <h4 className="text-xs font-bold text-zinc-900">Payroll Preparation & Disbursement</h4>
+                                <span className="text-[10px] text-zinc-500 block">3 Simple Steps · No Auto-Debits</span>
                               </div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200 text-[10px] font-semibold font-mono">
-                              NON-CUSTODIAL
-                            </span>
                           </div>
 
-                          <div className="space-y-3">
-                            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200/70 flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center shrink-0 text-zinc-700 font-bold text-[10px] mt-0.5">
+                          <div className="space-y-2.5">
+                            <div className="p-3 rounded-xl bg-zinc-50/80 border border-zinc-200/70 flex items-start gap-3">
+                              <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center shrink-0 text-zinc-700 font-bold text-[10px] mt-0.5 shadow-2xs">
                                 01
                               </div>
                               <div>
@@ -3380,8 +3415,8 @@ const GymProfile = () => {
                               </div>
                             </div>
 
-                            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200/70 flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center shrink-0 text-zinc-700 font-bold text-[10px] mt-0.5">
+                            <div className="p-3 rounded-xl bg-zinc-50/80 border border-zinc-200/70 flex items-start gap-3">
+                              <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center shrink-0 text-zinc-700 font-bold text-[10px] mt-0.5 shadow-2xs">
                                 02
                               </div>
                               <div>
@@ -3392,8 +3427,8 @@ const GymProfile = () => {
                               </div>
                             </div>
 
-                            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200/70 flex items-start gap-3">
-                              <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center shrink-0 text-zinc-700 font-bold text-[10px] mt-0.5">
+                            <div className="p-3 rounded-xl bg-zinc-50/80 border border-zinc-200/70 flex items-start gap-3">
+                              <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center shrink-0 text-zinc-700 font-bold text-[10px] mt-0.5 shadow-2xs">
                                 03
                               </div>
                               <div>
@@ -3415,7 +3450,7 @@ const GymProfile = () => {
                   </div>
                 )}
 
-                {/* 4. SECURITY, GOVERNANCE & NON-CUSTODIAL SAFEGUARDS (FAQ ACCORDION) */}
+                {/* 3. SECURITY, GOVERNANCE & NON-CUSTODIAL SAFEGUARDS (FAQ ACCORDION) */}
                 <div className="bg-white rounded-2xl border border-zinc-200 p-5 sm:p-6 shadow-xs space-y-5">
                   {/* Top Bar: Title, Badges, and Expand/Collapse Action */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
@@ -3426,9 +3461,6 @@ const GymProfile = () => {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Security & Non-Custodial Data Policy</h3>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200 font-medium">
-                            RBI & NPCI Compliant
-                          </span>
                         </div>
                         <p className="text-xs text-zinc-500 mt-0.5">
                           Common questions regarding direct settlement, banking permissions, and non-custodial safeguards.
@@ -3526,9 +3558,6 @@ const GymProfile = () => {
                               </div>
                               <div className="flex items-center gap-2 flex-wrap min-w-0">
                                 <span className="text-xs font-bold text-zinc-900">{faq.question}</span>
-                                <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-semibold ${faq.tagColor}`}>
-                                  {faq.tag}
-                                </span>
                               </div>
                             </div>
                             <div className="shrink-0 flex items-center gap-2.5">
@@ -3565,62 +3594,62 @@ const GymProfile = () => {
                     })}
                   </div>
 
-                  {/* 3. TECHNICAL SECURITY & REGULATORY CREDENTIALS GRID */}
-                  <div className="pt-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  {/* 3. TECHNICAL SECURITY & REGULATORY CREDENTIALS GRID (COMPACT) */}
+                  <div className="pt-1">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
                       {/* Badge 1 */}
-                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
-                          <Lock size={15} strokeWidth={2} />
+                      <div 
+                        title="Bank account coordinates encrypted at rest using dedicated hardware security modules."
+                        className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Lock size={13} strokeWidth={2} />
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="font-bold text-zinc-900 text-xs truncate">256-Bit Hardware AES</div>
-                          <div className="text-[10px] text-zinc-400 font-mono">FIPS 140-2 Level 3 HSM</div>
-                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
-                            Bank account coordinates encrypted at rest using dedicated hardware security modules.
-                          </p>
+                        <div className="min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate leading-tight">256-Bit Hardware AES</div>
+                          <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">FIPS 140-2 Level 3 HSM</div>
                         </div>
                       </div>
 
                       {/* Badge 2 */}
-                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
-                          <Network size={15} strokeWidth={2} />
+                      <div 
+                        title="End-to-end cryptographic transit tunneling protecting every API and banking handshake."
+                        className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Network size={13} strokeWidth={2} />
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="font-bold text-zinc-900 text-xs truncate">TLS 1.3 Strict Tunnel</div>
-                          <div className="text-[10px] text-zinc-400 font-mono">Perfect Forward Secrecy</div>
-                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
-                            End-to-end cryptographic transit tunneling protecting every API and banking handshake.
-                          </p>
+                        <div className="min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate leading-tight">TLS 1.3 Strict Tunnel</div>
+                          <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">Perfect Forward Secrecy</div>
                         </div>
                       </div>
 
                       {/* Badge 3 */}
-                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
-                          <Landmark size={15} strokeWidth={2} />
+                      <div 
+                        title="Operates under strict non-custodial software guidelines for direct merchant settlement."
+                        className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Landmark size={13} strokeWidth={2} />
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="font-bold text-zinc-900 text-xs truncate">RBI PA/PG Framework</div>
-                          <div className="text-[10px] text-zinc-400 font-mono">Circular RBI/2020-21/79</div>
-                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
-                            Operates under strict non-custodial software guidelines for direct merchant settlement.
-                          </p>
+                        <div className="min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate leading-tight">RBI PA/PG Framework</div>
+                          <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">Circular RBI/2020-21/79</div>
                         </div>
                       </div>
 
                       {/* Badge 4 */}
-                      <div className="p-3.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-start gap-3 hover:bg-zinc-50 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
-                          <CheckCircle size={15} strokeWidth={2} />
+                      <div 
+                        title="Native interoperable QR architecture depositing straight into your commercial account."
+                        className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                          <CheckCircle size={13} strokeWidth={2} />
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="font-bold text-zinc-900 text-xs truncate">NPCI UPI 2.0 Rails</div>
-                          <div className="text-[10px] text-zinc-400 font-mono">Direct Merchant Node</div>
-                          <p className="text-[10px] text-zinc-500 leading-snug pt-0.5">
-                            Native interoperable QR architecture depositing straight into your commercial account.
-                          </p>
+                        <div className="min-w-0">
+                          <div className="font-bold text-zinc-900 text-xs truncate leading-tight">NPCI UPI 2.0 Rails</div>
+                          <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">Direct Merchant Node</div>
                         </div>
                       </div>
                     </div>
@@ -3629,7 +3658,7 @@ const GymProfile = () => {
               </motion.div>
             )}
 
-            {/* ──────── TAB 7: SOCIAL MEDIA ──────── */}
+            {/* ──────── TAB 5: SOCIAL MEDIA ──────── */}
             {activeTab === "Social Media" && (
               <motion.div 
                 key="tab-socials"
@@ -3935,75 +3964,97 @@ const GymProfile = () => {
                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
                 transition={{ type: "spring", stiffness: 350, damping: 25 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh] my-auto"
+                className="bg-white rounded-2xl border border-zinc-200/90 shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh] my-auto"
               >
-                {/* Header */}
-                <div className="p-5 border-b border-zinc-100 flex items-start justify-between bg-zinc-50/50">
-                  <div className="flex items-center gap-3">
+                {/* Modal Header */}
+                <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/70">
+                  <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-2xs shrink-0">
-                      {modalStep === 1 && <ArrowUpDown size={18} strokeWidth={1.75} />}
-                      {modalStep === 2 && <Sliders size={18} strokeWidth={1.75} />}
-                      {modalStep === 3 && <Edit3 size={18} strokeWidth={1.75} />}
-                      {modalStep === 4 && <ShieldCheck size={18} strokeWidth={1.75} />}
+                      {modalStep === 1 && <ArrowUpDown size={18} strokeWidth={2} />}
+                      {modalStep === 2 && <Sliders size={18} strokeWidth={2} />}
+                      {modalStep === 3 && <Edit3 size={18} strokeWidth={2} />}
+                      {modalStep === 4 && <ShieldCheck size={18} strokeWidth={2} />}
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
-                        {editingAccountId ? "Edit Payment Destination" : "Add Payment Method"}
-                      </h3>
-                      <p className="text-xs text-zinc-500 font-normal">
-                        {modalStep === 1 && "Step 1 of 4: Select financial purpose and transaction role"}
-                        {modalStep === 2 && "Step 2 of 4: Choose the payment method or settlement rail"}
-                        {modalStep === 3 && "Step 3 of 4: Enter only relevant method coordinates"}
-                        {modalStep === 4 && "Step 4 of 4: Review financial destination and confirm"}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
+                          {editingAccountId ? "Edit Payment Destination" : "Add Payment Method"}
+                        </h3>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200 font-semibold">
+                          Step {modalStep} of 4
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 font-normal mt-0.5 truncate">
+                        {modalStep === 1 && "Step 1: Select the financial direction and transaction role for this destination"}
+                        {modalStep === 2 && "Step 2: Choose the settlement rail (UPI, Direct Bank, Combined, or Gateway)"}
+                        {modalStep === 3 && "Step 3: Enter verified coordinates for your chosen payment method"}
+                        {modalStep === 4 && "Step 4: Review destination coordinates and confirm configuration"}
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsAccountModalOpen(false)}
-                    className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer border-0 bg-transparent"
+                    className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer border-0 bg-transparent shrink-0"
                   >
                     <X size={16} strokeWidth={2} />
                   </button>
                 </div>
 
-                {/* 4-Step Indicator Stepper */}
-                <div className="px-5 py-2.5 bg-zinc-100/70 border-b border-zinc-200/80 flex items-center justify-between gap-1 overflow-x-auto select-none">
-                  {[
-                    { num: 1, label: "Purpose" },
-                    { num: 2, label: "Method" },
-                    { num: 3, label: "Coordinates" },
-                    { num: 4, label: "Review & Save" }
-                  ].map((s) => (
-                    <div 
-                      key={s.num}
-                      onClick={() => {
-                        if (s.num < modalStep) {
-                          setModalStep(s.num);
-                        } else if (s.num === 4 && modalStep === 3) {
-                          if (validateStep3()) setModalStep(4);
-                        }
-                      }}
-                      className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all ${
-                        modalStep === s.num
-                          ? "bg-zinc-900 text-white shadow-2xs cursor-default"
-                          : modalStep > s.num
-                          ? "bg-white text-zinc-800 border border-zinc-200 hover:bg-zinc-50 cursor-pointer"
-                          : "text-zinc-400 opacity-60 cursor-not-allowed"
-                      }`}
-                    >
-                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
-                        modalStep === s.num
-                          ? "bg-white text-zinc-900"
-                          : modalStep > s.num
-                          ? "bg-emerald-100 text-emerald-800 font-bold"
-                          : "bg-zinc-200 text-zinc-600"
-                      }`}>
-                        {modalStep > s.num ? "✓" : s.num}
-                      </span>
-                      <span className="whitespace-nowrap">{s.label}</span>
-                    </div>
-                  ))}
+                {/* 4-Step Stepper Progress Track */}
+                <div className="px-6 py-2.5 bg-zinc-50/40 border-b border-zinc-200/70 select-none">
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { num: 1, label: "Purpose", sub: "Flow Role" },
+                      { num: 2, label: "Method", sub: "Payment Rail" },
+                      { num: 3, label: "Coordinates", sub: "Details & QR" },
+                      { num: 4, label: "Confirm", sub: "Review & Save" }
+                    ].map((s) => {
+                      const isActive = modalStep === s.num;
+                      const isDone = modalStep > s.num;
+                      return (
+                        <div
+                          key={s.num}
+                          onClick={() => {
+                            if (s.num < modalStep) {
+                              setModalStep(s.num);
+                            } else if (s.num === 4 && modalStep === 3) {
+                              if (validateStep3()) setModalStep(4);
+                            }
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
+                            isActive
+                              ? "bg-zinc-900 text-white shadow-2xs cursor-default"
+                              : isDone
+                              ? "bg-emerald-50/80 border border-emerald-200/70 text-emerald-900 hover:bg-emerald-100/70 cursor-pointer"
+                              : "bg-zinc-100/60 text-zinc-400 opacity-60 cursor-not-allowed"
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-mono font-bold shrink-0 ${
+                            isActive
+                              ? "bg-white text-zinc-900"
+                              : isDone
+                              ? "bg-emerald-600 text-white"
+                              : "bg-zinc-200 text-zinc-500"
+                          }`}>
+                            {isDone ? <Check size={11} strokeWidth={3} /> : s.num}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className={`text-[11px] font-bold block truncate leading-tight ${
+                              isActive ? "text-white" : isDone ? "text-zinc-900" : "text-zinc-500"
+                            }`}>
+                              {s.label}
+                            </span>
+                            <span className={`text-[9px] font-medium block truncate leading-tight ${
+                              isActive ? "text-zinc-300" : isDone ? "text-emerald-700" : "text-zinc-400"
+                            }`}>
+                              {s.sub}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Form Body - Step Content */}
@@ -4011,16 +4062,19 @@ const GymProfile = () => {
                   {/* STEP 1: FINANCIAL PURPOSE */}
                   {modalStep === 1 && (
                     <div className="space-y-4">
-                      <div>
-                        <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
-                          Select Financial Purpose
-                        </h4>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          Specify how this destination will be used in your gym's monetary flow.
-                        </p>
+                      <div className="flex items-center justify-between pb-1 border-b border-zinc-100">
+                        <div>
+                          <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
+                            Select Financial Purpose
+                          </h4>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            Specify how this destination will interact with your gym's monetary cash flow.
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-400">1 of 3 options</span>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3.5">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                         {/* Option 1: Inflow */}
                         <div 
                           onClick={() => setAccountFormData(prev => ({ 
@@ -4030,29 +4084,44 @@ const GymProfile = () => {
                             isPrimaryInflow: true,
                             isPrimaryOutflow: false
                           }))}
-                          className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                          className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative group ${
                             accountFormData.purpose === "inflow"
-                              ? "border-zinc-900 bg-zinc-50/80 ring-1 ring-zinc-900 shadow-xs"
-                              : "border-zinc-200 bg-white hover:border-zinc-300"
+                              ? "border-zinc-900 bg-zinc-50/90 ring-1 ring-zinc-900 shadow-xs"
+                              : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/30"
                           }`}
                         >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            accountFormData.purpose === "inflow"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-zinc-100 text-zinc-600"
-                          }`}>
-                            <ArrowDownLeft size={18} strokeWidth={2.5} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <h5 className="text-xs font-bold text-zinc-900">Receive Money (Member Fees & Dues)</h5>
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                MEMBER INFLOW
-                              </span>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                accountFormData.purpose === "inflow"
+                                  ? "bg-emerald-600 text-white shadow-2xs"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              }`}>
+                                <ArrowDownLeft size={17} strokeWidth={2.5} />
+                              </div>
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                accountFormData.purpose === "inflow"
+                                  ? "border-zinc-900 bg-zinc-900 text-white"
+                                  : "border-zinc-300 bg-white"
+                              }`}>
+                                {accountFormData.purpose === "inflow" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
                             </div>
-                            <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                              Collect member subscriptions, package renewals, walk-ins, and POS payments.
-                            </p>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h5 className="text-xs font-bold text-zinc-900">Receive Money</h5>
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  INFLOW
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+                                Collect member dues, package renewals, walk-ins, and POS countertop QR payments.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="pt-2.5 mt-3 border-t border-zinc-200/60 text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>Zero platform escrow</span>
                           </div>
                         </div>
 
@@ -4066,33 +4135,48 @@ const GymProfile = () => {
                             isPrimaryOutflow: true,
                             method: prev.method === "CARD_GATEWAY" ? "BANK_TRANSFER" : prev.method
                           }))}
-                          className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                          className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative group ${
                             accountFormData.purpose === "outflow"
-                              ? "border-zinc-900 bg-zinc-50/80 ring-1 ring-zinc-900 shadow-xs"
-                              : "border-zinc-200 bg-white hover:border-zinc-300"
+                              ? "border-zinc-900 bg-zinc-50/90 ring-1 ring-zinc-900 shadow-xs"
+                              : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/30"
                           }`}
                         >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            accountFormData.purpose === "outflow"
-                              ? "bg-zinc-900 text-white"
-                              : "bg-zinc-100 text-zinc-600"
-                          }`}>
-                            <ArrowUpRight size={18} strokeWidth={2.5} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <h5 className="text-xs font-bold text-zinc-900">Send Money (Trainer Payroll & Payouts)</h5>
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200">
-                                PAYROLL OUTFLOW
-                              </span>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                accountFormData.purpose === "outflow"
+                                  ? "bg-zinc-900 text-white shadow-2xs"
+                                  : "bg-zinc-100 text-zinc-700 border border-zinc-200"
+                              }`}>
+                                <ArrowUpRight size={17} strokeWidth={2.5} />
+                              </div>
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                accountFormData.purpose === "outflow"
+                                  ? "border-zinc-900 bg-zinc-900 text-white"
+                                  : "border-zinc-300 bg-white"
+                              }`}>
+                                {accountFormData.purpose === "outflow" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
                             </div>
-                            <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                              Disburse trainer base salaries, PT commissions, contractor fees, and staff stipends.
-                            </p>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h5 className="text-xs font-bold text-zinc-900">Send Money</h5>
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200">
+                                  OUTFLOW
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+                                Disburse trainer base salaries, PT commissions, contractor fees, and operational payouts.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="pt-2.5 mt-3 border-t border-zinc-200/60 text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
+                            <span>Batch IMPS/NEFT rails</span>
                           </div>
                         </div>
 
-                        {/* Option 3: Dual Purpose (Both) */}
+                        {/* Option 3: Dual Purpose */}
                         <div 
                           onClick={() => setAccountFormData(prev => ({ 
                             ...prev, 
@@ -4101,29 +4185,44 @@ const GymProfile = () => {
                             isPrimaryInflow: true,
                             isPrimaryOutflow: true
                           }))}
-                          className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                          className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative group ${
                             accountFormData.purpose === "both"
-                              ? "border-zinc-900 bg-zinc-50/80 ring-1 ring-zinc-900 shadow-xs"
-                              : "border-zinc-200 bg-white hover:border-zinc-300"
+                              ? "border-zinc-900 bg-zinc-50/90 ring-1 ring-zinc-900 shadow-xs"
+                              : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/30"
                           }`}
                         >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            accountFormData.purpose === "both"
-                              ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                              : "bg-zinc-100 text-zinc-600"
-                          }`}>
-                            <ArrowUpDown size={18} strokeWidth={2.5} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <h5 className="text-xs font-bold text-zinc-900">Dual Purpose (Inflow + Outflow)</h5>
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
-                                DUAL PURPOSE
-                              </span>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                accountFormData.purpose === "both"
+                                  ? "bg-indigo-600 text-white shadow-2xs"
+                                  : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                              }`}>
+                                <ArrowUpDown size={17} strokeWidth={2.5} />
+                              </div>
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                accountFormData.purpose === "both"
+                                  ? "border-zinc-900 bg-zinc-900 text-white"
+                                  : "border-zinc-300 bg-white"
+                              }`}>
+                                {accountFormData.purpose === "both" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
                             </div>
-                            <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                              Use a single commercial business account to both receive member fees and disburse trainer payroll.
-                            </p>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h5 className="text-xs font-bold text-zinc-900">Dual Purpose</h5>
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                  DUAL RAILS
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+                                Single commercial account to both receive incoming member fees and disburse trainer payroll.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="pt-2.5 mt-3 border-t border-zinc-200/60 text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                            <span>Unified treasury routing</span>
                           </div>
                         </div>
                       </div>
@@ -4133,42 +4232,54 @@ const GymProfile = () => {
                   {/* STEP 2: PAYMENT METHOD SELECTION */}
                   {modalStep === 2 && (
                     <div className="space-y-4">
-                      <div>
-                        <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
-                          Select Payment Method
-                        </h4>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          Choose the specific payment rail. You will only configure fields relevant to this method.
-                        </p>
+                      <div className="flex items-center justify-between pb-1 border-b border-zinc-100">
+                        <div>
+                          <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
+                            Select Payment Method Rail
+                          </h4>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            Choose the settlement rail. You will only configure fields strictly relevant to this method.
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-400">Step 2 of 4</span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         {/* Method: UPI Only */}
                         <div 
                           onClick={() => setAccountFormData(prev => ({ ...prev, method: "UPI" }))}
-                          className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                          className={`p-4.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                             accountFormData.method === "UPI"
-                              ? "border-zinc-900 bg-zinc-50/80 ring-1 ring-zinc-900 shadow-xs"
-                              : "border-zinc-200 bg-white hover:border-zinc-300"
+                              ? "border-zinc-900 bg-zinc-50/90 ring-1 ring-zinc-900 shadow-xs"
+                              : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/30"
                           }`}
                         >
-                          <div className="space-y-2.5">
+                          <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-900">
-                                <QrCode size={18} strokeWidth={1.75} />
+                              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center">
+                                <QrCode size={19} strokeWidth={2} />
                               </div>
-                              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                UPI Rail
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  UPI Instant
+                                </span>
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                  accountFormData.method === "UPI"
+                                    ? "border-zinc-900 bg-zinc-900 text-white"
+                                    : "border-zinc-300 bg-white"
+                                }`}>
+                                  {accountFormData.method === "UPI" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                </div>
+                              </div>
                             </div>
                             <div>
                               <h5 className="text-xs font-bold text-zinc-900">UPI Only (VPA & Standee QR)</h5>
                               <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                                Direct merchant UPI ID handle and scannable countertop QR code. No bank account number needed.
+                                Standalone merchant UPI VPA handle and scannable countertop QR code. No bank account number needed.
                               </p>
                             </div>
                           </div>
-                          <div className="mt-3 pt-2.5 border-t border-zinc-100 text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                          <div className="mt-3.5 pt-2.5 border-t border-zinc-200/60 text-[10px] font-mono text-zinc-500 flex items-center gap-1.5">
                             <Check size={11} className="text-emerald-600" />
                             <span>Zero bank details required</span>
                           </div>
@@ -4177,62 +4288,80 @@ const GymProfile = () => {
                         {/* Method: Bank Transfer Only */}
                         <div 
                           onClick={() => setAccountFormData(prev => ({ ...prev, method: "BANK_TRANSFER" }))}
-                          className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                          className={`p-4.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                             accountFormData.method === "BANK_TRANSFER"
-                              ? "border-zinc-900 bg-zinc-50/80 ring-1 ring-zinc-900 shadow-xs"
-                              : "border-zinc-200 bg-white hover:border-zinc-300"
+                              ? "border-zinc-900 bg-zinc-50/90 ring-1 ring-zinc-900 shadow-xs"
+                              : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/30"
                           }`}
                         >
-                          <div className="space-y-2.5">
+                          <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-900">
-                                <Landmark size={18} strokeWidth={1.75} />
+                              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center">
+                                <Landmark size={19} strokeWidth={2} />
                               </div>
-                              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 border border-zinc-200">
-                                Direct Bank
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
+                                  Direct Bank
+                                </span>
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                  accountFormData.method === "BANK_TRANSFER"
+                                    ? "border-zinc-900 bg-zinc-900 text-white"
+                                    : "border-zinc-300 bg-white"
+                                }`}>
+                                  {accountFormData.method === "BANK_TRANSFER" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                </div>
+                              </div>
                             </div>
                             <div>
                               <h5 className="text-xs font-bold text-zinc-900">Bank Account Only</h5>
                               <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                                Direct transfer via NEFT, RTGS, or IMPS. Encrypted account number & IFSC code. No UPI ID required.
+                                Direct commercial transfer via NEFT, RTGS, or IMPS. Encrypted account number & IFSC. No UPI ID required.
                               </p>
                             </div>
                           </div>
-                          <div className="mt-3 pt-2.5 border-t border-zinc-100 text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                          <div className="mt-3.5 pt-2.5 border-t border-zinc-200/60 text-[10px] font-mono text-zinc-500 flex items-center gap-1.5">
                             <Check size={11} className="text-emerald-600" />
-                            <span>AES-256 encrypted at rest</span>
+                            <span>AES-256 hardware encrypted at rest</span>
                           </div>
                         </div>
 
                         {/* Method: Combined (Bank + UPI) */}
                         <div 
                           onClick={() => setAccountFormData(prev => ({ ...prev, method: "COMBINED" }))}
-                          className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                          className={`p-4.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                             accountFormData.method === "COMBINED"
-                              ? "border-zinc-900 bg-zinc-50/80 ring-1 ring-zinc-900 shadow-xs"
-                              : "border-zinc-200 bg-white hover:border-zinc-300"
+                              ? "border-zinc-900 bg-zinc-50/90 ring-1 ring-zinc-900 shadow-xs"
+                              : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/30"
                           }`}
                         >
-                          <div className="space-y-2.5">
+                          <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-900">
-                                <Wallet size={18} strokeWidth={1.75} />
+                              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center justify-center">
+                                <Wallet size={19} strokeWidth={2} />
                               </div>
-                              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 border border-zinc-200">
-                                Complete
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                  Full Suite
+                                </span>
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                  accountFormData.method === "COMBINED"
+                                    ? "border-zinc-900 bg-zinc-900 text-white"
+                                    : "border-zinc-300 bg-white"
+                                }`}>
+                                  {accountFormData.method === "COMBINED" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                </div>
+                              </div>
                             </div>
                             <div>
                               <h5 className="text-xs font-bold text-zinc-900">Combined (Bank + UPI)</h5>
                               <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                                Configure both commercial bank account coordinates and a linked UPI VPA on the same record.
+                                Configure both commercial bank account coordinates and a linked UPI VPA on the same destination record.
                               </p>
                             </div>
                           </div>
-                          <div className="mt-3 pt-2.5 border-t border-zinc-100 text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                          <div className="mt-3.5 pt-2.5 border-t border-zinc-200/60 text-[10px] font-mono text-zinc-500 flex items-center gap-1.5">
                             <Check size={11} className="text-emerald-600" />
-                            <span>Dual rails on single profile</span>
+                            <span>Dual rails on single gym profile</span>
                           </div>
                         </div>
 
@@ -4240,31 +4369,40 @@ const GymProfile = () => {
                         {accountFormData.purpose !== "outflow" && (
                           <div 
                             onClick={() => setAccountFormData(prev => ({ ...prev, method: "CARD_GATEWAY" }))}
-                            className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                            className={`p-4.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
                               accountFormData.method === "CARD_GATEWAY"
-                                ? "border-zinc-900 bg-zinc-50/80 ring-1 ring-zinc-900 shadow-xs"
-                                : "border-zinc-200 bg-white hover:border-zinc-300"
+                                ? "border-zinc-900 bg-zinc-50/90 ring-1 ring-zinc-900 shadow-xs"
+                                : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/30"
                             }`}
                           >
-                            <div className="space-y-2.5">
+                            <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-900">
-                                  <CreditCard size={18} strokeWidth={1.75} />
+                                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
+                                  <CreditCard size={19} strokeWidth={2} />
                                 </div>
-                                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
-                                  COMING SOON / NOT CONNECTED
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                                    Gateway
+                                  </span>
+                                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                    accountFormData.method === "CARD_GATEWAY"
+                                      ? "border-zinc-900 bg-zinc-900 text-white"
+                                      : "border-zinc-300 bg-white"
+                                  }`}>
+                                    {accountFormData.method === "CARD_GATEWAY" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                  </div>
+                                </div>
                               </div>
                               <div>
                                 <h5 className="text-xs font-bold text-zinc-900">Card Payments (Gateway)</h5>
                                 <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                                  Payment gateway integration is currently in development. Debit and credit card payments cannot be accepted until an authorized payment aggregator is connected.
+                                  Payment gateway integration is currently in development. Debit and credit card payments require an authorized aggregator.
                                 </p>
                               </div>
                             </div>
-                            <div className="mt-3 pt-2.5 border-t border-zinc-100 text-[10px] font-mono text-zinc-500 flex items-center gap-1">
-                              <Info size={11} className="text-amber-600" />
-                              <span>Zero card credentials stored</span>
+                            <div className="mt-3.5 pt-2.5 border-t border-zinc-200/60 text-[10px] font-mono text-zinc-500 flex items-center gap-1.5">
+                              <Info size={11} className="text-zinc-600" />
+                              <span>Tokenized PCI-DSS Level 1</span>
                             </div>
                           </div>
                         )}
@@ -4274,118 +4412,136 @@ const GymProfile = () => {
 
                   {/* STEP 3: METHOD-SPECIFIC COORDINATES CONFIGURATION */}
                   {modalStep === 3 && (
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
-                          {accountFormData.method === "UPI" && "Configure UPI Receiving Coordinates"}
-                          {accountFormData.method === "BANK_TRANSFER" && "Configure Bank Account Coordinates"}
-                          {accountFormData.method === "COMBINED" && "Configure Bank Account & UPI Coordinates"}
-                          {accountFormData.method === "CARD_GATEWAY" && "Card Gateway Provider Connection"}
-                        </h4>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {accountFormData.method === "UPI" && "Enter only your UPI ID and display name. No bank details required."}
-                          {accountFormData.method === "BANK_TRANSFER" && "Enter account coordinates. Encrypted at rest using AES-256-GCM."}
-                          {accountFormData.method === "COMBINED" && "Enter commercial bank coordinates and your primary merchant UPI ID."}
-                          {accountFormData.method === "CARD_GATEWAY" && "Connect an RBI-authorized payment aggregator for card acceptance."}
-                        </p>
+                    <div className="space-y-5">
+                      <div className="flex items-center justify-between pb-1 border-b border-zinc-100">
+                        <div>
+                          <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
+                            {accountFormData.method === "UPI" && "Configure UPI Receiving Coordinates"}
+                            {accountFormData.method === "BANK_TRANSFER" && "Configure Commercial Bank Coordinates"}
+                            {accountFormData.method === "COMBINED" && "Configure Bank Account & UPI Coordinates"}
+                            {accountFormData.method === "CARD_GATEWAY" && "Card Gateway Provider Connection"}
+                          </h4>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            {accountFormData.method === "UPI" && "Enter only your UPI ID and display name. No bank details required."}
+                            {accountFormData.method === "BANK_TRANSFER" && "Enter commercial banking coordinates. Encrypted at rest using AES-256-GCM."}
+                            {accountFormData.method === "COMBINED" && "Enter commercial banking coordinates and your linked merchant UPI ID."}
+                            {accountFormData.method === "CARD_GATEWAY" && "Connect an RBI-authorized payment aggregator for card acceptance."}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-400">Step 3 of 4</span>
                       </div>
 
-                      {/* --- CASE A: UPI ONLY --- */}
+                      {/* --- CASE A: UPI ONLY (ELEGANT 2-COLUMN SPLIT WITH LIVE STANDEE PREVIEW) --- */}
                       {accountFormData.method === "UPI" && (
-                        <div className="space-y-4">
-                          {/* Beneficiary Display Name */}
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-semibold text-zinc-700">Beneficiary Display Name (Shows in UPI Apps)</label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                                <Building2 size={15} strokeWidth={1.5} />
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                          {/* Left Column: Form Inputs (7 cols) */}
+                          <div className="lg:col-span-7 space-y-4">
+                            {/* Beneficiary Display Name */}
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Beneficiary Display Name (Shows in UPI Apps)</label>
+                              <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                                  <Building2 size={15} strokeWidth={1.5} />
+                                </div>
+                                <input 
+                                  type="text" 
+                                  value={accountFormData.accountHolderName} 
+                                  placeholder="e.g. Iron Pulse Fitness"
+                                  onChange={(e) => setAccountFormData(prev => ({ ...prev, accountHolderName: e.target.value }))}
+                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50/70 border rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal ${
+                                    accountFormErrors.accountHolderName ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                                  }`}
+                                />
                               </div>
-                              <input 
-                                type="text" 
-                                value={accountFormData.accountHolderName} 
-                                placeholder="e.g. Iron Pulse Fitness"
-                                onChange={(e) => setAccountFormData(prev => ({ ...prev, accountHolderName: e.target.value }))}
-                                className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal ${
-                                  accountFormErrors.accountHolderName ? "border-red-400 bg-red-50/20" : "border-zinc-200"
-                                }`}
-                              />
+                              {accountFormErrors.accountHolderName && (
+                                <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.accountHolderName}</span>
+                              )}
                             </div>
-                            {accountFormErrors.accountHolderName && (
-                              <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.accountHolderName}</span>
-                            )}
+
+                            {/* UPI VPA ID */}
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Merchant UPI ID / VPA Handle</label>
+                              <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                                  <QrCode size={15} strokeWidth={1.5} />
+                                </div>
+                                <input 
+                                  type="text" 
+                                  value={accountFormData.upiId} 
+                                  placeholder="e.g. gymname@okhdfcbank"
+                                  onChange={(e) => setAccountFormData(prev => ({ ...prev, upiId: e.target.value.toLowerCase().trim() }))}
+                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50/70 border rounded-xl text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
+                                    accountFormErrors.upiId ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                                  }`}
+                                />
+                              </div>
+                              {accountFormErrors.upiId && (
+                                <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.upiId}</span>
+                              )}
+                              <span className="text-[10px] text-zinc-400 block font-normal">
+                                Compatible with Google Pay, PhonePe, Paytm, BHIM, and any bank UPI app.
+                              </span>
+                            </div>
+
+                            {/* Primary Inflow Checkbox */}
+                            <div className="p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80">
+                              <label className="flex items-start gap-2.5 cursor-pointer">
+                                <input 
+                                  type="checkbox"
+                                  checked={accountFormData.isPrimaryInflow}
+                                  onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryInflow: e.target.checked }))}
+                                  className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
+                                />
+                                <div>
+                                  <div className="text-xs font-semibold text-zinc-900">Set as Primary UPI Receiving Destination</div>
+                                  <div className="text-[10px] text-zinc-500 mt-0.5 leading-relaxed">
+                                    Member dues invoices and countertop standee will route directly to this UPI ID by default.
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
                           </div>
 
-                          {/* UPI VPA ID */}
-                          <div className="space-y-1.5">
-                            <label className="text-[11px] font-semibold text-zinc-700">Merchant UPI ID / VPA Handle</label>
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                                <QrCode size={15} strokeWidth={1.5} />
-                              </div>
-                              <input 
-                                type="text" 
-                                value={accountFormData.upiId} 
-                                placeholder="e.g. gymname@okhdfcbank"
-                                onChange={(e) => setAccountFormData(prev => ({ ...prev, upiId: e.target.value.toLowerCase().trim() }))}
-                                className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
-                                  accountFormErrors.upiId ? "border-red-400 bg-red-50/20" : "border-zinc-200"
-                                }`}
-                              />
-                            </div>
-                            {accountFormErrors.upiId && (
-                              <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.upiId}</span>
-                            )}
-                            <span className="text-[10px] text-zinc-400 block font-normal">
-                              Compatible with Google Pay, PhonePe, Paytm, BHIM, and any bank UPI app.
-                            </span>
-                          </div>
-
-                          {/* Live Vector QR Preview Inline */}
-                          {accountFormData.upiId && accountFormData.upiId.includes("@") && (
-                            <div className="p-4 rounded-xl bg-zinc-50/80 border border-zinc-200 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                              <div className="p-2 bg-white rounded-lg border border-zinc-200 shrink-0 shadow-2xs">
+                          {/* Right Column: Live Vector QR Standee Card Preview (5 cols) */}
+                          <div className="lg:col-span-5 bg-gradient-to-b from-zinc-50 to-zinc-100/70 rounded-2xl border border-zinc-200/90 p-5 flex flex-col items-center justify-center text-center shadow-xs">
+                            <div className="p-3 bg-white rounded-xl border border-zinc-200/80 shadow-xs mb-3">
+                              {accountFormData.upiId && accountFormData.upiId.includes("@") ? (
                                 <UpiQrCodeSvg 
                                   vpa={accountFormData.upiId} 
                                   name={accountFormData.accountHolderName || gymData.name} 
-                                  size={110} 
+                                  size={135} 
                                 />
-                              </div>
-                              <div>
-                                <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mb-1 font-semibold">
-                                  LIVE VALID VECTOR QR GENERATED
+                              ) : (
+                                <div className="w-[135px] h-[135px] rounded-lg bg-zinc-50 border border-dashed border-zinc-300 flex flex-col items-center justify-center p-3 text-zinc-400">
+                                  <QrCode size={36} strokeWidth={1.5} className="mb-1 text-zinc-300" />
+                                  <span className="text-[10px] font-mono">Live QR Preview</span>
                                 </div>
-                                <div className="text-xs font-bold text-zinc-900">Instant Merchant Standee QR</div>
-                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
-                                  This authentic vector QR will be scannable at your front desk countertop and dynamically generated on member dues invoices.
-                                </p>
-                              </div>
+                              )}
                             </div>
-                          )}
-
-                          {/* Primary Inflow Checkbox */}
-                          <div className="pt-2 border-t border-zinc-100">
-                            <label className="flex items-start gap-2.5 cursor-pointer">
-                              <input 
-                                type="checkbox"
-                                checked={accountFormData.isPrimaryInflow}
-                                onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryInflow: e.target.checked }))}
-                                className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
-                              />
-                              <div>
-                                <div className="text-xs font-semibold text-zinc-900">Set as Primary UPI Receiving Destination</div>
-                                <div className="text-[10px] text-zinc-500">Member dues and countertop QR will route to this UPI ID by default.</div>
+                            <div className="w-full min-w-0">
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mb-1.5 font-semibold">
+                                {accountFormData.upiId && accountFormData.upiId.includes("@") ? "LIVE NPCI STANDARD QR" : "AWAITING UPI ID"}
+                              </span>
+                              <div className="text-xs font-bold text-zinc-900 truncate">
+                                {accountFormData.accountHolderName || "Beneficiary Name"}
                               </div>
-                            </label>
+                              <div className="text-[11px] font-mono text-zinc-500 truncate mt-0.5">
+                                {accountFormData.upiId || "vpa@bankhandle"}
+                              </div>
+                              <p className="text-[10px] text-zinc-400 mt-2 leading-relaxed">
+                                Ready for countertop standee printing & dynamic invoice billing. Zero payment gateway fees.
+                              </p>
+                            </div>
                           </div>
                         </div>
                       )}
 
-                      {/* --- CASE B: BANK TRANSFER ONLY --- */}
+                      {/* --- CASE B: BANK TRANSFER ONLY (STRUCTURED 2-COLUMN GRID) --- */}
                       {accountFormData.method === "BANK_TRANSFER" && (
                         <div className="space-y-4">
                           {/* Beneficiary Legal Name */}
                           <div className="space-y-1.5">
-                            <label className="text-[11px] font-semibold text-zinc-700">Account Holder / Legal Business Name</label>
+                            <label className="text-[11px] font-semibold text-zinc-700 block">Account Holder / Legal Business Name</label>
                             <div className="relative">
                               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                                 <Building2 size={15} strokeWidth={1.5} />
@@ -4395,7 +4551,7 @@ const GymProfile = () => {
                                 value={accountFormData.accountHolderName} 
                                 placeholder="e.g. Iron Pulse Fitness LLP"
                                 onChange={(e) => setAccountFormData(prev => ({ ...prev, accountHolderName: e.target.value }))}
-                                className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal ${
+                                className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50/70 border rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal ${
                                   accountFormErrors.accountHolderName ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                 }`}
                               />
@@ -4408,7 +4564,7 @@ const GymProfile = () => {
                           {/* Bank Name & Account Type */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-semibold text-zinc-700">Bank Name</label>
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Bank Name</label>
                               <CustomDropdown
                                 id="account-bank-dropdown"
                                 icon={Landmark}
@@ -4420,7 +4576,7 @@ const GymProfile = () => {
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-semibold text-zinc-700">Account Type</label>
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Account Type</label>
                               <CustomDropdown
                                 id="account-type-dropdown"
                                 icon={CreditCard}
@@ -4434,7 +4590,7 @@ const GymProfile = () => {
                           {/* Account Number & Confirm */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-semibold text-zinc-700">Account Number</label>
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Account Number</label>
                               <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                                   <CreditCard size={15} strokeWidth={1.5} />
@@ -4444,7 +4600,7 @@ const GymProfile = () => {
                                   value={accountFormData.accountNumber} 
                                   placeholder="e.g. 50200084920193"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, accountNumber: e.target.value.replace(/\s+/g, '') }))}
-                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
+                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50/70 border rounded-xl text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
                                     accountFormErrors.accountNumber ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                   }`}
                                 />
@@ -4455,7 +4611,7 @@ const GymProfile = () => {
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-semibold text-zinc-700">Re-enter Account Number</label>
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Re-enter Account Number</label>
                               <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                                   <CreditCard size={15} strokeWidth={1.5} />
@@ -4465,7 +4621,7 @@ const GymProfile = () => {
                                   value={accountFormData.confirmAccountNumber} 
                                   placeholder="Re-type account number"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, confirmAccountNumber: e.target.value.replace(/\s+/g, '') }))}
-                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
+                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50/70 border rounded-xl text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans ${
                                     accountFormErrors.confirmAccountNumber ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                   }`}
                                 />
@@ -4480,7 +4636,7 @@ const GymProfile = () => {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                               <div className="flex items-center justify-between">
-                                <label className="text-[11px] font-semibold text-zinc-700">IFSC Code</label>
+                                <label className="text-[11px] font-semibold text-zinc-700 block">IFSC Code</label>
                                 <span className="text-[10px] text-zinc-400 font-mono">11 Characters</span>
                               </div>
                               <div className="relative">
@@ -4493,7 +4649,7 @@ const GymProfile = () => {
                                   value={accountFormData.ifscCode} 
                                   placeholder="e.g. HDFC0000240"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))}
-                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50 border rounded-lg text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans uppercase ${
+                                  className={`w-full h-10 pl-10 pr-3.5 bg-zinc-50/70 border rounded-xl text-xs font-mono font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal placeholder:font-sans uppercase ${
                                     accountFormErrors.ifscCode ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                   }`}
                                 />
@@ -4504,7 +4660,7 @@ const GymProfile = () => {
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-semibold text-zinc-700">Branch Name & City (Optional)</label>
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Branch Name & City (Optional)</label>
                               <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                                   <MapPin size={15} strokeWidth={1.5} />
@@ -4514,42 +4670,46 @@ const GymProfile = () => {
                                   value={accountFormData.branchName} 
                                   placeholder="e.g. Indiranagar, Bengaluru"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, branchName: e.target.value }))}
-                                  className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
+                                  className="w-full h-10 pl-10 pr-3.5 bg-zinc-50/70 border border-zinc-200 rounded-xl text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
                                 />
                               </div>
                             </div>
                           </div>
 
                           {/* Primary Routing Checkboxes */}
-                          <div className="pt-2 border-t border-zinc-100 space-y-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-zinc-100">
                             {(accountFormData.purpose === "inflow" || accountFormData.purpose === "both") && (
-                              <label className="flex items-start gap-2.5 cursor-pointer">
-                                <input 
-                                  type="checkbox"
-                                  checked={accountFormData.isPrimaryInflow}
-                                  onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryInflow: e.target.checked }))}
-                                  className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
-                                />
-                                <div>
-                                  <div className="text-xs font-semibold text-zinc-900">Set as Primary Member Fee Inflow Destination</div>
-                                  <div className="text-[10px] text-zinc-500">Member bank transfer instructions will show these account coordinates.</div>
-                                </div>
-                              </label>
+                              <div className="p-3 rounded-xl bg-zinc-50/80 border border-zinc-200/80">
+                                <label className="flex items-start gap-2.5 cursor-pointer">
+                                  <input 
+                                    type="checkbox"
+                                    checked={accountFormData.isPrimaryInflow}
+                                    onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryInflow: e.target.checked }))}
+                                    className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
+                                  />
+                                  <div>
+                                    <div className="text-xs font-semibold text-zinc-900">Set as Primary Fee Inflow Account</div>
+                                    <div className="text-[10px] text-zinc-500 mt-0.5 leading-relaxed">Direct member transfer instructions will show these coordinates.</div>
+                                  </div>
+                                </label>
+                              </div>
                             )}
 
                             {(accountFormData.purpose === "outflow" || accountFormData.purpose === "both") && (
-                              <label className="flex items-start gap-2.5 cursor-pointer">
-                                <input 
-                                  type="checkbox"
-                                  checked={accountFormData.isPrimaryOutflow}
-                                  onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryOutflow: e.target.checked }))}
-                                  className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
-                                />
-                                <div>
-                                  <div className="text-xs font-semibold text-zinc-900">Set as Primary Trainer Payroll Outflow Source</div>
-                                  <div className="text-[10px] text-zinc-500">Account used for trainer salary and PT commission batch payouts.</div>
-                                </div>
-                              </label>
+                              <div className="p-3 rounded-xl bg-zinc-50/80 border border-zinc-200/80">
+                                <label className="flex items-start gap-2.5 cursor-pointer">
+                                  <input 
+                                    type="checkbox"
+                                    checked={accountFormData.isPrimaryOutflow}
+                                    onChange={(e) => setAccountFormData(prev => ({ ...prev, isPrimaryOutflow: e.target.checked }))}
+                                    className="w-4 h-4 mt-0.5 rounded text-zinc-900 focus:ring-0 cursor-pointer"
+                                  />
+                                  <div>
+                                    <div className="text-xs font-semibold text-zinc-900">Set as Primary Payroll Outflow Account</div>
+                                    <div className="text-[10px] text-zinc-500 mt-0.5 leading-relaxed">Source account used for batch trainer salary disbursements.</div>
+                                  </div>
+                                </label>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -4557,22 +4717,22 @@ const GymProfile = () => {
 
                       {/* --- CASE C: COMBINED (BANK + UPI) --- */}
                       {accountFormData.method === "COMBINED" && (
-                        <div className="space-y-5">
+                        <div className="space-y-4">
                           {/* Section A: Bank Coordinates */}
-                          <div className="p-4 rounded-xl bg-zinc-50/50 border border-zinc-200 space-y-3.5">
-                            <div className="flex items-center gap-2 pb-2 border-b border-zinc-200/60">
+                          <div className="p-4.5 rounded-2xl bg-zinc-50/50 border border-zinc-200 space-y-4">
+                            <div className="flex items-center gap-2 pb-2.5 border-b border-zinc-200/70">
                               <Landmark size={15} className="text-zinc-800" />
-                              <span className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">1. Bank Account Details</span>
+                              <span className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">1. Bank Account Coordinates</span>
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-semibold text-zinc-700">Account Holder / Legal Business Name</label>
+                              <label className="text-[11px] font-semibold text-zinc-700 block">Account Holder / Legal Business Name</label>
                               <input 
                                 type="text" 
                                 value={accountFormData.accountHolderName} 
                                 placeholder="e.g. Iron Pulse Fitness LLP"
                                 onChange={(e) => setAccountFormData(prev => ({ ...prev, accountHolderName: e.target.value }))}
-                                className={`w-full h-10 px-3 bg-white border rounded-lg text-xs font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
+                                className={`w-full h-10 px-3 bg-white border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
                                   accountFormErrors.accountHolderName ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                 }`}
                               />
@@ -4581,9 +4741,9 @@ const GymProfile = () => {
                               )}
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                               <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold text-zinc-700">Bank Name</label>
+                                <label className="text-[11px] font-semibold text-zinc-700 block">Bank Name</label>
                                 <CustomDropdown
                                   id="combined-bank-dropdown"
                                   icon={Landmark}
@@ -4595,7 +4755,7 @@ const GymProfile = () => {
                               </div>
 
                               <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold text-zinc-700">Account Type</label>
+                                <label className="text-[11px] font-semibold text-zinc-700 block">Account Type</label>
                                 <CustomDropdown
                                   id="combined-type-dropdown"
                                   icon={CreditCard}
@@ -4606,15 +4766,15 @@ const GymProfile = () => {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                               <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold text-zinc-700">Account Number</label>
+                                <label className="text-[11px] font-semibold text-zinc-700 block">Account Number</label>
                                 <input 
                                   type="text" 
                                   value={accountFormData.accountNumber} 
                                   placeholder="e.g. 50200084920193"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, accountNumber: e.target.value.replace(/\s+/g, '') }))}
-                                  className={`w-full h-10 px-3 bg-white border rounded-lg text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
+                                  className={`w-full h-10 px-3 bg-white border rounded-xl text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
                                     accountFormErrors.accountNumber ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                   }`}
                                 />
@@ -4624,13 +4784,13 @@ const GymProfile = () => {
                               </div>
 
                               <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold text-zinc-700">Re-enter Account Number</label>
+                                <label className="text-[11px] font-semibold text-zinc-700 block">Re-enter Account Number</label>
                                 <input 
                                   type="text" 
                                   value={accountFormData.confirmAccountNumber} 
                                   placeholder="Re-type account number"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, confirmAccountNumber: e.target.value.replace(/\s+/g, '') }))}
-                                  className={`w-full h-10 px-3 bg-white border rounded-lg text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
+                                  className={`w-full h-10 px-3 bg-white border rounded-xl text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
                                     accountFormErrors.confirmAccountNumber ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                   }`}
                                 />
@@ -4640,16 +4800,16 @@ const GymProfile = () => {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                               <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold text-zinc-700">IFSC Code</label>
+                                <label className="text-[11px] font-semibold text-zinc-700 block">IFSC Code</label>
                                 <input 
                                   type="text" 
                                   maxLength={11}
                                   value={accountFormData.ifscCode} 
                                   placeholder="e.g. HDFC0000240"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))}
-                                  className={`w-full h-10 px-3 bg-white border rounded-lg text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent uppercase ${
+                                  className={`w-full h-10 px-3 bg-white border rounded-xl text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent uppercase ${
                                     accountFormErrors.ifscCode ? "border-red-400 bg-red-50/20" : "border-zinc-200"
                                   }`}
                                 />
@@ -4659,52 +4819,60 @@ const GymProfile = () => {
                               </div>
 
                               <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold text-zinc-700">Branch Name (Optional)</label>
+                                <label className="text-[11px] font-semibold text-zinc-700 block">Branch Name (Optional)</label>
                                 <input 
                                   type="text" 
                                   value={accountFormData.branchName} 
                                   placeholder="e.g. Indiranagar Branch"
                                   onChange={(e) => setAccountFormData(prev => ({ ...prev, branchName: e.target.value }))}
-                                  className="w-full h-10 px-3 bg-white border border-zinc-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+                                  className="w-full h-10 px-3 bg-white border border-zinc-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
                                 />
                               </div>
                             </div>
                           </div>
 
-                          {/* Section B: UPI VPA */}
-                          <div className="p-4 rounded-xl bg-zinc-50/50 border border-zinc-200 space-y-3.5">
-                            <div className="flex items-center gap-2 pb-2 border-b border-zinc-200/60">
+                          {/* Section B: UPI VPA & Live QR Preview */}
+                          <div className="p-4.5 rounded-2xl bg-zinc-50/50 border border-zinc-200 space-y-4">
+                            <div className="flex items-center gap-2 pb-2.5 border-b border-zinc-200/70">
                               <QrCode size={15} className="text-zinc-800" />
-                              <span className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">2. Merchant UPI VPA</span>
+                              <span className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">2. Merchant UPI VPA & Standee</span>
                             </div>
 
-                            <div className="space-y-1.5">
-                              <label className="text-[11px] font-semibold text-zinc-700">Primary UPI ID / VPA Handle</label>
-                              <input 
-                                type="text" 
-                                value={accountFormData.upiId} 
-                                placeholder="e.g. ironpulse@okhdfcbank"
-                                onChange={(e) => setAccountFormData(prev => ({ ...prev, upiId: e.target.value.toLowerCase().trim() }))}
-                                className={`w-full h-10 px-3 bg-white border rounded-lg text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
-                                  accountFormErrors.upiId ? "border-red-400 bg-red-50/20" : "border-zinc-200"
-                                }`}
-                              />
-                              {accountFormErrors.upiId && (
-                                <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.upiId}</span>
-                              )}
-                            </div>
-
-                            {accountFormData.upiId && accountFormData.upiId.includes("@") && (
-                              <div className="p-3 bg-white rounded-lg border border-zinc-200 flex items-center gap-3">
-                                <div className="p-1 border border-zinc-200 rounded shrink-0">
-                                  <UpiQrCodeSvg vpa={accountFormData.upiId} name={accountFormData.accountHolderName || gymData.name} size={60} />
-                                </div>
-                                <div className="text-left min-w-0">
-                                  <span className="text-[10px] font-bold text-zinc-900 block truncate">Vector Standee QR Linked</span>
-                                  <span className="text-[10px] text-zinc-500 font-mono block truncate">{accountFormData.upiId}</span>
-                                </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                              <div className="sm:col-span-8 space-y-1.5">
+                                <label className="text-[11px] font-semibold text-zinc-700 block">Primary UPI ID / VPA Handle</label>
+                                <input 
+                                  type="text" 
+                                  value={accountFormData.upiId} 
+                                  placeholder="e.g. ironpulse@okhdfcbank"
+                                  onChange={(e) => setAccountFormData(prev => ({ ...prev, upiId: e.target.value.toLowerCase().trim() }))}
+                                  className={`w-full h-10 px-3 bg-white border rounded-xl text-xs font-mono font-semibold focus:ring-2 focus:ring-zinc-900 focus:border-transparent ${
+                                    accountFormErrors.upiId ? "border-red-400 bg-red-50/20" : "border-zinc-200"
+                                  }`}
+                                />
+                                {accountFormErrors.upiId && (
+                                  <span className="text-[10px] text-red-600 font-medium block">{accountFormErrors.upiId}</span>
+                                )}
                               </div>
-                            )}
+
+                              <div className="sm:col-span-4">
+                                {accountFormData.upiId && accountFormData.upiId.includes("@") ? (
+                                  <div className="p-2.5 bg-white rounded-xl border border-zinc-200 flex items-center gap-2.5 shadow-2xs">
+                                    <div className="p-1 border border-zinc-200 rounded-lg shrink-0">
+                                      <UpiQrCodeSvg vpa={accountFormData.upiId} name={accountFormData.accountHolderName || gymData.name} size={48} />
+                                    </div>
+                                    <div className="text-left min-w-0">
+                                      <span className="text-[10px] font-bold text-zinc-900 block truncate">Vector QR Linked</span>
+                                      <span className="text-[9px] text-zinc-500 font-mono block truncate">{accountFormData.upiId}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="p-2.5 rounded-xl border border-dashed border-zinc-300 text-center text-zinc-400 text-[10px] font-mono">
+                                    Enter UPI for live QR
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -4715,7 +4883,7 @@ const GymProfile = () => {
                           <div className="p-5 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-zinc-900 text-white flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center">
                                   <CreditCard size={18} />
                                 </div>
                                 <div>
@@ -4769,77 +4937,81 @@ const GymProfile = () => {
                   {/* STEP 4: REVIEW & CONFIRM */}
                   {modalStep === 4 && (
                     <div className="space-y-4">
-                      <div>
-                        <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
-                          Review Destination & Confirm
-                        </h4>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          Please verify your financial routing coordinates before connecting.
-                        </p>
+                      <div className="flex items-center justify-between pb-1 border-b border-zinc-100">
+                        <div>
+                          <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
+                            Review Destination & Confirm
+                          </h4>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            Please verify your financial routing coordinates before connecting.
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-400">Step 4 of 4</span>
                       </div>
 
                       {/* Summary Card */}
-                      <div className="p-5 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-200/80">
+                      <div className="p-5 rounded-2xl bg-zinc-50/70 border border-zinc-200 space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-3.5 border-b border-zinc-200/80">
                           <div>
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block font-medium">Beneficiary Name</span>
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block font-medium">Beneficiary Display Name</span>
                             <div className="text-sm font-bold text-zinc-900">{accountFormData.accountHolderName}</div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-zinc-900 text-white">
+                            <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-zinc-900 text-white">
                               {accountFormData.purpose === "inflow" ? "MEMBER INFLOW" : accountFormData.purpose === "outflow" ? "PAYROLL OUTFLOW" : "DUAL PURPOSE"}
                             </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white text-zinc-800 border border-zinc-200">
+                            <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-white text-zinc-800 border border-zinc-200">
                               {accountFormData.method === "UPI" ? "UPI ONLY" : accountFormData.method === "BANK_TRANSFER" ? "BANK ONLY" : accountFormData.method === "COMBINED" ? "COMBINED" : "CARD GATEWAY"}
                             </span>
                           </div>
                         </div>
 
-                        {/* Coordinates Review */}
+                        {/* Coordinates Review Grid */}
                         <div className="space-y-3 text-xs">
                           {(accountFormData.method === "BANK_TRANSFER" || accountFormData.method === "COMBINED") && (
-                            <div className="grid grid-cols-2 gap-3 p-3 bg-white rounded-xl border border-zinc-200">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 bg-white rounded-xl border border-zinc-200 shadow-2xs">
                               <div>
-                                <span className="text-[10px] text-zinc-400 font-mono uppercase block">Bank & Account</span>
-                                <span className="font-bold text-zinc-900 font-mono">
+                                <span className="text-[10px] text-zinc-400 font-mono uppercase block font-medium">Bank & Account Number</span>
+                                <span className="font-bold text-zinc-900 font-mono text-xs block mt-0.5">
                                   {accountFormData.bankName} (•••• {accountFormData.accountNumber?.slice(-4) || "0000"})
                                 </span>
-                                <span className="text-[10px] text-zinc-500 block">{accountFormData.accountType}</span>
+                                <span className="text-[10px] text-zinc-500 font-medium block mt-0.5">{accountFormData.accountType}</span>
                               </div>
                               <div>
-                                <span className="text-[10px] text-zinc-400 font-mono uppercase block">IFSC Code</span>
-                                <span className="font-bold text-zinc-900 font-mono">{accountFormData.ifscCode}</span>
-                                <span className="text-[10px] text-zinc-500 block truncate">{accountFormData.branchName || "Main Branch"}</span>
+                                <span className="text-[10px] text-zinc-400 font-mono uppercase block font-medium">IFSC Code & Branch</span>
+                                <span className="font-bold text-zinc-900 font-mono text-xs block mt-0.5">{accountFormData.ifscCode}</span>
+                                <span className="text-[10px] text-zinc-500 font-medium block truncate mt-0.5">{accountFormData.branchName || "Main Branch"}</span>
                               </div>
                             </div>
                           )}
 
                           {(accountFormData.method === "UPI" || accountFormData.method === "COMBINED") && (
-                            <div className="p-3 bg-white rounded-xl border border-zinc-200 flex items-center justify-between gap-3">
+                            <div className="p-3.5 bg-white rounded-xl border border-zinc-200 flex items-center justify-between gap-3 shadow-2xs">
                               <div className="min-w-0">
-                                <span className="text-[10px] text-zinc-400 font-mono uppercase block">Merchant UPI VPA</span>
-                                <span className="font-bold text-zinc-900 font-mono truncate block">{accountFormData.upiId}</span>
+                                <span className="text-[10px] text-zinc-400 font-mono uppercase block font-medium">Merchant UPI VPA</span>
+                                <span className="font-bold text-zinc-900 font-mono text-xs truncate block mt-0.5">{accountFormData.upiId}</span>
+                                <span className="text-[10px] text-emerald-700 font-medium block mt-0.5">Direct NPCI Standee QR Enabled</span>
                               </div>
                               {accountFormData.upiId && accountFormData.upiId.includes("@") && (
-                                <div className="p-1 bg-zinc-50 rounded border border-zinc-200 shrink-0">
-                                  <UpiQrCodeSvg vpa={accountFormData.upiId} name={accountFormData.accountHolderName} size={48} />
+                                <div className="p-1.5 bg-zinc-50 rounded-lg border border-zinc-200 shrink-0">
+                                  <UpiQrCodeSvg vpa={accountFormData.upiId} name={accountFormData.accountHolderName} size={52} />
                                 </div>
                               )}
                             </div>
                           )}
 
                           {accountFormData.method === "CARD_GATEWAY" && (
-                            <div className="p-3 bg-white rounded-xl border border-zinc-200 text-[11px] text-zinc-600">
+                            <div className="p-3.5 bg-white rounded-xl border border-zinc-200 text-[11px] text-zinc-600">
                               Selected Gateway: <strong>{accountFormData.gatewayProvider}</strong> (Status: NOT_CONNECTED / COMING_SOON)
                             </div>
                           )}
                         </div>
 
                         {/* Statutory UNVERIFIED Disclaimer */}
-                        <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 flex items-start gap-2.5">
+                        <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 flex items-start gap-2.5">
                           <AlertCircle size={15} className="text-amber-800 shrink-0 mt-0.5" />
                           <div className="text-[11px] text-amber-900 leading-relaxed">
-                            <strong>Status: UNVERIFIED.</strong> In compliance with financial security standards, newly configured destinations remain in <code className="font-mono font-bold">UNVERIFIED</code> status until matching transaction verification or staff approval is performed. You can immediately begin using this destination.
+                            <strong>Status: UNVERIFIED.</strong> Newly configured destinations remain in <code className="font-mono font-bold">UNVERIFIED</code> status until matching transaction verification or staff approval is performed. You can immediately begin using this destination.
                           </div>
                         </div>
                       </div>
@@ -4847,14 +5019,14 @@ const GymProfile = () => {
                   )}
                 </div>
 
-                {/* Footer Actions with Dynamic Stepper Navigation */}
-                <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-2.5">
+                {/* Footer Actions with Stepper Navigation */}
+                <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
                   <div>
                     {modalStep > 1 && (
                       <button
                         type="button"
                         onClick={handlePrevStep}
-                        className="h-9 px-3.5 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                        className="h-9 px-3.5 rounded-xl bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
                       >
                         <ChevronLeft size={14} strokeWidth={2} />
                         <span>Back</span>
@@ -4866,7 +5038,7 @@ const GymProfile = () => {
                     <button
                       type="button"
                       onClick={() => setIsAccountModalOpen(false)}
-                      className="h-9 px-4 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 text-xs font-semibold transition-colors cursor-pointer"
+                      className="h-9 px-4 rounded-xl bg-white border border-zinc-200 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -4875,7 +5047,7 @@ const GymProfile = () => {
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="h-9 px-4 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm border border-zinc-900"
+                        className="h-9 px-4.5 rounded-xl bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs border border-zinc-900"
                       >
                         <span>
                           {modalStep === 1 && "Next: Choose Method"}
@@ -4888,7 +5060,7 @@ const GymProfile = () => {
                       <button
                         type="button"
                         onClick={handleSaveAccountForm}
-                        className="h-9 px-4 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm border border-zinc-900"
+                        className="h-9 px-4.5 rounded-xl bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs border border-zinc-900"
                       >
                         <Check size={14} strokeWidth={2} />
                         <span>{editingAccountId ? "Save Account Changes" : "Confirm & Connect Destination"}</span>
@@ -5068,9 +5240,6 @@ const GymProfile = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Card Payments Gateway Integration</h3>
-                        <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold font-mono">
-                          COMING SOON · NOT CONNECTED
-                        </span>
                       </div>
                       <p className="text-xs text-zinc-500 mt-0.5">
                         Debit and credit card payments are currently disabled until an authorized Payment Aggregator is connected.

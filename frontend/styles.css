@@ -3368,7 +3368,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 .notify-members-stage {
   position: absolute;
   inset: 0;
-  padding: 22px;
+  padding: 0 !important;
   opacity: 0;
   transform: translateY(18px) scale(0.99);
   pointer-events: none;
@@ -3389,13 +3389,12 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 .notify-members-shell {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   min-height: 100%;
-  padding: 16px;
-  border-radius: 18px;
-  background: #f6f8fb;
-  border: 1px solid rgba(220, 226, 235, 0.96);
-  box-shadow: 0 24px 54px rgba(38, 47, 68, 0.12);
+  padding: 0 !important;
+  border-radius: 0;
+  background: #f8fafc;
+  border: none;
+  box-shadow: none;
 }
 
 .notify-members-workspace {
@@ -4943,7 +4942,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .pt-packages-stage,
   .session-tracking-stage,
   .trainer-earnings-stage,
-  .notify-members-stage,
   .revenue-reports-stage,
   .attendance-analytics-stage,
   .member-growth-stage,
@@ -4973,7 +4971,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .pt-packages-shell,
   .session-tracking-shell,
   .trainer-earnings-shell,
-  .notify-members-shell,
   .revenue-reports-shell,
   .attendance-analytics-shell,
   .member-growth-shell,
@@ -5093,7 +5090,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .pt-packages-stage,
   .session-tracking-stage,
   .trainer-earnings-stage,
-  .notify-members-stage,
   .revenue-reports-stage,
   .attendance-analytics-stage,
   .member-growth-stage,
@@ -5123,7 +5119,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .pt-packages-shell,
   .session-tracking-shell,
   .trainer-earnings-shell,
-  .notify-members-shell,
   .revenue-reports-shell,
   .attendance-analytics-shell,
   .member-growth-shell,
