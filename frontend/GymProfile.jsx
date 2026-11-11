@@ -350,58 +350,214 @@ const UpiQrCodeSvg = ({ vpa, name, size = 210 }) => {
 };
 
 /**
- * REUSABLE TOGGLE SWITCH & CHECK BUTTON COMPONENTS
- * Modern controls for managing communication channel activation & member permissions
+ * CONTACT & COMMUNICATION FAQS
  */
-const ToggleSwitch = ({ checked, onChange, disabled }) => (
-  <button 
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    disabled={disabled}
-    onClick={onChange}
-    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-      checked ? 'bg-zinc-900' : 'bg-zinc-200'
-    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-  >
-    <span 
-      aria-hidden="true" 
-      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-        checked ? 'translate-x-5' : 'translate-x-0'
-      }`} 
-    />
-  </button>
-);
+const COMMUNICATION_FAQS = [
+  {
+    id: "delivery-methods",
+    question: "How are notifications and receipts delivered to members?",
+    answer: "GymDeck routes member messages directly through the active channels configured above. WhatsApp messages and payment receipts are dispatched directly to the member's registered WhatsApp account. Inbound and outbound voice calls and urgent SMS texts use your facility phone line, while official tax invoices, welcome packets, and security notices are delivered via your verified official email address."
+  },
+  {
+    id: "channel-config",
+    question: "How do I update or deactivate a communication channel?",
+    answer: "Simply update or clear the phone number, WhatsApp number, or facility email address in the fields above and click Save Changes. When a channel has a verified address or phone number, automated receipts and member broadcasts are routed immediately. Leaving a field blank suspends automated dispatch on that rail."
+  },
+  {
+    id: "privacy-security",
+    question: "How are member contact details and phone numbers protected?",
+    answer: "Member contact information is protected under strict tenant isolation and zero-knowledge encryption protocols. Contact data is only utilized for explicit gym operational communications (receipts, renewals, schedule alerts) and is never exported, monetized, or shared with third-party advertisers."
+  },
+  {
+    id: "replies-support",
+    question: "Can members reply directly to messages sent by the gym?",
+    answer: "Yes. Because broadcasts and transactional alerts originate from your gym's authentic mobile number, WhatsApp line, or facility email address, any member responses or questions route straight to your front desk phone, WhatsApp inbox, or email for immediate staff handling."
+  },
+  {
+    id: "whatsapp-setup",
+    question: "Do I need a paid WhatsApp Business API subscription?",
+    answer: "No paid API subscription is required for regular operations. GymDeck includes native Assisted Delivery, allowing you to trigger member chats and send digital invoice PDFs directly via WhatsApp Web or Desktop from your existing phone number at zero additional operational cost."
+  }
+];
 
-const CheckButton = ({ checked, onChange, label, description, icon: Icon, disabled = false }) => (
-  <button
-    type="button"
-    disabled={disabled}
-    onClick={onChange}
-    className={`group w-full p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 select-none ${
-      disabled 
-        ? 'opacity-40 cursor-not-allowed bg-zinc-50/50 border-zinc-200/60 text-zinc-400' 
-        : checked 
-          ? 'bg-zinc-900/[0.03] border-zinc-900/30 text-zinc-900 cursor-pointer shadow-2xs hover:border-zinc-900/50' 
-          : 'bg-zinc-50/60 border-zinc-200/80 hover:border-zinc-300 hover:bg-white text-zinc-600 cursor-pointer'
-    }`}
-  >
-    <div className={`w-4 h-4 mt-0.5 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-      checked ? 'bg-zinc-900 text-white shadow-2xs' : 'border border-zinc-300 bg-white group-hover:border-zinc-400'
-    }`}>
-      {checked && <Check size={10} strokeWidth={3} />}
-    </div>
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-1.5">
-        {Icon && <Icon size={12} className={checked ? 'text-zinc-900' : 'text-zinc-400'} />}
-        <span className={`text-xs font-semibold leading-tight ${checked ? 'text-zinc-900' : 'text-zinc-700'}`}>{label}</span>
-      </div>
-      {description && (
-        <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug line-clamp-2">{description}</p>
-      )}
-    </div>
-  </button>
-);
+/**
+ * ─────────────────────────────────────────────────────────────
+ * ALL 28 INDIAN STATES & 8 UNION TERRITORIES (36 SUBDIVISIONS)
+ * Official administrative listing for enterprise gym profiling
+ * ─────────────────────────────────────────────────────────────
+ */
+const ALL_INDIAN_STATES_AND_UTS = [
+  // 28 States
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  // 8 Union Territories
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi (NCT)",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
+];
+
+/**
+ * ─────────────────────────────────────────────────────────────
+ * INDIAN & WEST BENGAL GAZETTED HOLIDAYS (2026 – 2027)
+ * Official Gazette of Govt of West Bengal (Finance Dept) & Govt of India
+ * Accurate chronological calendar for automated facility closure
+ * ─────────────────────────────────────────────────────────────
+ */
+const INDIAN_WB_HOLIDAYS = [
+  // ── 2026 Official Gazetted Holidays ──
+  { id: "h26-1", name: "Netaji Subhash Chandra Bose Jayanti", date: "2026-01-23", dateFormatted: "23 Jan 2026", day: "Friday", type: "West Bengal State", description: "Birth anniversary of Netaji Subhash Chandra Bose; statewide public holiday across all commercial units." },
+  { id: "h26-2", name: "Republic Day", date: "2026-01-26", dateFormatted: "26 Jan 2026", day: "Monday", type: "National Gazetted", description: "Commemoration of the Constitution of India; mandatory national gazetted public holiday." },
+  { id: "h26-3", name: "Saraswati Puja (Vasant Panchami)", date: "2026-02-13", dateFormatted: "13 Feb 2026", day: "Friday", type: "West Bengal State", description: "Major cultural and academic observance dedicated to Goddess Saraswati across Bengal." },
+  { id: "h26-4", name: "Maha Shivratri", date: "2026-02-15", dateFormatted: "15 Feb 2026", day: "Sunday", type: "National Gazetted", description: "Solemn observance and vigil dedicated to Lord Shiva across Indian fitness centers." },
+  { id: "h26-5", name: "Doljatra (Holi in Bengal)", date: "2026-03-03", dateFormatted: "03 Mar 2026", day: "Tuesday", type: "West Bengal State", description: "Traditional Bengali festival of colors and Chaitanya Mahaprabhu celebration." },
+  { id: "h26-6", name: "Holi", date: "2026-03-04", dateFormatted: "04 Mar 2026", day: "Wednesday", type: "National Gazetted", description: "National festival of colors observed across all states of India." },
+  { id: "h26-7", name: "Eid-ul-Fitr", date: "2026-03-21", dateFormatted: "21 Mar 2026", day: "Saturday", type: "National Gazetted", description: "Culmination of holy month of Ramadan; gazetted public holiday." },
+  { id: "h26-8", name: "Good Friday", date: "2026-04-03", dateFormatted: "03 Apr 2026", day: "Friday", type: "National Gazetted", description: "Christian solemn observance; gazetted national bank & public holiday." },
+  { id: "h26-9", name: "Dr. B.R. Ambedkar Jayanti", date: "2026-04-14", dateFormatted: "14 Apr 2026", day: "Tuesday", type: "National Gazetted", description: "Birth anniversary of the architect of the Indian Constitution." },
+  { id: "h26-10", name: "Poila Baisakh (Bengali New Year 1433)", date: "2026-04-15", dateFormatted: "15 Apr 2026", day: "Wednesday", type: "West Bengal State", description: "First day of the Bengali calendar (Nababarsho); supreme statewide festival holiday." },
+  { id: "h26-11", name: "May Day (International Workers' Day)", date: "2026-05-01", dateFormatted: "01 May 2026", day: "Friday", type: "West Bengal State", description: "International Workers' Day observed across West Bengal commercial facilities." },
+  { id: "h26-12", name: "Buddha Purnima", date: "2026-05-01", dateFormatted: "01 May 2026", day: "Friday", type: "National Gazetted", description: "Birth, enlightenment and Mahaparinirvana of Gautama Buddha." },
+  { id: "h26-13", name: "Rabindra Jayanti (25th Baisakh)", date: "2026-05-09", dateFormatted: "09 May 2026", day: "Saturday", type: "West Bengal State", description: "Birth anniversary of Nobel laureate Rabindranath Tagore; official WB gazetted holiday." },
+  { id: "h26-14", name: "Eid-ul-Adha (Bakrid)", date: "2026-05-28", dateFormatted: "28 May 2026", day: "Thursday", type: "National Gazetted", description: "Feast of the Sacrifice; gazetted national & state public holiday." },
+  { id: "h26-15", name: "Muharram", date: "2026-06-26", dateFormatted: "26 Jun 2026", day: "Friday", type: "National Gazetted", description: "Commemoration of the Day of Ashura; gazetted national holiday." },
+  { id: "h26-16", name: "Independence Day", date: "2026-08-15", dateFormatted: "15 Aug 2026", day: "Saturday", type: "National Gazetted", description: "Indian Independence Day; mandatory national closure for commercial institutes." },
+  { id: "h26-17", name: "Fateha-Dwaz-Daham (Milad-un-Nabi)", date: "2026-08-26", dateFormatted: "26 Aug 2026", day: "Wednesday", type: "National Gazetted", description: "Commemoration of the birth of Prophet Muhammad." },
+  { id: "h26-18", name: "Janmashtami", date: "2026-09-04", dateFormatted: "04 Sep 2026", day: "Friday", type: "National Gazetted", description: "Celebration of the birth of Lord Krishna." },
+  { id: "h26-19", name: "Mahatma Gandhi Jayanti", date: "2026-10-02", dateFormatted: "02 Oct 2026", day: "Friday", type: "National Gazetted", description: "Birth anniversary of Mahatma Gandhi; mandatory national gazetted holiday." },
+  { id: "h26-20", name: "Mahalaya", date: "2026-10-10", dateFormatted: "10 Oct 2026", day: "Saturday", type: "West Bengal State", description: "Auspicious invocation of Goddess Durga marking the start of Devi Paksha in Bengal." },
+  { id: "h26-21", name: "Durga Puja - Maha Saptami", date: "2026-10-18", dateFormatted: "18 Oct 2026", day: "Sunday", type: "West Bengal State", description: "West Bengal State Grand Festival Day 1; general closure across Kolkata & WB." },
+  { id: "h26-22", name: "Durga Puja - Maha Ashtami & Navami", date: "2026-10-19", dateFormatted: "19 Oct 2026", day: "Monday", type: "West Bengal State", description: "Peak worship days with Kumari Puja and Sandhi Puja across all Bengal facilities." },
+  { id: "h26-23", name: "Durga Puja - Vijaya Dashami", date: "2026-10-20", dateFormatted: "20 Oct 2026", day: "Tuesday", type: "West Bengal State", description: "Culmination of Durga Puja and immersion of the Goddess; statewide festival holiday." },
+  { id: "h26-24", name: "Lakshmi Puja", date: "2026-10-24", dateFormatted: "24 Oct 2026", day: "Saturday", type: "West Bengal State", description: "Traditional Bengali worship of Goddess Lakshmi on Kojagari Purnima." },
+  { id: "h26-25", name: "Kali Puja & Diwali", date: "2026-11-08", dateFormatted: "08 Nov 2026", day: "Sunday", type: "West Bengal State", description: "Worship of Goddess Shyama Kali & Festival of Lights; major WB & national holiday." },
+  { id: "h26-26", name: "Bhai Phonta (Bhatridwitiya)", date: "2026-11-10", dateFormatted: "10 Nov 2026", day: "Tuesday", type: "West Bengal State", description: "Traditional Bengali celebration of brother-sister bond; state public holiday." },
+  { id: "h26-27", name: "Chhath Puja", date: "2026-11-15", dateFormatted: "15 Nov 2026", day: "Sunday", type: "West Bengal State", description: "Ancient solar worship and community thanksgiving observed in West Bengal." },
+  { id: "h26-28", name: "Guru Nanak Jayanti", date: "2026-11-24", dateFormatted: "24 Nov 2026", day: "Tuesday", type: "National Gazetted", description: "Prakash Parv of Guru Nanak Dev Ji; gazetted national holiday." },
+  { id: "h26-29", name: "Christmas Day", date: "2026-12-25", dateFormatted: "25 Dec 2026", day: "Friday", type: "National Gazetted", description: "Christmas Day celebration; official gazetted national & state holiday." },
+
+  // ── 2027 Official Gazetted Holidays ──
+  { id: "h27-1", name: "Netaji Subhash Chandra Bose Jayanti", date: "2027-01-23", dateFormatted: "23 Jan 2027", day: "Saturday", type: "West Bengal State", description: "Birth anniversary of Netaji Subhash Chandra Bose; statewide public holiday across all commercial units." },
+  { id: "h27-2", name: "Republic Day", date: "2027-01-26", dateFormatted: "26 Jan 2027", day: "Tuesday", type: "National Gazetted", description: "Commemoration of the Constitution of India; mandatory national gazetted public holiday." },
+  { id: "h27-3", name: "Saraswati Puja (Vasant Panchami)", date: "2027-02-11", dateFormatted: "11 Feb 2027", day: "Thursday", type: "West Bengal State", description: "Major cultural and academic observance dedicated to Goddess Saraswati across Bengal." },
+  { id: "h27-4", name: "Maha Shivratri", date: "2027-03-06", dateFormatted: "06 Mar 2027", day: "Saturday", type: "National Gazetted", description: "Solemn observance and vigil dedicated to Lord Shiva across Indian fitness centers." },
+  { id: "h27-5", name: "Eid-ul-Fitr", date: "2027-03-10", dateFormatted: "10 Mar 2027", day: "Wednesday", type: "National Gazetted", description: "Culmination of holy month of Ramadan; gazetted public holiday." },
+  { id: "h27-6", name: "Doljatra (Holi in Bengal)", date: "2027-03-22", dateFormatted: "22 Mar 2027", day: "Monday", type: "West Bengal State", description: "Traditional Bengali festival of colors and Chaitanya Mahaprabhu celebration." },
+  { id: "h27-7", name: "Holi", date: "2027-03-23", dateFormatted: "23 Mar 2027", day: "Tuesday", type: "National Gazetted", description: "National festival of colors observed across all states of India." },
+  { id: "h27-8", name: "Good Friday", date: "2027-03-26", dateFormatted: "26 Mar 2027", day: "Friday", type: "National Gazetted", description: "Christian solemn observance; gazetted national bank & public holiday." },
+  { id: "h27-9", name: "Dr. B.R. Ambedkar Jayanti", date: "2027-04-14", dateFormatted: "14 Apr 2027", day: "Wednesday", type: "National Gazetted", description: "Birth anniversary of the architect of the Indian Constitution." },
+  { id: "h27-10", name: "Poila Baisakh (Bengali New Year 1434)", date: "2027-04-15", dateFormatted: "15 Apr 2027", day: "Thursday", type: "West Bengal State", description: "First day of the Bengali calendar (Nababarsho); supreme statewide festival holiday." },
+  { id: "h27-11", name: "May Day (International Workers' Day)", date: "2027-05-01", dateFormatted: "01 May 2027", day: "Saturday", type: "West Bengal State", description: "International Workers' Day observed across West Bengal commercial facilities." },
+  { id: "h27-12", name: "Rabindra Jayanti (25th Baisakh)", date: "2027-05-09", dateFormatted: "09 May 2027", day: "Sunday", type: "West Bengal State", description: "Birth anniversary of Nobel laureate Rabindranath Tagore; official WB gazetted holiday." },
+  { id: "h27-13", name: "Eid-ul-Adha (Bakrid)", date: "2027-05-17", dateFormatted: "17 May 2027", day: "Monday", type: "National Gazetted", description: "Feast of the Sacrifice; gazetted national & state public holiday." },
+  { id: "h27-14", name: "Buddha Purnima", date: "2027-05-20", dateFormatted: "20 May 2027", day: "Thursday", type: "National Gazetted", description: "Birth, enlightenment and Mahaparinirvana of Gautama Buddha." },
+  { id: "h27-15", name: "Muharram", date: "2027-06-16", dateFormatted: "16 Jun 2027", day: "Wednesday", type: "National Gazetted", description: "Commemoration of the Day of Ashura; gazetted national holiday." },
+  { id: "h27-16", name: "Independence Day", date: "2027-08-15", dateFormatted: "15 Aug 2027", day: "Sunday", type: "National Gazetted", description: "Indian Independence Day; mandatory national closure for commercial institutes." },
+  { id: "h27-17", name: "Fateha-Dwaz-Daham (Milad-un-Nabi)", date: "2027-08-15", dateFormatted: "15 Aug 2027", day: "Sunday", type: "National Gazetted", description: "Commemoration of the birth of Prophet Muhammad." },
+  { id: "h27-18", name: "Janmashtami", date: "2027-08-25", dateFormatted: "25 Aug 2027", day: "Wednesday", type: "National Gazetted", description: "Celebration of the birth of Lord Krishna." },
+  { id: "h27-19", name: "Mahalaya", date: "2027-09-29", dateFormatted: "29 Sep 2027", day: "Wednesday", type: "West Bengal State", description: "Auspicious invocation of Goddess Durga marking the start of Devi Paksha in Bengal." },
+  { id: "h27-20", name: "Mahatma Gandhi Jayanti", date: "2027-10-02", dateFormatted: "02 Oct 2027", day: "Saturday", type: "National Gazetted", description: "Birth anniversary of Mahatma Gandhi; mandatory national gazetted holiday." },
+  { id: "h27-21", name: "Durga Puja - Maha Saptami", date: "2027-10-07", dateFormatted: "07 Oct 2027", day: "Thursday", type: "West Bengal State", description: "West Bengal State Grand Festival Day 1; general closure across Kolkata & WB." },
+  { id: "h27-22", name: "Durga Puja - Maha Ashtami & Navami", date: "2027-10-08", dateFormatted: "08 Oct 2027", day: "Friday", type: "West Bengal State", description: "Peak worship days with Kumari Puja and Sandhi Puja across all Bengal facilities." },
+  { id: "h27-23", name: "Durga Puja - Vijaya Dashami", date: "2027-10-09", dateFormatted: "09 Oct 2027", day: "Saturday", type: "West Bengal State", description: "Culmination of Durga Puja and immersion of the Goddess; statewide festival holiday." },
+  { id: "h27-24", name: "Lakshmi Puja", date: "2027-10-14", dateFormatted: "14 Oct 2027", day: "Thursday", type: "West Bengal State", description: "Traditional Bengali worship of Goddess Lakshmi on Kojagari Purnima." },
+  { id: "h27-25", name: "Kali Puja & Diwali", date: "2027-10-29", dateFormatted: "29 Oct 2027", day: "Friday", type: "West Bengal State", description: "Worship of Goddess Shyama Kali & Festival of Lights; major WB & national holiday." },
+  { id: "h27-26", name: "Bhai Phonta (Bhatridwitiya)", date: "2027-10-31", dateFormatted: "31 Oct 2027", day: "Sunday", type: "West Bengal State", description: "Traditional Bengali celebration of brother-sister bond; state public holiday." },
+  { id: "h27-27", name: "Chhath Puja", date: "2027-11-04", dateFormatted: "04 Nov 2027", day: "Thursday", type: "West Bengal State", description: "Ancient solar worship and community thanksgiving observed in West Bengal." },
+  { id: "h27-28", name: "Guru Nanak Jayanti", date: "2027-11-14", dateFormatted: "14 Nov 2027", day: "Sunday", type: "National Gazetted", description: "Prakash Parv of Guru Nanak Dev Ji; gazetted national holiday." },
+  { id: "h27-29", name: "Christmas Day", date: "2027-12-25", dateFormatted: "25 Dec 2027", day: "Saturday", type: "National Gazetted", description: "Christmas Day celebration; official gazetted national & state holiday." }
+];
+
+/**
+ * CURATED INDIA & WEST BENGAL POSTAL CODE DIRECTORY
+ * High-speed offline resolver mapping 3-digit postal prefixes to City & State
+ */
+const INDIA_PINCODE_DIRECTORY = {
+  "700": { city: "Kolkata", state: "West Bengal" },
+  "711": { city: "Howrah", state: "West Bengal" },
+  "712": { city: "Hooghly", state: "West Bengal" },
+  "713": { city: "Durgapur / Burdwan", state: "West Bengal" },
+  "721": { city: "Midnapore", state: "West Bengal" },
+  "734": { city: "Siliguri / Darjeeling", state: "West Bengal" },
+  "735": { city: "Jalpaiguri", state: "West Bengal" },
+  "741": { city: "Nadia", state: "West Bengal" },
+  "742": { city: "Murshidabad", state: "West Bengal" },
+  "743": { city: "24 Parganas", state: "West Bengal" },
+  "110": { city: "New Delhi", state: "Delhi NCR" },
+  "400": { city: "Mumbai", state: "Maharashtra" },
+  "411": { city: "Pune", state: "Maharashtra" },
+  "560": { city: "Bengaluru", state: "Karnataka" },
+  "500": { city: "Hyderabad", state: "Telangana" },
+  "600": { city: "Chennai", state: "Tamil Nadu" },
+  "380": { city: "Ahmedabad", state: "Gujarat" },
+  "302": { city: "Jaipur", state: "Rajasthan" },
+  "682": { city: "Kochi", state: "Kerala" },
+  "160": { city: "Chandigarh", state: "Chandigarh" },
+  "201": { city: "Noida / Ghaziabad", state: "Uttar Pradesh" },
+  "122": { city: "Gurugram", state: "Haryana" },
+  "226": { city: "Lucknow", state: "Uttar Pradesh" },
+  "800": { city: "Patna", state: "Bihar" },
+  "751": { city: "Bhubaneswar", state: "Odisha" },
+  "781": { city: "Guwahati", state: "Assam" },
+  "403": { city: "Panaji", state: "Goa" }
+};
+
+/**
+ * COMPREHENSIVE LOCATION & LANDMARK DIRECTORY
+ * Auto-suggested locations across West Bengal & Indian Metros
+ */
+const POPULAR_WEST_BENGAL_LOCATIONS = [
+  { name: "Salt Lake Sector V, Kolkata", address: "Block EP & GP, Sector V, Bidhannagar", city: "Kolkata", state: "West Bengal", pincode: "700091", lat: 22.5726, lng: 88.4311 },
+  { name: "Salt Lake Sector I (City Centre), Kolkata", address: "DC Block, Sector I, Bidhannagar", city: "Kolkata", state: "West Bengal", pincode: "700064", lat: 22.5892, lng: 88.4081 },
+  { name: "Park Street, Kolkata", address: "17, Park Street, Mullick Bazar", city: "Kolkata", state: "West Bengal", pincode: "700016", lat: 22.5516, lng: 88.3524 },
+  { name: "Camac Street, Kolkata", address: "24, Camac Street, Elgin", city: "Kolkata", state: "West Bengal", pincode: "700017", lat: 22.5448, lng: 88.3533 },
+  { name: "New Town Action Area I, Kolkata", address: "Major Arterial Road, Action Area I, New Town", city: "Kolkata", state: "West Bengal", pincode: "700156", lat: 22.5855, lng: 88.4688 },
+  { name: "New Town Action Area II (Eco Space), Kolkata", address: "Action Area II, Rajarhat New Town", city: "Kolkata", state: "West Bengal", pincode: "700161", lat: 22.6015, lng: 88.4721 },
+  { name: "City Centre II, Rajarhat, Kolkata", address: "City Centre II, Action Area IID, Newtown", city: "Kolkata", state: "West Bengal", pincode: "700136", lat: 22.6275, lng: 88.4552 },
+  { name: "Ballygunge Circular Road, Kolkata", address: "62, Ballygunge Circular Road", city: "Kolkata", state: "West Bengal", pincode: "700019", lat: 22.5312, lng: 88.3619 },
+  { name: "Gariahat Crossing, Kolkata", address: "145, Rash Behari Avenue, Gariahat", city: "Kolkata", state: "West Bengal", pincode: "700029", lat: 22.5186, lng: 88.3653 },
+  { name: "Jadavpur 8B, Kolkata", address: "Raja SC Mullick Road, Jadavpur", city: "Kolkata", state: "West Bengal", pincode: "700032", lat: 22.4988, lng: 88.3718 },
+  { name: "Alipore, Kolkata", address: "24, Belvedere Road, Alipore", city: "Kolkata", state: "West Bengal", pincode: "700027", lat: 22.5309, lng: 88.3318 },
+  { name: "Shyambazar Five Point, Kolkata", address: "12, Bidhan Sarani, Shyambazar", city: "Kolkata", state: "West Bengal", pincode: "700004", lat: 22.6006, lng: 88.3712 },
+  { name: "Howrah Railway Station Area, Howrah", address: "Station Approach Road, Howrah", city: "Howrah", state: "West Bengal", pincode: "711101", lat: 22.5839, lng: 88.3426 },
+  { name: "Sevoke Road, Siliguri", address: "2nd Mile, Sevoke Road", city: "Siliguri", state: "West Bengal", pincode: "734001", lat: 26.7271, lng: 88.4312 },
+  { name: "City Centre, Durgapur", address: "Grand Trunk Road, City Centre", city: "Durgapur", state: "West Bengal", pincode: "713216", lat: 23.5334, lng: 87.2941 },
+  { name: "Koramangala, Bengaluru", address: "80 Feet Road, 4th Block, Koramangala", city: "Bengaluru", state: "Karnataka", pincode: "560034", lat: 12.9352, lng: 77.6245 },
+  { name: "Indiranagar, Bengaluru", address: "100 Feet Road, HAL 2nd Stage, Indiranagar", city: "Bengaluru", state: "Karnataka", pincode: "560038", lat: 12.9719, lng: 77.6412 },
+  { name: "Connaught Place, New Delhi", address: "Inner Circle, Block C, Connaught Place", city: "New Delhi", state: "Delhi NCR", pincode: "110001", lat: 28.6315, lng: 77.2167 },
+  { name: "Bandra West, Mumbai", address: "Hill Road, Bandra West", city: "Mumbai", state: "Maharashtra", pincode: "400050", lat: 19.0596, lng: 72.8295 },
+  { name: "Bandra Kurla Complex (BKC), Mumbai", address: "G Block, BKC, Bandra East", city: "Mumbai", state: "Maharashtra", pincode: "400051", lat: 19.0657, lng: 72.8687 }
+];
 
 /**
  * GYMDECK • GYM PROFILE & OPERATIONAL CONFIGURATION
@@ -419,6 +575,51 @@ const GymProfile = () => {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
+
+  // Map & Location State
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [mapSearchQuery, setMapSearchQuery] = useState("");
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [pincodeAutoDetectedMsg, setPincodeAutoDetectedMsg] = useState("");
+  const [mapSelectedLocation, setMapSelectedLocation] = useState({
+    address: "Block EP & GP, Sector V, Bidhannagar",
+    city: "Kolkata",
+    state: "West Bengal",
+    pincode: "700091",
+    lat: 22.5726,
+    lng: 88.4311,
+    displayName: "Sector V, Bidhannagar, Kolkata, West Bengal 700091"
+  });
+
+  // Multi-Branch Modal State
+  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+  const [editingBranchId, setEditingBranchId] = useState(null);
+  const [branchForm, setBranchForm] = useState({
+    name: "",
+    isMain: false,
+    managerName: "",
+    phone: "",
+    address: "",
+    city: "Kolkata",
+    state: "West Bengal",
+    pincode: "",
+    members: "120",
+    trainers: "3"
+  });
+
+  // Location Autocomplete System State
+  const [activeAutocompleteField, setActiveAutocompleteField] = useState(null); // 'address' | 'city' | 'pincode' | null
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState([]);
+  const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
+  const [mapZoom, setMapZoom] = useState(15);
+  const autocompleteContainerRef = useRef(null);
+  const autocompleteTimerRef = useRef(null);
+
+  // National & West Bengal Holiday Calendar State
+  const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
+  const [holidayFilter, setHolidayFilter] = useState("all"); // "all" | "national" | "west_bengal"
+  const [holidaySearchQuery, setHolidaySearchQuery] = useState("");
+  const [holidayOverrides, setHolidayOverrides] = useState({});
 
   // Banking & Settlement State
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -452,6 +653,8 @@ const GymProfile = () => {
   const [accountToDelete, setAccountToDelete] = useState(null);
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const toggleFaq = (id) => setExpandedFaqId(prev => (prev === id ? null : prev === "all" ? null : id));
+  const [communicationFaqId, setCommunicationFaqId] = useState(null);
+  const toggleCommFaq = (id) => setCommunicationFaqId(prev => (prev === id ? null : id));
 
   // Close Export Menu when clicking outside
   useEffect(() => {
@@ -474,9 +677,12 @@ const GymProfile = () => {
         setIsAccountModalOpen(false);
         setIsUpiQrModalOpen(false);
         setAccountToDelete(null);
+        setIsMapModalOpen(false);
+        setIsBranchModalOpen(false);
+        setIsHolidayModalOpen(false);
       }
     };
-    if (isQrModalOpen || isAccountModalOpen || isUpiQrModalOpen || accountToDelete) {
+    if (isQrModalOpen || isAccountModalOpen || isUpiQrModalOpen || accountToDelete || isMapModalOpen || isBranchModalOpen || isHolidayModalOpen) {
       window.addEventListener("keydown", handleKeyDown);
       const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -485,7 +691,18 @@ const GymProfile = () => {
         document.body.style.overflow = prevOverflow;
       };
     }
-  }, [isQrModalOpen, isAccountModalOpen, isUpiQrModalOpen, accountToDelete]);
+  }, [isQrModalOpen, isAccountModalOpen, isUpiQrModalOpen, accountToDelete, isMapModalOpen, isBranchModalOpen, isHolidayModalOpen]);
+
+  // Close autocomplete on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (autocompleteContainerRef.current && !autocompleteContainerRef.current.contains(e.target)) {
+        setActiveAutocompleteField(null);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   // File Input References
   const bannerInputRef = useRef(null);
@@ -673,8 +890,8 @@ const GymProfile = () => {
   const tabs = useMemo(() => [
     { id: "General", label: "General", icon: Building2 },
     { id: "Contact & Communication", label: "Contact & Communication", icon: MessageSquare },
-    { id: "QR Passes", label: "QR Passes", icon: QrCode },
     { id: "Banking & Settlement", label: "Banking & Settlement", icon: Landmark },
+    { id: "QR Passes", label: "QR Passes", icon: QrCode },
     { id: "Social Media", label: "Social Media", icon: Share2 }
   ], []);
 
@@ -1136,6 +1353,407 @@ const GymProfile = () => {
       socials: { ...prev.socials, [platform]: value }
     }));
     setHasChanges(true);
+  };
+
+  // Location & Pincode Auto-Detection Engine
+  const handlePincodeChange = (val) => {
+    handleInputChange('pincode', val);
+    const cleanPin = val.replace(/\D/g, "");
+    if (cleanPin.length === 6) {
+      const prefix = cleanPin.substring(0, 3);
+      if (INDIA_PINCODE_DIRECTORY[prefix]) {
+        const match = INDIA_PINCODE_DIRECTORY[prefix];
+        handleInputChange('state', match.state);
+        if (!gymData.city || gymData.city.trim() === "" || gymData.city === "Bengaluru") {
+          handleInputChange('city', match.city.split(" / ")[0]);
+        }
+        setPincodeAutoDetectedMsg(`Auto-detected: ${match.city}, ${match.state}`);
+      }
+      // Query India Post API asynchronously for accurate sub-locality if available
+      try {
+        fetch(`https://api.postalpincode.in/pincode/${cleanPin}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice?.length > 0) {
+              const po = data[0].PostOffice[0];
+              if (po.District) handleInputChange('city', po.District);
+              if (po.State) handleInputChange('state', po.State);
+              setPincodeAutoDetectedMsg(`Verified: ${po.District}, ${po.State} (${po.Name})`);
+            }
+          })
+          .catch(() => {});
+      } catch (e) {}
+    } else {
+      setPincodeAutoDetectedMsg("");
+    }
+  };
+
+  // Trigger location suggestions for Street Address, City, or Pincode
+  const triggerLocationSuggestions = (query, field) => {
+    if (!query || query.trim().length < 2) {
+      setAutocompleteSuggestions([]);
+      return;
+    }
+    const cleanQ = query.trim().toLowerCase();
+    
+    // 1. Instant local filter from directory
+    const localMatches = POPULAR_WEST_BENGAL_LOCATIONS.filter(item => {
+      if (field === 'pincode') {
+        return item.pincode.startsWith(cleanQ);
+      }
+      if (field === 'city') {
+        return item.city.toLowerCase().includes(cleanQ);
+      }
+      return item.name.toLowerCase().includes(cleanQ) || 
+             item.address.toLowerCase().includes(cleanQ) || 
+             item.city.toLowerCase().includes(cleanQ) ||
+             item.pincode.startsWith(cleanQ);
+    }).slice(0, 5);
+
+    setAutocompleteSuggestions(localMatches);
+
+    // 2. Debounced live query to Nominatim
+    if (autocompleteTimerRef.current) clearTimeout(autocompleteTimerRef.current);
+    if (cleanQ.length >= 3) {
+      autocompleteTimerRef.current = setTimeout(async () => {
+        try {
+          setIsSearchingSuggestions(true);
+          const searchParam = field === 'city' ? `${cleanQ}, West Bengal` : cleanQ;
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchParam)}&countrycodes=in&addressdetails=1&limit=4`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const remoteItems = data.map(item => {
+                const addr = item.address || {};
+                const street = [addr.road || addr.suburb || addr.neighbourhood, addr.quarter].filter(Boolean).join(", ") || item.display_name.split(",")[0];
+                const city = addr.city || addr.town || addr.municipality || addr.district || "Kolkata";
+                const state = addr.state || "West Bengal";
+                const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+                return {
+                  name: item.display_name.split(",").slice(0, 2).join(", "),
+                  address: street,
+                  city: city,
+                  state: state,
+                  pincode: pincode,
+                  lat: parseFloat(item.lat),
+                  lng: parseFloat(item.lon)
+                };
+              });
+              setAutocompleteSuggestions(prev => {
+                const combined = [...localMatches];
+                for (const r of remoteItems) {
+                  if (!combined.some(c => c.name.toLowerCase() === r.name.toLowerCase() || (c.city === r.city && c.address === r.address))) {
+                    combined.push(r);
+                  }
+                }
+                return combined.slice(0, 6);
+              });
+            }
+          }
+        } catch (e) {
+        } finally {
+          setIsSearchingSuggestions(false);
+        }
+      }, 260);
+    }
+  };
+
+  // Select location suggestion and auto-fill address fields
+  const handleSelectLocationSuggestion = (item) => {
+    if (item.address) handleInputChange('address', item.address);
+    if (item.city) handleInputChange('city', item.city);
+    if (item.state) handleInputChange('state', item.state);
+    if (item.pincode) handleInputChange('pincode', item.pincode);
+    setPincodeAutoDetectedMsg(`Auto-detected: ${item.city}, ${item.state} (${item.pincode || "Verified"})`);
+    setActiveAutocompleteField(null);
+    setAutocompleteSuggestions([]);
+    showToast(`Location selected: ${item.city}, ${item.state}`);
+  };
+
+  // Open Map Picker Modal initialized with current address or Kolkata preset
+  const handleOpenMapModal = () => {
+    const existingPincode = gymData.pincode?.replace(/\D/g, "");
+    const matchingPreset = POPULAR_WEST_BENGAL_LOCATIONS.find(loc => 
+      (existingPincode && loc.pincode === existingPincode) ||
+      (gymData.city && loc.city.toLowerCase() === gymData.city.toLowerCase())
+    ) || POPULAR_WEST_BENGAL_LOCATIONS[0];
+
+    setMapSelectedLocation({
+      address: gymData.address || matchingPreset.address,
+      city: gymData.city || matchingPreset.city,
+      state: gymData.state || matchingPreset.state,
+      pincode: gymData.pincode || matchingPreset.pincode,
+      lat: matchingPreset.lat,
+      lng: matchingPreset.lng,
+      displayName: `${gymData.address || matchingPreset.address}, ${gymData.city || matchingPreset.city}, ${gymData.state || matchingPreset.state}`
+    });
+    setMapSearchQuery("");
+    setMapZoom(15);
+    setIsMapModalOpen(true);
+  };
+
+  // Interactive Click on Map Canvas
+  const handleMapCanvasClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const dx = clickX - centerX;
+    const dy = clickY - centerY;
+    
+    const n = Math.pow(2, mapZoom);
+    const dLng = (dx / 256) * (360 / n);
+    const currentLat = mapSelectedLocation?.lat || 22.5726;
+    const currentLng = mapSelectedLocation?.lng || 88.4311;
+    const latRad = currentLat * Math.PI / 180;
+    const mercY = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * 256;
+    const newMercY = mercY + dy;
+    const normY = newMercY / (n * 256);
+    const newLatRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * normY)));
+    const newLat = newLatRad * 180 / Math.PI;
+    const newLng = currentLng + dLng;
+    
+    reverseGeocodeCoords(newLat, newLng);
+  };
+
+  // Reverse geocode lat & lng using OpenStreetMap Nominatim
+  const reverseGeocodeCoords = async (lat, lng) => {
+    setIsGeocoding(true);
+    const closest = POPULAR_WEST_BENGAL_LOCATIONS.reduce((best, loc) => {
+      const d = Math.hypot(loc.lat - lat, loc.lng - lng);
+      return (!best || d < best.d) ? { loc, d } : best;
+    }, null);
+    const nearbyPreset = closest && closest.d < 0.02 ? closest.loc : null;
+
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.address) {
+          const addr = data.address;
+          const street = [addr.road || addr.suburb || addr.neighbourhood, addr.quarter || addr.subdivision].filter(Boolean).join(", ") || data.display_name.split(",")[0];
+          const city = addr.city || addr.town || addr.municipality || addr.district || addr.county || (nearbyPreset?.city || "Kolkata");
+          const state = addr.state || (nearbyPreset?.state || "West Bengal");
+          const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6) || (nearbyPreset?.pincode || "");
+          
+          setMapSelectedLocation({
+            address: street || data.display_name.split(",").slice(0, 2).join(", ") || (nearbyPreset?.address || "Selected Facility Location"),
+            city: city,
+            state: state,
+            pincode: pincode,
+            lat: parseFloat(lat),
+            lng: parseFloat(lng),
+            displayName: data.display_name
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Reverse geocode fallback", err);
+    } finally {
+      setIsGeocoding(false);
+    }
+
+    if (nearbyPreset) {
+      setMapSelectedLocation({
+        address: nearbyPreset.address,
+        city: nearbyPreset.city,
+        state: nearbyPreset.state,
+        pincode: nearbyPreset.pincode,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        displayName: nearbyPreset.name
+      });
+    } else {
+      setMapSelectedLocation(prev => ({
+        ...prev,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng)
+      }));
+    }
+  };
+
+  // Search location in Map Modal
+  const handleMapSearch = async (query) => {
+    setMapSearchQuery(query);
+    if (!query || query.trim().length < 3) return;
+    
+    const presetMatch = POPULAR_WEST_BENGAL_LOCATIONS.find(loc => 
+      loc.name.toLowerCase().includes(query.toLowerCase()) ||
+      loc.address.toLowerCase().includes(query.toLowerCase()) ||
+      loc.city.toLowerCase().includes(query.toLowerCase())
+    );
+    if (presetMatch) {
+      setMapSelectedLocation({
+        address: presetMatch.address,
+        city: presetMatch.city,
+        state: presetMatch.state,
+        pincode: presetMatch.pincode,
+        lat: presetMatch.lat,
+        lng: presetMatch.lng,
+        displayName: presetMatch.name
+      });
+      return;
+    }
+
+    try {
+      setIsGeocoding(true);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&addressdetails=1&limit=1`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data[0]) {
+          const first = data[0];
+          const addr = first.address || {};
+          const street = [addr.road || addr.suburb || addr.neighbourhood, addr.quarter].filter(Boolean).join(", ") || first.display_name.split(",")[0];
+          const city = addr.city || addr.town || addr.municipality || addr.district || "Kolkata";
+          const state = addr.state || "West Bengal";
+          const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+
+          setMapSelectedLocation({
+            address: street,
+            city: city,
+            state: state,
+            pincode: pincode,
+            lat: parseFloat(first.lat),
+            lng: parseFloat(first.lon),
+            displayName: first.display_name
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Map search fallback", e);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  // Apply location selected from map modal
+  const handleApplyMapLocation = () => {
+    if (mapSelectedLocation) {
+      if (mapSelectedLocation.address) handleInputChange('address', mapSelectedLocation.address);
+      if (mapSelectedLocation.city) handleInputChange('city', mapSelectedLocation.city);
+      if (mapSelectedLocation.state) handleInputChange('state', mapSelectedLocation.state);
+      if (mapSelectedLocation.pincode) handleInputChange('pincode', mapSelectedLocation.pincode);
+      setPincodeAutoDetectedMsg(`Auto-filled from Map: ${mapSelectedLocation.city}, ${mapSelectedLocation.state}`);
+      showToast("Address, City, State & PIN code auto-filled from map!");
+    }
+    setIsMapModalOpen(false);
+  };
+
+  // Multi-Branch Management Modal Handlers
+  const handleOpenAddBranch = () => {
+    setEditingBranchId(null);
+    setBranchForm({
+      name: "",
+      isMain: gymData.branches.length === 0,
+      managerName: "",
+      phone: gymData.primaryPhone || "",
+      address: "",
+      city: gymData.city || "Kolkata",
+      state: gymData.state || "West Bengal",
+      pincode: "",
+      members: "120",
+      trainers: "3"
+    });
+    setIsBranchModalOpen(true);
+  };
+
+  const handleOpenEditBranch = (branch) => {
+    setEditingBranchId(branch.id);
+    setBranchForm({
+      name: branch.name || "",
+      isMain: !!branch.isMain,
+      managerName: branch.managerName || "",
+      phone: branch.phone || "",
+      address: branch.address || "",
+      city: branch.city || "Kolkata",
+      state: branch.state || "West Bengal",
+      pincode: branch.pincode || "",
+      members: branch.members ? String(branch.members) : "100",
+      trainers: branch.trainers ? String(branch.trainers) : "2"
+    });
+    setIsBranchModalOpen(true);
+  };
+
+  const handleSaveBranch = () => {
+    if (!branchForm.name.trim()) {
+      showToast("Please enter a valid branch name.");
+      return;
+    }
+    if (editingBranchId) {
+      setGymData(prev => ({
+        ...prev,
+        branches: prev.branches.map(b => b.id === editingBranchId ? {
+          ...b,
+          ...branchForm,
+          members: parseInt(branchForm.members) || 0,
+          trainers: parseInt(branchForm.trainers) || 0
+        } : b)
+      }));
+      setHasChanges(true);
+      showToast("Branch updated successfully!");
+    } else {
+      const newBranch = {
+        id: `branch-${Date.now()}`,
+        ...branchForm,
+        members: parseInt(branchForm.members) || 0,
+        trainers: parseInt(branchForm.trainers) || 0
+      };
+      setGymData(prev => ({
+        ...prev,
+        branches: [...prev.branches, newBranch]
+      }));
+      setHasChanges(true);
+      showToast("New branch added to network!");
+    }
+    setIsBranchModalOpen(false);
+  };
+
+  const handleDeleteBranch = (branchId) => {
+    setGymData(prev => ({
+      ...prev,
+      branches: prev.branches.filter(b => b.id !== branchId)
+    }));
+    setHasChanges(true);
+    setIsBranchModalOpen(false);
+    showToast("Branch removed from network.");
+  };
+
+  // Next upcoming holiday computation (relative to dynamic calendar date)
+  const nextUpcomingHoliday = useMemo(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    
+    const sorted = [...INDIAN_WB_HOLIDAYS].sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = sorted.find(h => h.date >= todayStr);
+    
+    if (upcoming) {
+      const holidayDate = new Date(upcoming.date + "T00:00:00");
+      const todayDate = new Date(yyyy, today.getMonth(), today.getDate());
+      const diffTime = holidayDate.getTime() - todayDate.getTime();
+      const daysUntil = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      return {
+        ...upcoming,
+        daysUntil,
+        statusText: daysUntil === 0 
+          ? "Today (Facility Closed)" 
+          : daysUntil === 1 
+            ? "Tomorrow" 
+            : `In ${daysUntil} days`
+      };
+    }
+    return sorted[0];
+  }, []);
+
+  const toggleHolidayOverride = (holidayId) => {
+    setHolidayOverrides(prev => ({
+      ...prev,
+      [holidayId]: !prev[holidayId]
+    }));
   };
 
   // Live Cover Banner Image Upload Handler
@@ -1882,392 +2500,606 @@ const GymProfile = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-8"
+                className="space-y-6 pb-12"
               >
-                {/* Basic Information */}
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-center gap-3.5 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                      <Building2 size={20} strokeWidth={1.5} />
+                {/* 1. COMPACT OVERVIEW HEADER */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Building2 size={18} strokeWidth={2} />
                     </div>
                     <div>
-                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Basic Information</h2>
-                      <p className="text-xs text-zinc-500 font-normal">Primary institutional profile and descriptors</p>
+                      <h2 className="text-sm sm:text-base font-bold text-zinc-900 tracking-tight">Institutional Profile & Operating Parameters</h2>
+                      <p className="text-xs text-zinc-500 font-normal mt-0.5">Manage your core gym brand identity, physical premises, workout schedule, and branch network</p>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Gym Brand Name</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Building2 size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          id="gym-brand-name-input"
-                          type="text" 
-                          value={gymData.name} 
-                          placeholder="e.g. Iron Temple Fitness (Enter your official gym or facility name)"
-                          onChange={(e) => handleInputChange('name', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Tagline / Slogan</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Sparkles size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          id="gym-tagline-input"
-                          type="text" 
-                          value={gymData.tagline} 
-                          placeholder="e.g. Strength • Discipline • Transformation (A short brand motto or slogan)"
-                          onChange={(e) => handleInputChange('tagline', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
-                        />
-                      </div>
-                    </div>
-                    <div className="col-span-2 space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Public Gym Description</label>
-                      <textarea 
-                        id="gym-description-input"
-                        rows={3}
-                        value={gymData.description} 
-                        placeholder="Provide an overview of your gym facility, equipment, coaching philosophy and culture..."
-                        onChange={(e) => handleInputChange('description', e.target.value)}
-                        className="w-full p-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-normal focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all resize-none leading-relaxed text-zinc-800 placeholder:text-zinc-400"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Founded Year</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Calendar size={15} strokeWidth={1.5} />
-                        </div>
-                        <input 
-                          id="gym-founded-input"
-                          type="text" 
-                          value={gymData.foundedYear} 
-                          placeholder="e.g. 2018 (Year founded)"
-                          onChange={(e) => handleInputChange('foundedYear', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Business / Facility Type</label>
-                      <CustomDropdown 
-                        id="gym-businesstype-input"
-                        icon={Layers}
-                        value={gymData.businessType} 
-                        placeholder="Select facility / business type..."
-                        onChange={(val) => handleInputChange('businessType', val)}
-                        options={[
-                          { value: "Commercial Gym", label: "Commercial Gym", description: "Multi-floor facility with cardio, weight racks & lockers" },
-                          { value: "Boutique Studio", label: "Boutique Studio", description: "Specialized class & private personal coaching facility" },
-                          { value: "CrossFit Box", label: "CrossFit Box", description: "Functional conditioning & Olympic lifting arena" },
-                          { value: "MMA & Combat Academy", label: "MMA & Combat Academy", description: "Martial arts, boxing ring, mats & combat sports center" },
-                          { value: "Pilates & Yoga Sanctuary", label: "Pilates & Yoga Sanctuary", description: "Reformer pilates, restorative yoga & wellness sanctuary" },
-                          { value: "Powerlifting & Barbell Club", label: "Powerlifting & Barbell Club", description: "Competition benches, calibrated plates & deadlift platforms" },
-                          { value: "Wellness & Athletic Club", label: "Wellness & Athletic Club", description: "Holistic sports conditioning, sauna, steam & recovery" }
-                        ]}
-                      />
-                    </div>
+                  <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200/80 text-xs font-semibold">
+                      <Layers size={13} strokeWidth={2} className="text-zinc-600" />
+                      <span>{gymData.businessType || "Commercial Facility"}</span>
+                    </span>
                   </div>
-                </section>
+                </div>
 
-                {/* Facility Address & Location */}
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-center gap-3.5 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                      <MapPin size={20} strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Facility Address & Location</h2>
-                      <p className="text-xs text-zinc-500 font-normal">Physical establishment coordinates and web domain</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                    {/* Cross-tab shortcut banner */}
-                    <div className="col-span-2 p-3.5 rounded-xl bg-zinc-50/80 border border-zinc-200/80 flex items-center justify-between shadow-2xs">
-                      <div className="flex items-center gap-2.5 text-xs text-zinc-600">
-                        <MessageSquare size={15} className="text-zinc-500 flex-shrink-0" />
-                        <span>Looking for Mobile, WhatsApp, and Email? Configure them with member communication rules in <strong>Contact & Communication</strong>.</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={() => setActiveTab("Contact & Communication")} 
-                        className="text-xs font-semibold text-zinc-900 hover:text-zinc-700 underline underline-offset-2 cursor-pointer flex items-center gap-1 flex-shrink-0 ml-4"
-                      >
-                        <span>Open Tab</span>
-                        <ArrowRight size={12} />
-                      </button>
-                    </div>
-
-                    <div className="col-span-2 space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Official Website</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Globe size={15} strokeWidth={1.5} />
+                {/* 2. TWO-COLUMN BALANCED WORKSPACE */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                  {/* ──── LEFT COLUMN: INSTITUTIONAL IDENTITY & LOCATION ──── */}
+                  <div className="space-y-6">
+                    {/* Basic Institutional Information */}
+                    <section className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-4">
+                      <div className="flex items-center gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Building2 size={16} strokeWidth={2} />
                         </div>
-                        <input 
-                          type="text" 
-                          value={gymData.website} 
-                          placeholder="e.g. https://www.yourgym.com (Official website URL)"
-                          onChange={(e) => handleInputChange('website', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900">Institutional Identity</h3>
+                          <span className="text-xs text-zinc-500 block">Brand name, slogan, classification & culture</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="col-span-2 space-y-1.5 pt-2 border-t border-zinc-100">
-                      <label className="text-[11px] font-semibold text-zinc-600">Address</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <MapPin size={15} strokeWidth={1.5} />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-zinc-700">Gym Brand Name</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                              <Building2 size={14} strokeWidth={1.75} />
+                            </div>
+                            <input 
+                              id="gym-brand-name-input"
+                              type="text" 
+                              value={gymData.name} 
+                              placeholder="e.g. Iron Temple Fitness"
+                              onChange={(e) => handleInputChange('name', e.target.value)}
+                              className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
+                            />
+                          </div>
                         </div>
-                        <input 
-                          type="text" 
-                          value={gymData.address} 
-                          placeholder="e.g. 12, 80 Feet Road, 4th Block, Koramangala (Physical street address)"
-                          onChange={(e) => handleInputChange('address', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">City</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Navigation size={15} strokeWidth={1.5} />
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-zinc-700">Tagline / Slogan</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                              <Sparkles size={14} strokeWidth={1.75} />
+                            </div>
+                            <input 
+                              id="gym-tagline-input"
+                              type="text" 
+                              value={gymData.tagline} 
+                              placeholder="e.g. Strength • Discipline"
+                              onChange={(e) => handleInputChange('tagline', e.target.value)}
+                              className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
+                            />
+                          </div>
                         </div>
-                        <input 
-                          id="gym-city-input"
-                          type="text" 
-                          value={gymData.city} 
-                          placeholder="e.g. Bengaluru"
-                          onChange={(e) => handleInputChange('city', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">State & Pincode</label>
-                      <div className="flex gap-3">
-                        <div className="flex-1">
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-zinc-700">Facility / Business Type</label>
                           <CustomDropdown 
-                            id="gym-state-input"
-                            icon={Map}
-                            value={gymData.state} 
-                            placeholder="Select State / UT..."
-                            onChange={(val) => handleInputChange('state', val)}
+                            id="gym-businesstype-input"
+                            icon={Layers}
+                            value={gymData.businessType} 
+                            placeholder="Select facility type..."
+                            onChange={(val) => handleInputChange('businessType', val)}
                             options={[
-                              "Karnataka", "Maharashtra", "Delhi NCR", "Tamil Nadu", "Telangana",
-                              "Gujarat", "Uttar Pradesh", "West Bengal", "Rajasthan", "Kerala",
-                              "Punjab", "Haryana", "Madhya Pradesh", "Andhra Pradesh", "Goa",
-                              "Chandigarh", "Uttarakhand", "Assam", "Odisha", "Bihar"
-                            ].map(s => ({ value: s, label: s }))}
+                              { value: "Commercial Gym", label: "Commercial Gym", description: "Multi-floor cardio, weights & lockers" },
+                              { value: "Boutique Studio", label: "Boutique Studio", description: "Specialized class & private personal coaching" },
+                              { value: "CrossFit Box", label: "CrossFit Box", description: "Functional conditioning & Olympic lifting arena" },
+                              { value: "MMA & Combat Academy", label: "MMA & Combat Academy", description: "Martial arts, boxing ring, mats & combat sports" },
+                              { value: "Pilates & Yoga Sanctuary", label: "Pilates & Yoga Sanctuary", description: "Reformer pilates, restorative yoga & wellness" },
+                              { value: "Powerlifting & Barbell Club", label: "Powerlifting & Barbell Club", description: "Competition benches & deadlift platforms" },
+                              { value: "Wellness & Athletic Club", label: "Wellness & Athletic Club", description: "Sports conditioning, sauna & recovery" }
+                            ]}
                           />
                         </div>
-                        <div className="relative w-36">
-                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                            <Hash size={15} strokeWidth={1.5} />
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-zinc-700">Founded Year</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                              <Calendar size={14} strokeWidth={1.75} />
+                            </div>
+                            <input 
+                              id="gym-founded-input"
+                              type="text" 
+                              value={gymData.foundedYear} 
+                              placeholder="e.g. 2018"
+                              onChange={(e) => handleInputChange('foundedYear', e.target.value)}
+                              className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-zinc-700">Public Facility Description</label>
+                        <textarea 
+                          id="gym-description-input"
+                          rows={3}
+                          value={gymData.description} 
+                          placeholder="Provide an overview of your gym facility, equipment, coaching philosophy and culture..."
+                          onChange={(e) => handleInputChange('description', e.target.value)}
+                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-normal focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all resize-none leading-relaxed text-zinc-800 placeholder:text-zinc-400"
+                        />
+                        <span className="text-[10px] text-zinc-400 block">Displayed on member welcome passes, online portals, and institutional bulletins.</span>
+                      </div>
+                    </section>
+
+                    {/* Facility Address & Location */}
+                    <section className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-4">
+                      <div className="flex items-center gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                          <MapPin size={16} strokeWidth={2} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900">Premises & Web Coordinates</h3>
+                          <span className="text-xs text-zinc-500 block">Physical establishment location and verified coordinates</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-zinc-700">Official Website URL</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                            <Globe size={14} strokeWidth={1.75} />
                           </div>
                           <input 
                             type="text" 
-                            value={gymData.pincode} 
-                            placeholder="e.g. 560034"
-                            onChange={(e) => handleInputChange('pincode', e.target.value)}
-                            className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                            value={gymData.website} 
+                            placeholder="e.g. https://www.yourgym.com"
+                            onChange={(e) => handleInputChange('website', e.target.value)}
+                            className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
                           />
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </section>
 
-                {/* 3. Facility Hours & Capacity (Operational Settings) */}
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-center gap-3.5 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                      <Clock size={20} strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">Facility Hours & Capacity</h2>
-                      <p className="text-xs text-zinc-500 font-normal">Opening cycles, peak hours, and maximum slot volumes</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-6">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Weekday Opening & Closing</label>
-                      <div className="flex items-center gap-2.5">
-                        <input 
-                          type="time" 
-                          value={gymData.openingHours} 
-                          onChange={(e) => handleInputChange('openingHours', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                        <span className="text-xs text-zinc-400 font-medium">to</span>
-                        <input 
-                          type="time" 
-                          value={gymData.closingHours} 
-                          onChange={(e) => handleInputChange('closingHours', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Weekend Opening & Closing</label>
-                      <div className="flex items-center gap-2.5">
-                        <input 
-                          type="time" 
-                          value={gymData.weekendOpening} 
-                          onChange={(e) => handleInputChange('weekendOpening', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                        <span className="text-xs text-zinc-400 font-medium">to</span>
-                        <input 
-                          type="time" 
-                          value={gymData.weekendClosing} 
-                          onChange={(e) => handleInputChange('weekendClosing', e.target.value)}
-                          className="flex-1 h-10 px-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Max Capacity Per Slot</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
-                          <Users size={15} strokeWidth={1.5} />
+                      {/* Facility Physical Address */}
+                      <div className="space-y-1.5" ref={autocompleteContainerRef}>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-zinc-700">Street Address</label>
+                          {pincodeAutoDetectedMsg && (
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/70 flex items-center gap-1">
+                              <Check size={10} strokeWidth={2.5} />
+                              <span className="truncate max-w-[200px]">{pincodeAutoDetectedMsg}</span>
+                            </span>
+                          )}
                         </div>
-                        <input 
-                          type="number" 
-                          value={gymData.slotCapacity} 
-                          placeholder="e.g. 50 (Maximum allowed members in one workout batch)"
-                          onChange={(e) => handleInputChange('slotCapacity', e.target.value)}
-                          className="w-full h-10 pl-10 pr-3.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                        />
-                      </div>
-                    </div>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                            <MapPin size={14} strokeWidth={1.75} />
+                          </div>
+                          <input 
+                            type="text" 
+                            value={gymData.address} 
+                            placeholder="e.g. 12, Park Street / Salt Lake Sector V"
+                            onFocus={() => {
+                              if (gymData.address && gymData.address.length >= 2) {
+                                setActiveAutocompleteField('address');
+                                triggerLocationSuggestions(gymData.address, 'address');
+                              }
+                            }}
+                            onChange={(e) => {
+                              handleInputChange('address', e.target.value);
+                              setActiveAutocompleteField('address');
+                              triggerLocationSuggestions(e.target.value, 'address');
+                            }}
+                            className="w-full h-10 pl-9 pr-10 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                          />
+                          <div className="absolute inset-y-0 right-1.5 flex items-center">
+                            <button 
+                              type="button"
+                              onClick={handleOpenMapModal}
+                              className="w-7 h-7 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white flex items-center justify-center shadow-2xs transition-all cursor-pointer group shrink-0"
+                              title="Choose location on map"
+                            >
+                              <MapPin size={13} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                            </button>
+                          </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600">Standard Slot Duration</label>
-                      <CustomDropdown 
-                        id="gym-slotduration-input"
-                        icon={Timer}
-                        value={gymData.slotDurationMinutes} 
-                        placeholder="Select standard workout slot duration..."
-                        onChange={(val) => handleInputChange('slotDurationMinutes', val)}
-                        options={[
-                          { value: "30", label: "30 Minutes", description: "Express HIIT & quick functional circuits" },
-                          { value: "45", label: "45 Minutes", description: "Standard group class & studio training block" },
-                          { value: "60", label: "60 Minutes (1 Hour)", description: "Standard gym workout session" },
-                          { value: "75", label: "75 Minutes", description: "Extended hypertrophy & personal training session" },
-                          { value: "90", label: "90 Minutes (1.5 Hours)", description: "Heavy strength & powerlifting block" },
-                          { value: "120", label: "120 Minutes (2 Hours)", description: "Open floor workout & athlete competition prep" }
-                        ]}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-semibold text-zinc-900">National Holiday Closure</h4>
-                      <p className="text-[11px] text-zinc-500">Auto-mark facility closed on recognized national holidays</p>
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={gymData.autoHolidayClosure} 
-                      onChange={(e) => handleInputChange('autoHolidayClosure', e.target.checked)}
-                      className="w-4 h-4 rounded text-zinc-900 focus:ring-0 cursor-pointer" 
-                    />
-                  </div>
-                </section>
-
-                {/* 4. Multi-Branch Locations */}
-                <section className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-800">
-                        <MapPin size={20} strokeWidth={1.5} />
-                      </div>
-                      <div>
-                        <h2 className="text-base font-bold text-zinc-900 tracking-tight">Multi-Branch Locations</h2>
-                        <p className="text-xs text-zinc-500 font-normal">Manage interconnected branches, staff, and quotas</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => showToast("Branch creation modal opened.")}
-                      className="h-9 px-3.5 rounded-lg bg-zinc-900 text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm"
-                    >
-                      <Plus size={14} strokeWidth={1.5} />
-                      <span>Add Branch</span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-3.5">
-                    {gymData.branches.length === 0 ? (
-                      <div className="p-8 rounded-xl border-2 border-dotted border-zinc-300 bg-zinc-50/50 flex flex-col items-center justify-center text-center">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-400 mb-3 shadow-sm">
-                          <MapPin size={22} strokeWidth={1.5} />
+                          {/* Autocomplete Dropdown Popover */}
+                          {activeAutocompleteField === 'address' && autocompleteSuggestions.length > 0 && (
+                            <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden py-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                              <div className="px-3.5 py-1.5 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between text-[11px] font-semibold text-zinc-500">
+                                <span className="flex items-center gap-1.5">
+                                  <Sparkles size={11} className="text-amber-500" /> Suggested Addresses
+                                </span>
+                                <span className="text-[10px] text-zinc-400">Click to auto-fill</span>
+                              </div>
+                              <div className="max-h-56 overflow-y-auto divide-y divide-zinc-50">
+                                {autocompleteSuggestions.map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      handleSelectLocationSuggestion(item);
+                                    }}
+                                    className="px-3.5 py-2 hover:bg-zinc-50 flex items-center gap-3 cursor-pointer transition-colors"
+                                  >
+                                    <div className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-600 flex items-center justify-center shrink-0">
+                                      <MapPin size={13} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs font-bold text-zinc-900 truncate">{item.name || item.address}</div>
+                                      <div className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                        {item.city}, {item.state} {item.pincode ? `• PIN ${item.pincode}` : ''}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <h4 className="text-sm font-bold text-zinc-800">No Branches Configured</h4>
-                        <p className="text-xs text-zinc-500 max-w-sm mt-1 mb-4 font-normal">
-                          Add your main gym headquarters or regional branches to manage separate member capacities, trainers, and local schedules.
-                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5 relative">
+                          <label className="text-xs font-semibold text-zinc-700">City</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                              <Navigation size={14} strokeWidth={1.75} />
+                            </div>
+                            <input 
+                              id="gym-city-input"
+                              type="text" 
+                              value={gymData.city} 
+                              placeholder="e.g. Kolkata"
+                              onFocus={() => {
+                                if (gymData.city && gymData.city.length >= 2) {
+                                  setActiveAutocompleteField('city');
+                                  triggerLocationSuggestions(gymData.city, 'city');
+                                }
+                              }}
+                              onChange={(e) => {
+                                handleInputChange('city', e.target.value);
+                                setActiveAutocompleteField('city');
+                                triggerLocationSuggestions(e.target.value, 'city');
+                              }}
+                              className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                            />
+
+                            {/* Autocomplete Dropdown Popover for City */}
+                            {activeAutocompleteField === 'city' && autocompleteSuggestions.length > 0 && (
+                              <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden py-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                                <div className="px-3.5 py-1.5 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between text-[11px] font-semibold text-zinc-500">
+                                  <span className="flex items-center gap-1.5">
+                                    <Sparkles size={11} className="text-amber-500" /> Suggested Cities
+                                  </span>
+                                  <span className="text-[10px] text-zinc-400">Click to auto-fill</span>
+                                </div>
+                                <div className="max-h-56 overflow-y-auto divide-y divide-zinc-50">
+                                  {autocompleteSuggestions.map((item, idx) => (
+                                    <div
+                                      key={idx}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handleSelectLocationSuggestion(item);
+                                      }}
+                                      className="px-3.5 py-2 hover:bg-zinc-50 flex items-center gap-3 cursor-pointer transition-colors"
+                                    >
+                                      <div className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-600 flex items-center justify-center shrink-0">
+                                        <Navigation size={13} />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-bold text-zinc-900 truncate">{item.city}</div>
+                                        <div className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                          {item.state} {item.pincode ? `• PIN ${item.pincode}` : ''}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
+                            <span>State & Pincode</span>
+                            <span className="text-[10px] text-zinc-400 font-normal">Auto-detects City & State</span>
+                          </label>
+                          <div className="flex gap-2">
+                            <div className="flex-1 min-w-0">
+                              <CustomDropdown 
+                                id="gym-state-input"
+                                icon={Map}
+                                value={gymData.state} 
+                                placeholder="Select State or UT..."
+                                searchable={true}
+                                onChange={(val) => handleInputChange('state', val)}
+                                options={ALL_INDIAN_STATES_AND_UTS.map(s => ({ value: s, label: s }))}
+                              />
+                            </div>
+                            <div className="relative w-28 shrink-0">
+                              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-zinc-400">
+                                <Hash size={13} strokeWidth={1.75} />
+                              </div>
+                              <input 
+                                type="text" 
+                                value={gymData.pincode} 
+                                placeholder="Pincode"
+                                maxLength={6}
+                                onFocus={() => {
+                                  if (gymData.pincode && gymData.pincode.length >= 2) {
+                                    setActiveAutocompleteField('pincode');
+                                    triggerLocationSuggestions(gymData.pincode, 'pincode');
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  handlePincodeChange(e.target.value);
+                                  setActiveAutocompleteField('pincode');
+                                  triggerLocationSuggestions(e.target.value, 'pincode');
+                                }}
+                                className="w-full h-10 pl-7 pr-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal font-mono" 
+                              />
+
+                              {/* Autocomplete Dropdown Popover for Pincode */}
+                              {activeAutocompleteField === 'pincode' && autocompleteSuggestions.length > 0 && (
+                                <div className="absolute right-0 top-full mt-1.5 z-50 w-64 bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden py-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                                  <div className="px-3.5 py-1.5 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between text-[11px] font-semibold text-zinc-500">
+                                    <span className="flex items-center gap-1.5">
+                                      <Hash size={11} className="text-zinc-500" /> PIN Matches
+                                    </span>
+                                    <span className="text-[10px] text-zinc-400">Click to fill</span>
+                                  </div>
+                                  <div className="max-h-52 overflow-y-auto divide-y divide-zinc-50">
+                                    {autocompleteSuggestions.map((item, idx) => (
+                                      <div
+                                        key={idx}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleSelectLocationSuggestion(item);
+                                        }}
+                                        className="px-3 py-1.5 hover:bg-zinc-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                                      >
+                                        <span className="font-mono font-bold text-xs text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                          {item.pincode}
+                                        </span>
+                                        <div className="min-w-0 flex-1 text-left">
+                                          <div className="text-[11px] font-bold text-zinc-900 truncate">{item.city}</div>
+                                          <div className="text-[10px] text-zinc-500 truncate">{item.state}</div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cross-tab shortcut banner */}
+                      <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200/80 flex items-center justify-between shadow-2xs">
+                        <div className="flex items-center gap-2 text-xs text-zinc-600 min-w-0">
+                          <MessageSquare size={14} className="text-zinc-500 shrink-0" />
+                          <span className="truncate text-[11px]">Phone, WhatsApp & Email settings are in <strong>Contact & Communication</strong>.</span>
+                        </div>
                         <button 
-                          onClick={() => showToast("Branch creation modal opened.")}
-                          className="h-8 px-4 rounded-lg bg-zinc-900 text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-zinc-800 transition-colors shadow-sm cursor-pointer"
+                          type="button" 
+                          onClick={() => setActiveTab("Contact & Communication")} 
+                          className="text-[11px] font-bold text-zinc-900 hover:text-emerald-700 underline underline-offset-2 cursor-pointer flex items-center gap-1 shrink-0 ml-3"
                         >
-                          <Plus size={13} strokeWidth={1.75} />
-                          <span>Add First Branch</span>
+                          <span>Open Tab</span>
+                          <ArrowRight size={11} />
                         </button>
                       </div>
-                    ) : (
-                      gymData.branches.map(branch => (
-                        <div key={branch.id} className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 hover:border-zinc-400 transition-all flex items-center justify-between">
-                          <div className="flex items-start gap-3.5">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs ${branch.isMain ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-200 text-zinc-800'}`}>
-                              <Building2 size={18} strokeWidth={1.5} />
+                    </section>
+                  </div>
+
+                  {/* ──── RIGHT COLUMN: OPERATIONS & BRANCH NETWORK ──── */}
+                  <div className="space-y-6">
+                    {/* Facility Hours & Capacity */}
+                    <section className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-4">
+                      <div className="flex items-center gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Clock size={16} strokeWidth={2} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900">Operating Hours & Capacity</h3>
+                          <span className="text-xs text-zinc-500 block">Daily workout batches, duration & holiday closure rules</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-zinc-700">Weekday Hours (Mon - Fri)</label>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="time" 
+                              value={gymData.openingHours} 
+                              onChange={(e) => handleInputChange('openingHours', e.target.value)}
+                              className="flex-1 h-10 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                            />
+                            <span className="text-xs text-zinc-400 font-medium">to</span>
+                            <input 
+                              type="time" 
+                              value={gymData.closingHours} 
+                              onChange={(e) => handleInputChange('closingHours', e.target.value)}
+                              className="flex-1 h-10 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-zinc-700">Weekend Hours (Sat - Sun)</label>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="time" 
+                              value={gymData.weekendOpening} 
+                              onChange={(e) => handleInputChange('weekendOpening', e.target.value)}
+                              className="flex-1 h-10 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                            />
+                            <span className="text-xs text-zinc-400 font-medium">to</span>
+                            <input 
+                              type="time" 
+                              value={gymData.weekendClosing} 
+                              onChange={(e) => handleInputChange('weekendClosing', e.target.value)}
+                              className="flex-1 h-10 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-zinc-700">Standard Workout Slot Duration</label>
+                        <CustomDropdown 
+                          id="gym-slotduration-input"
+                          icon={Timer}
+                          value={gymData.slotDurationMinutes} 
+                          placeholder="Select standard workout slot duration..."
+                          onChange={(val) => handleInputChange('slotDurationMinutes', val)}
+                          options={[
+                            { value: "30", label: "30 Minutes", description: "Express HIIT & functional circuits" },
+                            { value: "45", label: "45 Minutes", description: "Standard group class & studio block" },
+                            { value: "60", label: "60 Minutes (1 Hour)", description: "Standard gym workout session" },
+                            { value: "75", label: "75 Minutes", description: "Extended hypertrophy session" },
+                            { value: "90", label: "90 Minutes (1.5 Hours)", description: "Heavy strength & powerlifting block" },
+                            { value: "120", label: "120 Minutes (2 Hours)", description: "Open floor workout & athlete prep" }
+                          ]}
+                        />
+                      </div>
+
+                      {/* National & West Bengal Holiday Closure Auto-System */}
+                      <div className="p-4 bg-zinc-50/80 border border-zinc-200 rounded-xl space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-zinc-700" />
+                              <h4 className="text-xs font-bold text-zinc-900">National & West Bengal Holiday Auto-Closure</h4>
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold text-zinc-900">{branch.name}</h4>
-                                {branch.isMain && (
-                                  <span className="px-2 py-0.5 rounded bg-zinc-200/80 text-zinc-800 text-[9px] font-semibold uppercase tracking-wider">
-                                    HQ
+                            <p className="text-[11px] text-zinc-500 font-normal mt-0.5">Auto-mark facility closed on 29 official Gazetted National & Govt of West Bengal holiday dates</p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input 
+                              type="checkbox" 
+                              checked={gymData.autoHolidayClosure} 
+                              onChange={(e) => handleInputChange('autoHolidayClosure', e.target.checked)}
+                              className="sr-only peer" 
+                            />
+                            <div className="w-10 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-zinc-900"></div>
+                          </label>
+                        </div>
+
+                        {gymData.autoHolidayClosure && (
+                          <div className="pt-2.5 border-t border-zinc-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-emerald-50/70 p-3 rounded-xl border border-emerald-200/70">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                              <div className="min-w-0 text-xs">
+                                <span className="text-zinc-600 font-medium">Next Scheduled Closure: </span>
+                                <span className="font-bold text-emerald-950 truncate">{nextUpcomingHoliday.name}</span>
+                                <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">{nextUpcomingHoliday.dateFormatted} ({nextUpcomingHoliday.day})</span>
+                                {nextUpcomingHoliday.statusText && (
+                                  <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-zinc-900 text-white font-semibold">
+                                    {nextUpcomingHoliday.statusText}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-zinc-500 font-normal mt-0.5">{branch.address}</p>
-                              <p className="text-[11px] text-zinc-400 mt-0.5 font-mono">{branch.phone}</p>
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-5">
-                            <div className="text-right">
-                              <div className="text-xs font-bold text-zinc-900">{branch.members}</div>
-                              <div className="text-[9px] font-medium uppercase text-zinc-400">Members</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs font-bold text-zinc-900">{branch.trainers}</div>
-                              <div className="text-[9px] font-medium uppercase text-zinc-400">Trainers</div>
-                            </div>
-                            <button className="h-8 w-8 rounded-lg border border-zinc-200 bg-white flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer shadow-sm">
-                              <Edit3 size={13} strokeWidth={1.5} />
+                            <button 
+                              type="button"
+                              onClick={() => setIsHolidayModalOpen(true)}
+                              className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 underline underline-offset-2 cursor-pointer flex items-center gap-1 shrink-0"
+                            >
+                              <span>View West Bengal & National Calendar</span>
+                              <ArrowRight size={11} />
                             </button>
                           </div>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* Multi-Branch Locations */}
+                    <section className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-4">
+                      <div className="flex items-center justify-between pb-3.5 border-b border-zinc-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 border border-violet-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                            <Building2 size={16} strokeWidth={2} />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-zinc-900">Multi-Branch Network</h3>
+                            <span className="text-xs text-zinc-500 block">Manage interconnected branch hubs</span>
+                          </div>
                         </div>
-                      ))
-                    )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {gymData.branches.length === 0 ? (
+                          <div className="p-6 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 flex flex-col items-center justify-center text-center">
+                            <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-400 mb-2.5 shadow-2xs">
+                              <MapPin size={18} strokeWidth={1.5} />
+                            </div>
+                            <h4 className="text-xs font-bold text-zinc-900">No Secondary Branches</h4>
+                            <p className="text-[11px] text-zinc-500 max-w-xs mt-0.5 mb-3 font-normal">
+                              Add regional centers to manage independent capacities, trainers, and schedules.
+                            </p>
+                            <button 
+                              type="button"
+                              onClick={handleOpenAddBranch}
+                              className="h-8 px-3.5 rounded-xl bg-zinc-900 text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
+                            >
+                              <Plus size={13} strokeWidth={2} />
+                              <span>Add First Branch</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            {gymData.branches.map(branch => (
+                              <div key={branch.id} className="p-3.5 rounded-xl border border-zinc-200/90 bg-zinc-50/50 hover:border-zinc-300 hover:bg-white transition-all flex items-center justify-between gap-3">
+                                <div className="flex items-start gap-3 min-w-0">
+                                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${branch.isMain ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-200 text-zinc-800'}`}>
+                                    <Building2 size={16} strokeWidth={1.75} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <h4 className="text-xs font-bold text-zinc-900 truncate">{branch.name}</h4>
+                                      {branch.isMain && (
+                                        <span className="px-1.5 py-0.5 rounded bg-zinc-200/90 text-zinc-800 text-[9px] font-bold uppercase tracking-wider">
+                                          HQ
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-zinc-500 truncate mt-0.5">{branch.address}</p>
+                                    <p className="text-[10px] text-zinc-400 font-mono mt-0.5">{branch.phone}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <div className="text-right">
+                                    <div className="text-xs font-bold text-zinc-900">{branch.members}</div>
+                                    <div className="text-[9px] font-medium uppercase text-zinc-400">Members</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-xs font-bold text-zinc-900">{branch.trainers}</div>
+                                    <div className="text-[9px] font-medium uppercase text-zinc-400">Trainers</div>
+                                  </div>
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleOpenEditBranch(branch)}
+                                    className="h-7 w-7 rounded-lg border border-zinc-200 bg-white flex items-center justify-center text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 transition-colors cursor-pointer shadow-2xs"
+                                    title="Edit branch details"
+                                  >
+                                    <Edit3 size={12} strokeWidth={1.75} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={handleOpenAddBranch}
+                              className="w-full py-2.5 rounded-xl border border-dashed border-zinc-300 hover:border-zinc-400 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <Plus size={13} strokeWidth={2} />
+                              <span>Add Secondary Campus / Branch</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </section>
                   </div>
-                </section>
+                </div>
               </motion.div>
             )}
 
@@ -2293,12 +3125,6 @@ const GymProfile = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200 text-xs font-semibold font-mono">
-                      <span className={`w-2 h-2 rounded-full ${
-                        ((gymData.mobileForMembers ? 1 : 0) + (gymData.whatsappForMembers ? 1 : 0) + (gymData.emailForMembers ? 1 : 0)) > 0 ? 'bg-emerald-500' : 'bg-zinc-400'
-                      }`} />
-                      <span>{((gymData.mobileForMembers ? 1 : 0) + (gymData.whatsappForMembers ? 1 : 0) + (gymData.emailForMembers ? 1 : 0))} of 3 Channels Active</span>
-                    </span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-xs font-semibold">
                       <ShieldCheck size={13} strokeWidth={2} />
                       <span>Zero-Spam Compliant</span>
@@ -2309,37 +3135,24 @@ const GymProfile = () => {
                 {/* 2. 3-COLUMN COMPACT CHANNELS GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
                   {/* CHANNEL 1: VOICE & SMS LINE */}
-                  <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+                  <div className="bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 p-5 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm">
                     <div className="space-y-4">
                       {/* Card Header */}
-                      <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-zinc-100">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center justify-center shrink-0 shadow-2xs">
-                            <Phone size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <h3 className="text-xs font-bold text-zinc-900">Phone & Voice Line</h3>
-                            <span className="text-[10px] text-zinc-500 block">Calls & Transactional SMS</span>
-                          </div>
+                      <div className="flex items-center gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Phone size={17} strokeWidth={2} />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full border ${
-                            gymData.mobileForMembers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'
-                          }`}>
-                            {gymData.mobileForMembers ? 'Active' : 'Muted'}
-                          </span>
-                          <ToggleSwitch 
-                            checked={gymData.mobileForMembers} 
-                            onChange={() => handleInputChange('mobileForMembers', !gymData.mobileForMembers)} 
-                          />
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900">Phone & Voice Line</h3>
+                          <span className="text-xs text-zinc-500 block">Calls & Transactional SMS</span>
                         </div>
                       </div>
 
                       {/* Primary Input */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-zinc-700 flex items-center justify-between">
+                        <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
                           <span>Official Mobile Number</span>
-                          <span className="text-[10px] text-zinc-400 font-normal">Voice & SMS</span>
+                          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-md">Voice & SMS</span>
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
@@ -2350,81 +3163,65 @@ const GymProfile = () => {
                             value={gymData.primaryPhone} 
                             placeholder="e.g. +91 98765 43210"
                             onChange={(e) => handleInputChange('primaryPhone', e.target.value)}
-                            className="w-full h-9 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                            className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
                           />
                         </div>
                       </div>
 
-                      {/* Permission Group */}
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Member Permissions</span>
-                          <span className="text-[10px] font-mono text-zinc-400 font-semibold">
-                            {((gymData.mobileForMembers && gymData.mobileCallsAllowed ? 1 : 0) + (gymData.mobileForMembers && gymData.mobileSmsAllowed ? 1 : 0) + (gymData.mobileForMembers && gymData.mobilePromosAllowed ? 1 : 0))}/3 Enabled
+                      {/* Feature Capabilities Strip */}
+                      <div className="pt-2 border-t border-zinc-100 space-y-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            Inbound Calls
+                          </span>
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            Check-in Alerts
+                          </span>
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            Due SMS
                           </span>
                         </div>
-                        <div className="space-y-2">
-                          <CheckButton 
-                            checked={gymData.mobileForMembers && gymData.mobileCallsAllowed}
-                            disabled={!gymData.mobileForMembers}
-                            onChange={() => handleInputChange('mobileCallsAllowed', !gymData.mobileCallsAllowed)}
-                            label="Voice Calls"
-                            description="Front desk & trainer coordination calls"
-                            icon={PhoneCall}
-                          />
-                          <CheckButton 
-                            checked={gymData.mobileForMembers && gymData.mobileSmsAllowed}
-                            disabled={!gymData.mobileForMembers}
-                            onChange={() => handleInputChange('mobileSmsAllowed', !gymData.mobileSmsAllowed)}
-                            label="Transactional SMS"
-                            description="Check-in alerts, OTPs & payment dues"
-                            icon={Send}
-                          />
-                          <CheckButton 
-                            checked={gymData.mobileForMembers && gymData.mobilePromosAllowed}
-                            disabled={!gymData.mobileForMembers}
-                            onChange={() => handleInputChange('mobilePromosAllowed', !gymData.mobilePromosAllowed)}
-                            label="Promotions & Renewals"
-                            description="Early bird discounts & package renewals"
-                            icon={Sparkles}
-                          />
-                        </div>
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                          Primary facility line used for member inquiries, front-desk calls, OTP verification, and scheduled fee reminder alerts.
+                        </p>
                       </div>
+                    </div>
+
+                    {/* Footer Status Pill */}
+                    <div className="pt-4 mt-2">
+                      {gymData.primaryPhone ? (
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50/70 border border-emerald-200/60 px-3 py-1.5 rounded-xl">
+                          <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                          <span className="truncate">Active for voice calls & transactional SMS</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 bg-amber-50/70 border border-amber-200/60 px-3 py-1.5 rounded-xl">
+                          <AlertCircle size={13} className="text-amber-600 shrink-0" />
+                          <span className="truncate">Enter a mobile number to enable call routing</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* CHANNEL 2: WHATSAPP BUSINESS */}
-                  <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+                  <div className="bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 p-5 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm">
                     <div className="space-y-4">
                       {/* Card Header */}
-                      <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-zinc-100">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-2xs">
-                            <Smartphone size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <h3 className="text-xs font-bold text-zinc-900">WhatsApp Business</h3>
-                            <span className="text-[10px] text-zinc-500 block">PDF Invoices, Reminders & Chat</span>
-                          </div>
+                      <div className="flex items-center gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Smartphone size={17} strokeWidth={2} />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full border ${
-                            gymData.whatsappForMembers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'
-                          }`}>
-                            {gymData.whatsappForMembers ? 'Active' : 'Muted'}
-                          </span>
-                          <ToggleSwitch 
-                            checked={gymData.whatsappForMembers} 
-                            onChange={() => handleInputChange('whatsappForMembers', !gymData.whatsappForMembers)} 
-                          />
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900">WhatsApp Business</h3>
+                          <span className="text-xs text-zinc-500 block">PDF Invoices, Reminders & Chat</span>
                         </div>
                       </div>
 
                       {/* Primary Input */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-zinc-700 flex items-center justify-between">
+                        <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
                           <span>Registered WhatsApp Number</span>
-                          <span className="text-[10px] text-zinc-400 font-normal">Business API</span>
+                          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-md">Business API</span>
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
@@ -2435,89 +3232,65 @@ const GymProfile = () => {
                             value={gymData.whatsapp} 
                             placeholder="e.g. +91 98765 43210"
                             onChange={(e) => handleInputChange('whatsapp', e.target.value)}
-                            className="w-full h-9 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                            className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
                           />
                         </div>
                       </div>
 
-                      {/* Permission Group */}
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Member Permissions</span>
-                          <span className="text-[10px] font-mono text-zinc-400 font-semibold">
-                            {((gymData.whatsappForMembers && gymData.whatsappReceiptsAllowed ? 1 : 0) + (gymData.whatsappForMembers && gymData.whatsappRemindersAllowed ? 1 : 0) + (gymData.whatsappForMembers && gymData.whatsappSupportAllowed ? 1 : 0) + (gymData.whatsappForMembers && gymData.whatsappPromosAllowed ? 1 : 0))}/4 Enabled
+                      {/* Feature Capabilities Strip */}
+                      <div className="pt-2 border-t border-zinc-100 space-y-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            PDF Receipts
+                          </span>
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            Expiry Alerts
+                          </span>
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            Direct Chat
                           </span>
                         </div>
-                        <div className="space-y-2">
-                          <CheckButton 
-                            checked={gymData.whatsappForMembers && gymData.whatsappReceiptsAllowed}
-                            disabled={!gymData.whatsappForMembers}
-                            onChange={() => handleInputChange('whatsappReceiptsAllowed', !gymData.whatsappReceiptsAllowed)}
-                            label="PDF Receipts & Invoices"
-                            description="Instant PDF receipts upon fee payment"
-                            icon={Receipt}
-                          />
-                          <CheckButton 
-                            checked={gymData.whatsappForMembers && gymData.whatsappRemindersAllowed}
-                            disabled={!gymData.whatsappForMembers}
-                            onChange={() => handleInputChange('whatsappRemindersAllowed', !gymData.whatsappRemindersAllowed)}
-                            label="Workout Reminders"
-                            description="PT batch schedule & attendance alerts"
-                            icon={Clock}
-                          />
-                          <CheckButton 
-                            checked={gymData.whatsappForMembers && gymData.whatsappSupportAllowed}
-                            disabled={!gymData.whatsappForMembers}
-                            onChange={() => handleInputChange('whatsappSupportAllowed', !gymData.whatsappSupportAllowed)}
-                            label="Two-Way Member Chat"
-                            description="Front desk helpline for freezes & diet queries"
-                            icon={MessageSquare}
-                          />
-                          <CheckButton 
-                            checked={gymData.whatsappForMembers && gymData.whatsappPromosAllowed}
-                            disabled={!gymData.whatsappForMembers}
-                            onChange={() => handleInputChange('whatsappPromosAllowed', !gymData.whatsappPromosAllowed)}
-                            label="Announcements & Events"
-                            description="Challenges, holiday closures & gym updates"
-                            icon={Sparkles}
-                          />
-                        </div>
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                          Enables automatic PDF invoice delivery upon fee payment, renewal alerts, personal trainer updates, and 1-click member chat.
+                        </p>
                       </div>
+                    </div>
+
+                    {/* Footer Status Pill */}
+                    <div className="pt-4 mt-2">
+                      {gymData.whatsapp ? (
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50/70 border border-emerald-200/60 px-3 py-1.5 rounded-xl">
+                          <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                          <span className="truncate">Active for WhatsApp receipts & 1-click chat</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 bg-amber-50/70 border border-amber-200/60 px-3 py-1.5 rounded-xl">
+                          <AlertCircle size={13} className="text-amber-600 shrink-0" />
+                          <span className="truncate">Enter WhatsApp number to enable PDF invoices</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* CHANNEL 3: OFFICIAL EMAIL */}
-                  <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+                  <div className="bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 p-5 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm">
                     <div className="space-y-4">
                       {/* Card Header */}
-                      <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-zinc-100">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 border border-violet-200/80 flex items-center justify-center shrink-0 shadow-2xs">
-                            <Mail size={16} strokeWidth={2} />
-                          </div>
-                          <div>
-                            <h3 className="text-xs font-bold text-zinc-900">Official Email</h3>
-                            <span className="text-[10px] text-zinc-500 block">GST Invoices & Policy Bulletins</span>
-                          </div>
+                      <div className="flex items-center gap-3 pb-3.5 border-b border-zinc-100">
+                        <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-700 border border-violet-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                          <Mail size={17} strokeWidth={2} />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full border ${
-                            gymData.emailForMembers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'
-                          }`}>
-                            {gymData.emailForMembers ? 'Active' : 'Muted'}
-                          </span>
-                          <ToggleSwitch 
-                            checked={gymData.emailForMembers} 
-                            onChange={() => handleInputChange('emailForMembers', !gymData.emailForMembers)} 
-                          />
+                        <div>
+                          <h3 className="text-sm font-bold text-zinc-900">Official Email</h3>
+                          <span className="text-xs text-zinc-500 block">GST Invoices & Policy Bulletins</span>
                         </div>
                       </div>
 
                       {/* Primary Input */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-zinc-700 flex items-center justify-between">
+                        <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
                           <span>Facility Email Address</span>
-                          <span className="text-[10px] text-zinc-400 font-normal">Sender Identity</span>
+                          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-md">Sender Identity</span>
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
@@ -2528,66 +3301,103 @@ const GymProfile = () => {
                             value={gymData.email} 
                             placeholder="e.g. contact@yourgym.com"
                             onChange={(e) => handleInputChange('email', e.target.value)}
-                            className="w-full h-9 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                            className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
                           />
                         </div>
                       </div>
 
-                      {/* Permission Group */}
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Member Permissions</span>
-                          <span className="text-[10px] font-mono text-zinc-400 font-semibold">
-                            {((gymData.emailForMembers && gymData.emailInvoicesAllowed ? 1 : 0) + (gymData.emailForMembers && gymData.emailAlertsAllowed ? 1 : 0) + (gymData.emailForMembers && gymData.emailNewsletterAllowed ? 1 : 0))}/3 Enabled
+                      {/* Feature Capabilities Strip */}
+                      <div className="pt-2 border-t border-zinc-100 space-y-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            GST Tax Invoices
+                          </span>
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            Welcome Packs
+                          </span>
+                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
+                            Policy Notices
                           </span>
                         </div>
-                        <div className="space-y-2">
-                          <CheckButton 
-                            checked={gymData.emailForMembers && gymData.emailInvoicesAllowed}
-                            disabled={!gymData.emailForMembers}
-                            onChange={() => handleInputChange('emailInvoicesAllowed', !gymData.emailInvoicesAllowed)}
-                            label="Monthly GST Invoices"
-                            description="Tax deduction certificates & fee statements"
-                            icon={FileBadge}
-                          />
-                          <CheckButton 
-                            checked={gymData.emailForMembers && gymData.emailAlertsAllowed}
-                            disabled={!gymData.emailForMembers}
-                            onChange={() => handleInputChange('emailAlertsAllowed', !gymData.emailAlertsAllowed)}
-                            label="Welcome Packs & Security"
-                            description="Member credentials, handbook & policy rules"
-                            icon={ShieldCheck}
-                          />
-                          <CheckButton 
-                            checked={gymData.emailForMembers && gymData.emailNewsletterAllowed}
-                            disabled={!gymData.emailForMembers}
-                            onChange={() => handleInputChange('emailNewsletterAllowed', !gymData.emailNewsletterAllowed)}
-                            label="Gym Insights Newsletter"
-                            description="Monthly workout tips & nutrition articles"
-                            icon={Sparkles}
-                          />
-                        </div>
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                          Primary sender address for official payment statements, tax certificates, password resets, and gym membership handbooks.
+                        </p>
                       </div>
+                    </div>
+
+                    {/* Footer Status Pill */}
+                    <div className="pt-4 mt-2">
+                      {gymData.email ? (
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50/70 border border-emerald-200/60 px-3 py-1.5 rounded-xl">
+                          <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                          <span className="truncate">Active for GST invoices & official bulletins</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 bg-amber-50/70 border border-amber-200/60 px-3 py-1.5 rounded-xl">
+                          <AlertCircle size={13} className="text-amber-600 shrink-0" />
+                          <span className="truncate">Enter facility email to enable invoice dispatch</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* 3. COMPACT PRIVACY & ANTI-SPAM GOVERNANCE BANNER */}
-                <div className="p-4 rounded-2xl border border-zinc-200 bg-zinc-50/70 flex items-center justify-between gap-4 text-xs">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-zinc-800 shrink-0 shadow-2xs">
-                      <ShieldCheck size={16} strokeWidth={2} />
+                {/* 3. INTERACTIVE FAQ ACCORDION SECTION */}
+                <div className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-7 shadow-xs space-y-5">
+                  <div className="flex items-center gap-3.5 pb-4 border-b border-zinc-100">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <HelpCircle size={18} strokeWidth={2} />
                     </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-zinc-900 block sm:inline">Member Privacy & Anti-Spam Governance: </span>
-                      <span className="text-[11px] text-zinc-500 leading-relaxed">
-                        GymDeck enforces opt-in consent. Only channels and categories actively toggled above will be utilized for automated triggers or staff broadcasts.
-                      </span>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-zinc-900 tracking-tight">Frequently Asked Questions</h3>
+                      <p className="text-xs text-zinc-500 font-normal mt-0.5">Clear answers on channel routing, automated message delivery, and communication privacy</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full bg-zinc-200/80 text-zinc-700 shrink-0 hidden md:inline-block">
-                    Zero-Spam Standard
-                  </span>
+
+                  <div className="space-y-2.5 pt-1">
+                    {COMMUNICATION_FAQS.map((faq) => {
+                      const isOpen = communicationFaqId === faq.id;
+                      return (
+                        <div 
+                          key={faq.id}
+                          className={`rounded-xl border transition-all duration-200 overflow-hidden ${
+                            isOpen ? 'border-zinc-300 bg-zinc-50/60 shadow-2xs' : 'border-zinc-200/80 bg-white hover:border-zinc-300 hover:bg-zinc-50/30'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleCommFaq(faq.id)}
+                            className="w-full py-3.5 px-4 flex items-center justify-between text-left cursor-pointer gap-4 select-none"
+                          >
+                            <span className={`text-xs sm:text-sm font-semibold transition-colors ${isOpen ? 'text-zinc-950 font-bold' : 'text-zinc-800'}`}>
+                              {faq.question}
+                            </span>
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 ${
+                              isOpen ? 'rotate-180 bg-zinc-200/80 text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'
+                            }`}>
+                              <ChevronDown size={14} strokeWidth={2.5} />
+                            </div>
+                          </button>
+                          
+                          <AnimatePresence initial={false}>
+                            {isOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-4 pb-4 pt-1 text-xs text-zinc-600 leading-relaxed border-t border-zinc-100">
+                                  {faq.answer}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -3944,7 +4754,8 @@ const GymProfile = () => {
         document.body
       )}
 
-      {/* 7. ADD / EDIT BANK ACCOUNT & UPI MODAL */}
+
+            {/* 7. ADD / EDIT BANK ACCOUNT & UPI MODAL */}
       {typeof document !== "undefined" && createPortal(
         <AnimatePresence>
           {isAccountModalOpen && (
@@ -5366,6 +6177,788 @@ const GymProfile = () => {
         </AnimatePresence>,
         document.body
       )}
+
+
+            {/* 10. INTERACTIVE MAP LOCATION & GEO-DETECTION MODAL */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isMapModalOpen && (
+            <motion.div 
+              key="map-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMapModalOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
+              style={{ zIndex: 100000 }}
+            >
+              <motion.div 
+                key="map-modal-card"
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-3xl w-full flex flex-col max-h-[92vh] overflow-hidden select-none"
+              >
+                {/* Header */}
+                <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <MapPin size={18} strokeWidth={2} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Interactive Map Location & Geo-Detection</h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Click anywhere on the interactive map or reposition the pin to auto-detect facility location details.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMapModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                </div>
+
+                {/* Search Bar (Clean alignment without Device GPS button or Quick Hubs) */}
+                <div className="p-4 bg-zinc-50/80 border-b border-zinc-200/80 shrink-0">
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={mapSearchQuery}
+                      onChange={(e) => setMapSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleMapSearch(mapSearchQuery);
+                        }
+                      }}
+                      placeholder="Search landmark, sector, or road across Kolkata & India..."
+                      className="w-full h-10 pl-10 pr-24 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium shadow-2xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleMapSearch(mapSearchQuery)}
+                      disabled={isGeocoding}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 px-3.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                    >
+                      {isGeocoding ? (
+                        <RefreshCw size={11} className="animate-spin" />
+                      ) : (
+                        <Search size={11} strokeWidth={2.5} />
+                      )}
+                      <span>Search</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Interactive Clickable Slippy Tile Canvas */}
+                <div 
+                  onClick={handleMapCanvasClick}
+                  className="relative flex-1 min-h-[350px] bg-[#e5e9ec] overflow-hidden cursor-crosshair select-none group"
+                >
+                  {/* Native Slippy Map Tiles (3x3 grid centered on mapSelectedLocation) */}
+                  {(() => {
+                    const lat = mapSelectedLocation?.lat || 22.5726;
+                    const lng = mapSelectedLocation?.lng || 88.4311;
+                    const n = Math.pow(2, mapZoom);
+                    const rawX = (lng + 180) / 360 * n;
+                    const latRad = lat * Math.PI / 180;
+                    const rawY = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
+                    const tileX = Math.floor(rawX);
+                    const tileY = Math.floor(rawY);
+                    const tileOffsetX = (rawX - tileX) * 256;
+                    const tileOffsetY = (rawY - tileY) * 256;
+
+                    const tiles = [];
+                    for (let dy = -1; dy <= 1; dy++) {
+                      for (let dx = -1; dx <= 1; dx++) {
+                        const x = tileX + dx;
+                        const y = tileY + dy;
+                        tiles.push({
+                          x,
+                          y,
+                          key: `${mapZoom}-${x}-${y}`,
+                          left: `calc(50% + ${dx * 256 - tileOffsetX}px)`,
+                          top: `calc(50% + ${dy * 256 - tileOffsetY}px)`
+                        });
+                      }
+                    }
+
+                    return (
+                      <div className="absolute inset-0 pointer-events-none">
+                        {tiles.map(t => (
+                          <img
+                            key={t.key}
+                            src={`https://tile.openstreetmap.org/${mapZoom}/${t.x}/${t.y}.png`}
+                            alt=""
+                            className="w-[256px] h-[256px] absolute pointer-events-none filter contrast-[1.03] select-none"
+                            style={{ left: t.left, top: t.top }}
+                            onError={(e) => {
+                              e.currentTarget.style.opacity = '0.2';
+                            }}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Clickable Nearby Landmark Pins Plotted on Surface */}
+                  {POPULAR_WEST_BENGAL_LOCATIONS.map((preset) => {
+                    const lat = mapSelectedLocation?.lat || 22.5726;
+                    const lng = mapSelectedLocation?.lng || 88.4311;
+                    const n = Math.pow(2, mapZoom);
+                    const dLng = preset.lng - lng;
+                    const pxX = (dLng / 360) * n * 256;
+                    
+                    const latRad = lat * Math.PI / 180;
+                    const presetLatRad = preset.lat * Math.PI / 180;
+                    const mercY = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * 256;
+                    const presetMercY = (1 - Math.log(Math.tan(presetLatRad) + 1 / Math.cos(presetLatRad)) / Math.PI) / 2 * n * 256;
+                    const pxY = presetMercY - mercY;
+
+                    if (Math.abs(pxX) > 280 || Math.abs(pxY) > 150) return null;
+
+                    return (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMapSelectedLocation({
+                            address: preset.address,
+                            city: preset.city,
+                            state: preset.state,
+                            pincode: preset.pincode,
+                            lat: preset.lat,
+                            lng: preset.lng,
+                            displayName: preset.name
+                          });
+                          setMapSearchQuery(preset.name);
+                        }}
+                        style={{
+                          left: `calc(50% + ${pxX}px)`,
+                          top: `calc(50% + ${pxY}px)`
+                        }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 px-2 py-1 rounded-lg bg-white/95 hover:bg-zinc-900 hover:text-white text-zinc-800 border border-zinc-300 shadow-sm text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer z-10 hover:scale-105"
+                        title={`Click to position at ${preset.name}`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="truncate max-w-[120px]">{preset.name.split(",")[0]}</span>
+                      </button>
+                    );
+                  })}
+
+                  {/* Active Pin Center Marker */}
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-20 flex flex-col items-center">
+                    <div className="w-5 h-5 rounded-full bg-emerald-500/40 animate-ping absolute -bottom-2.5" />
+                    <div className="w-3 h-3 rounded-full bg-emerald-600 border-2 border-white shadow-md absolute -bottom-1.5" />
+                    <motion.div 
+                      key={`${mapSelectedLocation?.lat}-${mapSelectedLocation?.lng}`}
+                      initial={{ y: -16, scale: 0.85 }}
+                      animate={{ y: 0, scale: 1 }}
+                      transition={{ type: "spring", stiffness: 450, damping: 22 }}
+                      className="p-2 rounded-2xl bg-zinc-900 text-white shadow-2xl border-2 border-white flex items-center justify-center mb-1"
+                    >
+                      <Building2 size={16} className="text-emerald-400" />
+                    </motion.div>
+                  </div>
+
+                  {/* Top Left: Live Coordinates */}
+                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-200/90 shadow-sm flex items-center gap-2 pointer-events-none z-20">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[11px] font-mono font-bold text-zinc-800">
+                      {mapSelectedLocation?.lat?.toFixed(5) || "22.57260"}° N, {mapSelectedLocation?.lng?.toFixed(5) || "88.43110"}° E
+                    </span>
+                  </div>
+
+                  {/* Top Center: Click Map Helper Pill */}
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-zinc-900/85 backdrop-blur-md text-white px-3 py-1.2 rounded-full text-[10px] font-medium shadow-md flex items-center gap-1.5 pointer-events-none z-20">
+                    <MapPin size={11} className="text-emerald-400" />
+                    <span>Click anywhere on the map to pin facility location</span>
+                  </div>
+
+                  {/* Top Right: Zoom & Directional Controls */}
+                  <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
+                    {/* Zoom Controls */}
+                    <div className="flex flex-col bg-white/95 rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMapZoom(z => Math.min(18, z + 1));
+                        }}
+                        className="w-8 h-8 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 font-bold text-sm cursor-pointer border-b border-zinc-100 transition-colors"
+                        title="Zoom In"
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMapZoom(z => Math.max(12, z - 1));
+                        }}
+                        className="w-8 h-8 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 font-bold text-sm cursor-pointer transition-colors"
+                        title="Zoom Out"
+                      >
+                        −
+                      </button>
+                    </div>
+
+                    {/* Pan Navigation Buttons */}
+                    <div className="flex flex-col items-center bg-white/95 rounded-xl border border-zinc-200 shadow-sm p-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newLat = (mapSelectedLocation?.lat || 22.5726) + 0.0015;
+                          const newLng = mapSelectedLocation?.lng || 88.4311;
+                          reverseGeocodeCoords(newLat, newLng);
+                        }}
+                        title="Pan North"
+                        className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
+                      >
+                        ▲
+                      </button>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newLat = mapSelectedLocation?.lat || 22.5726;
+                            const newLng = (mapSelectedLocation?.lng || 88.4311) - 0.0015;
+                            reverseGeocodeCoords(newLat, newLng);
+                          }}
+                          title="Pan West"
+                          className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
+                        >
+                          ◀
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newLat = mapSelectedLocation?.lat || 22.5726;
+                            const newLng = (mapSelectedLocation?.lng || 88.4311) + 0.0015;
+                            reverseGeocodeCoords(newLat, newLng);
+                          }}
+                          title="Pan East"
+                          className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
+                        >
+                          ▶
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newLat = (mapSelectedLocation?.lat || 22.5726) - 0.0015;
+                          const newLng = mapSelectedLocation?.lng || 88.4311;
+                          reverseGeocodeCoords(newLat, newLng);
+                        }}
+                        title="Pan South"
+                        className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detected Location Result Card */}
+                <div className="p-4 bg-zinc-50 border-t border-zinc-200 space-y-3 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-800">
+                      <CheckCircle2 size={13} className="text-emerald-600" />
+                      <span>Resolved Address Details</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-zinc-500">
+                      Click "Confirm & Auto-Fill" to sync with Gym Profile
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                    {/* Street */}
+                    <div className="md:col-span-2 p-2.5 rounded-xl bg-white border border-zinc-200/90 shadow-2xs">
+                      <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider block">Street Address</span>
+                      <span className="text-xs font-semibold text-zinc-900 truncate block mt-0.5">
+                        {mapSelectedLocation?.address || "Street address not detected"}
+                      </span>
+                    </div>
+
+                    {/* City & State */}
+                    <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90 shadow-2xs">
+                      <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider block">City & State</span>
+                      <span className="text-xs font-semibold text-zinc-900 truncate block mt-0.5">
+                        {mapSelectedLocation?.city || "—"}, {mapSelectedLocation?.state || "—"}
+                      </span>
+                    </div>
+
+                    {/* PIN */}
+                    <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90 shadow-2xs">
+                      <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider block">Postal PIN Code</span>
+                      <span className="text-xs font-mono font-bold text-emerald-800 truncate block mt-0.5">
+                        {mapSelectedLocation?.pincode || "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Buttons (Cleanly aligned without OSM attribution line) */}
+                <div className="px-6 py-4 bg-white border-t border-zinc-100 flex items-center justify-end gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsMapModalOpen(false)}
+                    className="h-9 px-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApplyMapLocation}
+                    className="h-9 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm border border-zinc-900"
+                  >
+                    <Check size={14} strokeWidth={2.5} />
+                    <span>Confirm & Auto-Fill Facility Details</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* 11. MULTI-BRANCH NETWORK MODAL */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isBranchModalOpen && (
+            <motion.div 
+              key="branch-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsBranchModalOpen(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+              style={{ zIndex: 100000 }}
+            >
+              <motion.div 
+                key="branch-modal-card"
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden select-none"
+              >
+                {/* Header */}
+                <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <Building2 size={18} strokeWidth={2} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
+                        {editingBranchId ? "Edit Regional Branch Facility" : "Add New Secondary Branch Hub"}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Configure branch premises, branch manager details, and operational capacity quotas.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsBranchModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                </div>
+
+                {/* Form Fields (Scrollable) */}
+                <div className="p-6 overflow-y-auto space-y-4">
+                  {/* Branch Name & HQ Status */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-700">Branch Name *</label>
+                    <input
+                      type="text"
+                      value={branchForm.name}
+                      onChange={(e) => setBranchForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g. GymDeck Salt Lake Sector V Hub"
+                      className="w-full h-9.5 px-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium"
+                    />
+                  </div>
+
+                  {/* HQ Checkbox Toggle */}
+                  <label className="flex items-start gap-3 p-3 rounded-xl bg-zinc-50 border border-zinc-200/80 cursor-pointer hover:bg-zinc-100/60 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={!!branchForm.isMain}
+                      onChange={(e) => setBranchForm(prev => ({ ...prev, isMain: e.target.checked }))}
+                      className="mt-0.5 w-4 h-4 rounded text-zinc-900 border-zinc-300 focus:ring-zinc-900 cursor-pointer"
+                    />
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-zinc-900 block">Designate as Primary Headquarters (HQ)</span>
+                      <p className="text-[11px] text-zinc-500 leading-relaxed">
+                        HQ branch handles centralized subscription billing, master trainer licenses, and brand policy defaults.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Branch Manager & Phone */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-700">Branch Manager / Head Coach</label>
+                      <input
+                        type="text"
+                        value={branchForm.managerName}
+                        onChange={(e) => setBranchForm(prev => ({ ...prev, managerName: e.target.value }))}
+                        placeholder="e.g. Debjit Mukherjee"
+                        className="w-full h-9.5 px-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-700">Manager Contact Phone</label>
+                      <input
+                        type="text"
+                        value={branchForm.phone}
+                        onChange={(e) => setBranchForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="e.g. +91 98301 23456"
+                        className="w-full h-9.5 px-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Street Address */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-700">Street Address *</label>
+                    <input
+                      type="text"
+                      value={branchForm.address}
+                      onChange={(e) => setBranchForm(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="e.g. Plot J3, GP Block, Sector V, Bidhannagar"
+                      className="w-full h-9.5 px-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium"
+                    />
+                  </div>
+
+                  {/* City, State, PIN */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-700">City</label>
+                      <input
+                        type="text"
+                        value={branchForm.city}
+                        onChange={(e) => setBranchForm(prev => ({ ...prev, city: e.target.value }))}
+                        placeholder="Kolkata"
+                        className="w-full h-9.5 px-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-700">State</label>
+                      <input
+                        type="text"
+                        value={branchForm.state}
+                        onChange={(e) => setBranchForm(prev => ({ ...prev, state: e.target.value }))}
+                        placeholder="West Bengal"
+                        className="w-full h-9.5 px-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-700">PIN Code</label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={branchForm.pincode}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                          if (val.length >= 3 && INDIA_PINCODE_DIRECTORY[val.slice(0, 3)]) {
+                            const entry = INDIA_PINCODE_DIRECTORY[val.slice(0, 3)];
+                            setBranchForm(prev => ({
+                              ...prev,
+                              pincode: val,
+                              city: prev.city || entry.city,
+                              state: prev.state || entry.state
+                            }));
+                          } else {
+                            setBranchForm(prev => ({ ...prev, pincode: val }));
+                          }
+                        }}
+                        placeholder="700091"
+                        className="w-full h-9.5 px-3 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-mono font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Members Quota & Assigned Trainers */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                    <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-zinc-900">Branch Member Quota</label>
+                        <Users size={14} className="text-zinc-500" />
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        value={branchForm.members}
+                        onChange={(e) => setBranchForm(prev => ({ ...prev, members: e.target.value }))}
+                        className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-xs text-zinc-900 font-bold focus:outline-none focus:border-zinc-900 font-mono"
+                      />
+                      <span className="text-[10px] text-zinc-500 block">Total active members allowed at this branch</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-zinc-900">Stationed Fitness Trainers</label>
+                        <Award size={14} className="text-zinc-500" />
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={branchForm.trainers}
+                        onChange={(e) => setBranchForm(prev => ({ ...prev, trainers: e.target.value }))}
+                        className="w-full h-9 px-3 rounded-lg border border-zinc-200 bg-white text-xs text-zinc-900 font-bold focus:outline-none focus:border-zinc-900 font-mono"
+                      />
+                      <span className="text-[10px] text-zinc-500 block">Certified instructors permanently rostered</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between shrink-0">
+                  {editingBranchId && !branchForm.isMain ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBranch(editingBranchId)}
+                      className="h-9 px-3.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={13} strokeWidth={2} />
+                      <span>Remove Branch</span>
+                    </button>
+                  ) : <div />}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsBranchModalOpen(false)}
+                      className="h-9 px-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveBranch}
+                      className="h-9 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm border border-zinc-900"
+                    >
+                      <Check size={14} strokeWidth={2.5} />
+                      <span>{editingBranchId ? "Save Branch Changes" : "Create Branch"}</span>
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* 12. OFFICIAL 2025-2026 WEST BENGAL & NATIONAL HOLIDAYS MODAL */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isHolidayModalOpen && (
+            <motion.div 
+              key="holiday-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsHolidayModalOpen(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+              style={{ zIndex: 100000 }}
+            >
+              <motion.div 
+                key="holiday-modal-card"
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-3xl w-full flex flex-col max-h-[90vh] overflow-hidden select-none"
+              >
+                {/* Header */}
+                <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                      <Calendar size={18} strokeWidth={2} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
+                          West Bengal & National Gazetted Holidays (2026–2027)
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[10px] font-semibold border border-zinc-200">
+                          {INDIAN_WB_HOLIDAYS.length} Gazetted Days
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Automated facility closures based on Govt. of West Bengal Finance Dept. & Govt. of India gazette orders.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsHolidayModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="p-4 bg-zinc-50/80 border-b border-zinc-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-200/70">
+                    <button
+                      type="button"
+                      onClick={() => setHolidayFilter("all")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        holidayFilter === "all"
+                          ? "bg-white text-zinc-900 shadow-2xs font-bold"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      }`}
+                    >
+                      All Holidays ({INDIAN_WB_HOLIDAYS.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHolidayFilter("west_bengal")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        holidayFilter === "west_bengal"
+                          ? "bg-white text-emerald-900 shadow-2xs font-bold"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      }`}
+                    >
+                      West Bengal ({INDIAN_WB_HOLIDAYS.filter(h => h.type.includes("West Bengal")).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHolidayFilter("national")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        holidayFilter === "national"
+                          ? "bg-white text-blue-900 shadow-2xs font-bold"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      }`}
+                    >
+                      National ({INDIAN_WB_HOLIDAYS.filter(h => h.type.includes("National")).length})
+                    </button>
+                  </div>
+
+                  <div className="relative min-w-[200px]">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={holidaySearchQuery}
+                      onChange={(e) => setHolidaySearchQuery(e.target.value)}
+                      placeholder="Search holiday or puja..."
+                      className="w-full h-8.5 pl-8.5 pr-3 rounded-lg border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900"
+                    />
+                  </div>
+                </div>
+
+                {/* Holiday Items List */}
+                <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
+                  {INDIAN_WB_HOLIDAYS
+                    .filter(h => {
+                      if (holidayFilter === "west_bengal") return h.type.includes("West Bengal");
+                      if (holidayFilter === "national") return h.type.includes("National");
+                      return true;
+                    })
+                    .filter(h => {
+                      if (!holidaySearchQuery) return true;
+                      const q = holidaySearchQuery.toLowerCase();
+                      return h.name.toLowerCase().includes(q) || h.description.toLowerCase().includes(q) || h.dateFormatted.toLowerCase().includes(q);
+                    })
+                    .map(holiday => {
+                      const isOverridden = !!holidayOverrides[holiday.id];
+                      const isWB = holiday.type.includes("West Bengal");
+                      return (
+                        <div
+                          key={holiday.id}
+                          className="p-3.5 rounded-2xl border border-zinc-200/90 bg-white hover:border-zinc-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                        >
+                          {/* Date Block & Details */}
+                          <div className="flex items-start gap-3.5 min-w-0">
+                            {/* Calendar Block */}
+                            <div className="w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-200 flex flex-col items-center justify-center shrink-0 shadow-2xs">
+                              <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">
+                                {holiday.dateFormatted.split(" ")[1]}
+                              </span>
+                              <span className="text-base font-bold text-zinc-900 leading-none my-0.5">
+                                {holiday.dateFormatted.split(" ")[0]}
+                              </span>
+                              <span className="text-[9px] font-semibold text-zinc-500">
+                                {holiday.day.slice(0, 3)}
+                              </span>
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="text-xs font-bold text-zinc-900">{holiday.name}</h4>
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
+                                  isWB 
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200" 
+                                    : "bg-blue-50 text-blue-800 border-blue-200"
+                                }`}>
+                                  {holiday.type}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                                {holiday.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Closure Status & Facility Override Toggle */}
+                          <div className="flex items-center gap-2 sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100">
+                            <button
+                              type="button"
+                              onClick={() => toggleHolidayOverride(holiday.id)}
+                              className={`h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                                isOverridden
+                                  ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                                  : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800"
+                              }`}
+                              title="Click to toggle morning session vs complete holiday closure"
+                            >
+                              <Clock size={12} strokeWidth={2} />
+                              <span>{isOverridden ? "Morning Only (6–11 AM)" : "Full Facility Closure"}</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-3.5 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between shrink-0">
+                  <div className="text-[11px] text-zinc-500 flex items-center gap-1.5">
+                    <ShieldCheck size={13} className="text-emerald-600" />
+                    <span>Member app push & WhatsApp closure alerts are auto-queued 24h prior.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsHolidayModalOpen(false)}
+                    className="h-8.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Done & Close
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
 
     </div>
   );
