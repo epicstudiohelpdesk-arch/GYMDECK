@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Shield,
   ArrowRight,
+  ArrowLeft,
   Clock, 
   Settings, 
   Users, 
@@ -580,8 +581,19 @@ const GymProfile = () => {
   // Map & Location State
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
-  // Official Website Solutions Modal State
+  // Official Website Solutions Modal State & Onboarding Order (Powered by Epic Studio)
   const [isNoWebsiteModalOpen, setIsNoWebsiteModalOpen] = useState(false);
+  const [websiteModalStep, setWebsiteModalStep] = useState("offer"); // "offer" | "contact" | "success"
+  const [websiteOrderForm, setWebsiteOrderForm] = useState({
+    gymName: "",
+    ownerName: "",
+    phone: "",
+    email: "",
+    preferredDomain: "",
+    notes: ""
+  });
+  const [websiteOrderSubmitting, setWebsiteOrderSubmitting] = useState(false);
+  const [websiteOrderRefId, setWebsiteOrderRefId] = useState("");
 
   // Multi-Branch Modal State
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
@@ -1626,6 +1638,36 @@ const GymProfile = () => {
     }, {});
   }, [holidayFilter, holidayYearFilter, selectedHolidayMonth, holidaySearchQuery]);
 
+  // Official Website Solutions & Onboarding Handlers (₹2,000 Package by Epic Studio)
+  const handleOpenWebsiteModal = () => {
+    setWebsiteModalStep("offer");
+    setWebsiteOrderForm({
+      gymName: gymData.name || "",
+      ownerName: gymData.ownerName || "",
+      phone: gymData.phone || "",
+      email: gymData.email || "",
+      preferredDomain: gymData.name ? `${gymData.name.toLowerCase().replace(/[^a-z0-9]/g, "")}.in` : "",
+      notes: ""
+    });
+    setIsNoWebsiteModalOpen(true);
+  };
+
+  const handleWebsiteOrderSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!websiteOrderForm.phone || websiteOrderForm.phone.trim().length < 8) {
+      showToast("Please enter a valid phone or WhatsApp number");
+      return;
+    }
+    setWebsiteOrderSubmitting(true);
+    setTimeout(() => {
+      const generatedId = `EPIC-${Math.floor(1000 + Math.random() * 9000)}`;
+      setWebsiteOrderRefId(generatedId);
+      setWebsiteOrderSubmitting(false);
+      setWebsiteModalStep("success");
+      showToast(`Website onboarding request ${generatedId} submitted!`);
+    }, 600);
+  };
+
   // Live Cover Banner Image Upload Handler
   const handleBannerUpload = (e) => {
     const file = e.target.files?.[0];
@@ -2524,9 +2566,9 @@ const GymProfile = () => {
                           <div className="absolute inset-y-0 right-1.5 flex items-center">
                             <button
                               type="button"
-                              onClick={() => setIsNoWebsiteModalOpen(true)}
+                              onClick={handleOpenWebsiteModal}
                               className="h-7 px-2.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-600 hover:text-zinc-950 border border-zinc-200/90 shadow-2xs text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer group shrink-0 active:scale-95"
-                              title="Don't have an official website? Click to explore options"
+                              title="Don't have an official website? Get an official custom website for ₹2,000 only"
                             >
                               <HelpCircle size={12} strokeWidth={2} className="text-zinc-400 group-hover:text-zinc-600 transition-colors" />
                               <span>Don't have a website?</span>
@@ -6613,7 +6655,7 @@ const GymProfile = () => {
         document.body
       )}
 
-      {/* 13. OFFICIAL WEBSITE SOLUTIONS MODAL (BLANK SHELL FOR FUTURE CONTENT) */}
+      {/* 13. OFFICIAL WEBSITE SOLUTIONS MODAL (POWERED BY EPIC STUDIO) */}
       {typeof document !== "undefined" && createPortal(
         <AnimatePresence>
           {isNoWebsiteModalOpen && (
@@ -6623,26 +6665,46 @@ const GymProfile = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsNoWebsiteModalOpen(false)}
-              className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
               style={{ zIndex: 100000 }}
             >
               <motion.div 
                 key="no-website-modal-card"
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                initial={{ opacity: 0, scale: 0.96, y: 15 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                exit={{ opacity: 0, scale: 0.96, y: 15 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-xl w-full flex flex-col min-h-[380px] overflow-hidden select-none relative"
+                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-2xl sm:max-w-3xl w-full flex flex-col max-h-[92vh] overflow-hidden select-none relative"
               >
-                {/* Header */}
-                <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
+                {/* Modal Header */}
+                <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <div className="w-10 h-10 rounded-2xl bg-zinc-950 text-white flex items-center justify-center shrink-0 shadow-sm">
                       <Globe size={18} strokeWidth={2} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Website Solutions & Setup</h3>
-                      <p className="text-[11px] text-zinc-500 font-normal mt-0.5">Official gym web presence and landing page options</p>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
+                          {websiteModalStep === "offer" && "Official Gym Website Package"}
+                          {websiteModalStep === "contact" && "Reserve Your Website Package"}
+                          {websiteModalStep === "success" && "Website Request Confirmed"}
+                        </h3>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200/80">
+                          ₹2,000 Limited Offer
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1.5">
+                        <span>Engineered & maintained by</span>
+                        <a 
+                          href="https://epic-studio.in" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="font-bold text-zinc-900 hover:text-emerald-700 underline underline-offset-2 inline-flex items-center gap-1"
+                        >
+                          <span>epic-studio.in</span>
+                          <ExternalLink size={10} />
+                        </a>
+                      </p>
                     </div>
                   </div>
                   <button
@@ -6655,10 +6717,414 @@ const GymProfile = () => {
                   </button>
                 </div>
 
-                {/* Blank Modal Content Area (Ready for future content) */}
-                <div className="p-8 flex-1 flex flex-col items-center justify-center min-h-[260px]">
-                  {/* Intentionally blank as requested */}
-                </div>
+                {/* Modal Content - STEP 1: OFFER ADVERTISEMENT */}
+                {websiteModalStep === "offer" && (
+                  <>
+                    <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-zinc-50/40">
+                      {/* Hero Dark Showcase Card */}
+                      <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white rounded-2xl p-5 sm:p-6 border border-zinc-800 shadow-xl relative overflow-hidden">
+                        <div className="absolute -right-10 -top-10 w-44 h-44 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+                        
+                        <div className="relative z-10 space-y-4">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 tracking-wide uppercase flex items-center gap-1.5">
+                              <Sparkles size={11} className="text-amber-300" />
+                              <span>GymDeck Partner Exclusive</span>
+                            </span>
+                            <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              87% OFF • Save ₹12,999
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
+                              Launch Your Official Gym Website for Just ₹2,000
+                            </h2>
+                            <p className="text-xs sm:text-[13px] text-zinc-300 leading-relaxed max-w-2xl font-normal">
+                              Turn Google, Apple & AI search queries into daily paying gym members. Includes our complete <span className="text-emerald-400 font-semibold">Triple-Engine Optimization (SEO + GEO + AEO)</span> and <span className="text-emerald-400 font-semibold">100% Free Lifetime Maintenance</span> with zero ongoing monthly hosting bills.
+                            </p>
+                          </div>
+
+                          {/* Pricing & Key Guarantees Strip */}
+                          <div className="pt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-baseline gap-2.5">
+                              <span className="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">
+                                ₹2,000
+                              </span>
+                              <span className="text-sm font-semibold text-zinc-500 line-through">
+                                ₹14,999
+                              </span>
+                              <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800/60">
+                                One-Time Fee
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3 text-[11px] text-zinc-300 flex-wrap">
+                              <span className="flex items-center gap-1 font-medium">
+                                <Check size={12} strokeWidth={2.5} className="text-emerald-400" /> Free Lifetime Hosting
+                              </span>
+                              <span className="flex items-center gap-1 font-medium">
+                                <Check size={12} strokeWidth={2.5} className="text-emerald-400" /> Zero Maintenance Bills
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Official Agency Backing Banner (epic-studio.in) */}
+                      <div className="p-4 rounded-2xl bg-white border border-zinc-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                            <Building2 size={18} strokeWidth={2} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-zinc-900">Engineered by Epic Studio</span>
+                              <span className="px-1.5 py-0.2 rounded text-[10px] bg-zinc-100 text-zinc-600 font-semibold">Verified Agency</span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-snug mt-0.5">
+                              Premier digital experience and search engineering studio. Explore live client builds and design systems at <span className="font-semibold text-zinc-700">epic-studio.in</span>.
+                            </p>
+                          </div>
+                        </div>
+
+                        <a
+                          href="https://epic-studio.in"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-8.5 px-3.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 hover:text-zinc-950 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-start sm:self-center shadow-2xs"
+                        >
+                          <Globe size={13} className="text-emerald-600" />
+                          <span>Visit epic-studio.in</span>
+                          <ExternalLink size={11} className="text-zinc-400" />
+                        </a>
+                      </div>
+
+                      {/* Feature Pillars Grid */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                            Everything Included in Your ₹2,000 Package
+                          </h4>
+                          <span className="text-[11px] text-zinc-400 font-medium">Turnkey 3-Day Delivery</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* 1. SEO + GEO + AEO */}
+                          <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/90 shadow-2xs space-y-1.5 hover:border-zinc-300 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                                <Search size={14} strokeWidth={2.2} />
+                              </div>
+                              <h5 className="text-xs font-bold text-zinc-900">Triple-Engine Optimization (SEO + GEO + AEO)</h5>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                              Rank top on Google Search & Google Maps local pack (SEO), get cited directly in AI search like ChatGPT & Perplexity (GEO), and power instant answers for Siri & Google Assistant (AEO).
+                            </p>
+                          </div>
+
+                          {/* 2. Free Lifetime Maintenance */}
+                          <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/90 shadow-2xs space-y-1.5 hover:border-zinc-300 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                                <ShieldCheck size={14} strokeWidth={2.2} />
+                              </div>
+                              <h5 className="text-xs font-bold text-zinc-900">100% Free Lifetime Maintenance</h5>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                              Never worry about renewal fees or web developer invoices. Server hosting, security patches, SSL certificates, and mobile OS compatibility are taken care of forever.
+                            </p>
+                          </div>
+
+                          {/* 3. Direct WhatsApp Lead Capture */}
+                          <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/90 shadow-2xs space-y-1.5 hover:border-zinc-300 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                                <Phone size={14} strokeWidth={2.2} />
+                              </div>
+                              <h5 className="text-xs font-bold text-zinc-900">1-Tap WhatsApp Lead Integration</h5>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                              Floating WhatsApp consultation button and fast trial session forms that send interested walk-in prospects straight to your front-desk mobile phone.
+                            </p>
+                          </div>
+
+                          {/* 4. Trainer Roster & Class Timetables */}
+                          <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/90 shadow-2xs space-y-1.5 hover:border-zinc-300 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
+                                <Clock size={14} strokeWidth={2.2} />
+                              </div>
+                              <h5 className="text-xs font-bold text-zinc-900">Facility, Trainers & Batch Timetable</h5>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                              Showcase your certified personal trainers, floor equipment, membership plan pricing, and scheduled class batches (CrossFit, Zumba, Yoga, Strength).
+                            </p>
+                          </div>
+
+                          {/* 5. 100/100 Mobile Speed & Modern UX */}
+                          <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/90 shadow-2xs space-y-1.5 hover:border-zinc-300 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                                <Zap size={14} strokeWidth={2.2} />
+                              </div>
+                              <h5 className="text-xs font-bold text-zinc-900">Sub-Second Mobile 4G/5G Speed</h5>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                              100% mobile-first design with 95+ Google Lighthouse speed scores. Fast interactive loading ensures zero prospect drop-off on cellular data.
+                            </p>
+                          </div>
+
+                          {/* 6. Custom Domain & Google Maps Embed */}
+                          <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/90 shadow-2xs space-y-1.5 hover:border-zinc-300 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0">
+                                <Globe size={14} strokeWidth={2.2} />
+                              </div>
+                              <h5 className="text-xs font-bold text-zinc-900">Custom Domain & Google Maps Pin</h5>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                              Works with your custom domain name (e.g. yourgym.in) and embeds direct Google Maps turn-by-turn navigation for first-time visitors.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+                      <div className="text-[11px] text-zinc-500 flex items-center gap-1.5">
+                        <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                        <span>3-Day Turnaround • 100% Satisfaction or Full Refund Guarantee</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <a
+                          href="https://epic-studio.in"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-9 px-3.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <span>epic-studio.in</span>
+                          <ExternalLink size={12} className="text-zinc-400" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setWebsiteModalStep("contact")}
+                          className="h-9 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm border border-zinc-900 group active:scale-95"
+                        >
+                          <span>Claim Website for ₹2,000</span>
+                          <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Modal Content - STEP 2: CONTACT DETAILS FILLUP FORM */}
+                {websiteModalStep === "contact" && (
+                  <form onSubmit={handleWebsiteOrderSubmit} className="flex-1 flex flex-col overflow-hidden">
+                    <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-zinc-50/40">
+                      {/* Summary Banner */}
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                            <Sparkles size={14} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-emerald-950 block">Official Gym Website Package</span>
+                            <span className="text-[11px] text-emerald-800">Includes SEO, GEO, AEO & Free Lifetime Maintenance</span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-base font-extrabold font-mono text-emerald-950 block">₹2,000</span>
+                          <span className="text-[10px] text-emerald-700 font-semibold">One-time payment</span>
+                        </div>
+                      </div>
+
+                      {/* Contact Form Fields */}
+                      <div className="bg-white rounded-2xl border border-zinc-200/90 p-4 sm:p-5 space-y-3.5 shadow-2xs">
+                        <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                          Facility & Owner Contact Details
+                        </h4>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          {/* Gym Name */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-zinc-700">Gym / Facility Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={websiteOrderForm.gymName}
+                              onChange={(e) => setWebsiteOrderForm(prev => ({ ...prev, gymName: e.target.value }))}
+                              placeholder="e.g. Iron Pulse Fitness Hub"
+                              className="w-full h-9 px-3 rounded-xl border border-zinc-200 bg-zinc-50/60 text-xs text-zinc-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-semibold"
+                            />
+                          </div>
+
+                          {/* Owner Name */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-zinc-700">Owner / Manager Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={websiteOrderForm.ownerName}
+                              onChange={(e) => setWebsiteOrderForm(prev => ({ ...prev, ownerName: e.target.value }))}
+                              placeholder="e.g. Subham Das"
+                              className="w-full h-9 px-3 rounded-xl border border-zinc-200 bg-zinc-50/60 text-xs text-zinc-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-semibold"
+                            />
+                          </div>
+
+                          {/* WhatsApp / Phone */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-zinc-700">WhatsApp / Contact Phone *</label>
+                            <input
+                              type="tel"
+                              required
+                              value={websiteOrderForm.phone}
+                              onChange={(e) => setWebsiteOrderForm(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="e.g. +91 98765 43210"
+                              className="w-full h-9 px-3 rounded-xl border border-zinc-200 bg-zinc-50/60 text-xs text-zinc-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-semibold font-mono"
+                            />
+                          </div>
+
+                          {/* Email */}
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-semibold text-zinc-700">Official Email Address</label>
+                            <input
+                              type="email"
+                              value={websiteOrderForm.email}
+                              onChange={(e) => setWebsiteOrderForm(prev => ({ ...prev, email: e.target.value }))}
+                              placeholder="e.g. contact@yourgym.com"
+                              className="w-full h-9 px-3 rounded-xl border border-zinc-200 bg-zinc-50/60 text-xs text-zinc-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-semibold"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Preferred Domain */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-zinc-700">Preferred Website Name or Domain</label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                              <Globe size={13} />
+                            </div>
+                            <input
+                              type="text"
+                              value={websiteOrderForm.preferredDomain}
+                              onChange={(e) => setWebsiteOrderForm(prev => ({ ...prev, preferredDomain: e.target.value }))}
+                              placeholder="e.g. ironpulsefitness.in or pulsefitness.com"
+                              className="w-full h-9 pl-8.5 pr-3 rounded-xl border border-zinc-200 bg-zinc-50/60 text-xs text-zinc-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-semibold"
+                            />
+                          </div>
+                          <span className="text-[10px] text-zinc-400 block">We will assist in purchasing, connecting, or configuring your domain.</span>
+                        </div>
+
+                        {/* Specific Requirements / Notes */}
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-zinc-700">Special Notes or Target Features (Optional)</label>
+                          <textarea
+                            rows={2}
+                            value={websiteOrderForm.notes}
+                            onChange={(e) => setWebsiteOrderForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="e.g. We specialize in CrossFit & personal training with 4 coaches. We need direct WhatsApp booking."
+                            className="w-full p-2.5 rounded-xl border border-zinc-200 bg-zinc-50/60 text-xs text-zinc-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all resize-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Onboarding Promise */}
+                      <div className="p-3 bg-zinc-100/80 rounded-xl border border-zinc-200 flex items-center gap-2.5 text-[11px] text-zinc-600">
+                        <Info size={14} className="text-zinc-500 shrink-0" />
+                        <span>A senior onboarding engineer from <strong>Epic Studio</strong> will connect via WhatsApp within 2–4 hours with initial wireframe previews.</span>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between gap-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setWebsiteModalStep("offer")}
+                        className="h-9 px-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <ArrowLeft size={13} />
+                        <span>Back to Details</span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={websiteOrderSubmitting}
+                        className="h-9 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm border border-zinc-900 active:scale-95"
+                      >
+                        {websiteOrderSubmitting ? (
+                          <>
+                            <RefreshCw size={13} className="animate-spin" />
+                            <span>Submitting Order...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check size={14} strokeWidth={2.5} />
+                            <span>Submit Order & Request Setup (₹2,000)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Modal Content - STEP 3: SUCCESS CONFIRMATION */}
+                {websiteModalStep === "success" && (
+                  <div className="p-6 sm:p-8 flex-1 flex flex-col items-center justify-center text-center space-y-4 bg-zinc-50/40">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-800 flex items-center justify-center shadow-sm">
+                      <CheckCircle2 size={32} strokeWidth={2.2} />
+                    </div>
+
+                    <div className="space-y-1.5 max-w-md">
+                      <h3 className="text-lg font-extrabold text-zinc-900">
+                        Website Setup Request Initiated!
+                      </h3>
+                      <div className="inline-block px-3 py-1 rounded-full bg-zinc-900 text-white font-mono text-xs font-bold tracking-wide shadow-2xs">
+                        Ref: {websiteOrderRefId}
+                      </div>
+                      <p className="text-xs text-zinc-600 leading-relaxed pt-2">
+                        Thank you, <strong className="text-zinc-900">{websiteOrderForm.ownerName || 'Partner'}</strong>! The web engineering team at <strong>Epic Studio</strong> has received your ₹2,000 website package order for <strong className="text-zinc-900">{websiteOrderForm.gymName || 'your facility'}</strong>.
+                      </p>
+                      <p className="text-[11px] text-zinc-500 leading-relaxed">
+                        An onboarding specialist will reach out on WhatsApp at <strong className="text-zinc-800 font-mono">{websiteOrderForm.phone}</strong> within 2–4 hours with initial layouts, domain registration assistance, and content guidelines.
+                      </p>
+                    </div>
+
+                    {/* Quick Contact & Studio Actions */}
+                    <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-2.5 w-full max-w-sm">
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(`Hi Epic Studio, I have placed an order for the ₹2,000 gym website package for ${websiteOrderForm.gymName} (Ref: ${websiteOrderRefId}). Looking forward to onboarding!`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full sm:w-auto h-9 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                      >
+                        <Phone size={13} />
+                        <span>Chat on WhatsApp</span>
+                      </a>
+
+                      <a
+                        href="https://epic-studio.in"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full sm:w-auto h-9 px-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Globe size={13} className="text-zinc-500" />
+                        <span>Visit epic-studio.in</span>
+                      </a>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsNoWebsiteModalOpen(false)}
+                      className="text-xs text-zinc-500 hover:text-zinc-900 font-semibold underline underline-offset-2 pt-2 cursor-pointer transition-colors"
+                    >
+                      Done & Return to Profile
+                    </button>
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           )}

@@ -494,19 +494,14 @@ const FacilityLeafletMapModal = ({
             <header className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm">
-                  <Compass size={18} strokeWidth={2} />
+                  <MapPin size={18} strokeWidth={2} />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
-                      Facility Geolocation & Precision Pinning Studio
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200/80">
-                      Enterprise Precision
-                    </span>
-                  </div>
+                  <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
+                    Facility Location & Interactive Map
+                  </h3>
                   <p className="text-[11px] text-zinc-500 font-normal mt-0.5">
-                    Position your primary facility entrance marker with sub-meter accuracy to synchronize member routing and delivery.
+                    Click anywhere on the map or drag the pin to set your gym's physical entrance
                   </p>
                 </div>
               </div>
@@ -515,36 +510,22 @@ const FacilityLeafletMapModal = ({
                 type="button"
                 onClick={onClose}
                 className="w-8.5 h-8.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center transition-colors cursor-pointer"
-                title="Close Studio (Esc)"
+                title="Close (Esc)"
               >
-                <X size={16} strokeWidth={2.2} />
+                <X size={15} strokeWidth={2.2} />
               </button>
             </header>
 
             {/* Main Content: Split-Pane Master-Detail Layout */}
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
               
-              {/* LEFT DOCKED CONTROL & VERIFICATION SIDEBAR (380px) */}
-              <aside className="w-full lg:w-[380px] bg-white border-r border-zinc-200 flex flex-col shrink-0 overflow-y-auto z-20">
+              {/* LEFT DOCKED CONTROL & LOCATION SIDEBAR (360px) */}
+              <aside className="w-full lg:w-[360px] bg-white border-r border-zinc-200/90 flex flex-col shrink-0 overflow-y-auto z-20">
                 {/* Search Bar Section */}
-                <div className="p-4 border-b border-zinc-100 bg-zinc-50/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-                      <Search size={12} strokeWidth={2.2} className="text-zinc-600" />
-                      <span>Search Location</span>
-                    </span>
-                    {searchQuery && (
-                      <span className="text-[10px] text-zinc-400 font-mono">
-                        Press Enter ↵
-                      </span>
-                    )}
-                  </div>
-
+                <div className="p-4 border-b border-zinc-100 bg-white">
                   <div className="relative">
-                    <div className="flex items-center bg-white rounded-2xl border border-zinc-200/90 shadow-xs focus-within:border-zinc-900 focus-within:ring-3 focus-within:ring-zinc-900/10 focus-within:shadow-sm transition-all px-3 h-11 gap-2.5">
-                      <div className="w-6 h-6 rounded-lg bg-zinc-100 text-zinc-600 flex items-center justify-center shrink-0">
-                        <Search size={13} strokeWidth={2} />
-                      </div>
+                    <div className="flex items-center bg-zinc-50 hover:bg-zinc-100/70 rounded-2xl border border-zinc-200/90 focus-within:bg-white focus-within:border-zinc-900 focus-within:ring-2 focus-within:ring-zinc-900/10 transition-all px-3.5 h-11 gap-2.5 shadow-2xs">
+                      <Search size={15} strokeWidth={2} className="text-zinc-400 shrink-0" />
                       <input
                         type="text"
                         value={searchQuery}
@@ -555,7 +536,7 @@ const FacilityLeafletMapModal = ({
                             handleSelectSearchResult(searchSuggestions[0]);
                           }
                         }}
-                        placeholder="Search street, landmark, sector, or PIN..."
+                        placeholder="Search street, area, or PIN code..."
                         className="w-full bg-transparent text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none font-medium"
                       />
                       {searchQuery && (
@@ -565,14 +546,14 @@ const FacilityLeafletMapModal = ({
                             setSearchQuery("");
                             setSearchSuggestions([]);
                           }}
-                          className="w-6 h-6 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                          className="w-5 h-5 rounded-full bg-zinc-200 hover:bg-zinc-300 text-zinc-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
                           title="Clear search"
                         >
-                          <X size={13} strokeWidth={2} />
+                          <X size={10} strokeWidth={2.5} />
                         </button>
                       )}
                       {isSearching && (
-                        <RefreshCw size={13} className="text-zinc-600 animate-spin shrink-0" />
+                        <RefreshCw size={13} className="text-zinc-500 animate-spin shrink-0" />
                       )}
                     </div>
 
@@ -611,135 +592,102 @@ const FacilityLeafletMapModal = ({
                   </div>
                 </div>
 
-                {/* Verified Location Card Section */}
+                {/* Selected Location Details Card */}
                 <div className="p-4 space-y-3.5 flex-1">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                        Designated Pin Details
-                      </span>
-                      {isGeocoding ? (
-                        <span className="flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 font-medium">
+                  <div className="rounded-2xl border border-zinc-200/90 bg-zinc-50/60 p-4 space-y-3 shadow-2xs">
+                    {/* Header with Pin Icon & Status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 border border-red-100 flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                          <MapPin size={18} strokeWidth={2.2} />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                            Pinned Facility
+                          </span>
+                          <h4 className="text-xs font-bold text-zinc-900 leading-snug mt-0.5">
+                            {selectedLocation?.address || "Selected Facility Location"}
+                          </h4>
+                        </div>
+                      </div>
+
+                      {isGeocoding && (
+                        <span className="flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 font-medium shrink-0">
                           <RefreshCw size={10} className="animate-spin text-amber-600" />
-                          <span>Resolving GPS...</span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          <CheckCircle2 size={11} strokeWidth={2} />
-                          <span>Coordinates Locked</span>
+                          <span>Detecting...</span>
                         </span>
                       )}
                     </div>
 
-                    <div className="bg-zinc-50/80 rounded-2xl border border-zinc-200/90 p-4 space-y-3.5">
-                      {/* Street Address */}
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                          Street / Locality
-                        </div>
-                        <div className="text-xs font-bold text-zinc-900 leading-snug">
-                          {selectedLocation?.address || "Selected Facility Location"}
-                        </div>
-                      </div>
+                    {/* City, State & PIN Badges */}
+                    <div className="pt-2.5 border-t border-zinc-200/70 flex flex-wrap gap-1.5">
+                      {selectedLocation?.city && (
+                        <span className="px-2.5 py-1 rounded-lg bg-white border border-zinc-200 text-[11px] font-semibold text-zinc-800 shadow-2xs">
+                          {selectedLocation.city}
+                        </span>
+                      )}
+                      {selectedLocation?.state && (
+                        <span className="px-2.5 py-1 rounded-lg bg-white border border-zinc-200 text-[11px] font-semibold text-zinc-800 shadow-2xs">
+                          {selectedLocation.state}
+                        </span>
+                      )}
+                      {selectedLocation?.pincode && (
+                        <span className="px-2.5 py-1 rounded-lg bg-white border border-zinc-200 text-[11px] font-mono font-bold text-emerald-800 shadow-2xs">
+                          PIN {selectedLocation.pincode}
+                        </span>
+                      )}
+                    </div>
 
-                      {/* City, State & PIN */}
-                      <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-zinc-200/70">
-                        <div>
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-0.5">
-                            City & State
-                          </div>
-                          <div className="text-xs font-semibold text-zinc-800 truncate">
-                            {selectedLocation?.city || "Kolkata"}, {selectedLocation?.state || "West Bengal"}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-0.5">
-                            PIN Code
-                          </div>
-                          <div className="text-xs font-semibold text-zinc-800 font-mono">
-                            {selectedLocation?.pincode ? `PIN ${selectedLocation.pincode}` : "Not specified"}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* GPS Precision Coordinates */}
-                      <div className="pt-2.5 border-t border-zinc-200/70 flex items-center justify-between">
-                        <div>
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-0.5">
-                            GPS Coordinates
-                          </div>
-                          <div className="text-[11px] font-mono font-semibold text-zinc-700">
-                            {selectedLocation?.lat?.toFixed(5) || "22.57260"}° N, {selectedLocation?.lng?.toFixed(5) || "88.43110"}° E
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={handleCopyCoords}
-                          className={`h-7 px-2.5 rounded-lg border text-[10px] font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs ${
-                            copiedCoords 
-                              ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                              : "bg-white hover:bg-zinc-100 text-zinc-700 border-zinc-200 hover:text-zinc-950"
-                          }`}
-                          title="Copy Latitude & Longitude"
-                        >
-                          {copiedCoords ? (
-                            <>
-                              <Check size={11} strokeWidth={2.5} className="text-emerald-700" />
-                              <span>Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={11} strokeWidth={1.75} />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
+                    {/* GPS Coordinates & Copy */}
+                    <div className="pt-2.5 border-t border-zinc-200/70 flex items-center justify-between text-xs">
+                      <span className="text-[11px] font-mono font-medium text-zinc-500">
+                        {selectedLocation?.lat?.toFixed(5) || "22.57260"}° N, {selectedLocation?.lng?.toFixed(5) || "88.43110"}° E
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyCoords}
+                        className="h-6.5 px-2.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-600 hover:text-zinc-950 border border-zinc-200 text-[10px] font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                        title="Copy coordinates"
+                      >
+                        {copiedCoords ? (
+                          <>
+                            <Check size={10} strokeWidth={2.5} className="text-emerald-600" />
+                            <span className="text-emerald-700 font-bold">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={10} strokeWidth={1.75} />
+                            <span>Copy GPS</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
 
-                  {/* Reset / Recenter Pin Button on Left Panel */}
-                  <button
-                    type="button"
-                    onClick={handleRecenter}
-                    className="w-full h-9 rounded-xl border border-zinc-200/90 bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-950 text-[11px] font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
-                    title="Snap pin back to gym profile coordinates"
-                  >
-                    <Locate size={13} strokeWidth={2} className="text-zinc-500" />
-                    <span>Reset Pin to Facility Default</span>
-                  </button>
-
-                  {/* Operational Usage Hint */}
-                  <div className="bg-blue-50/50 rounded-2xl border border-blue-200/60 p-3 flex items-start gap-2.5">
-                    <Info size={14} className="text-blue-700 shrink-0 mt-0.5" strokeWidth={2} />
-                    <div className="text-[11px] text-blue-900/90 leading-relaxed font-normal">
-                      <span className="font-semibold text-blue-950">Fine-tuning tip:</span> Drag the 3D red pin or click anywhere on the map to place your gym entrance. All profile fields will auto-populate.
-                    </div>
+                  {/* Clean Auto-Fill Assurance Line */}
+                  <div className="px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200/70 flex items-center gap-2 text-[11px] text-zinc-500">
+                    <CheckCircle2 size={13} strokeWidth={2} className="text-emerald-600 shrink-0" />
+                    <span>Auto-fills street address, city, state & PIN in your profile.</span>
                   </div>
                 </div>
 
-                {/* Fixed Action Footer Buttons */}
-                <div className="p-4 border-t border-zinc-200 bg-white shrink-0">
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="h-10.5 px-4.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 text-xs font-semibold transition-all hover:border-zinc-300 active:scale-[0.98] cursor-pointer shadow-2xs"
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleConfirm}
-                      className="flex-1 h-10.5 px-4 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-zinc-950/15 hover:shadow-lg hover:shadow-zinc-950/20 active:scale-[0.98] border border-zinc-900"
-                    >
-                      <Check size={14} strokeWidth={2.5} />
-                      <span className="truncate">Confirm & Auto-Fill</span>
-                    </button>
-                  </div>
+                {/* Clean Action Footer */}
+                <div className="p-4 border-t border-zinc-200 bg-white shrink-0 flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="h-10 px-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 hover:text-zinc-950 text-xs font-semibold transition-colors cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirm}
+                    className="flex-1 h-10 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm border border-zinc-900 active:scale-95"
+                  >
+                    <Check size={14} strokeWidth={2.5} />
+                    <span>Confirm & Apply Location</span>
+                  </button>
                 </div>
               </aside>
 
