@@ -1,6 +1,6 @@
-import BrandFooter from "./BrandFooter.jsx";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import {
   Search,
   Plus,
@@ -8,403 +8,755 @@ import {
   MoreVertical,
   LayoutGrid,
   List,
-  ChevronRight,
+  ChevronDown,
   TrendingUp,
   Clock,
   Activity,
   CheckCircle2,
   AlertCircle,
   BarChart3,
-  Download,
   Shield,
   Zap,
   Award,
-  TrendingDown,
-  RefreshCw,
-  MoreHorizontal,
-  Clock3,
-  BrainCircuit,
   Crown,
-  Share2,
   X,
   CreditCard,
   Percent,
   Tag,
-  Users
+  Users,
+  Dumbbell,
+  Flame,
+  Sparkles,
+  Package,
+  IndianRupee,
+  Calendar,
+  Trash2,
+  Edit3,
+  Eye,
+  ArrowRight,
+  FolderPlus
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ErrorBoundary } from "./ErrorHandlers.jsx";
+import BrandFooter from "./BrandFooter.jsx";
 
 // ─────────────────────────────────────────
-// CONSTANTS & MOCK DATA
+// UTILITIES & HELPERS
 // ─────────────────────────────────────────
+
+const formatCompact = (val) => {
+  if (val === null || val === undefined || isNaN(val)) return "0";
+  return new Intl.NumberFormat("en-IN", {
+    notation: "compact",
+    maximumFractionDigits: 1
+  }).format(val);
+};
+
+const formatCurrency = (val) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0
+  }).format(val || 0);
+};
+
+const cn = (...classes) => classes.filter(Boolean).join(" ");
+
+const getPackageVisual = (pkg) => {
+  if (!pkg) return { gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", IconComponent: Package };
+  
+  const name = (pkg.name || "").toLowerCase();
+  const category = (pkg.category || "").toLowerCase();
+  
+  let gradient = "linear-gradient(135deg, #0ea5e9, #0284c7)";
+  let IconComponent = Package;
+  
+  if (category.includes("transform") || name.includes("transform") || name.includes("pro")) {
+    gradient = "linear-gradient(135deg, #6366f1, #4f46e5)";
+    IconComponent = Sparkles;
+  } else if (category.includes("strength") || name.includes("strength") || name.includes("muscle") || name.includes("athlete")) {
+    gradient = "linear-gradient(135deg, #10b981, #059669)";
+    IconComponent = Dumbbell;
+  } else if (category.includes("weight") || name.includes("burn") || name.includes("fat") || name.includes("loss")) {
+    gradient = "linear-gradient(135deg, #f59e0b, #d97706)";
+    IconComponent = Flame;
+  } else if (category.includes("rehab") || name.includes("rehab") || name.includes("mobility") || name.includes("recovery")) {
+    gradient = "linear-gradient(135deg, #8b5cf6, #7c3aed)";
+    IconComponent = Shield;
+  } else if (name.includes("starter") || name.includes("basic") || name.includes("kickoff")) {
+    gradient = "linear-gradient(135deg, #f43f5e, #e11d48)";
+    IconComponent = Zap;
+  } else {
+    gradient = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
+    IconComponent = Award;
+  }
+  
+  return { gradient, IconComponent };
+};
+
+// ─────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────
+
+const FILTER_OPTIONS = ["All", "Active", "Transformation", "Strength", "Weight Loss", "Rehabilitation", "General"];
 
 const PT_PACKAGE_CATEGORIES = [
-  "Weight Loss", "Muscle Building", "Strength Training", "Rehabilitation", "Athlete Coaching", "Premium Transformation"
-];
-
-const DURATION_FILTERS = [
-  "1 Month", "3 Months", "6 Months", "Annual", "Session-Based"
-];
-
-const MOCK_PT_PACKAGES = [
-  {
-    id: "PKG-2001",
-    name: "Transformation Pro (36 Sessions)",
-    type: "Premium Transformation",
-    duration: "3 Months",
-    sessions: 36,
-    price: "₹85,000",
-    priceValue: 85000,
-    status: "active",
-    activeClients: 42,
-    completionRate: 94,
-    renewalRate: 78,
-    trainerType: "Elite Coaches",
-    revenueGenerated: "₹35.7L",
-    features: ["36 PT Sessions", "Nutrition Coaching", "Weekly Assessments", "Transformation Reports", "Priority Scheduling"]
-  },
-  {
-    id: "PKG-2002",
-    name: "Monthly Starter (12 Sessions)",
-    type: "Weight Loss",
-    duration: "1 Month",
-    sessions: 12,
-    price: "₹15,000",
-    priceValue: 15000,
-    status: "active",
-    activeClients: 128,
-    completionRate: 88,
-    renewalRate: 65,
-    trainerType: "Senior Coaches",
-    revenueGenerated: "₹19.2L",
-    features: ["12 PT Sessions", "Basic Diet Plan", "Monthly Assessment", "App Tracking"]
-  },
-  {
-    id: "PKG-2003",
-    name: "Athlete Strength Camp",
-    type: "Athlete Coaching",
-    duration: "6 Months",
-    sessions: 72,
-    price: "₹1,50,000",
-    priceValue: 150000,
-    status: "active",
-    activeClients: 15,
-    completionRate: 98,
-    renewalRate: 85,
-    trainerType: "Master Coaches",
-    revenueGenerated: "₹22.5L",
-    features: ["72 PT Sessions", "Sports Nutrition", "Biomechanical Analysis", "Recovery Protocols", "Competition Prep"]
-  },
-  {
-    id: "PKG-2004",
-    name: "Rehab & Recovery Core",
-    type: "Rehabilitation",
-    duration: "Session-Based",
-    sessions: 10,
-    price: "₹20,000",
-    priceValue: 20000,
-    status: "inactive",
-    activeClients: 0,
-    completionRate: 0,
-    renewalRate: 0,
-    trainerType: "Specialist Coaches",
-    revenueGenerated: "₹0",
-    features: ["10 Rehab Sessions", "Physio Consultation", "Mobility Tracking"]
-  }
-];
-
-const REVENUE_ANALYTICS = [
-  { id: 1, label: "Active PT Packages", value: "185", trend: "+12", isUp: true, subtext: "Total active subscriptions", icon: CheckCircle2 },
-  { id: 2, label: "PT Revenue This Month", value: "₹28.4L", trend: "+15.2%", isUp: true, subtext: "Target: ₹30L", icon: BarChart3 },
-  { id: 3, label: "Most Purchased Package", value: "Monthly Starter", trend: "128 Active", isUp: true, subtext: "Consistent driver", icon: Crown },
-  { id: 4, label: "Avg Package Value", value: "₹38,500", trend: "+4.5%", isUp: true, subtext: "Per subscriber", icon: Tag },
-  { id: 5, label: "Package Renewals", value: "42", trend: "This Week", isUp: true, subtext: "High retention", icon: RefreshCw },
-  { id: 6, label: "Session Utilization %", value: "88.4%", trend: "+2.1%", isUp: true, subtext: "System healthy", icon: Activity },
-  { id: 7, label: "Expiring Packages", value: "18", trend: "Critical", isUp: false, subtext: "Next 7 days", icon: AlertCircle },
-  { id: 8, label: "PT Conversion Rate", value: "12.4%", trend: "+1.2%", isUp: true, subtext: "Trial to paid", icon: TrendingUp }
+  "Transformation",
+  "Strength",
+  "Weight Loss",
+  "Rehabilitation",
+  "Athlete Coaching",
+  "General"
 ];
 
 // ─────────────────────────────────────────
-// COMPONENTS
+// KPI CARD COMPONENT
 // ─────────────────────────────────────────
+const KPICard = ({ label, value, subtext, icon: Icon, tone = "indigo" }) => {
+  const tones = {
+    indigo: {
+      icon: "text-indigo-600 bg-indigo-50 border-indigo-100"
+    },
+    emerald: {
+      icon: "text-emerald-600 bg-emerald-50 border-emerald-100"
+    },
+    blue: {
+      icon: "text-blue-600 bg-blue-50 border-blue-100"
+    },
+    amber: {
+      icon: "text-amber-600 bg-amber-50 border-amber-100"
+    }
+  };
 
-function KPICard({ item }) {
-  const Icon = item.icon;
+  const currentTone = tones[tone] || tones.indigo;
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group"
-    >
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-2.5 rounded-xl ${item.isUp ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'} transition-colors group-hover:scale-110 duration-300`}>
-          <Icon size={20} />
-        </div>
-        <div className={`flex items-center gap-1 text-xs font-bold ${item.isUp ? 'text-emerald-600' : 'text-rose-600'}`}>
-          {item.isUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-          {item.trend}
+    <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all duration-200 flex flex-col justify-between min-h-[105px]">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+        <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center border shrink-0", currentTone.icon)}>
+          <Icon size={16} strokeWidth={2.2} />
         </div>
       </div>
-      <div className="space-y-1">
-        <h3 className="text-slate-500 text-[11px] font-black uppercase tracking-wider">{item.label}</h3>
-        <p className="text-2xl font-black text-slate-900 tracking-tight">{item.value}</p>
-        <p className="text-slate-400 text-[10px] font-medium">{item.subtext}</p>
+      <div className="mt-2 text-left">
+        <p className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1.5">{value}</p>
+        <p className="text-[11px] text-slate-400 font-medium leading-none">{subtext}</p>
       </div>
-      
-      <div className="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: "70%" }}
-          className={`h-full ${item.isUp ? 'bg-indigo-500' : 'bg-rose-500'}`}
-        />
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────
+// CUSTOM SELECT COMPONENT
+// ─────────────────────────────────────────
+function CustomSelect({ label, value, onChange, options }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="space-y-1.5 relative">
+      {label && <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between hover:bg-slate-100 transition-all text-left cursor-pointer"
+        >
+          <span>{value}</span>
+          <ChevronDown size={14} className={cn("text-slate-400 transition-transform", isOpen && "rotate-180")} />
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.12, ease: "easeOut" }}
+                className="absolute left-0 right-0 top-[48px] bg-white rounded-xl border border-slate-200 shadow-xl py-1 z-50 overflow-hidden max-h-48 overflow-y-auto"
+              >
+                {options.map((option) => {
+                  const isSelected = value === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        onChange(option);
+                        setIsOpen(false);
+                      }}
+                      className={cn(
+                        "w-full px-4 py-2.5 text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer",
+                        isSelected
+                          ? "bg-slate-900 text-white"
+                          : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                      )}
+                    >
+                      <span>{option}</span>
+                      {isSelected && <CheckCircle2 size={12} className="text-emerald-400" />}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-function PackageCard({ pkg, onClick }) {
-  const statusColors = {
-    active: "bg-emerald-100 text-emerald-700",
-    inactive: "bg-slate-100 text-slate-600"
-  };
+// ─────────────────────────────────────────
+// DIRECTORY ROW CARD COMPONENT
+// ─────────────────────────────────────────
+function PTPackageRow({ pkg, index, onViewDetails, onEdit, onDelete }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { gradient, IconComponent } = getPackageVisual(pkg);
+  const pricePerSession = Math.round((pkg.price || 0) / (pkg.sessions || 1));
+
+  return (
+    <motion.tr
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.2, delay: index * 0.02 }}
+      className="relative grid grid-cols-3 gap-4 p-3.5 bg-white border border-slate-200/90 rounded-xl shadow-xs hover:shadow-sm hover:border-slate-300 transition-all duration-200 list-none cursor-pointer"
+      onClick={() => onViewDetails(pkg)}
+    >
+      {/* Col 1: Identity & Parameters */}
+      <div className="flex items-center gap-3.5 min-w-0 text-left">
+        <div 
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
+          style={{ background: gradient }}
+        >
+          <IconComponent size={20} strokeWidth={2.2} />
+        </div>
+        <div className="min-w-0 text-left">
+          <h4 className="text-sm font-bold text-slate-900 leading-tight truncate">{pkg.name}</h4>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wider">
+              {pkg.category}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              {pkg.duration}
+            </span>
+            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              {pkg.sessions} Sessions
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Col 2: Commercials & Assigned Tier */}
+      <div className="flex items-center justify-around gap-2 text-left">
+        <div>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Price</span>
+          <span className="text-sm font-black text-slate-900 mt-0.5 block">{formatCurrency(pkg.price)}</span>
+          <span className="text-[10px] text-slate-400 font-medium">₹{pricePerSession.toLocaleString("en-IN")}/session</span>
+        </div>
+        <div>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Coach Tier</span>
+          <span className="text-xs font-bold text-slate-800 mt-0.5 block truncate max-w-[120px]">{pkg.trainerType || "General"}</span>
+          <span className="text-[10px] text-slate-400 font-medium">{pkg.frequency || "Standard"}</span>
+        </div>
+        <div>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Clients</span>
+          <span className="text-sm font-black text-slate-900 mt-0.5 block">{pkg.activeClients || 0}</span>
+          <span className="text-[10px] text-slate-400 font-medium">enrolled</span>
+        </div>
+      </div>
+
+      {/* Col 3: Status & Action Menu */}
+      <div className="flex items-center justify-between gap-4 pr-10 text-left">
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            "px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider",
+            pkg.status === "inactive"
+              ? "bg-slate-50 border-slate-200 text-slate-600"
+              : "bg-emerald-50 border-emerald-200 text-emerald-700"
+          )}>
+            {pkg.status === "inactive" ? "Inactive" : "Active"}
+          </span>
+          <span className="text-xs text-slate-400 font-bold font-mono">
+            {pkg.validity ? `${pkg.validity} val.` : `${pkg.duration}`}
+          </span>
+        </div>
+
+        {/* More options button */}
+        <div className="absolute right-3 top-3.5" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+            title="Package options"
+          >
+            <MoreVertical size={16} />
+          </button>
+
+          <AnimatePresence>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.1 }}
+                  className="absolute right-0 top-8 w-36 bg-white rounded-xl border border-slate-200 shadow-xl py-1 z-40"
+                >
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onViewDetails(pkg);
+                    }}
+                    className="w-full px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-left cursor-pointer"
+                  >
+                    <Eye size={13} className="text-slate-400" /> View Details
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onEdit(pkg);
+                    }}
+                    className="w-full px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-left cursor-pointer"
+                  >
+                    <Edit3 size={13} className="text-slate-400" /> Edit Package
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onDelete(pkg);
+                    }}
+                    className="w-full px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 text-left cursor-pointer"
+                  >
+                    <Trash2 size={13} className="text-rose-400" /> Delete Package
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </motion.tr>
+  );
+}
+
+// ─────────────────────────────────────────
+// GRID CARD COMPONENT
+// ─────────────────────────────────────────
+function PTPackageGridCard({ pkg, onViewDetails, onEdit, onDelete }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { gradient, IconComponent } = getPackageVisual(pkg);
+  const pricePerSession = Math.round((pkg.price || 0) / (pkg.sessions || 1));
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden flex flex-col"
-      onClick={() => onClick(pkg)}
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="bg-white border border-slate-200/90 rounded-2xl p-5 hover:border-slate-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between group cursor-pointer relative"
+      onClick={() => onViewDetails(pkg)}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors" />
-      
-      <div className="flex justify-between items-start relative z-10 mb-4">
-        <div>
-          <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${statusColors[pkg.status]}`}>
-            {pkg.status}
-          </span>
-        </div>
-        <button className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
-          <MoreVertical size={20} />
-        </button>
-      </div>
+      <div>
+        <div className="flex items-start justify-between mb-4">
+          <div 
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
+            style={{ background: gradient }}
+          >
+            <IconComponent size={22} strokeWidth={2.2} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider",
+              pkg.status === "inactive"
+                ? "bg-slate-50 border-slate-200 text-slate-600"
+                : "bg-emerald-50 border-emerald-200 text-emerald-700"
+            )}>
+              {pkg.status === "inactive" ? "Inactive" : "Active"}
+            </span>
 
-      <div className="relative z-10 mb-6">
-        <h3 className="text-lg font-black text-slate-900 tracking-tight leading-tight mb-1 group-hover:text-indigo-600 transition-colors">
-          {pkg.name}
-        </h3>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{pkg.type}</p>
-      </div>
-
-      <div className="relative z-10 mb-6">
-        <p className="text-3xl font-black text-slate-900 tracking-tight">{pkg.price}</p>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">per package</p>
-      </div>
-
-      <div className="space-y-3 relative z-10 flex-1">
-        <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-          <Clock size={16} className="text-slate-400" /> {pkg.duration} ({pkg.sessions} Sessions)
-        </div>
-        <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-          <Shield size={16} className="text-slate-400" /> {pkg.trainerType}
-        </div>
-        <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
-          {pkg.features.slice(0, 3).map((feature, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs font-medium text-slate-600">
-              <CheckCircle2 size={14} className="text-indigo-500 shrink-0 mt-0.5" />
-              <span>{feature}</span>
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <MoreVertical size={16} />
+              </button>
+              <AnimatePresence>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.1 }}
+                      className="absolute right-0 top-7 w-36 bg-white rounded-xl border border-slate-200 shadow-xl py-1 z-40"
+                    >
+                      <button
+                        onClick={() => { setMenuOpen(false); onViewDetails(pkg); }}
+                        className="w-full px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-left cursor-pointer"
+                      >
+                        <Eye size={13} className="text-slate-400" /> View Details
+                      </button>
+                      <button
+                        onClick={() => { setMenuOpen(false); onEdit(pkg); }}
+                        className="w-full px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-left cursor-pointer"
+                      >
+                        <Edit3 size={13} className="text-slate-400" /> Edit Package
+                      </button>
+                      <button
+                        onClick={() => { setMenuOpen(false); onDelete(pkg); }}
+                        className="w-full px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 text-left cursor-pointer"
+                      >
+                        <Trash2 size={13} className="text-rose-400" /> Delete Package
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
-          ))}
-          {pkg.features.length > 3 && (
-            <p className="text-xs font-bold text-indigo-600 pl-6">+ {pkg.features.length - 3} more features</p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded">
+              {pkg.category}
+            </span>
+            <span className="text-[10px] font-bold text-slate-400">
+              {pkg.duration}
+            </span>
+          </div>
+          <h3 className="text-base font-bold text-slate-900 mt-1.5 leading-snug group-hover:text-indigo-600 transition-colors">
+            {pkg.name}
+          </h3>
+          {pkg.description && (
+            <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
+              {pkg.description}
+            </p>
           )}
         </div>
+
+        <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 mb-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-lg font-black text-slate-900">{formatCurrency(pkg.price)}</span>
+            <span className="text-[11px] text-slate-400 font-medium">₹{pricePerSession.toLocaleString("en-IN")}/sess</span>
+          </div>
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200/60 text-xs text-slate-600">
+            <span className="font-bold text-indigo-600">{pkg.sessions} Sessions</span>
+            <span>•</span>
+            <span className="truncate">{pkg.trainerType || "General Coaches"}</span>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 gap-4 relative z-10">
-        <div>
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Clients</p>
-          <p className="text-sm font-black text-slate-900">{pkg.activeClients}</p>
-        </div>
-        <div>
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal Rate</p>
-          <p className="text-sm font-black text-slate-900">{pkg.renewalRate}%</p>
-        </div>
-      </div>
-
-      <div className="mt-6 flex gap-2 relative z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="flex-1 bg-slate-900 text-white py-3 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-colors">
-          View Details
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+        <span className="text-slate-500 font-medium">
+          <strong className="text-slate-900 font-bold">{pkg.activeClients || 0}</strong> Clients Enrolled
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails(pkg);
+          }}
+          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+        >
+          View Details →
         </button>
       </div>
     </motion.div>
   );
 }
 
-function PackageDrawer({ pkg, isOpen, onClose }) {
+// ─────────────────────────────────────────
+// PACKAGE DETAILS MODAL
+// ─────────────────────────────────────────
+function PackageDetailsModal({ pkg, isOpen, onClose, onEdit, onDelete }) {
   if (!pkg) return null;
+
+  const { gradient, IconComponent } = getPackageVisual(pkg);
+  const pricePerSession = Math.round((pkg.price || 0) / (pkg.sessions || 1));
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          onClick={onClose}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]"
-          />
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-[560px] bg-white shadow-2xl z-[70] overflow-y-auto"
+            initial={{ scale: 0.95, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 15 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh]"
           >
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-10">
-                <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-2xl text-slate-400 transition-all">
-                  <X size={24} />
-                </button>
-                <div className="flex gap-3">
-                  <button className="px-5 py-3 border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
-                    Edit Package
-                  </button>
-                  <button className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
-                    <Share2 size={20} />
-                  </button>
+            {/* Header with Visual Card */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xs"
+                  style={{ background: gradient }}
+                >
+                  <IconComponent size={22} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-slate-900">{pkg.name}</h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {pkg.status === "inactive" ? "Inactive" : "Active"}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-400 mt-0.5 flex items-center gap-2">
+                    <span>{pkg.category}</span>
+                    <span>•</span>
+                    <span>{pkg.duration}</span>
+                    <span>•</span>
+                    <span className="text-indigo-600 font-bold">{pkg.sessions} Sessions</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Stat Tiles */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Package Price</span>
+                  <span className="text-base font-black text-slate-900 mt-1 block">{formatCurrency(pkg.price)}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Rate / Session</span>
+                  <span className="text-base font-black text-slate-900 mt-1 block">₹{pricePerSession.toLocaleString("en-IN")}</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Sessions Pool</span>
+                  <span className="text-base font-black text-slate-900 mt-1 block">{pkg.sessions} Sessions</span>
+                </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Enrolled Clients</span>
+                  <span className="text-base font-black text-slate-900 mt-1 block">{pkg.activeClients || 0}</span>
                 </div>
               </div>
 
-              <div className="mb-8">
-                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest mb-4 inline-block ${pkg.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                  {pkg.status} Package
+              {/* Description */}
+              {pkg.description && (
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    Package Description &amp; Scope
+                  </span>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">{pkg.description}</p>
+                </div>
+              )}
+
+              {/* Features Included */}
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-3">
+                  Included Features &amp; Privileges
                 </span>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">{pkg.name}</h2>
-                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{pkg.type}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-10">
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Package Price</p>
-                  <p className="text-xl font-black text-slate-900">{pkg.price}</p>
-                </div>
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Duration & Sessions</p>
-                  <p className="text-xl font-black text-slate-900">{pkg.duration}</p>
-                  <p className="text-[10px] font-bold text-indigo-600 mt-1">{pkg.sessions} Total Sessions</p>
-                </div>
-              </div>
-
-              <section className="mb-10">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Zap size={16} />
-                  Included Features
-                </h3>
-                <div className="space-y-3">
-                  {pkg.features.map((feature, i) => (
-                    <div key={i} className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <CheckCircle2 size={16} />
+                <div className="grid grid-cols-2 gap-2.5">
+                  {(pkg.features || []).length > 0 ? (
+                    pkg.features.map((feat, i) => (
+                      <div key={i} className="p-3 rounded-xl border border-slate-100 bg-white flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                        <span className="truncate">{feat}</span>
                       </div>
-                      <span className="text-sm font-bold text-slate-700">{feature}</span>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 italic col-span-2">No custom features listed for this package.</p>
+                  )}
                 </div>
-              </section>
+              </div>
 
-              <section className="mb-10 grid grid-cols-2 gap-6">
-                <div className="bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100/50">
-                  <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Trainer Assignment</h3>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Shield size={20} className="text-indigo-600" />
-                    <span className="text-sm font-black text-slate-900">{pkg.trainerType}</span>
-                  </div>
-                  <p className="text-[10px] font-bold text-slate-500 leading-relaxed">Only trainers with this designation can be assigned to this package.</p>
+              {/* Trainer Allocation & Rules */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
+                  <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider block mb-1">Trainer Tier Allocation</span>
+                  <p className="text-xs font-bold text-slate-900">{pkg.trainerType || "General Trainers"}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Designated coach level authorized for this package.</p>
                 </div>
-                
-                <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100/50">
-                  <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Revenue Generated</h3>
-                  <div className="flex items-center gap-3 mb-2">
-                    <BarChart3 size={20} className="text-emerald-600" />
-                    <span className="text-lg font-black text-slate-900">{pkg.revenueGenerated}</span>
-                  </div>
-                  <p className="text-[10px] font-bold text-slate-500 leading-relaxed">Lifetime revenue generated from {pkg.activeClients} active subscriptions.</p>
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Session Frequency &amp; Validity</span>
+                  <p className="text-xs font-bold text-slate-900">{pkg.frequency || "Flexible"} • {pkg.validity || pkg.duration}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Operating schedule &amp; validity expiry window.</p>
                 </div>
-              </section>
+              </div>
+            </div>
 
-              <section className="mb-10">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Activity size={16} />
-                  Client Analytics
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-sm">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Subs</p>
-                    <p className="text-lg font-black text-slate-900">{pkg.activeClients}</p>
-                  </div>
-                  <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-sm">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Completion</p>
-                    <p className="text-lg font-black text-slate-900">{pkg.completionRate}%</p>
-                  </div>
-                  <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-sm">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Renewal</p>
-                    <p className="text-lg font-black text-slate-900">{pkg.renewalRate}%</p>
-                  </div>
-                </div>
-              </section>
-
-              <div className="p-8 bg-slate-900 rounded-[40px] text-white relative overflow-hidden shadow-2xl shadow-slate-200">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 blur-3xl -mr-20 -mt-20" />
-                <h4 className="text-xl font-black tracking-tight mb-2">Assign to Client</h4>
-                <p className="text-slate-300 text-xs font-medium leading-relaxed mb-6">Enroll a member into this transformation package directly.</p>
-                <button className="w-full bg-indigo-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-colors flex items-center justify-center gap-2 shadow-xl shadow-indigo-900/20">
-                  <Users size={16} />
-                  Enroll Member
+            {/* Footer Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onDelete(pkg);
+                }}
+                className="px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onEdit(pkg);
+                  }}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit3 size={14} /> Edit Package
                 </button>
               </div>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );
 }
 
-function CreatePackageModal({ isOpen, onClose }) {
+// ─────────────────────────────────────────
+// CREATE / EDIT PACKAGE MODAL
+// ─────────────────────────────────────────
+function CreatePackageModal({ isOpen, onClose, onSave, editingPackage }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
-    category: "Weight Loss",
+    category: "Transformation",
     description: "",
-    trainerType: "Senior Coaches",
-    duration: "1 Month",
-    sessions: 12,
-    frequency: "3 days/week",
-    validity: "45 Days",
-    basePrice: "",
-    discount: "",
-    gst: "18%",
-    renewalPricing: "",
-    features: {
-      nutrition: true,
-      assessments: true,
-      tracking: true,
-      whatsapp: false,
-      priority: false
-    },
-    trainerEligibility: ["Senior Coaches"]
+    trainerType: "Elite Coaches",
+    duration: "90 Days",
+    sessions: 36,
+    frequency: "3 sessions/week",
+    validity: "90 Days",
+    price: "",
+    features: [
+      "1-on-1 Personal Training Sessions",
+      "Customized Nutrition Plan",
+      "Weekly Progress Assessments",
+      "App Workout & Log Tracking"
+    ]
   });
+
+  const [featureInput, setFeatureInput] = useState("");
+
+  useEffect(() => {
+    if (editingPackage) {
+      setFormData({
+        name: editingPackage.name || "",
+        category: editingPackage.category || "Transformation",
+        description: editingPackage.description || "",
+        trainerType: editingPackage.trainerType || "Elite Coaches",
+        duration: editingPackage.duration || "90 Days",
+        sessions: editingPackage.sessions || 36,
+        frequency: editingPackage.frequency || "3 sessions/week",
+        validity: editingPackage.validity || "90 Days",
+        price: editingPackage.price?.toString() || "",
+        features: editingPackage.features || [
+          "1-on-1 Personal Training Sessions",
+          "Customized Nutrition Plan",
+          "Weekly Progress Assessments"
+        ]
+      });
+      setStep(1);
+    } else {
+      setFormData({
+        name: "",
+        category: "Transformation",
+        description: "",
+        trainerType: "Elite Coaches",
+        duration: "90 Days",
+        sessions: 36,
+        frequency: "3 sessions/week",
+        validity: "90 Days",
+        price: "",
+        features: [
+          "1-on-1 Personal Training Sessions",
+          "Customized Nutrition Plan",
+          "Weekly Progress Assessments",
+          "App Workout & Log Tracking"
+        ]
+      });
+      setStep(1);
+    }
+  }, [editingPackage, isOpen]);
 
   if (!isOpen) return null;
 
-  const totalSteps = 5;
+  const handleChange = (field, val) => {
+    setFormData((prev) => ({ ...prev, [field]: val }));
+  };
 
-  const nextStep = () => setStep(s => Math.min(s + 1, totalSteps));
-  const prevStep = () => setStep(s => Math.max(s - 1, 1));
+  const addFeature = () => {
+    if (featureInput.trim() && !formData.features.includes(featureInput.trim())) {
+      setFormData((prev) => ({
+        ...prev,
+        features: [...prev.features, featureInput.trim()]
+      }));
+      setFeatureInput("");
+    }
+  };
+
+  const removeFeature = (idx) => {
+    setFormData((prev) => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleFinish = (e) => {
+    e?.preventDefault();
+    if (!formData.name.trim()) return;
+
+    const basePriceNum = parseFloat(formData.price.toString().replace(/[^\d.]/g, "")) || 0;
+    const sessionsNum = parseInt(formData.sessions) || 12;
+
+    const savedItem = {
+      id: editingPackage?.id || `PKG-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: formData.name.trim(),
+      category: formData.category,
+      price: basePriceNum,
+      duration: formData.duration,
+      sessions: sessionsNum,
+      frequency: formData.frequency,
+      validity: formData.validity,
+      activeClients: editingPackage?.activeClients || 0,
+      status: editingPackage?.status || "active",
+      trainerType: formData.trainerType,
+      description: formData.description,
+      features: formData.features,
+      createdAt: editingPackage?.createdAt || new Date().toISOString()
+    };
+
+    onSave(savedItem);
+    onClose();
+  };
+
+  const calculatedPerSession = formData.price && formData.sessions > 0
+    ? Math.round(parseFloat(formData.price.toString().replace(/[^\d.]/g, "")) / formData.sessions)
+    : 0;
 
   return (
     <AnimatePresence>
@@ -412,209 +764,268 @@ function CreatePackageModal({ isOpen, onClose }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+        onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          initial={{ scale: 0.95, opacity: 0, y: 15 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          exit={{ scale: 0.95, opacity: 0, y: 15 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         >
-          {/* Modal Header */}
-          <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="px-3 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest">
-                  Step {step} of {totalSteps}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-900 text-white">
+                  Step {step} of 3
                 </span>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">Create PT Package</h2>
+                <h3 className="text-base font-black text-slate-900">
+                  {editingPackage ? "Edit PT Package" : "Create PT Package"}
+                </h3>
               </div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                {step === 1 && "Basic Information"}
-                {step === 2 && "Duration & Session Allocation"}
-                {step === 3 && "Pricing & Monetization"}
-                {step === 4 && "Included Features & Services"}
-                {step === 5 && "Trainer Eligibility & Restrictions"}
+              <p className="text-xs text-slate-400 font-semibold">
+                {step === 1 && "Basic Package Details & Classification"}
+                {step === 2 && "Sessions, Frequency & Commercials"}
+                {step === 3 && "Inclusions & Features Checklist"}
               </p>
             </div>
-            <button onClick={onClose} className="p-3 hover:bg-white hover:shadow-md rounded-2xl text-slate-400 transition-all">
-              <X size={24} />
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              <X size={18} />
             </button>
           </div>
 
-          {/* Modal Body */}
-          <div className="p-8 overflow-y-auto flex-1">
+          {/* Form Content */}
+          <div className="p-6 overflow-y-auto space-y-5">
             {step === 1 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Package Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 12-Week Transformation Pro" 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all"
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Package Name *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 12-Week Transformation Pro"
+                    value={formData.name}
+                    onChange={(e) => handleChange("name", e.target.value)}
+                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
+                    required
+                    autoFocus
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all appearance-none">
-                      {PT_PACKAGE_CATEGORIES.map(cat => <option key={cat}>{cat}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trainer Type</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all appearance-none">
-                      <option>Elite Coaches</option>
-                      <option>Senior Coaches</option>
-                      <option>General Trainers</option>
-                    </select>
-                  </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <CustomSelect
+                    label="Category"
+                    value={formData.category}
+                    onChange={(val) => handleChange("category", val)}
+                    options={PT_PACKAGE_CATEGORIES}
+                  />
+
+                  <CustomSelect
+                    label="Trainer Assignment Tier"
+                    value={formData.trainerType}
+                    onChange={(val) => handleChange("trainerType", val)}
+                    options={["Elite Coaches", "Master Coaches", "Senior Coaches", "Specialist Coaches", "General Trainers"]}
+                  />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</label>
-                  <textarea 
-                    rows={4}
-                    placeholder="Describe the package benefits and target audience..." 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all resize-none"
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Description &amp; Target Goal
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Describe program goals, target clientele, and curriculum..."
+                    value={formData.description}
+                    onChange={(e) => handleChange("description", e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all resize-none"
                   />
                 </div>
               </div>
             )}
 
             {step === 2 && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duration</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all appearance-none">
-                      {DURATION_FILTERS.map(d => <option key={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Sessions</label>
-                    <input type="number" placeholder="24" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <CustomSelect
+                    label="Package Duration"
+                    value={formData.duration}
+                    onChange={(val) => handleChange("duration", val)}
+                    options={["30 Days", "45 Days", "60 Days", "90 Days", "180 Days", "365 Days"]}
+                  />
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Total 1-on-1 Sessions *
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 36"
+                      value={formData.sessions}
+                      onChange={(e) => handleChange("sessions", e.target.value)}
+                      className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
+                      min="1"
+                    />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Session Frequency</label>
-                    <input type="text" placeholder="3 sessions/week" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Session Frequency
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 3 sessions/week"
+                      value={formData.frequency}
+                      onChange={(e) => handleChange("frequency", e.target.value)}
+                      className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Validity (Days)</label>
-                    <input type="number" placeholder="45" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" />
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                      Package Validity
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 90 Days"
+                      value={formData.validity}
+                      onChange={(e) => handleChange("validity", e.target.value)}
+                      className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
+                    />
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Base Package Price (₹ INR) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                    <input
+                      type="number"
+                      placeholder="e.g. 45000"
+                      value={formData.price}
+                      onChange={(e) => handleChange("price", e.target.value)}
+                      className="w-full h-11 pl-8 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
+                      min="0"
+                    />
+                  </div>
+                  {calculatedPerSession > 0 && (
+                    <small className="text-[11px] text-slate-500 font-medium mt-1 block">
+                      Equivalent to <strong className="text-slate-800">₹{calculatedPerSession.toLocaleString("en-IN")}</strong> per individual session.
+                    </small>
+                  )}
                 </div>
               </div>
             )}
 
             {step === 3 && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Price (₹)</label>
-                    <input type="text" placeholder="15,000" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Discount (%)</label>
-                    <input type="text" placeholder="10" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">GST Rate</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all appearance-none">
-                      <option>18% (Standard)</option>
-                      <option>12%</option>
-                      <option>5%</option>
-                      <option>Exempted</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Renewal Price (₹)</label>
-                    <input type="text" placeholder="12,500" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" />
-                  </div>
-                </div>
-                <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Final Client Price</p>
-                    <p className="text-2xl font-black text-indigo-600">₹16,200 <span className="text-xs font-bold opacity-60">(incl. GST)</span></p>
-                  </div>
-                  <Tag className="text-indigo-200" size={32} />
-                </div>
-              </div>
-            )}
-
-            {step === 4 && (
               <div className="space-y-4">
-                {[
-                  { id: 'nutrition', label: 'Nutrition Guidance', icon: Heart },
-                  { id: 'assessments', label: 'Weekly Body Assessments', icon: Activity },
-                  { id: 'tracking', label: 'Transformation Tracking', icon: Zap },
-                  { id: 'whatsapp', label: 'WhatsApp Support', icon: Share2 },
-                  { id: 'priority', label: 'Priority Scheduling', icon: Clock }
-                ].map(item => (
-                  <div key={item.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                        <item.icon size={20} />
-                      </div>
-                      <span className="text-sm font-bold text-slate-700">{item.label}</span>
-                    </div>
-                    <div className="w-12 h-6 bg-slate-200 rounded-full relative p-1 cursor-pointer">
-                      <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {step === 5 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trainer Category Restrictions</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['Elite Coaches', 'Senior Coaches', 'Specialists', 'General Trainers'].map(cat => (
-                      <div key={cat} className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div className="w-5 h-5 border-2 border-slate-300 rounded" />
-                        <span className="text-xs font-bold text-slate-600">{cat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Specialization Requirements</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['Weight Loss', 'Bodybuilding', 'Yoga', 'Physio'].map(s => (
-                      <span key={s} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-                        {s}
-                      </span>
-                    ))}
-                    <button className="px-4 py-2 border-2 border-dashed border-slate-200 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-indigo-200 hover:text-indigo-500 transition-all">
-                      + Add Rule
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Features &amp; Client Inclusions
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add feature (e.g. Weekly Body Composition Scans)..."
+                      value={featureInput}
+                      onChange={(e) => setFeatureInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addFeature();
+                        }
+                      }}
+                      className="flex-1 h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                    />
+                    <button
+                      type="button"
+                      onClick={addFeature}
+                      className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-800 transition-colors"
+                    >
+                      Add
                     </button>
                   </div>
+
+                  <div className="flex flex-wrap gap-2 mt-3 max-h-40 overflow-y-auto">
+                    {formData.features.map((feat, i) => (
+                      <span
+                        key={i}
+                        className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-2 border border-slate-200/80"
+                      >
+                        {feat}
+                        <button
+                          type="button"
+                          onClick={() => removeFeature(i)}
+                          className="hover:text-rose-600 transition-colors cursor-pointer"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-slate-900">Summary Preview</span>
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                      {formData.category}
+                    </span>
+                  </div>
+                  <p className="text-sm font-black text-slate-900">{formData.name || "Untitled PT Package"}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {formData.sessions} Sessions • {formData.duration} • ₹{Number(formData.price || 0).toLocaleString("en-IN")}
+                  </p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Modal Footer */}
-          <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <button 
-              onClick={prevStep}
+          {/* Footer Navigation */}
+          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <button
+              type="button"
               disabled={step === 1}
-              className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 disabled:opacity-30 transition-all"
+              onClick={() => setStep((s) => Math.max(1, s - 1))}
+              className="px-4 py-2 text-xs font-bold text-slate-600 disabled:opacity-30 cursor-pointer hover:bg-slate-200/60 rounded-xl transition-colors"
             >
-              Back
+              ← Back
             </button>
-            <button 
-              onClick={step === totalSteps ? onClose : nextStep}
-              className="px-10 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 flex items-center gap-2"
-            >
-              {step === totalSteps ? "Create Package" : "Continue"}
-              <ChevronRight size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => Math.min(3, s + 1))}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+                >
+                  Next →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleFinish}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+                >
+                  {editingPackage ? "Save Changes" : "Create Package"}
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -623,336 +1034,590 @@ function CreatePackageModal({ isOpen, onClose }) {
 }
 
 // ─────────────────────────────────────────
-// MAIN PAGE COMPONENT
+// DELETE CONFIRMATION MODAL
 // ─────────────────────────────────────────
+function DeleteConfirmationModal({ isOpen, pkg, onClose, onConfirm }) {
+  if (!pkg) return null;
 
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white max-w-sm w-full rounded-2xl p-6 shadow-2xl text-center"
+          >
+            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-4">
+              <AlertCircle size={24} />
+            </div>
+            <h3 className="text-base font-black text-slate-900">Delete PT Package</h3>
+            <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+              Are you sure you want to remove <strong className="text-slate-800">{pkg.name}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex items-center gap-2 mt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onConfirm(pkg);
+                  onClose();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─────────────────────────────────────────
+// MAIN PAGE COMPONENT (NO FAKE DATA)
+// ─────────────────────────────────────────
 export default function PTPackages() {
-  const [viewMode, setViewMode] = useState("grid");
-  const [selectedPackage, setSelectedPackage] = useState(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [view, setView] = useState("packages"); // "packages" | "analytics"
+  const [viewMode, setViewMode] = useState("list"); // "list" | "grid"
+
+  // Clean data initialization from localStorage, purging any fake legacy mock packages
+  const [packages, setPackages] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gymdeck_pt_packages");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const fakeMockIds = new Set([
+            "PKG-2001",
+            "PKG-2002",
+            "PKG-2003",
+            "PKG-2004",
+            "PT-TRANS-PRO",
+            "PT-STR-CAMP",
+            "PT-MTH-START",
+            "PT-REHAB-CORE"
+          ]);
+          const userCreatedPackages = parsed.filter((p) => !fakeMockIds.has(p.id));
+          return userCreatedPackages;
+        }
+      }
+    } catch (e) {
+      console.error("Error reading gymdeck_pt_packages:", e);
+    }
+    return [];
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [detailsPackage, setDetailsPackage] = useState(null);
+  const [editingPackage, setEditingPackage] = useState(null);
+  const [deletePackage, setDeletePackage] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isHeaderStuck, setIsHeaderStuck] = useState(false);
+  const sentinelRef = useRef(null);
 
+  // Sync to localStorage
+  const savePackagesToStorage = (updated) => {
+    setPackages(updated);
+    try {
+      localStorage.setItem("gymdeck_pt_packages", JSON.stringify(updated));
+    } catch (e) {
+      console.error("Error saving to gymdeck_pt_packages:", e);
+    }
+  };
+
+  // Sticky header observer
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsHeaderStuck(!entry.isIntersecting);
+      },
+      { threshold: [0], rootMargin: "-20px 0px 0px 0px" }
+    );
+
+    observer.observe(sentinel);
+    return () => {
+      if (sentinel) observer.unobserve(sentinel);
+    };
+  }, []);
+
+  // Filtered packages
   const filteredPackages = useMemo(() => {
-    return MOCK_PT_PACKAGES.filter(pkg => {
-      const matchesSearch = pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          pkg.type.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = activeFilter === "all" || pkg.status === activeFilter;
-      return matchesSearch && matchesFilter;
-    });
-  }, [searchQuery, activeFilter]);
+    let result = [...packages];
 
-  const handlePackageClick = (pkg) => {
-    setSelectedPackage(pkg);
-    setIsDrawerOpen(true);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(q) ||
+          p.category?.toLowerCase().includes(q) ||
+          p.duration?.toLowerCase().includes(q) ||
+          p.trainerType?.toLowerCase().includes(q)
+      );
+    }
+
+    if (activeFilter === "Active") {
+      result = result.filter((p) => p.status !== "inactive");
+    } else if (activeFilter !== "All") {
+      result = result.filter((p) => p.category?.toLowerCase().includes(activeFilter.toLowerCase()));
+    }
+
+    return result;
+  }, [packages, searchQuery, activeFilter]);
+
+  // Aggregate real stats
+  const totalPackages = packages.length;
+  const activePackages = packages.filter((p) => p.status !== "inactive").length;
+  const totalClients = packages.reduce((acc, p) => acc + (p.activeClients || 0), 0);
+  const totalRevenue = packages.reduce((acc, p) => acc + ((p.price || 0) * (p.activeClients || 0)), 0);
+  const totalSessions = packages.reduce((acc, p) => acc + (p.sessions || 0), 0);
+  const avgPackagePrice = totalPackages > 0
+    ? Math.round(packages.reduce((acc, p) => acc + (p.price || 0), 0) / totalPackages)
+    : 0;
+
+  const handleSavePackage = (savedPkg) => {
+    setPackages((prev) => {
+      const exists = prev.some((p) => p.id === savedPkg.id);
+      let updated;
+      if (exists) {
+        updated = prev.map((p) => (p.id === savedPkg.id ? { ...p, ...savedPkg } : p));
+      } else {
+        updated = [savedPkg, ...prev];
+      }
+      try {
+        localStorage.setItem("gymdeck_pt_packages", JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
+  const handleDeletePackage = (pkgToDelete) => {
+    const updated = packages.filter((p) => p.id !== pkgToDelete.id);
+    savePackagesToStorage(updated);
   };
 
   return (
-    <div className="pt-packages-shell font-sans text-slate-900 selection:bg-indigo-100">
-      {/* 5. TOP UTILITY HEADER */}
-      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-          <span className="opacity-60">Personal Training</span>
-          <span className="text-slate-300">/</span>
-          <span className="text-slate-900 font-bold font-sans">PT Packages</span>
-        </div>
-
-        <div className="flex-1 max-w-2xl px-12 relative">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-            <input 
-              type="text"
-              placeholder="Search package, duration, trainer, pricing..."
-              className="w-full bg-slate-100 border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
-          >
-            <Plus size={16} />
-            Create PT Package
-          </button>
-          <div className="h-8 w-px bg-slate-200 mx-1" />
-          <button className="px-4 h-10 flex items-center justify-center border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Discount Rules
-          </button>
-          <button className="w-10 h-10 flex items-center justify-center border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-500">
-            <Download size={18} />
-          </button>
-        </div>
-      </header>
-
-      {/* 6. PAGE TITLE SECTION */}
-      <section className="flex justify-between items-end mb-2 relative z-10">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">PT Packages</h1>
-          <p className="text-slate-500 text-xs font-semibold max-w-2xl">
-            Create, manage, optimize, and monitor personal training packages, subscriptions, coaching plans, and PT revenue operations.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {["Revenue Analytics", "Package Optimization", "Session Intelligence"].map((tag) => (
-            <span key={tag} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-              {tag}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* 7. KPI ANALYTICS STRIP */}
-      <section className="grid grid-cols-8 gap-4 mb-2 relative z-10">
-        {REVENUE_ANALYTICS.map((item) => (
-          <KPICard key={item.id} item={item} />
-        ))}
-      </section>
-
-      <div className="pt-packages-workspace">
-
-        {/* 8. MAIN WORKSPACE STRUCTURE */}
-        <div className="grid grid-cols-12 gap-8">
-          
-          {/* 9. LEFT PANEL → PACKAGE CATEGORIES & QUICK FILTERS */}
-          <aside className="col-span-2 space-y-8 sticky top-24 h-fit">
-            <div>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Quick Filters</h3>
-              <div className="space-y-1">
-                <button onClick={() => setActiveFilter("active")} className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group ${activeFilter === 'active' ? 'bg-white shadow-md border-indigo-100 ring-1 ring-indigo-50' : 'hover:bg-slate-100'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600"><CheckCircle2 size={14} /></div>
-                    <span className={`text-[11px] font-bold ${activeFilter === 'active' ? 'text-slate-900' : 'text-slate-500'}`}>Active Packages</span>
-                  </div>
-                </button>
-                <button onClick={() => setActiveFilter("inactive")} className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group ${activeFilter === 'inactive' ? 'bg-white shadow-md border-indigo-100 ring-1 ring-indigo-50' : 'hover:bg-slate-100'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded-lg bg-slate-100 text-slate-500"><X size={14} /></div>
-                    <span className={`text-[11px] font-bold ${activeFilter === 'inactive' ? 'text-slate-900' : 'text-slate-500'}`}>Inactive Packages</span>
-                  </div>
-                </button>
-                <button onClick={() => setActiveFilter("all")} className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group ${activeFilter === 'all' ? 'bg-white shadow-md border-indigo-100 ring-1 ring-indigo-50' : 'hover:bg-slate-100'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600"><LayoutGrid size={14} /></div>
-                    <span className={`text-[11px] font-bold ${activeFilter === 'all' ? 'text-slate-900' : 'text-slate-500'}`}>All Packages</span>
-                  </div>
-                </button>
+    <div className="min-h-full bg-[#FAFBFD] p-5 text-slate-900 font-sans">
+      <div className="members-shell max-w-7xl mx-auto">
+        {/* HEADER */}
+        <header className="pb-3 border-b border-slate-200/80 mb-3 text-left">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-xs">
+                <Dumbbell size={18} />
               </div>
-            </div>
-
-            <div>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Categories</h3>
-              <div className="space-y-2">
-                {PT_PACKAGE_CATEGORIES.map((cat) => (
-                  <label key={cat} className="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                    <span className="text-xs font-bold text-slate-500 group-hover:text-slate-900 transition-colors">{cat}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Duration</h3>
-              <div className="space-y-2">
-                {DURATION_FILTERS.map((dur) => (
-                  <label key={dur} className="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                    <span className="text-xs font-bold text-slate-500 group-hover:text-slate-900 transition-colors">{dur}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          {/* 10. CENTER WORKSPACE → PT PACKAGE GRID / TABLE */}
-          <section className="col-span-7 space-y-6">
-            <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex gap-1">
-                <button 
-                  onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                  <LayoutGrid size={18} />
-                </button>
-                <button 
-                  onClick={() => setViewMode("table")}
-                  className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                  <List size={18} />
-                </button>
-              </div>
-              <div className="flex items-center gap-4">
-                <p className="text-xs font-bold text-slate-400">Showing {filteredPackages.length} packages</p>
-                <div className="h-4 w-px bg-slate-200" />
-                <button className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors">
-                  <Filter size={16} />
-                  Filters
-                </button>
-              </div>
-            </div>
-
-            {filteredPackages.length === 0 ? (
-              <div className="bg-white rounded-[40px] border border-slate-200 border-dashed p-20 flex flex-col items-center text-center">
-                <div className="w-24 h-24 bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-300 mb-8">
-                  <Tag size={48} />
-                </div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">No PT packages created yet</h3>
-                <p className="text-slate-500 font-medium max-w-sm mb-8">
-                  Personal training packages and coaching plans will appear here once you create them.
+              <div>
+                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Personal Training Packages</h1>
+                <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live PT Coaching Configurations
                 </p>
-                <button 
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="px-8 py-4 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center gap-2"
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Segmented Control */}
+              <div className="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/20 gap-1">
+                <button
+                  onClick={() => setView("packages")}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer",
+                    view === "packages"
+                      ? "bg-slate-950 text-white shadow-xs"
+                      : "bg-white text-slate-500 hover:text-slate-800 shadow-xs border border-slate-200/40"
+                  )}
                 >
-                  <Plus size={16} />
-                  Create First PT Package
+                  Packages
+                </button>
+                <button
+                  onClick={() => setView("analytics")}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200 cursor-pointer",
+                    view === "analytics"
+                      ? "bg-slate-950 text-white shadow-xs"
+                      : "bg-white text-slate-500 hover:text-slate-800 shadow-xs border border-slate-200/40"
+                  )}
+                >
+                  Analytics
                 </button>
               </div>
-            ) : viewMode === "grid" ? (
-              <div className="grid grid-cols-2 gap-6">
-                <AnimatePresence mode="popLayout">
-                  {filteredPackages.map((pkg) => (
-                    <PackageCard 
-                      key={pkg.id} 
-                      pkg={pkg} 
-                      onClick={handlePackageClick} 
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Package</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Duration</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Price</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Clients</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredPackages.map((pkg) => (
-                      <tr key={pkg.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => handlePackageClick(pkg)}>
-                        <td className="px-6 py-5">
-                          <p className="text-sm font-black text-slate-900 leading-tight">{pkg.name}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{pkg.type}</p>
-                        </td>
-                        <td className="px-6 py-5">
-                          <p className="text-sm font-bold text-slate-700">{pkg.duration}</p>
-                          <p className="text-[10px] font-bold text-slate-400">{pkg.sessions} Sessions</p>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="text-sm font-black text-slate-900">{pkg.price}</span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="text-sm font-black text-slate-900">{pkg.activeClients}</span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                            pkg.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {pkg.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-5 text-right">
-                          <button className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 transition-colors">
-                            <MoreHorizontal size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+
+              <button
+                onClick={() => {
+                  setEditingPackage(null);
+                  setIsCreateModalOpen(true);
+                }}
+                className="h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                Create PT Package
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* OVERVIEW STAT CARDS (REAL DATA ONLY) */}
+        {view === "packages" && (
+          <section className="grid grid-cols-4 gap-4 mt-1 mb-4">
+            <KPICard
+              label="Active Packages"
+              value={totalPackages.toString()}
+              subtext={totalPackages === 0 ? "No packages configured" : `${activePackages} active packages`}
+              icon={Package}
+              tone="indigo"
+            />
+            <KPICard
+              label="Clients Enrolled"
+              value={totalClients.toString()}
+              subtext={totalClients === 0 ? "0 active PT subscriptions" : "Across active coaching tiers"}
+              icon={Users}
+              tone="emerald"
+            />
+            <KPICard
+              label="Total PT Revenue"
+              value={formatCurrency(totalRevenue)}
+              subtext={totalPackages === 0 ? "No active earnings" : `Avg. ${formatCurrency(avgPackagePrice)} / package`}
+              icon={IndianRupee}
+              tone="blue"
+            />
+            <KPICard
+              label="Sessions Configured"
+              value={totalSessions.toString()}
+              subtext={totalSessions === 0 ? "0 sessions in catalog" : "Total 1-on-1 session pool"}
+              icon={Clock}
+              tone="amber"
+            />
           </section>
+        )}
 
-          {/* 14. RIGHT PANEL → PT REVENUE & AI INSIGHTS */}
-          <aside className="col-span-3 space-y-8 sticky top-24 h-fit">
-            <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-                  <BrainCircuit size={20} />
-                </div>
-              </div>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">AI Monetization Insights</h3>
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="w-1 h-10 bg-emerald-400 rounded-full" />
-                  <div>
-                    <p className="text-xs font-black text-slate-900 leading-snug">3-month PT plans converting 24% better than monthly plans.</p>
-                    <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-2 hover:underline">View Analytics</button>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-1 h-10 bg-amber-400 rounded-full" />
-                  <div>
-                    <p className="text-xs font-black text-slate-900 leading-snug">Premium coaching package demand rising in evening shifts.</p>
-                    <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-2 hover:underline">Adjust Trainer Load</button>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="members-workspace">
+          <AnimatePresence mode="wait">
+            {/* ─── PACKAGES VIEW ─── */}
+            {view === "packages" && (
+              <motion.div
+                key="packages"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col"
+              >
+                {/* Sentinel for sticky detection */}
+                <div ref={sentinelRef} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", pointerEvents: "none" }} />
 
-            <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Live PT Sales Status</h3>
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><CreditCard size={16} /></div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900 leading-none mb-1">Monthly Starter</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Purchased 2m ago</p>
+                {/* UNIFIED STICKY CONTROL PANEL */}
+                <div 
+                  className={cn(
+                    "bg-white border border-slate-200/90 shadow-xs flex flex-col transition-all duration-200 mb-4",
+                    isHeaderStuck ? "rounded-none border-x-0 border-t-0" : "rounded-2xl"
+                  )}
+                  style={{ position: "sticky", top: "-1px", zIndex: 20 }}
+                >
+                  {/* SEARCH & FILTERS ROW */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 pt-3.5 pb-2.5">
+                    <div className="relative flex-1 max-w-md">
+                      <Search 
+                        size={15} 
+                        className="absolute left-3.5 text-slate-400 pointer-events-none" 
+                        style={{ top: "50%", transform: "translateY(-50%)" }}
+                      />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search packages by name, category, or coach tier..."
+                        className="w-full h-10 pl-10 pr-9 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-slate-300 focus:bg-white transition-all placeholder:text-slate-400"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-3 w-5 h-5 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center border-0 p-0 outline-none cursor-pointer"
+                          style={{ top: "50%", transform: "translateY(-50%)" }}
+                        >
+                          <X size={11} strokeWidth={2.5} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {FILTER_OPTIONS.map((filter) => (
+                          <button
+                            key={filter}
+                            onClick={() => setActiveFilter(filter)}
+                            className={cn(
+                              "h-9 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all duration-200 flex items-center justify-center cursor-pointer",
+                              activeFilter === filter
+                                ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                                : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            )}
+                          >
+                            {filter}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* View Mode Switcher */}
+                      <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200/60 ml-2">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("list")}
+                          className={cn(
+                            "p-1.5 rounded-lg transition-colors cursor-pointer",
+                            viewMode === "list" ? "bg-white text-slate-900 shadow-xs" : "text-slate-400 hover:text-slate-700"
+                          )}
+                          title="List view"
+                        >
+                          <List size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("grid")}
+                          className={cn(
+                            "p-1.5 rounded-lg transition-colors cursor-pointer",
+                            viewMode === "grid" ? "bg-white text-slate-900 shadow-xs" : "text-slate-400 hover:text-slate-700"
+                          )}
+                          title="Grid view"
+                        >
+                          <LayoutGrid size={15} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-emerald-600">+₹15,000</span>
+
+                  {/* META SUB-BAR */}
+                  <div className="border-t border-slate-100 mx-4" />
+                  <div className="flex items-center justify-between px-4 py-2 bg-white rounded-b-2xl">
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      Showing <strong className="text-slate-700 font-bold">{filteredPackages.length}</strong> of {totalPackages} configured packages
+                    </p>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Catalog Status: {totalPackages > 0 ? "Active" : "Ready for Setup"}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><CreditCard size={16} /></div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900 leading-none mb-1">Transformation Pro</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Renewed 15m ago</p>
+
+                {/* CONTENT AREA */}
+                {filteredPackages.length === 0 ? (
+                  <div className="w-full my-6 py-14 px-8 bg-gradient-to-b from-slate-50/70 via-slate-50/45 to-white border-2 border-dashed border-slate-200 rounded-3xl shadow-xs flex flex-col items-center text-center relative overflow-hidden">
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center mb-4 shadow-xs">
+                      <Package size={26} strokeWidth={2} />
+                    </div>
+
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight leading-tight">
+                      {activeFilter === "All" && !searchQuery ? "No PT Packages Configured Yet" : "No Matching PT Packages Found"}
+                    </h3>
+
+                    <p className="text-xs text-slate-500 font-medium mt-1.5 max-w-md leading-relaxed">
+                      {activeFilter === "All" && !searchQuery
+                        ? "Create structured personal training packages with customized session allocations, coach tiers, and pricing models to start onboarding clients."
+                        : "Try adjusting your search query or reset the active filter options."}
+                    </p>
+
+                    {activeFilter === "All" && !searchQuery ? (
+                      <button
+                        onClick={() => {
+                          setEditingPackage(null);
+                          setIsCreateModalOpen(true);
+                        }}
+                        className="mt-5 h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+                      >
+                        <Plus size={15} strokeWidth={2.5} />
+                        Create First PT Package
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSearchQuery("");
+                          setActiveFilter("All");
+                        }}
+                        className="mt-5 h-10 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                ) : viewMode === "list" ? (
+                  <div className="space-y-3">
+                    <LayoutGroup>
+                      <AnimatePresence mode="popLayout">
+                        {filteredPackages.map((pkg, i) => (
+                          <PTPackageRow
+                            key={pkg.id}
+                            pkg={pkg}
+                            index={i}
+                            onViewDetails={setDetailsPackage}
+                            onEdit={(item) => {
+                              setEditingPackage(item);
+                              setIsCreateModalOpen(true);
+                            }}
+                            onDelete={setDeletePackage}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </LayoutGroup>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <LayoutGroup>
+                      <AnimatePresence mode="popLayout">
+                        {filteredPackages.map((pkg) => (
+                          <PTPackageGridCard
+                            key={pkg.id}
+                            pkg={pkg}
+                            onViewDetails={setDetailsPackage}
+                            onEdit={(item) => {
+                              setEditingPackage(item);
+                              setIsCreateModalOpen(true);
+                            }}
+                            onDelete={setDeletePackage}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </LayoutGroup>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* ─── REAL ANALYTICS VIEW ─── */}
+            {view === "analytics" && (
+              <motion.div
+                key="analytics"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-5"
+              >
+                {packages.length === 0 ? (
+                  <div className="p-12 bg-white rounded-3xl border border-slate-200 text-center flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
+                      <BarChart3 size={24} />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-800">No Analytics Data Available</h3>
+                    <p className="text-xs text-slate-400 max-w-sm mt-1">
+                      Create personal training packages and enroll clients to see real revenue distribution, session pools, and coach allocations.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setEditingPackage(null);
+                        setIsCreateModalOpen(true);
+                      }}
+                      className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-800 transition-colors"
+                    >
+                      Create Package
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-5">
+                    {/* Category Breakdown */}
+                    <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
+                      <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-4">
+                        Packages by Category
+                      </h3>
+                      <div className="space-y-3.5">
+                        {PT_PACKAGE_CATEGORIES.map((cat) => {
+                          const catPackages = packages.filter((p) => p.category?.toLowerCase() === cat.toLowerCase());
+                          const pct = packages.length > 0 ? Math.round((catPackages.length / packages.length) * 100) : 0;
+                          return (
+                            <div key={cat}>
+                              <div className="flex items-center justify-between mb-1 text-xs">
+                                <span className="font-semibold text-slate-700">{cat}</span>
+                                <span className="font-bold text-slate-900">{catPackages.length} ({pct}%)</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-indigo-600 rounded-full transition-all duration-300"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Revenue Contribution */}
+                    <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs">
+                      <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-4">
+                        Revenue Contribution by Package
+                      </h3>
+                      <div className="space-y-3.5">
+                        {packages.map((pkg) => {
+                          const pkgRev = (pkg.price || 0) * (pkg.activeClients || 0);
+                          const revPct = totalRevenue > 0 ? Math.round((pkgRev / totalRevenue) * 100) : 0;
+                          return (
+                            <div key={pkg.id}>
+                              <div className="flex items-center justify-between mb-1 text-xs">
+                                <span className="font-semibold text-slate-700 truncate max-w-[200px]">{pkg.name}</span>
+                                <span className="font-bold text-slate-900">{formatCurrency(pkgRev)} ({revPct}%)</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                  style={{ width: `${revPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-emerald-600">+₹85,000</span>
-                </div>
-              </div>
-              <button className="w-full mt-6 py-4 bg-slate-50 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-100 transition-colors">
-                View All Transactions
-              </button>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-8 rounded-[40px] text-white relative overflow-hidden shadow-2xl shadow-indigo-100">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl -mr-16 -mt-16" />
-              <Percent className="w-10 h-10 text-white/20 mb-6" />
-              <h4 className="text-xl font-black tracking-tight mb-2">Discount & Offer Engine</h4>
-              <p className="text-indigo-100 text-[11px] font-medium leading-relaxed mb-6">Create promotional codes, seasonal offers, and loyalty discounts to boost conversions.</p>
-              <button className="w-full bg-white text-indigo-600 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors shadow-xl">
-                Manage Discounts
-              </button>
-            </div>
-          </aside>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      <PackageDrawer 
-        pkg={selectedPackage} 
-        isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)} 
+      {/* MODALS */}
+      <PackageDetailsModal
+        pkg={detailsPackage}
+        isOpen={Boolean(detailsPackage)}
+        onClose={() => setDetailsPackage(null)}
+        onEdit={(pkg) => {
+          setEditingPackage(pkg);
+          setIsCreateModalOpen(true);
+        }}
+        onDelete={setDeletePackage}
       />
 
-      <CreatePackageModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
+      <CreatePackageModal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingPackage(null);
+        }}
+        onSave={handleSavePackage}
+        editingPackage={editingPackage}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={Boolean(deletePackage)}
+        pkg={deletePackage}
+        onClose={() => setDeletePackage(null)}
+        onConfirm={handleDeletePackage}
       />
     </div>
   );
@@ -964,8 +1629,13 @@ export default function PTPackages() {
 export const mountPTPackages = () => {
   const container = document.querySelector('[data-stage="pt-packages"]');
   if (!container) return null;
-  
+
   const root = createRoot(container);
-  root.render(<><PTPackages /><BrandFooter /></>);
+  root.render(
+    <ErrorBoundary>
+      <PTPackages />
+      <BrandFooter />
+    </ErrorBoundary>
+  );
   return root;
 };

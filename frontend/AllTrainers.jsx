@@ -39,12 +39,16 @@ import {
   Camera,
   ArrowRight,
   Check,
-  Sparkles
+  Sparkles,
+  ChevronDown,
+  Dumbbell,
+  CalendarClock,
+  IndianRupee
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─────────────────────────────────────────
-// CONSTANTS & MOCK DATA
+// CONSTANTS
 // ─────────────────────────────────────────
 
 const SPECIALIZATIONS = [
@@ -57,210 +61,288 @@ const TRAINER_TYPES = [
 
 const BRANCHES = ["Main Branch", "Downtown", "North Gym", "East Side"];
 
-const MOCK_TRAINERS = [
-  {
-    id: "TR-101",
-    name: "Ankit Kumar",
-    specialization: "Strength & Conditioning",
-    type: "Personal Trainer",
-    branch: "Main Branch",
-    experience: "Senior",
-    status: "active", // active, busy, off-shift, leave
-    availability: "Available Now",
-    rating: 4.9,
-    activeClients: 12,
-    sessionsToday: 5,
-    attendanceRate: 98,
-    revenue: 85000,
-    email: "ankit.k@gymdeck.com",
-    phone: "+91 98765 43210",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ankit",
-    certifications: ["NSCA-CPT", "Precision Nutrition Level 1"],
-    shift: "06:00 - 14:00"
-  },
-  {
-    id: "TR-102",
-    name: "Sneha Patel",
-    specialization: "Yoga & Mindfulness",
-    type: "Yoga Coach",
-    branch: "Downtown",
-    experience: "Mid-Level",
-    status: "busy",
-    availability: "In Session",
-    rating: 4.8,
-    activeClients: 8,
-    sessionsToday: 3,
-    attendanceRate: 95,
-    revenue: 42000,
-    email: "sneha.p@gymdeck.com",
-    phone: "+91 98111 22233",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sneha",
-    certifications: ["RYT 500", "Holistic Nutrition Specialist"],
-    shift: "07:30 - 15:30"
-  },
-  {
-    id: "TR-103",
-    name: "Manav Rao",
-    specialization: "CrossFit & HIIT",
-    type: "Group Instructor",
-    branch: "Main Branch",
-    experience: "Senior",
-    status: "active",
-    availability: "Available Now",
-    rating: 4.7,
-    activeClients: 15,
-    sessionsToday: 6,
-    attendanceRate: 92,
-    revenue: 96000,
-    email: "manav.r@gymdeck.com",
-    phone: "+91 99000 12345",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Manav",
-    certifications: ["CrossFit Level 2", "Olympic Weightlifting"],
-    shift: "13:00 - 21:00"
-  },
-  {
-    id: "TR-104",
-    name: "Vikram Shah",
-    specialization: "Rehabilitation",
-    type: "Personal Trainer",
-    branch: "North Gym",
-    experience: "Senior",
-    status: "off-shift",
-    availability: "Off Duty",
-    rating: 4.9,
-    activeClients: 6,
-    sessionsToday: 0,
-    attendanceRate: 100,
-    revenue: 55000,
-    email: "vikram.s@gymdeck.com",
-    phone: "+91 98450 67890",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Vikram",
-    certifications: ["DPT", "NASM-CES"],
-    shift: "09:00 - 17:00"
-  },
-  {
-    id: "TR-105",
-    name: "Priya Nair",
-    specialization: "Nutrition & Fat Loss",
-    type: "Nutritionist",
-    branch: "East Side",
-    experience: "Mid-Level",
-    status: "leave",
-    availability: "On Leave",
-    rating: 4.6,
-    activeClients: 22,
-    sessionsToday: 0,
-    attendanceRate: 88,
-    revenue: 38000,
-    email: "priya.n@gymdeck.com",
-    phone: "+91 91234 56789",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Priya",
-    certifications: ["Certified Sports Nutritionist", "NASM-CPT"],
-    shift: "10:00 - 18:00"
-  }
-];
-
 // ─────────────────────────────────────────
 // COMPONENTS
 // ─────────────────────────────────────────
 
-const KPICard = ({ label, value, trend, icon: Icon, tone }) => {
+const KPICard = ({ label, value, trend, icon: Icon, tone, iconFill }) => {
   const tones = {
-    blue: "bg-blue-50 text-blue-700 border-blue-100",
-    emerald: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    amber: "bg-amber-50 text-amber-700 border-amber-100",
-    rose: "bg-rose-50 text-rose-700 border-rose-100",
-    indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-    slate: "bg-slate-50 text-slate-700 border-slate-100"
+    indigo: {
+      icon: "text-indigo-600 bg-indigo-50 border-indigo-100",
+      trend: "text-emerald-700 bg-emerald-50 border-emerald-100/80"
+    },
+    emerald: {
+      icon: "text-emerald-600 bg-emerald-50 border-emerald-100",
+      trend: "text-emerald-700 bg-emerald-50 border-emerald-100/80"
+    },
+    blue: {
+      icon: "text-blue-600 bg-blue-50 border-blue-100",
+      trend: "text-blue-700 bg-blue-50 border-blue-100/80"
+    },
+    amber: {
+      icon: "text-amber-600 bg-amber-50 border-amber-100",
+      trend: "text-amber-700 bg-amber-50 border-amber-100/80"
+    },
+    rose: {
+      icon: "text-rose-600 bg-rose-50 border-rose-100",
+      trend: "text-rose-700 bg-rose-50 border-rose-100/80"
+    }
   };
 
+  const currentTone = tones[tone] || tones.indigo;
+
   return (
-    <div className={`p-5 rounded-2xl border ${tones[tone]} flex flex-col gap-3 transition-all hover:shadow-sm`}>
-      <div className="flex items-center justify-between">
-        <div className={`p-2 rounded-lg bg-white/60`}>
-          <Icon size={20} />
+    <div className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-xl p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-sm transition-all duration-200 flex flex-col justify-between gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+          {label}
+        </span>
+        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${currentTone.icon}`}>
+          <Icon size={15} strokeWidth={2.2} className={iconFill ? "fill-amber-400 text-amber-500" : ""} />
         </div>
+      </div>
+      <div className="flex items-baseline justify-between gap-2 pt-0.5">
+        <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+          {value}
+        </h3>
         {trend && (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full bg-white/60`}>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${currentTone.trend}`}>
             {trend}
           </span>
         )}
       </div>
-      <div>
-        <p className="text-xs font-medium opacity-80 uppercase tracking-wider">{label}</p>
-        <h3 className="text-2xl font-bold mt-1">{value}</h3>
-      </div>
+    </div>
+  );
+};
+
+const CustomDropdown = ({ label, value, options, onChange, icon: Icon }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find((opt) => 
+    typeof opt === "string" ? opt === value : opt.value === value
+  );
+
+  const displayLabel = selectedOption 
+    ? (typeof selectedOption === "string" ? selectedOption : selectedOption.label)
+    : label;
+
+  const isSelected = value && value !== "All" && value !== "All Groups" && value !== "All Branches" && value !== "All Specializations" && value !== "All Experience";
+
+  return (
+    <div className="relative inline-block text-left" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`group inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 border cursor-pointer select-none ${
+          isSelected
+            ? "bg-indigo-50/80 border-indigo-300 text-indigo-900 shadow-xs ring-1 ring-indigo-200/50"
+            : isOpen
+            ? "bg-white border-slate-300 text-slate-900 shadow-sm ring-2 ring-indigo-500/10"
+            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50/80 hover:border-slate-300 shadow-xs"
+        }`}
+      >
+        {Icon && (
+          <Icon 
+            size={13} 
+            className={`shrink-0 transition-colors ${
+              isSelected ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
+            }`} 
+          />
+        )}
+        <span className="truncate max-w-[130px]">{displayLabel}</span>
+        <ChevronDown 
+          size={13} 
+          className={`shrink-0 transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
+          }`} 
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 2, scale: 0.98 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute left-0 mt-1.5 min-w-[210px] max-h-72 overflow-y-auto bg-white rounded-xl shadow-xl shadow-slate-900/10 border border-slate-200/90 py-1.5 z-[250] focus:outline-none"
+          >
+            <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+              {label}
+            </div>
+            {options.map((opt) => {
+              const optVal = typeof opt === "string" ? opt : opt.value;
+              const optLabel = typeof opt === "string" ? opt : opt.label;
+              const optCount = typeof opt === "object" ? opt.count : undefined;
+              const optColor = typeof opt === "object" ? opt.color : undefined;
+              const isItemActive = value === optVal;
+
+              return (
+                <button
+                  key={optVal}
+                  type="button"
+                  onClick={() => {
+                    onChange(optVal);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors cursor-pointer text-left ${
+                    isItemActive
+                      ? "bg-indigo-50/70 text-indigo-900 font-bold"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {optColor && (
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${optColor}`} />
+                    )}
+                    <span className="truncate">{optLabel}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    {optCount !== undefined && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        isItemActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                      }`}>
+                        {optCount}
+                      </span>
+                    )}
+                    {isItemActive && (
+                      <Check size={13} className="text-indigo-600 stroke-[2.5]" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 const TrainerCard = ({ trainer, onClick }) => {
   const statusColors = {
-    active: "bg-emerald-500",
-    busy: "bg-amber-500",
-    "off-shift": "bg-slate-400",
-    leave: "bg-rose-500"
+    active: { label: "Active", dot: "bg-emerald-500", pill: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+    busy: { label: "Busy", dot: "bg-amber-500", pill: "bg-amber-50 text-amber-700 border-amber-100" },
+    "off-shift": { label: "Off Duty", dot: "bg-slate-400", pill: "bg-slate-50 text-slate-600 border-slate-200" },
+    leave: { label: "On Leave", dot: "bg-rose-500", pill: "bg-rose-50 text-rose-700 border-rose-100" }
   };
+
+  const statusInfo = statusColors[trainer.status] || statusColors.active;
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 hover:shadow-md transition-all group cursor-pointer"
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="bg-white border border-slate-200/90 rounded-2xl p-5 hover:border-slate-300 hover:shadow-md transition-all duration-200 group cursor-pointer flex flex-col justify-between"
       onClick={() => onClick(trainer)}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="relative">
-          <img src={trainer.image} alt={trainer.name} className="w-16 h-16 rounded-xl bg-slate-100 object-cover" />
-          <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${statusColors[trainer.status]}`} />
+      <div>
+        <div className="flex items-start justify-between mb-3.5">
+          <div className="relative">
+            <img src={trainer.image} alt={trainer.name} className="w-14 h-14 rounded-xl bg-slate-100 object-cover border border-slate-100 shadow-xs" />
+            <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${statusInfo.dot}`} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusInfo.pill}`}>
+              {statusInfo.label}
+            </span>
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick(trainer);
+              }}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              title="More options"
+            >
+              <MoreVertical size={16} />
+            </button>
+          </div>
         </div>
-        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
-          <MoreVertical size={20} />
-        </button>
-      </div>
 
-      <div className="mb-4">
-        <h4 className="text-lg font-bold text-slate-900 leading-tight">{trainer.name}</h4>
-        <p className="text-sm text-slate-500 font-medium">{trainer.specialization}</p>
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-            {trainer.experience}
-          </span>
-          <span className="text-xs text-slate-400 flex items-center gap-1">
-            <MapPin size={12} /> {trainer.branch}
-          </span>
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <h4 className="text-base font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+              {trainer.name}
+            </h4>
+            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/60 uppercase">
+              {trainer.id}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mt-1">{trainer.specialization}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+              {trainer.experience}
+            </span>
+            <span className="text-xs text-slate-400 flex items-center gap-1">
+              <MapPin size={11} className="text-slate-400" /> {trainer.branch}
+            </span>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4 pt-4 border-t border-slate-50">
-        <div>
-          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">PT Clients</p>
-          <p className="text-sm font-bold text-slate-800">{trainer.activeClients}</p>
-        </div>
-        <div>
-          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Sessions Today</p>
-          <p className="text-sm font-bold text-slate-800">{trainer.sessionsToday}</p>
-        </div>
-        <div>
-          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Attendance</p>
-          <p className="text-sm font-bold text-slate-800">{trainer.attendanceRate}%</p>
-        </div>
-        <div>
-          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Rating</p>
-          <div className="flex items-center gap-1">
-            <Star size={12} className="fill-amber-400 text-amber-400" />
-            <span className="text-sm font-bold text-slate-800">{trainer.rating}</span>
+        <div className="grid grid-cols-2 gap-2.5 mb-4 p-3 bg-slate-50/80 rounded-xl border border-slate-100">
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">PT Clients</p>
+            <p className="text-sm font-black text-slate-800 mt-0.5">{trainer.activeClients}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Sessions Today</p>
+            <p className="text-sm font-black text-slate-800 mt-0.5">{trainer.sessionsToday}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Attendance</p>
+            <p className="text-sm font-black text-slate-800 mt-0.5">{trainer.attendanceRate}%</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Rating</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <Star size={12} className="fill-amber-400 text-amber-400" />
+              <span className="text-sm font-black text-slate-800">{trainer.rating}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-2">
-        <button className="flex-1 py-2 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors">
+      <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+        <button 
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(trainer);
+          }}
+          className="flex-1 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all cursor-pointer text-center"
+        >
           View Profile
         </button>
-        <button className="p-2 text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors">
-          <MessageSquare size={16} />
+        <button 
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(trainer);
+          }}
+          className="p-2 text-slate-500 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all cursor-pointer"
+          title="Message trainer"
+        >
+          <MessageSquare size={15} />
         </button>
       </div>
     </motion.div>
@@ -336,42 +418,55 @@ const ProfileDrawer = ({ trainer, isOpen, onClose }) => {
 
               <section className="mb-10">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Award size={16} /> Expertise & Certifications
+                  <Award size={16} /> Expertise &amp; Certifications
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {trainer.certifications.map((cert, i) => (
-                    <span key={i} className="px-3 py-1.5 rounded-lg border border-slate-100 bg-white text-xs font-bold text-slate-700 flex items-center gap-2">
-                      <CheckCircle2 size={12} className="text-emerald-500" /> {cert}
-                    </span>
-                  ))}
+                  {Array.isArray(trainer.certifications) && trainer.certifications.length > 0 ? (
+                    trainer.certifications.map((cert, i) => (
+                      <span key={i} className="px-3 py-1.5 rounded-lg border border-slate-100 bg-white text-xs font-bold text-slate-700 flex items-center gap-2">
+                        <CheckCircle2 size={12} className="text-emerald-500" /> {cert}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">No certifications listed</span>
+                  )}
                 </div>
               </section>
 
               <section className="mb-10">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Clock size={16} /> Shift & Schedule
+                  <Clock size={16} /> Shift &amp; Schedule
                 </h4>
                 <div className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase font-bold">Standard Shift</p>
-                      <p className="text-base font-bold text-slate-800 mt-1">{trainer.shift}</p>
+                      <p className="text-base font-bold text-slate-800 mt-1">{trainer.shift || "Not configured"}</p>
                     </div>
-                    <button className="text-xs font-bold text-indigo-600 hover:underline">Edit Shift</button>
                   </div>
                   <div className="pt-4 border-t border-slate-200">
                     <p className="text-[10px] text-slate-400 uppercase font-bold mb-3">Today's Remaining Sessions</p>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">RV</div>
-                          <div>
-                            <p className="text-xs font-bold">Rohan Verma</p>
-                            <p className="text-[10px] text-slate-400">Strength Training • 17:30</p>
+                      {Array.isArray(trainer.upcomingSessions) && trainer.upcomingSessions.length > 0 ? (
+                        trainer.upcomingSessions.map((session, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                {session.clientName ? session.clientName.slice(0, 2).toUpperCase() : "PT"}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-slate-900">{session.clientName}</p>
+                                <p className="text-[10px] text-slate-400">{session.type || "Training"} • {session.time || "Scheduled"}</p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">Upcoming</span>
                           </div>
+                        ))
+                      ) : (
+                        <div className="p-4 rounded-xl bg-white border border-slate-100 text-center">
+                          <p className="text-xs text-slate-400 font-medium">No sessions scheduled for today</p>
                         </div>
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">Upcoming</span>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -383,15 +478,21 @@ const ProfileDrawer = ({ trainer, isOpen, onClose }) => {
                 </h4>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-slate-900">{trainer.activeClients}</p>
+                    <p className="text-2xl font-bold text-slate-900">{trainer.activeClients ?? 0}</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Total Members</p>
                   </div>
                   <div className="text-center border-x border-slate-100">
-                    <p className="text-2xl font-bold text-slate-900">₹{trainer.revenue / 1000}K</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {Number(trainer.revenue || 0) >= 1000 
+                        ? `₹${(Number(trainer.revenue) / 1000).toFixed(1)}K` 
+                        : `₹${Number(trainer.revenue || 0)}`}
+                    </p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Revenue (MTD)</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-slate-900">{trainer.attendanceRate}%</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {trainer.attendanceRate != null ? `${trainer.attendanceRate}%` : "0%"}
+                    </p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Punctuality</p>
                   </div>
                 </div>
@@ -710,7 +811,7 @@ const CustomDatePicker = ({ value, displayValue, onChange }) => {
 // ADD TRAINER MODAL COMPONENT (100% IDENTICAL UI/UX TO MEMBER FORM MODAL)
 // ─────────────────────────────────────────
 
-const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount = 5 }) => {
+const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount = 0 }) => {
   const [mounted, setMounted] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -731,14 +832,14 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
     bloodGroup: "",
     address: "",
     type: "Personal Trainer",
-    specialization: "Strength & Conditioning",
+    specialization: "",
     branch: "Main Branch",
-    experience: "Senior",
-    shift: "06:00 - 14:00 (Morning Shift)",
-    certifications: ["NSCA-CPT", "CPR / AED"],
+    experience: "Junior",
+    shift: "",
+    certifications: [],
     bio: "",
-    baseSalary: "45000",
-    commission: "20%",
+    baseSalary: "",
+    commission: "",
     agreementType: "Full-Time Staff",
     status: "active"
   });
@@ -1047,7 +1148,24 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
 
   return createPortal(
     <>
-      {/* Unified Modal Backdrop (identical CSS class & transition) */}
+      <style>{`
+        .member-form-page::-webkit-scrollbar {
+          width: 5px !important;
+          display: block !important;
+        }
+        .member-form-page::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        .member-form-page::-webkit-scrollbar-thumb {
+          background: rgba(148, 163, 184, 0.4) !important;
+          border-radius: 9999px !important;
+        }
+        .member-form-page::-webkit-scrollbar-thumb:hover {
+          background: rgba(100, 116, 139, 0.7) !important;
+        }
+      `}</style>
+
+      {/* Unified Modal Backdrop */}
       <div className="member-form-backdrop" onClick={handleClose} />
 
       {/* Unified Sliding Modal Sheet */}
@@ -1057,83 +1175,44 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
         aria-modal="true"
         aria-labelledby="trainer-form-title"
         aria-describedby="trainer-form-copy"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "88vh",
+          maxHeight: "88vh",
+          overflow: "hidden"
+        }}
       >
-        {/* Drawer Handle */}
+        {/* Top Drawer Handle */}
         <div className="drawer-handle" />
 
-        {/* Fixed Close Button at top-right */}
+        {/* Fixed Close Button at top-right of Modal */}
         <button
           className="member-modal-close-btn"
           type="button"
           aria-label="Close modal form"
           onClick={handleClose}
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <X size={18} strokeWidth={2.5} />
         </button>
 
-        {/* Top Interactive Step Navigation Pills */}
-        <div className="flex items-center justify-between px-10 pt-6 pb-2.5 border-b border-slate-100 bg-white/70 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-2 overflow-x-auto py-0.5 scrollbar-none">
-            {[
-              { num: 1, label: "Personal Details" },
-              { num: 2, label: "Profile Photo" },
-              { num: 3, label: "Documents" },
-              { num: 4, label: "Role & Shifts" },
-              { num: 5, label: "Agreement & Pay" }
-            ].map((s) => {
-              const isActive = currentStep === s.num;
-              const isCompleted = currentStep > s.num;
-              return (
-                <button
-                  key={s.num}
-                  type="button"
-                  onClick={() => {
-                    if (s.num <= currentStep || validateStep(currentStep)) {
-                      setCurrentStep(s.num);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-slate-900 text-white shadow-sm"
-                      : isCompleted
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100"
-                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-100/70"
-                  }`}
-                >
-                  <span
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black ${
-                      isActive
-                        ? "bg-white/20 text-white"
-                        : isCompleted
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-200 text-slate-500"
-                    }`}
-                  >
-                    {isCompleted ? <Check size={10} strokeWidth={3.5} /> : s.num}
-                  </span>
-                  <span className="hidden sm:inline">{s.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="text-right text-xs font-black text-slate-400 font-mono pl-3 shrink-0">
-            Step {currentStep} of 5
-          </div>
-        </div>
-
         {/* Sliding Page Container (width: 500% with translateX 0%, -20%, -40%, -60%, -80%) */}
-        <div className="member-form-modal-container">
+        <div 
+          className="member-form-modal-container"
+          style={{ height: "100%", display: "flex" }}
+        >
           {/* ═══════════════════════════════════════
               PAGE 1: REGISTRATION FORM (PERSONAL DETAILS)
               ═══════════════════════════════════════ */}
-          <div className="member-form-page" data-member-form-page="1">
+          <div 
+            className="member-form-page" 
+            data-member-form-page="1"
+            style={{ height: "100%", overflowY: "auto", paddingBottom: "140px", scrollbarWidth: "thin" }}
+          >
             <div className="member-form-top">
               <div>
-                <p className="member-form-kicker">WORKFORCE ONBOARDING</p>
-                <h2 id="trainer-form-title">Add New Trainer</h2>
+                <p className="member-form-kicker">STEP 1 • WORKFORCE ONBOARDING</p>
+                <h2 id="trainer-form-title">Personal &amp; Contact Details</h2>
               </div>
             </div>
             <p id="trainer-form-copy" className="member-form-copy">
@@ -1151,7 +1230,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 <span>Full Name <em>*</em></span>
                 <input
                   type="text"
-                  placeholder="Enter trainer's full name"
+                  placeholder="e.g. Rahul Sharma"
                   value={formData.fullName}
                   onChange={(e) => handleChange("fullName", e.target.value)}
                   style={{
@@ -1166,7 +1245,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
 
               {/* Contact Number */}
               <label className="member-field" data-field-label="Contact Number">
-                <span>Contact Number <em>*</em></span>
+                <span>Primary Mobile Number <em>*</em></span>
                 <input
                   type="tel"
                   placeholder="10-digit mobile number"
@@ -1183,10 +1262,10 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
 
               {/* Alternate Contact */}
               <label className="member-field" data-field-label="Alternate Contact">
-                <span>Emergency Contact</span>
+                <span>Emergency Contact Number</span>
                 <input
                   type="tel"
-                  placeholder="Alternate phone number"
+                  placeholder="Alternate mobile number"
                   value={formData.alternatePhone}
                   onChange={(e) => handleChange("alternatePhone", e.target.value.replace(/\D/g, "").slice(0, 10))}
                 />
@@ -1194,7 +1273,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
 
               {/* Email Address */}
               <label className="member-field" data-field-label="Email Address">
-                <span>Email Address <em>*</em></span>
+                <span>Work / Personal Email <em>*</em></span>
                 <input
                   type="email"
                   placeholder="trainer@gymdeck.com"
@@ -1260,12 +1339,12 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 <span>Residential Address <em>*</em></span>
                 <textarea
                   rows={1}
-                  placeholder="Enter complete residential address"
+                  placeholder="Flat/House No., Street, City, State, PIN"
                   value={formData.address}
                   onChange={(e) => handleChange("address", e.target.value)}
                   required
                   style={{
-                    minHeight: "56px",
+                    minHeight: "48px",
                     resize: "none",
                     borderColor: errors.address ? "#ef4444" : undefined,
                     backgroundColor: errors.address ? "#fff5f5" : undefined
@@ -1275,23 +1354,27 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
               </label>
 
               <div className="member-form-disclaimer member-field-wide">
-                <span><em>*</em> Fields marked with a red star are mandatory.</span>
+                <span><em>*</em> Fields marked with a red star are mandatory for HR records.</span>
               </div>
             </form>
           </div>
 
           {/* ═══════════════════════════════════════
-              PAGE 2: PROFILE PHOTO UPLOAD
+              PAGE 2: PROFILE PHOTO UPLOAD (SPLIT STUDIO LAYOUT)
               ═══════════════════════════════════════ */}
-          <div className="member-form-page" data-member-form-page="2">
+          <div 
+            className="member-form-page" 
+            data-member-form-page="2"
+            style={{ height: "100%", overflowY: "auto", paddingBottom: "140px", scrollbarWidth: "thin" }}
+          >
             <div className="member-form-top">
               <div>
-                <p className="member-form-kicker">Identity Capture</p>
-                <h2 id="photo-upload-title">Capture Trainer Photo</h2>
+                <p className="member-form-kicker">STEP 2 • IDENTITY CAPTURE</p>
+                <h2 id="photo-upload-title">Capture Trainer Portrait</h2>
               </div>
             </div>
             <p className="member-form-copy">
-              Please upload a clear portrait photo of the trainer for credentials verification, digital badge, and member booking card.
+              Upload a clear portrait photo of the trainer for credentials verification, digital badge, and member booking card.
             </p>
 
             <div className="photo-capture-container">
@@ -1316,10 +1399,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                   </div>
                 ) : (
                   <div className="photo-placeholder-icon">
-                    <svg viewBox="0 0 24 24">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
+                    <Camera size={44} strokeWidth={1.8} className="text-slate-400" />
                     <span>Upload Photo</span>
                   </div>
                 )}
@@ -1331,37 +1411,38 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                   hidden
                 />
               </div>
+
               <div className="photo-capture-meta">
-                <p className="photo-capture-recommendation">Recommended: High quality JPG or PNG (square portrait format)</p>
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <button
-                    type="button"
-                    className={`btn-change-photo ${photoPreview ? "is-visible" : ""}`}
-                    onClick={() => photoInputRef.current?.click()}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      style={{ width: "14px", height: "14px" }}
-                    >
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
-                    <span>Change Photo</span>
-                  </button>
-                  {photoPreview && (
+                <p className="photo-capture-recommendation">Recommended: High quality JPG or PNG (Square 1:1, max 5MB)</p>
+                {photoPreview ? (
+                  <div className="flex items-center gap-2 justify-center mt-3">
                     <button
                       type="button"
-                      className="btn-change-photo is-visible !text-rose-600 !border-rose-200 hover:!bg-rose-50"
+                      className="btn-change-photo is-visible cursor-pointer"
+                      onClick={() => photoInputRef.current?.click()}
+                    >
+                      <Camera size={14} />
+                      <span>Change Photo</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-change-photo is-visible cursor-pointer text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
                       onClick={() => setPhotoPreview(null)}
                     >
                       <X size={14} />
                       <span>Remove</span>
                     </button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-change-photo is-visible cursor-pointer mt-2"
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    <Plus size={14} />
+                    <span>Browse Photo</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1369,15 +1450,19 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
           {/* ═══════════════════════════════════════
               PAGE 3: DOCUMENT UPLOAD CENTER
               ═══════════════════════════════════════ */}
-          <div className="member-form-page" data-member-form-page="3">
+          <div 
+            className="member-form-page" 
+            data-member-form-page="3"
+            style={{ height: "100%", overflowY: "auto", paddingBottom: "140px", scrollbarWidth: "thin" }}
+          >
             <div className="member-form-top">
               <div>
-                <p className="member-form-kicker">Document Center</p>
-                <h2 id="doc-upload-title">Upload Trainer Documents</h2>
+                <p className="member-form-kicker">STEP 3 • ACCREDITATION &amp; VERIFICATION</p>
+                <h2 id="doc-upload-title">Upload Verification Documents</h2>
               </div>
             </div>
             <p className="member-form-copy">
-              Trainer profile initiated. Add supporting accreditations and identity proof to complete staff verification.
+              Attach national identity proof, coaching credentials, resume, and background verification to complete onboarding.
             </p>
 
             <div className="doc-upload-grid">
@@ -1393,16 +1478,13 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                   backgroundColor: dragDocType === "aadhaar" ? "#eff6ff" : undefined
                 }}
               >
-                <div className="doc-upload-card-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <path d="M7 15h0M11 15h0M15 15h0M7 11h0M11 11h0M15 11h0" />
-                  </svg>
+                <div className="doc-upload-card-icon" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                  <Shield size={22} strokeWidth={1.8} />
                 </div>
-                <div className="doc-upload-card-content">
+                <div className="doc-upload-card-content flex-1">
                   <strong>Aadhaar / National ID</strong>
                   <span>Government identity proof (front &amp; back)</span>
-                  <div className="doc-upload-card-actions">
+                  <div className="doc-upload-card-actions mt-3">
                     <input
                       ref={aadhaarInputRef}
                       className="doc-upload-input"
@@ -1416,11 +1498,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       type="button"
                       onClick={() => aadhaarInputRef.current?.click()}
                     >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: "14px", height: "14px", marginRight: "6px" }}>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
+                      <Plus size={14} strokeWidth={2.5} style={{ marginRight: "4px" }} />
                       Upload
                     </button>
                     <span className="doc-upload-meta">
@@ -1430,10 +1508,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       <div className="doc-upload-preview">
                         {documents.aadhaar.isPdf ? (
                           <div className="doc-upload-preview-pdf">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="doc-pdf-icon-svg">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                              <polyline points="14 2 14 8 20 8" />
-                            </svg>
+                            <FileText size={16} className="text-red-500" />
                             <span className="doc-pdf-label-tag">PDF</span>
                           </div>
                         ) : (
@@ -1445,10 +1520,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                           aria-label="Remove"
                           onClick={() => removeDoc("aadhaar")}
                         >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M6 6 18 18" />
-                            <path d="M18 6 6 18" />
-                          </svg>
+                          <X size={14} />
                         </button>
                       </div>
                     )}
@@ -1471,10 +1543,10 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 <div className="doc-upload-card-icon" style={{ background: "#ecfdf5", color: "#059669" }}>
                   <Award size={22} strokeWidth={1.8} />
                 </div>
-                <div className="doc-upload-card-content">
+                <div className="doc-upload-card-content flex-1">
                   <strong>Fitness Certification</strong>
                   <span>NSCA, NASM, ACE, or CrossFit certificate</span>
-                  <div className="doc-upload-card-actions">
+                  <div className="doc-upload-card-actions mt-3">
                     <input
                       ref={certInputRef}
                       className="doc-upload-input"
@@ -1488,11 +1560,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       type="button"
                       onClick={() => certInputRef.current?.click()}
                     >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: "14px", height: "14px", marginRight: "6px" }}>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
+                      <Plus size={14} strokeWidth={2.5} style={{ marginRight: "4px" }} />
                       Upload
                     </button>
                     <span className="doc-upload-meta">
@@ -1502,10 +1570,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       <div className="doc-upload-preview">
                         {documents.cert.isPdf ? (
                           <div className="doc-upload-preview-pdf">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="doc-pdf-icon-svg">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                              <polyline points="14 2 14 8 20 8" />
-                            </svg>
+                            <FileText size={16} className="text-red-500" />
                             <span className="doc-pdf-label-tag">PDF</span>
                           </div>
                         ) : (
@@ -1517,10 +1582,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                           aria-label="Remove"
                           onClick={() => removeDoc("cert")}
                         >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M6 6 18 18" />
-                            <path d="M18 6 6 18" />
-                          </svg>
+                          <X size={14} />
                         </button>
                       </div>
                     )}
@@ -1543,10 +1605,10 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 <div className="doc-upload-card-icon" style={{ background: "#fef3c7", color: "#d97706" }}>
                   <FileText size={22} strokeWidth={1.8} />
                 </div>
-                <div className="doc-upload-card-content">
+                <div className="doc-upload-card-content flex-1">
                   <strong>Trainer Resume / CV</strong>
                   <span>Coaching background, experience records &amp; bio</span>
-                  <div className="doc-upload-card-actions">
+                  <div className="doc-upload-card-actions mt-3">
                     <input
                       ref={resumeInputRef}
                       className="doc-upload-input"
@@ -1560,11 +1622,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       type="button"
                       onClick={() => resumeInputRef.current?.click()}
                     >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: "14px", height: "14px", marginRight: "6px" }}>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
+                      <Plus size={14} strokeWidth={2.5} style={{ marginRight: "4px" }} />
                       Upload
                     </button>
                     <span className="doc-upload-meta">
@@ -1574,10 +1632,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       <div className="doc-upload-preview">
                         {documents.resume.isPdf ? (
                           <div className="doc-upload-preview-pdf">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="doc-pdf-icon-svg">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                              <polyline points="14 2 14 8 20 8" />
-                            </svg>
+                            <FileText size={16} className="text-red-500" />
                             <span className="doc-pdf-label-tag">PDF</span>
                           </div>
                         ) : (
@@ -1589,10 +1644,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                           aria-label="Remove"
                           onClick={() => removeDoc("resume")}
                         >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M6 6 18 18" />
-                            <path d="M18 6 6 18" />
-                          </svg>
+                          <X size={14} />
                         </button>
                       </div>
                     )}
@@ -1600,7 +1652,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 </div>
               </div>
 
-              {/* Police Clearance / Medical Background */}
+              {/* Police Clearance / Background */}
               <div
                 className="doc-upload-card doc-upload-card-others transition-all"
                 data-doc-type="clearance"
@@ -1612,13 +1664,13 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                   backgroundColor: dragDocType === "clearance" ? "#f1f5f9" : undefined
                 }}
               >
-                <div className="doc-upload-card-icon">
+                <div className="doc-upload-card-icon" style={{ background: "#f1f5f9", color: "#64748b" }}>
                   <Shield size={22} strokeWidth={1.8} />
                 </div>
-                <div className="doc-upload-card-content">
+                <div className="doc-upload-card-content flex-1">
                   <strong>Police Clearance / Medical</strong>
                   <span>Background check verification &amp; health certificate</span>
-                  <div className="doc-upload-card-actions">
+                  <div className="doc-upload-card-actions mt-3">
                     <input
                       ref={clearanceInputRef}
                       className="doc-upload-input"
@@ -1632,11 +1684,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       type="button"
                       onClick={() => clearanceInputRef.current?.click()}
                     >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: "14px", height: "14px", marginRight: "6px" }}>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
+                      <Plus size={14} strokeWidth={2.5} style={{ marginRight: "4px" }} />
                       Upload
                     </button>
                     <span className="doc-upload-meta">
@@ -1646,10 +1694,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                       <div className="doc-upload-preview">
                         {documents.clearance.isPdf ? (
                           <div className="doc-upload-preview-pdf">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="doc-pdf-icon-svg">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                              <polyline points="14 2 14 8 20 8" />
-                            </svg>
+                            <FileText size={16} className="text-red-500" />
                             <span className="doc-pdf-label-tag">PDF</span>
                           </div>
                         ) : (
@@ -1661,10 +1706,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                           aria-label="Remove"
                           onClick={() => removeDoc("clearance")}
                         >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M6 6 18 18" />
-                            <path d="M18 6 6 18" />
-                          </svg>
+                          <X size={14} />
                         </button>
                       </div>
                     )}
@@ -1673,7 +1715,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
               </div>
             </div>
 
-            <div className="mt-4 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center gap-3 text-xs text-slate-500 font-medium">
+            <div className="mt-5 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center gap-3 text-xs text-slate-500 font-medium">
               <Sparkles size={16} className="text-indigo-600 shrink-0" />
               <span>
                 Supporting credentials can also be uploaded, verified, or updated anytime directly from the trainer's profile drawer.
@@ -1684,18 +1726,22 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
           {/* ═══════════════════════════════════════
               PAGE 4: STAFF ALLOCATION & OPERATIONAL SHIFTS
               ═══════════════════════════════════════ */}
-          <div className="member-form-page" data-member-form-page="4">
+          <div 
+            className="member-form-page" 
+            data-member-form-page="4"
+            style={{ height: "100%", overflowY: "auto", paddingBottom: "140px", scrollbarWidth: "thin" }}
+          >
             <div className="member-form-top">
               <div>
-                <p className="member-form-kicker">Role &amp; Schedule</p>
+                <p className="member-form-kicker">STEP 4 • ROLE &amp; SCHEDULE</p>
                 <h2 id="plan-selection-title">Staff Allocation &amp; Shifts</h2>
               </div>
             </div>
             <p className="member-form-copy">
-              Assign trainer specialization, facility branch, coaching level, and weekly operational shift allocation.
+              Assign trainer specialization, coaching level, and weekly operational shift allocation.
             </p>
 
-            <div className="member-form-grid">
+            <div className="member-form-grid" style={{ marginTop: "16px", gap: "16px 20px" }}>
               {/* Role */}
               <div className="member-field">
                 <span>Staff Category / Role <em>*</em></span>
@@ -1723,16 +1769,6 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 />
               </div>
 
-              {/* Branch */}
-              <div className="member-field">
-                <span>Assigned Facility / Branch <em>*</em></span>
-                <CustomSelect
-                  value={formData.branch}
-                  onChange={(val) => handleChange("branch", val)}
-                  options={BRANCHES}
-                />
-              </div>
-
               {/* Experience Tier */}
               <div className="member-field">
                 <span>Experience Level <em>*</em></span>
@@ -1748,7 +1784,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 />
               </div>
 
-              {/* Shift Schedule */}
+              {/* Shift Schedule - spans 2 cols */}
               <div className="member-field member-field-span-2">
                 <span>Operational Shift Schedule <em>*</em></span>
                 <CustomSelect
@@ -1765,7 +1801,19 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 />
               </div>
 
-              {/* Certifications Badges Selection */}
+              {/* Bio & Philosophy - spans 1 col */}
+              <label className="member-field">
+                <span>Bio &amp; Philosophy</span>
+                <textarea
+                  rows={1}
+                  placeholder="Coaching philosophy & background..."
+                  value={formData.bio}
+                  onChange={(e) => handleChange("bio", e.target.value)}
+                  style={{ minHeight: "48px", resize: "none" }}
+                />
+              </label>
+
+              {/* Certifications Badges Selection - spans all 3 cols */}
               <div className="member-field member-field-wide">
                 <span className="flex items-center justify-between">
                   <span>Professional Certifications &amp; Accreditations</span>
@@ -1773,21 +1821,16 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                     {formData.certifications.length} selected
                   </span>
                 </span>
-                <p className="text-xs text-slate-500 font-medium mt-1 mb-3">
-                  Select accreditations to display on the trainer's profile card and client booking radar:
-                </p>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
                   {[
                     "NSCA-CPT",
                     "NASM-CPT",
                     "ACE-CPT",
                     "CrossFit Level 2",
                     "RYT 500",
-                    "Precision Nutrition Level 1",
+                    "Precision Nutrition",
                     "ISSA Certified",
-                    "CPR / AED",
-                    "Olympic Weightlifting",
-                    "DPT"
+                    "CPR / AED"
                   ].map((cert) => {
                     const isSelected = formData.certifications.includes(cert);
                     return (
@@ -1795,13 +1838,13 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                         key={cert}
                         type="button"
                         onClick={() => toggleCertification(cert)}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1 cursor-pointer ${
                           isSelected
-                            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
                             : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
-                        {isSelected ? <Check size={13} strokeWidth={3} /> : <Plus size={13} strokeWidth={2.5} />}
+                        {isSelected ? <Check size={11} strokeWidth={3} /> : <Plus size={11} strokeWidth={2.5} />}
                         {cert}
                       </button>
                     );
@@ -1812,7 +1855,7 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Add custom certification (e.g. Kettlebell Specialist)..."
+                    placeholder="Add custom certification..."
                     value={customCert}
                     onChange={(e) => setCustomCert(e.target.value)}
                     onKeyDown={(e) => {
@@ -1821,228 +1864,164 @@ const AddTrainerModal = ({ isOpen, onClose, onTrainerAdded, totalTrainersCount =
                         addCustomCertification();
                       }
                     }}
-                    className="flex-1 !min-h-[46px] !rounded-xl"
+                    className="flex-1 !min-h-[38px] !rounded-xl text-xs"
                   />
                   <button
                     type="button"
                     onClick={addCustomCertification}
-                    className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+                    className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shrink-0"
                   >
-                    Add Badge
+                    Add
                   </button>
                 </div>
               </div>
-
-              {/* Bio & Philosophy */}
-              <label className="member-field member-field-wide">
-                <span>Professional Bio &amp; Coaching Philosophy</span>
-                <textarea
-                  rows={2}
-                  placeholder="Highlight certifications background, coaching philosophy, and athletic milestones..."
-                  value={formData.bio}
-                  onChange={(e) => handleChange("bio", e.target.value)}
-                  style={{ minHeight: "72px", resize: "none" }}
-                />
-              </label>
             </div>
           </div>
 
           {/* ═══════════════════════════════════════
-              PAGE 5: COMPENSATION & CONTRACT SUMMARY (CHECKOUT THEME)
+              PAGE 5: COMPENSATION & CONTRACT AGREEMENT
               ═══════════════════════════════════════ */}
-          <div className="member-form-page" data-member-form-page="5">
+          <div 
+            className="member-form-page" 
+            data-member-form-page="5"
+            style={{ height: "100%", overflowY: "auto", paddingBottom: "140px", scrollbarWidth: "thin" }}
+          >
             <div className="member-form-top">
               <div>
-                <p className="member-form-kicker-premium">Contract &amp; Compensation</p>
-                <h2 id="payment-title" className="checkout-title-premium">Agreement Summary &amp; Pay</h2>
+                <p className="member-form-kicker">STEP 5 • CONTRACT &amp; COMPENSATION</p>
+                <h2 id="payment-title">Agreement &amp; Compensation</h2>
               </div>
             </div>
-            <p className="member-form-copy-premium">
-              Verify the trainer agreement details and record compensation structure to activate the profile.
+            <p className="member-form-copy">
+              Configure the employment contract terms and define the base compensation and session commission structure.
             </p>
 
-            <div className="payment-split-layout">
-              {/* Left Column: Premium Ticket Receipt with Live Updates */}
-              <div className="checkout-billing-section">
-                <div className="premium-receipt-card">
-                  <div className="receipt-header">
-                    <div className="receipt-brand">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
-                      </svg>
-                      <span>AGREEMENT SUMMARY</span>
-                    </div>
-                    <span className="receipt-status-badge">READY TO ONBOARD</span>
-                  </div>
-
-                  <div className="receipt-meta">
-                    <span className="receipt-id">TX-GD-TR-{100 + totalTrainersCount + 1}</span>
-                    <span className="receipt-date">{currentDateStr}</span>
-                  </div>
-
-                  <div className="receipt-divider" />
-
-                  {/* Details */}
-                  <div className="receipt-item-list">
-                    <div className="receipt-item-row">
-                      <div className="item-label-group">
-                        <div className="item-icon-wrapper plan-glow">
-                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                          </svg>
+            {/* 2-Column Professional Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5 items-start">
+              {/* Left Column: Employment Agreement Modes (lg:col-span-6) */}
+              <div className="lg:col-span-6 flex flex-col gap-2.5">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-0.5">
+                  Agreement / Contract Type
+                </span>
+                {[
+                  {
+                    id: "Full-Time Staff",
+                    title: "Full-Time Staff Agreement",
+                    desc: "Dedicated roster with monthly fixed salary, scheduled floor shifts, and full gym benefits."
+                  },
+                  {
+                    id: "Consultant / Part-Time",
+                    title: "Consultant / Part-Time Agreement",
+                    desc: "Flexible shift hours with hourly retainers and per-session compensation."
+                  },
+                  {
+                    id: "Freelance Trainer",
+                    title: "Freelance PT Agreement",
+                    desc: "Independent personal coach with floor access privileges and client PT commissions."
+                  }
+                ].map((mode) => {
+                  const isActive = formData.agreementType === mode.id;
+                  return (
+                    <div
+                      key={mode.id}
+                      onClick={() => handleChange("agreementType", mode.id)}
+                      className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        isActive
+                          ? "border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                          : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/70"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                            isActive ? "bg-white/15 text-white" : "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          <Briefcase size={16} strokeWidth={2.2} />
                         </div>
-                        <div className="item-text">
-                          <span className="item-name">{formData.fullName.trim() || "New Trainer"}</span>
-                          <span className="item-desc">{formData.type} • {formData.specialization}</span>
-                        </div>
-                      </div>
-                      <span className="item-value badge-plan-premium">{formData.branch}</span>
-                    </div>
-
-                    <div className="receipt-item-row">
-                      <div className="item-label-group">
-                        <div className="item-icon-wrapper price-glow">
-                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <rect x="2" y="4" width="20" height="16" rx="2" />
-                            <circle cx="12" cy="12" r="3" />
-                            <path d="M18 8.01h.01M6 16.01h.01" />
-                          </svg>
-                        </div>
-                        <div className="item-text">
-                          <span className="item-name">Monthly Base Salary</span>
-                          <span className="item-desc">Guaranteed monthly retainer</span>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold leading-snug truncate">{mode.title}</h4>
+                          <p className={`text-[10.5px] mt-0.5 leading-relaxed line-clamp-1 ${isActive ? "text-slate-300" : "text-slate-500"}`}>
+                            {mode.desc}
+                          </p>
                         </div>
                       </div>
-                      <span className="item-value">₹{baseSalaryNum.toLocaleString("en-IN")}</span>
-                    </div>
-
-                    <div className="receipt-item-row">
-                      <div className="item-label-group">
-                        <div className="item-icon-wrapper fee-glow">
-                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M12 5v14M5 12h14" />
-                          </svg>
-                        </div>
-                        <div className="item-text">
-                          <span className="item-name">PT Commission</span>
-                          <span className="item-desc">Per-session incentive rate</span>
-                        </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                          isActive ? "border-emerald-400 bg-emerald-500 text-white" : "border-slate-300"
+                        }`}
+                      >
+                        {isActive && <Check size={10} strokeWidth={3.5} />}
                       </div>
-                      <span className="item-value">{formData.commission || "20%"}</span>
                     </div>
-
-                    <div className="receipt-item-row">
-                      <div className="item-label-group">
-                        <div className="item-icon-wrapper plan-glow">
-                          <Clock size={15} strokeWidth={2.5} />
-                        </div>
-                        <div className="item-text">
-                          <span className="item-name">Shift Allocation</span>
-                          <span className="item-desc">{formData.shift}</span>
-                        </div>
-                      </div>
-                      <span className="item-value text-xs font-bold text-slate-500 uppercase">
-                        {formData.agreementType.split(" ")[0]}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Tear-off line */}
-                  <div className="receipt-tear-line" />
-
-                  {/* Total */}
-                  <div className="receipt-total-section">
-                    <div className="total-label-group">
-                      <span className="total-label">Estimated Monthly Compensation</span>
-                      <span className="total-subtext">Base retainer + estimated PT session yield</span>
-                    </div>
-                    <div className="total-value-wrapper">
-                      <span className="receipt-total-value">
-                        ₹{Math.round(totalProjected).toLocaleString("en-IN")}
-                        <span className="text-xs font-bold opacity-60 ml-1">/mo</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
 
-              {/* Right Column: Compensation & Agreement Mode Selection */}
-              <div className="checkout-payment-section">
-                <span className="payment-selection-title">Employment &amp; Agreement Terms</span>
+              {/* Right Column: Compensation Retainer & Estimated Payout (lg:col-span-6) */}
+              <div className="lg:col-span-6 flex flex-col gap-3">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-0.5">
+                  Compensation Structure
+                </span>
 
-                {/* Base Salary Input */}
-                <div className="member-field mb-4">
+                {/* Monthly Base Retainer */}
+                <label className="member-field">
                   <span>Monthly Base Retainer (₹ INR)</span>
                   <div className="relative mt-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
                     <input
                       type="number"
                       placeholder="e.g. 45000"
                       value={formData.baseSalary}
                       onChange={(e) => handleChange("baseSalary", e.target.value)}
-                      className="!pl-9"
+                      className="!pl-8 !min-h-[42px] !rounded-xl"
                       min="0"
                     />
                   </div>
-                </div>
+                </label>
 
-                {/* PT Commission Input */}
-                <div className="member-field mb-4">
+                {/* PT Commission */}
+                <label className="member-field">
                   <span>PT Session Commission</span>
-                  <input
-                    type="text"
-                    placeholder="e.g. 20% or ₹600/session"
-                    value={formData.commission}
-                    onChange={(e) => handleChange("commission", e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      placeholder="e.g. 20% or ₹600/session"
+                      value={formData.commission}
+                      onChange={(e) => handleChange("commission", e.target.value)}
+                      className="!min-h-[42px] !rounded-xl"
+                    />
+                  </div>
+                </label>
 
-                {/* Agreement Mode Options */}
-                <div className="payment-modes-stack">
-                  {[
-                    {
-                      id: "Full-Time Staff",
-                      title: "Full-Time Staff Agreement",
-                      desc: "Dedicated roster with monthly salary and gym benefits"
-                    },
-                    {
-                      id: "Consultant / Part-Time",
-                      title: "Consultant / Part-Time Agreement",
-                      desc: "Flexible shifts with hourly/session-based retainers"
-                    },
-                    {
-                      id: "Freelance Trainer",
-                      title: "Freelance PT Agreement",
-                      desc: "Independent personal coach with floor access privileges"
-                    }
-                  ].map((mode) => {
-                    const isActive = formData.agreementType === mode.id;
-                    return (
-                      <label
-                        key={mode.id}
-                        className={`payment-mode-option cursor-pointer ${isActive ? "active" : ""}`}
-                        onClick={() => handleChange("agreementType", mode.id)}
-                      >
-                        <div className="payment-mode-left">
-                          <div className={`payment-mode-icon-wrapper ${isActive ? "cash-icon" : ""}`}>
-                            <Briefcase size={18} strokeWidth={2.5} />
-                          </div>
-                          <div className="payment-mode-details">
-                            <span className="payment-mode-name">{mode.title}</span>
-                            <span className="payment-mode-desc">{mode.desc}</span>
-                          </div>
-                        </div>
-                        <div className="payment-mode-selector">
-                          <div className={`custom-radio-indicator ${isActive ? "active" : ""}`} />
-                        </div>
-                      </label>
-                    );
-                  })}
+                {/* Estimated Payout Highlight Card */}
+                <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-slate-200/70 pb-2 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-xs font-bold text-slate-700">Estimated Monthly Compensation</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                      {formData.agreementType}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">
+                        {formData.fullName.trim() || "Trainer"} • {formData.type}
+                      </p>
+                      <p className="text-[10.5px] text-slate-500 mt-0.5">
+                        Retainer (₹{baseSalaryNum.toLocaleString("en-IN")}) + {formData.commission || "20%"} PT yield
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xl font-black text-slate-900 tracking-tight">
+                        ₹{Math.round(totalProjected).toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400 ml-1">/mo</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2127,21 +2106,47 @@ export default function AllTrainers() {
       const saved = localStorage.getItem("gymdeck_trainers");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Purge any legacy mock trainers
+          const mockIds = new Set(["TR-101", "TR-102", "TR-103", "TR-104", "TR-105"]);
+          const realTrainers = parsed.filter(t => t && t.id && !mockIds.has(t.id));
+          if (realTrainers.length !== parsed.length) {
+            localStorage.setItem("gymdeck_trainers", JSON.stringify(realTrainers));
+          }
+          return realTrainers;
+        }
       }
     } catch (e) {
       console.warn("Failed to parse saved trainers:", e);
     }
-    return MOCK_TRAINERS;
+    return [];
   });
 
-  const [viewMode, setViewMode] = useState("grid"); // grid or table
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [groupFilter, setGroupFilter] = useState("All");
+  const [specializationFilter, setSpecializationFilter] = useState("All");
+  const [experienceFilter, setExperienceFilter] = useState("All");
+
   const [selectedTrainer, setSelectedTrainer] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAddTrainerOpen, setIsAddTrainerOpen] = useState(false);
   const [toast, setToast] = useState(null);
+
+  const resetFilters = () => {
+    setStatusFilter("All");
+    setGroupFilter("All");
+    setSpecializationFilter("All");
+    setExperienceFilter("All");
+    setSearchQuery("");
+  };
+
+  const isAnyFilterActive = 
+    statusFilter !== "All" || 
+    groupFilter !== "All" || 
+    specializationFilter !== "All" || 
+    experienceFilter !== "All" || 
+    searchQuery.trim().length > 0;
 
   const handleTrainerAdded = (newTrainer) => {
     const updated = [newTrainer, ...trainersList];
@@ -2162,19 +2167,104 @@ export default function AllTrainers() {
 
   const filteredTrainers = useMemo(() => {
     return trainersList.filter(t => {
-      const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           t.specialization.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           t.id.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesFilter = activeFilter === "All" || t.status === activeFilter.toLowerCase();
-      return matchesSearch && matchesFilter;
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch = !q || 
+        (t.name && t.name.toLowerCase().includes(q)) || 
+        (t.specialization && t.specialization.toLowerCase().includes(q)) ||
+        (t.id && t.id.toLowerCase().includes(q)) ||
+        (t.type && t.type.toLowerCase().includes(q)) ||
+        (t.branch && t.branch.toLowerCase().includes(q));
+
+      let matchesStatus = true;
+      if (statusFilter !== "All") {
+        if (statusFilter.toLowerCase() === "leave" || statusFilter.toLowerCase() === "on leave") {
+          matchesStatus = t.status === "leave";
+        } else if (statusFilter.toLowerCase() === "off-shift" || statusFilter.toLowerCase() === "off duty") {
+          matchesStatus = t.status === "off-shift";
+        } else {
+          matchesStatus = t.status.toLowerCase() === statusFilter.toLowerCase();
+        }
+      }
+
+      let matchesGroup = true;
+      if (groupFilter !== "All") {
+        matchesGroup = t.type === groupFilter;
+      }
+
+      let matchesSpec = true;
+      if (specializationFilter !== "All") {
+        matchesSpec = t.specialization.toLowerCase().includes(specializationFilter.toLowerCase());
+      }
+
+      let matchesExp = true;
+      if (experienceFilter !== "All") {
+        matchesExp = t.experience.toLowerCase() === experienceFilter.toLowerCase();
+      }
+
+      return matchesSearch && matchesStatus && matchesGroup && matchesSpec && matchesExp;
     });
-  }, [trainersList, searchQuery, activeFilter]);
+  }, [trainersList, searchQuery, statusFilter, groupFilter, specializationFilter, experienceFilter]);
 
   const totalTrainers = trainersList.length;
   const activeShiftCount = trainersList.filter(t => t.status === "active").length;
   const busyCount = trainersList.filter(t => t.status === "busy").length;
   const leaveCount = trainersList.filter(t => t.status === "leave").length;
+
+  const totalSessionsToday = useMemo(() => {
+    return trainersList.reduce((acc, t) => acc + (Number(t.sessionsToday) || 0), 0);
+  }, [trainersList]);
+
+  const totalRevenue = useMemo(() => {
+    return trainersList.reduce((acc, t) => acc + (Number(t.revenue) || 0), 0);
+  }, [trainersList]);
+
+  const revenueTrainersCount = useMemo(() => {
+    return trainersList.filter(t => (Number(t.revenue) || 0) > 0).length;
+  }, [trainersList]);
+
+  const formattedRevenue = useMemo(() => {
+    if (totalRevenue === 0) return "₹0";
+    if (totalRevenue >= 100000) return `₹${(totalRevenue / 100000).toFixed(1)}L`;
+    if (totalRevenue >= 1000) return `₹${(totalRevenue / 1000).toFixed(1)}K`;
+    return `₹${Number(totalRevenue).toLocaleString("en-IN")}`;
+  }, [totalRevenue]);
+
+  const ratedStaff = useMemo(() => {
+    return trainersList.filter(t => Number(t.rating) > 0);
+  }, [trainersList]);
+
+  const avgRating = useMemo(() => {
+    if (ratedStaff.length === 0) return "0.0";
+    const sum = ratedStaff.reduce((acc, t) => acc + Number(t.rating), 0);
+    return (sum / ratedStaff.length).toFixed(2);
+  }, [ratedStaff]);
+
+  const statusOptions = [
+    { label: "All Statuses", value: "All", count: totalTrainers },
+    { label: "Active", value: "active", count: activeShiftCount, color: "bg-emerald-500" },
+    { label: "Busy", value: "busy", count: busyCount, color: "bg-amber-500" },
+    { label: "On Leave", value: "leave", count: leaveCount, color: "bg-rose-500" }
+  ];
+
+  const staffGroupOptions = [
+    { label: "All Staff Groups", value: "All", count: totalTrainers },
+    { label: "Personal Trainers", value: "Personal Trainer", count: trainersList.filter(t => t.type === "Personal Trainer").length },
+    { label: "Group Instructors", value: "Group Instructor", count: trainersList.filter(t => t.type === "Group Instructor").length },
+    { label: "Nutritionists", value: "Nutritionist", count: trainersList.filter(t => t.type === "Nutritionist").length },
+    { label: "Yoga Coaches", value: "Yoga Coach", count: trainersList.filter(t => t.type === "Yoga Coach").length }
+  ];
+
+  const specializationOptions = [
+    { label: "All Specializations", value: "All" },
+    ...SPECIALIZATIONS.map(s => ({ label: s, value: s }))
+  ];
+
+  const experienceOptions = [
+    { label: "All Experience", value: "All" },
+    { label: "Junior", value: "Junior" },
+    { label: "Mid-Level", value: "Mid-Level" },
+    { label: "Senior", value: "Senior" }
+  ];
 
   const handleTrainerClick = (trainer) => {
     setSelectedTrainer(trainer);
@@ -2189,31 +2279,33 @@ export default function AllTrainers() {
       <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <nav className="flex items-center text-sm font-medium text-slate-500">
-            <span>Trainers & Staff</span>
+            <span>Trainers &amp; Staff</span>
             <ChevronRight size={16} className="text-slate-300 mx-2" />
             <span className="text-slate-900 font-bold">All Trainers</span>
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative w-96 group">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center w-80 lg:w-96 group">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+              <Search size={16} strokeWidth={2.2} />
+            </div>
             <input 
               type="text" 
               placeholder="Search trainer, specialization, PT clients..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
+              className="w-full pl-10 pr-14 h-10 bg-slate-100/90 hover:bg-slate-100 border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all outline-none leading-normal shadow-2xs"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <span className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200">⌘</span>
-              <span className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200">K</span>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none gap-0.5">
+              <kbd className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs leading-none">⌘</kbd>
+              <kbd className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs leading-none">K</kbd>
             </div>
           </div>
           <button 
             type="button"
             onClick={() => setIsAddTrainerOpen(true)}
-            className="add-member-btn cursor-pointer"
+            className="add-member-btn cursor-pointer h-10 flex items-center gap-2"
             aria-label="Add new trainer"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -2228,31 +2320,60 @@ export default function AllTrainers() {
       {/* ─────────────────────────────────────────
           PAGE TITLE SECTION
           ───────────────────────────────────────── */}
-      <div className="flex items-end justify-between mb-2 relative z-10">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 relative z-10">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">All Trainers</h1>
           <p className="text-slate-500 text-xs font-semibold mt-2 max-w-2xl">
             Manage trainers, PT staff, schedules, attendance, and operational performance across your fitness ecosystem.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-          {["PT Analytics", "Shift Management", "Payroll Insights", "Performance"].map((pill) => (
-            <button key={pill} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-all">
-              {pill}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+            Roster: <strong className="text-indigo-600 font-bold">{totalTrainers}</strong> Total Staff
+          </span>
         </div>
       </div>
 
       {/* ─────────────────────────────────────────
           KPI ANALYTICS STRIP
           ───────────────────────────────────────── */}
-      <div className="grid grid-cols-5 gap-5 mb-2 relative z-10">
-        <KPICard label="Total Trainers" value={totalTrainers.toString()} icon={Users} tone="indigo" trend={`+${totalTrainers - 5 > 0 ? totalTrainers - 5 : 2} this month`} />
-        <KPICard label="Active PT Sessions" value="42" icon={Zap} tone="emerald" trend="8 active now" />
-        <KPICard label="Trainers On Shift" value={activeShiftCount.toString()} icon={Clock} tone="blue" trend="Next shift: 14:00" />
-        <KPICard label="PT Revenue Today" value="₹12.4K" icon={BarChart3} tone="amber" trend="15% above avg" />
-        <KPICard label="Avg Rating" value="4.85" icon={Star} tone="rose" trend="Top 1% in sector" />
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 mb-2 relative z-10">
+        <KPICard 
+          label="Total Trainers" 
+          value={totalTrainers.toString()} 
+          icon={UserCheck} 
+          tone="indigo" 
+          trend={totalTrainers === 0 ? "0 registered" : `${totalTrainers} active staff`} 
+        />
+        <KPICard 
+          label="Active PT Sessions" 
+          value={totalSessionsToday.toString()} 
+          icon={Dumbbell} 
+          tone="emerald" 
+          trend={totalSessionsToday === 0 ? "0 active now" : `${totalSessionsToday} scheduled today`} 
+        />
+        <KPICard 
+          label="Trainers On Shift" 
+          value={activeShiftCount.toString()} 
+          icon={CalendarClock} 
+          tone="blue" 
+          trend={activeShiftCount === 0 ? "None on duty" : `${activeShiftCount} on duty now`} 
+        />
+        <KPICard 
+          label="PT Revenue Today" 
+          value={formattedRevenue} 
+          icon={IndianRupee} 
+          tone="amber" 
+          trend={totalRevenue === 0 ? "₹0 logged today" : `From ${revenueTrainersCount} trainers`} 
+        />
+        <KPICard 
+          label="Avg Rating" 
+          value={avgRating} 
+          icon={Star} 
+          iconFill={avgRating !== "0.0"} 
+          tone="rose" 
+          trend={ratedStaff.length === 0 ? "No ratings yet" : `Based on ${ratedStaff.length} staff`} 
+        />
       </div>
 
       <div className="all-trainers-workspace">
@@ -2260,361 +2381,301 @@ export default function AllTrainers() {
             SEARCH + FILTER TOOLBAR
             ───────────────────────────────────────── */}
         <div className="all-trainers-workspace-sticky-header">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Filter size={16} className="text-slate-400" />
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Filters</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-1.5 text-slate-500 font-bold text-xs uppercase tracking-wider mr-1 select-none">
+              <Filter size={14} className="text-slate-400" />
+              <span>Filters</span>
             </div>
             
-            <div className="h-6 w-px bg-slate-100" />
+            <div className="h-5 w-px bg-slate-200 hidden sm:block mx-0.5" />
 
-            <div className="flex items-center gap-3">
-              <select className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer">
-                <option>Specialization: All</option>
-                {SPECIALIZATIONS.map(s => <option key={s}>{s}</option>)}
-              </select>
-              <select className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer">
-                <option>Experience: All</option>
-                <option>Junior</option>
-                <option>Mid-Level</option>
-                <option>Senior</option>
-              </select>
-              <select className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer">
-                <option>Branch: All Branches</option>
-                {BRANCHES.map(b => <option key={b}>{b}</option>)}
-              </select>
-            </div>
+            {/* Custom Dropdown: Operational Status */}
+            <CustomDropdown
+              label="Operational Status"
+              value={statusFilter}
+              options={statusOptions}
+              onChange={setStatusFilter}
+              icon={Activity}
+            />
+
+            {/* Custom Dropdown: Staff Groups */}
+            <CustomDropdown
+              label="Staff Groups"
+              value={groupFilter}
+              options={staffGroupOptions}
+              onChange={setGroupFilter}
+              icon={Users}
+            />
+
+            {/* Custom Dropdown: Specialization */}
+            <CustomDropdown
+              label="Specialization"
+              value={specializationFilter}
+              options={specializationOptions}
+              onChange={setSpecializationFilter}
+              icon={Award}
+            />
+
+            {/* Custom Dropdown: Experience */}
+            <CustomDropdown
+              label="Experience"
+              value={experienceFilter}
+              options={experienceOptions}
+              onChange={setExperienceFilter}
+              icon={Briefcase}
+            />
+
+            {isAnyFilterActive && (
+              <button 
+                type="button"
+                onClick={resetFilters}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer border border-rose-200/80 shadow-2xs"
+                title="Reset all filters"
+              >
+                <X size={13} />
+                <span>Reset Filters</span>
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-            <button 
-              onClick={() => setViewMode("grid")}
-              className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-white shadow-sm text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              <LayoutGrid size={18} />
-            </button>
-            <button 
-              onClick={() => setViewMode("table")}
-              className={`p-2 rounded-lg transition-all ${viewMode === "table" ? "bg-white shadow-sm text-indigo-600" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              <List size={18} />
-            </button>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs font-semibold text-slate-500 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/70">
+              Showing <strong className="text-slate-900 font-black">{filteredTrainers.length}</strong> of {totalTrainers} Trainers
+            </span>
           </div>
         </div>
 
         {/* ─────────────────────────────────────────
-            MAIN WORKSPACE
+            MAIN WORKSPACE (FULL WIDTH TABLE VIEW)
             ───────────────────────────────────────── */}
-        <div className="grid grid-cols-12 gap-8 items-start">
-          {/* LEFT PANEL: QUICK FILTERS */}
-          <aside className="col-span-2 space-y-6">
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Operational Status</p>
-              {[
-                { label: "All", count: totalTrainers, color: "bg-slate-500" },
-                { label: "Active", count: activeShiftCount, color: "bg-emerald-500" },
-                { label: "Busy", count: busyCount, color: "bg-amber-500" },
-                { label: "On Leave", count: leaveCount, color: "bg-rose-500" }
-              ].map((f) => (
+        <section className="w-full">
+          {filteredTrainers.length === 0 ? (
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-xs">
+              <div className="w-14 h-14 mx-auto mb-3.5 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <Users size={24} />
+              </div>
+              <h3 className="text-base font-bold text-slate-800">
+                {trainersList.length === 0 ? "No trainers registered yet" : "No trainers match your criteria"}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">
+                {trainersList.length === 0
+                  ? "Get started by registering your first trainer or coach to build your staff roster."
+                  : "Try adjusting your filters or search keywords, or add a new trainer to your roster."}
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                {trainersList.length > 0 && isAnyFilterActive && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+                  >
+                    Reset All Filters
+                  </button>
+                )}
                 <button
-                  key={f.label}
-                  onClick={() => setActiveFilter(f.label)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${activeFilter === f.label ? "bg-white shadow-md border border-slate-100 ring-1 ring-slate-100" : "hover:bg-white/50 text-slate-500"}`}
+                  type="button"
+                  onClick={() => setIsAddTrainerOpen(true)}
+                  className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2 h-2 rounded-full ${f.color}`} />
-                    <span className="text-sm font-bold">{f.label}</span>
-                  </div>
-                  <span className="text-xs font-bold opacity-40">{f.count}</span>
+                  <Plus size={14} /> Add Trainer
                 </button>
-              ))}
+              </div>
             </div>
-
-            <div className="pt-6 border-t border-slate-200 space-y-2">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Staff Groups</p>
-              {TRAINER_TYPES.map((type) => (
-                <button key={type} className="w-full flex items-center justify-between p-3 rounded-xl text-slate-500 hover:bg-white/50 transition-all">
-                  <span className="text-sm font-bold">{type}s</span>
-                  <ChevronRight size={14} className="opacity-40" />
-                </button>
-              ))}
-            </div>
-          </aside>
-
-          {/* CENTER: TRAINERS GRID / TABLE */}
-          <section className="col-span-7">
-            {viewMode === "grid" ? (
-              filteredTrainers.length === 0 ? (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-sm">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                    <Users size={28} />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-800">No trainers found</h3>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">
-                    No staff member matches your current search or filter criteria. Add a new trainer or clear filters.
-                  </p>
-                  <div className="flex items-center justify-center gap-3">
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery("")}
-                        className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
-                      >
-                        Clear Search
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setIsAddTrainerOpen(true)}
-                      className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Plus size={14} /> Add Trainer
-                    </button>
-                  </div>
+          ) : (
+            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs w-full">
+              {/* Table Meta Bar */}
+              <div className="px-5 py-3.5 border-b border-slate-200/80 flex items-center justify-between bg-white">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-sm font-bold text-slate-900 tracking-tight">Trainer Roster</h2>
+                  <span className="text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+                    {filteredTrainers.length} {filteredTrainers.length === 1 ? 'trainer' : 'trainers'}
+                  </span>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-6">
-                  <AnimatePresence mode="popLayout">
-                    {filteredTrainers.map((trainer) => (
-                      <TrainerCard key={trainer.id} trainer={trainer} onClick={handleTrainerClick} />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )
-            ) : (
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
+                  Click any row to open complete profile &amp; schedule
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50/80 border-b border-slate-200/80">
                     <tr>
-                      <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trainer</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Specialization</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workload</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Performance</th>
-                      <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="py-3 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Trainer</th>
+                      <th className="py-3 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Specialization &amp; Role</th>
+                      <th className="py-3 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Branch &amp; Shift</th>
+                      <th className="py-3 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Clients &amp; Sessions</th>
+                      <th className="py-3 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Attendance &amp; Rating</th>
+                      <th className="py-3 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                      <th className="py-3 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {filteredTrainers.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-12 text-center">
-                          <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                            <Users size={22} />
-                          </div>
-                          <p className="text-sm font-bold text-slate-700">No trainers found</p>
-                          <p className="text-xs text-slate-400 mt-1 mb-4">Try adjusting your search query or filter options.</p>
-                          <button
-                            type="button"
-                            onClick={() => setIsAddTrainerOpen(true)}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-sm cursor-pointer"
-                          >
-                            <Plus size={14} /> Add Trainer
-                          </button>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredTrainers.map((trainer) => (
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredTrainers.map((trainer) => {
+                      const statusMap = {
+                        active: { 
+                          label: "Active", 
+                          dot: "bg-emerald-500", 
+                          pill: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+                          isPulse: true 
+                        },
+                        busy: { 
+                          label: "Busy", 
+                          dot: "bg-amber-500", 
+                          pill: "bg-amber-50 text-amber-700 border-amber-200/80",
+                          isPulse: false 
+                        },
+                        "off-shift": { 
+                          label: "Off Duty", 
+                          dot: "bg-slate-400", 
+                          pill: "bg-slate-50 text-slate-600 border-slate-200/80",
+                          isPulse: false 
+                        },
+                        leave: { 
+                          label: "On Leave", 
+                          dot: "bg-rose-500", 
+                          pill: "bg-rose-50 text-rose-700 border-rose-200/80",
+                          isPulse: false 
+                        }
+                      };
+                      const sInfo = statusMap[trainer.status] || statusMap.active;
+
+                      // Type badge styling
+                      const typeStyles = {
+                        "Personal Trainer": "bg-indigo-50 text-indigo-700 border-indigo-100",
+                        "Yoga Coach": "bg-teal-50 text-teal-700 border-teal-100",
+                        "Group Instructor": "bg-violet-50 text-violet-700 border-violet-100",
+                        "Nutritionist": "bg-amber-50 text-amber-700 border-amber-100"
+                      };
+                      const typeBadgeClass = typeStyles[trainer.type] || "bg-slate-50 text-slate-700 border-slate-200";
+
+                      // Experience badge styling
+                      const expStyles = {
+                        Senior: "bg-purple-50 text-purple-700 border-purple-200/60",
+                        "Mid-Level": "bg-sky-50 text-sky-700 border-sky-200/60",
+                        Junior: "bg-slate-100 text-slate-700 border-slate-200/60"
+                      };
+                      const expBadgeClass = expStyles[trainer.experience] || "bg-slate-100 text-slate-600 border-slate-200/60";
+
+                      return (
                         <tr 
                           key={trainer.id} 
-                          className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                          className="hover:bg-indigo-50/30 transition-colors cursor-pointer group"
                           onClick={() => handleTrainerClick(trainer)}
                         >
-                          <td className="p-4">
-                            <div className="flex items-center gap-3">
-                              <img src={trainer.image} alt="" className="w-10 h-10 rounded-lg bg-slate-100" />
+                          {/* Trainer Info */}
+                          <td className="py-4 px-5 align-middle">
+                            <div className="flex items-center gap-3.5">
+                              <div className="relative shrink-0">
+                                <img 
+                                  src={trainer.image} 
+                                  alt={trainer.name} 
+                                  className="w-11 h-11 rounded-xl bg-slate-100 object-cover ring-1 ring-slate-200/80 shadow-2xs group-hover:ring-indigo-300 transition-all" 
+                                />
+                                <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${sInfo.dot}`} />
+                              </div>
                               <div>
-                                <p className="text-sm font-bold text-slate-900 leading-none">{trainer.name}</p>
-                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{trainer.id}</p>
+                                <p className="text-sm font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                                  {trainer.name}
+                                </p>
+                                <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100/90 px-1.5 py-0.5 rounded border border-slate-200/60 tracking-wider inline-block mt-1">
+                                  {trainer.id}
+                                </span>
                               </div>
                             </div>
                           </td>
-                          <td className="p-4 text-sm font-semibold text-slate-600">{trainer.specialization}</td>
-                          <td className="p-4">
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center justify-between w-24">
-                                <span className="text-[10px] font-bold text-slate-400">Utilization</span>
-                                <span className="text-[10px] font-bold text-slate-700">75%</span>
-                              </div>
-                              <div className="w-24 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-indigo-500" style={{ width: "75%" }} />
-                              </div>
-                            </div>
+
+                          {/* Specialization & Role */}
+                          <td className="py-4 px-5 align-middle">
+                            <p className="text-xs font-bold text-slate-800 leading-tight">{trainer.specialization}</p>
+                            <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border mt-1.5 ${typeBadgeClass}`}>
+                              {trainer.type || "Personal Trainer"}
+                            </span>
                           </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-4">
-                              <div>
-                                <p className="text-xs font-bold text-slate-800">₹{trainer.revenue / 1000}K</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Revenue</p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold text-slate-800">{trainer.rating}</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Rating</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4">
+
+                          {/* Branch & Shift */}
+                          <td className="py-4 px-5 align-middle">
                             <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${trainer.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                              <span className="text-xs font-bold text-slate-700 capitalize">{trainer.status}</span>
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${expBadgeClass}`}>
+                                {trainer.experience}
+                              </span>
+                              <span className="text-xs font-medium text-slate-600 flex items-center gap-1">
+                                <MapPin size={11} className="text-slate-400 shrink-0" /> {trainer.branch}
+                              </span>
                             </div>
+                            <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1 mt-1.5">
+                              <Clock size={11} className="text-slate-400 shrink-0" />
+                              Shift: <span className="text-slate-600 font-semibold">{trainer.shift || "09:00 - 17:00"}</span>
+                            </p>
+                          </td>
+
+                          {/* Clients & Sessions */}
+                          <td className="py-4 px-5 align-middle">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-sm font-extrabold text-slate-900">{trainer.activeClients}</span>
+                              <span className="text-xs font-medium text-slate-500">clients</span>
+                            </div>
+                            <div className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md mt-1">
+                              <span className="font-bold text-indigo-600">{trainer.sessionsToday}</span>
+                              <span>today</span>
+                            </div>
+                          </td>
+
+                          {/* Attendance & Rating */}
+                          <td className="py-4 px-5 align-middle">
+                            <div className="flex items-center gap-1 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200/70 text-amber-800 w-fit shadow-2xs">
+                              <Star size={12} className="fill-amber-400 text-amber-400 shrink-0" />
+                              <span className="text-xs font-extrabold">{Number(trainer.rating).toFixed(1)}</span>
+                              <span className="text-[10px] text-amber-600/80 font-medium">/ 5.0</span>
+                            </div>
+                            <div className="text-[11px] font-medium text-slate-500 flex items-center gap-2 mt-1.5">
+                              <div className="w-12 bg-slate-100 h-1.5 rounded-full overflow-hidden shrink-0 border border-slate-200/50">
+                                <div 
+                                  className="bg-emerald-500 h-full rounded-full transition-all" 
+                                  style={{ width: `${Math.min(100, Math.max(0, trainer.attendanceRate))}%` }} 
+                                />
+                              </div>
+                              <span className="text-xs font-bold text-slate-700">{trainer.attendanceRate}%</span>
+                              <span className="text-[10px] text-slate-400">att.</span>
+                            </div>
+                          </td>
+
+                          {/* Operational Status */}
+                          <td className="py-4 px-5 align-middle">
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border shadow-2xs ${sInfo.pill}`}>
+                              {sInfo.isPulse ? (
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                              ) : (
+                                <span className={`w-2 h-2 rounded-full ${sInfo.dot}`} />
+                              )}
+                              {sInfo.label}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-4 px-5 align-middle text-right">
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTrainerClick(trainer);
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-indigo-600 hover:text-white border border-slate-200/80 hover:border-indigo-600 rounded-xl transition-all shadow-2xs cursor-pointer group/btn ml-auto active:scale-95"
+                            >
+                              <span>View Profile</span>
+                              <ChevronRight size={13} className="text-slate-400 group-hover/btn:text-white group-hover/btn:translate-x-0.5 transition-transform" />
+                            </button>
                           </td>
                         </tr>
-                      ))
-                    )}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-            )}
-          </section>
-
-          {/* RIGHT PANEL: TRAINER INTELLIGENCE */}
-          <aside className="col-span-3 space-y-6">
-            <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200">
-              <div className="flex items-center gap-2 mb-4">
-                <Zap size={18} className="text-indigo-200" />
-                <span className="text-xs font-bold uppercase tracking-widest text-indigo-100">AI Intelligence</span>
-              </div>
-              <h4 className="text-lg font-bold leading-tight mb-4">Trainer utilization increased 14% this week.</h4>
-              <p className="text-sm text-indigo-100/80 leading-relaxed mb-6">
-                3 trainers are nearing their overbooking threshold. Recommend redistributing 5 upcoming PT trials to Sneha.
-              </p>
-              <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-all border border-white/20">
-                View Staff Recommendations
-              </button>
             </div>
-
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Activity size={16} /> Live Staff Status
-              </h4>
-              <div className="space-y-4">
-                {[
-                  { name: "Ongoing PT Sessions", count: 8, trend: "+2" },
-                  { name: "Available for Trials", count: 3, trend: "0" },
-                  { name: "Shift Transitions (1h)", count: 2, trend: "-1" }
-                ].map((s) => (
-                  <div key={s.name} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">{s.name}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">Status: Stable</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-black text-slate-900">{s.count}</p>
-                      <span className="text-[10px] font-bold text-emerald-500">{s.trend}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <TrendingUp size={16} /> Performance Snapshot
-              </h4>
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Top Rated</span>
-                    <span className="text-[10px] font-bold text-slate-900">Vikram Shah</span>
-                  </div>
-                  <div className="w-full h-1 bg-slate-100 rounded-full">
-                    <div className="h-full bg-rose-500" style={{ width: "98%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Highest Revenue</span>
-                    <span className="text-[10px] font-bold text-slate-900">Manav Rao</span>
-                  </div>
-                  <div className="w-full h-1 bg-slate-100 rounded-full">
-                    <div className="h-full bg-emerald-500" style={{ width: "85%" }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
-        </div>
-
-        {/* ─────────────────────────────────────────
-            BOTTOM ANALYTICS & OPERATIONAL REPORTS
-            ───────────────────────────────────────── */}
-        <section className="mt-12 pt-12 border-t border-slate-200">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <PieChart size={24} className="text-indigo-600" /> Operational Workforce Analytics
-            </h3>
-            <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
-                <Download size={14} /> Export Workforce Data
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
-                <Calendar size={14} /> View Shift Planner
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Revenue Leaderboard</p>
-              <div className="space-y-4">
-                {trainersList.slice(0, 3).map((t, i) => (
-                  <div key={t.id} className="flex items-center gap-3">
-                    <span className="text-xs font-black text-slate-300">0{i+1}</span>
-                    <img src={t.image} alt="" className="w-8 h-8 rounded-lg bg-slate-50" />
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-slate-800">{t.name}</p>
-                      <div className="w-full h-1 bg-slate-50 rounded-full mt-1 overflow-hidden">
-                        <div className="h-full bg-indigo-500" style={{ width: `${80 - i*15}%` }} />
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-slate-900">₹{t.revenue / 1000}K</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Staff Utilization</p>
-              <div className="h-32 flex items-end gap-2 px-2">
-                {[45, 68, 82, 91, 74, 56, 42].map((h, i) => (
-                  <div key={i} className="flex-1 bg-slate-100 rounded-t-lg relative group">
-                    <div 
-                      className="absolute bottom-0 w-full bg-indigo-500/20 group-hover:bg-indigo-500 rounded-t-lg transition-all duration-500"
-                      style={{ height: `${h}%` }}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-[10px] font-bold text-slate-400">Mon</span>
-                <span className="text-[10px] font-bold text-slate-400">Sun</span>
-              </div>
-            </div>
-
-            <div className="col-span-2 bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden">
-              <div className="relative z-10 h-full flex flex-col justify-between">
-                <div>
-                  <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Staffing Insight</p>
-                  <h3 className="text-2xl font-bold max-w-sm leading-tight">Your trainer utilization is optimized for the morning shift.</h3>
-                </div>
-                <div className="flex items-center gap-6">
-                  <div>
-                    <p className="text-3xl font-black">74%</p>
-                    <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Avg Occupancy</p>
-                  </div>
-                  <div className="h-10 w-px bg-white/10" />
-                  <div>
-                    <p className="text-3xl font-black">₹4.2L</p>
-                    <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Projected Commission</p>
-                  </div>
-                  <button className="ml-auto bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-xl shadow-indigo-900/40">
-                    Review Payroll
-                  </button>
-                </div>
-              </div>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full -mr-20 -mt-20" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/5 blur-[80px] rounded-full -ml-10 -mb-10" />
-            </div>
-          </div>
+          )}
         </section>
       </div>
 
