@@ -6,6 +6,7 @@ import BrandFooter from "./BrandFooter.jsx";
 import { communicationsApi } from "./communicationsApi.js";
 import { paymentsV2Api } from "./paymentsV2Api.js";
 import { qrcode } from "./qr-lib.js";
+import FacilityLeafletMapModal from "./FacilityLeafletMapModal.jsx";
 import { 
   Building2, 
   Upload, 
@@ -578,18 +579,9 @@ const GymProfile = () => {
 
   // Map & Location State
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [mapSearchQuery, setMapSearchQuery] = useState("");
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const [pincodeAutoDetectedMsg, setPincodeAutoDetectedMsg] = useState("");
-  const [mapSelectedLocation, setMapSelectedLocation] = useState({
-    address: "Block EP & GP, Sector V, Bidhannagar",
-    city: "Kolkata",
-    state: "West Bengal",
-    pincode: "700091",
-    lat: 22.5726,
-    lng: 88.4311,
-    displayName: "Sector V, Bidhannagar, Kolkata, West Bengal 700091"
-  });
+
+  // Official Website Solutions Modal State
+  const [isNoWebsiteModalOpen, setIsNoWebsiteModalOpen] = useState(false);
 
   // Multi-Branch Modal State
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
@@ -611,15 +603,16 @@ const GymProfile = () => {
   const [activeAutocompleteField, setActiveAutocompleteField] = useState(null); // 'address' | 'city' | 'pincode' | null
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState([]);
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
-  const [mapZoom, setMapZoom] = useState(15);
   const autocompleteContainerRef = useRef(null);
   const autocompleteTimerRef = useRef(null);
 
-  // National & West Bengal Holiday Calendar State
+  // National & West Bengal Holiday Calendar State (Google Calendar Style)
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
   const [holidayFilter, setHolidayFilter] = useState("all"); // "all" | "national" | "west_bengal"
+  const [holidayYearFilter, setHolidayYearFilter] = useState("all"); // "all" | "2026" | "2027"
   const [holidaySearchQuery, setHolidaySearchQuery] = useState("");
   const [holidayOverrides, setHolidayOverrides] = useState({});
+  const [selectedHolidayMonth, setSelectedHolidayMonth] = useState("ALL");
 
   // Banking & Settlement State
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -680,9 +673,10 @@ const GymProfile = () => {
         setIsMapModalOpen(false);
         setIsBranchModalOpen(false);
         setIsHolidayModalOpen(false);
+        setIsNoWebsiteModalOpen(false);
       }
     };
-    if (isQrModalOpen || isAccountModalOpen || isUpiQrModalOpen || accountToDelete || isMapModalOpen || isBranchModalOpen || isHolidayModalOpen) {
+    if (isQrModalOpen || isAccountModalOpen || isUpiQrModalOpen || accountToDelete || isMapModalOpen || isBranchModalOpen || isHolidayModalOpen || isNoWebsiteModalOpen) {
       window.addEventListener("keydown", handleKeyDown);
       const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -691,7 +685,7 @@ const GymProfile = () => {
         document.body.style.overflow = prevOverflow;
       };
     }
-  }, [isQrModalOpen, isAccountModalOpen, isUpiQrModalOpen, accountToDelete, isMapModalOpen, isBranchModalOpen, isHolidayModalOpen]);
+  }, [isQrModalOpen, isAccountModalOpen, isUpiQrModalOpen, accountToDelete, isMapModalOpen, isBranchModalOpen, isHolidayModalOpen, isNoWebsiteModalOpen]);
 
   // Close autocomplete on outside click
   useEffect(() => {
@@ -1367,7 +1361,6 @@ const GymProfile = () => {
         if (!gymData.city || gymData.city.trim() === "" || gymData.city === "Bengaluru") {
           handleInputChange('city', match.city.split(" / ")[0]);
         }
-        setPincodeAutoDetectedMsg(`Auto-detected: ${match.city}, ${match.state}`);
       }
       // Query India Post API asynchronously for accurate sub-locality if available
       try {
@@ -1378,13 +1371,10 @@ const GymProfile = () => {
               const po = data[0].PostOffice[0];
               if (po.District) handleInputChange('city', po.District);
               if (po.State) handleInputChange('state', po.State);
-              setPincodeAutoDetectedMsg(`Verified: ${po.District}, ${po.State} (${po.Name})`);
             }
           })
           .catch(() => {});
       } catch (e) {}
-    } else {
-      setPincodeAutoDetectedMsg("");
     }
   };
 
@@ -1464,181 +1454,14 @@ const GymProfile = () => {
     if (item.city) handleInputChange('city', item.city);
     if (item.state) handleInputChange('state', item.state);
     if (item.pincode) handleInputChange('pincode', item.pincode);
-    setPincodeAutoDetectedMsg(`Auto-detected: ${item.city}, ${item.state} (${item.pincode || "Verified"})`);
     setActiveAutocompleteField(null);
     setAutocompleteSuggestions([]);
     showToast(`Location selected: ${item.city}, ${item.state}`);
   };
 
-  // Open Map Picker Modal initialized with current address or Kolkata preset
+  // Open Interactive Map Location Modal
   const handleOpenMapModal = () => {
-    const existingPincode = gymData.pincode?.replace(/\D/g, "");
-    const matchingPreset = POPULAR_WEST_BENGAL_LOCATIONS.find(loc => 
-      (existingPincode && loc.pincode === existingPincode) ||
-      (gymData.city && loc.city.toLowerCase() === gymData.city.toLowerCase())
-    ) || POPULAR_WEST_BENGAL_LOCATIONS[0];
-
-    setMapSelectedLocation({
-      address: gymData.address || matchingPreset.address,
-      city: gymData.city || matchingPreset.city,
-      state: gymData.state || matchingPreset.state,
-      pincode: gymData.pincode || matchingPreset.pincode,
-      lat: matchingPreset.lat,
-      lng: matchingPreset.lng,
-      displayName: `${gymData.address || matchingPreset.address}, ${gymData.city || matchingPreset.city}, ${gymData.state || matchingPreset.state}`
-    });
-    setMapSearchQuery("");
-    setMapZoom(15);
     setIsMapModalOpen(true);
-  };
-
-  // Interactive Click on Map Canvas
-  const handleMapCanvasClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const dx = clickX - centerX;
-    const dy = clickY - centerY;
-    
-    const n = Math.pow(2, mapZoom);
-    const dLng = (dx / 256) * (360 / n);
-    const currentLat = mapSelectedLocation?.lat || 22.5726;
-    const currentLng = mapSelectedLocation?.lng || 88.4311;
-    const latRad = currentLat * Math.PI / 180;
-    const mercY = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * 256;
-    const newMercY = mercY + dy;
-    const normY = newMercY / (n * 256);
-    const newLatRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * normY)));
-    const newLat = newLatRad * 180 / Math.PI;
-    const newLng = currentLng + dLng;
-    
-    reverseGeocodeCoords(newLat, newLng);
-  };
-
-  // Reverse geocode lat & lng using OpenStreetMap Nominatim
-  const reverseGeocodeCoords = async (lat, lng) => {
-    setIsGeocoding(true);
-    const closest = POPULAR_WEST_BENGAL_LOCATIONS.reduce((best, loc) => {
-      const d = Math.hypot(loc.lat - lat, loc.lng - lng);
-      return (!best || d < best.d) ? { loc, d } : best;
-    }, null);
-    const nearbyPreset = closest && closest.d < 0.02 ? closest.loc : null;
-
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.address) {
-          const addr = data.address;
-          const street = [addr.road || addr.suburb || addr.neighbourhood, addr.quarter || addr.subdivision].filter(Boolean).join(", ") || data.display_name.split(",")[0];
-          const city = addr.city || addr.town || addr.municipality || addr.district || addr.county || (nearbyPreset?.city || "Kolkata");
-          const state = addr.state || (nearbyPreset?.state || "West Bengal");
-          const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6) || (nearbyPreset?.pincode || "");
-          
-          setMapSelectedLocation({
-            address: street || data.display_name.split(",").slice(0, 2).join(", ") || (nearbyPreset?.address || "Selected Facility Location"),
-            city: city,
-            state: state,
-            pincode: pincode,
-            lat: parseFloat(lat),
-            lng: parseFloat(lng),
-            displayName: data.display_name
-          });
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Reverse geocode fallback", err);
-    } finally {
-      setIsGeocoding(false);
-    }
-
-    if (nearbyPreset) {
-      setMapSelectedLocation({
-        address: nearbyPreset.address,
-        city: nearbyPreset.city,
-        state: nearbyPreset.state,
-        pincode: nearbyPreset.pincode,
-        lat: parseFloat(lat),
-        lng: parseFloat(lng),
-        displayName: nearbyPreset.name
-      });
-    } else {
-      setMapSelectedLocation(prev => ({
-        ...prev,
-        lat: parseFloat(lat),
-        lng: parseFloat(lng)
-      }));
-    }
-  };
-
-  // Search location in Map Modal
-  const handleMapSearch = async (query) => {
-    setMapSearchQuery(query);
-    if (!query || query.trim().length < 3) return;
-    
-    const presetMatch = POPULAR_WEST_BENGAL_LOCATIONS.find(loc => 
-      loc.name.toLowerCase().includes(query.toLowerCase()) ||
-      loc.address.toLowerCase().includes(query.toLowerCase()) ||
-      loc.city.toLowerCase().includes(query.toLowerCase())
-    );
-    if (presetMatch) {
-      setMapSelectedLocation({
-        address: presetMatch.address,
-        city: presetMatch.city,
-        state: presetMatch.state,
-        pincode: presetMatch.pincode,
-        lat: presetMatch.lat,
-        lng: presetMatch.lng,
-        displayName: presetMatch.name
-      });
-      return;
-    }
-
-    try {
-      setIsGeocoding(true);
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&addressdetails=1&limit=1`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data[0]) {
-          const first = data[0];
-          const addr = first.address || {};
-          const street = [addr.road || addr.suburb || addr.neighbourhood, addr.quarter].filter(Boolean).join(", ") || first.display_name.split(",")[0];
-          const city = addr.city || addr.town || addr.municipality || addr.district || "Kolkata";
-          const state = addr.state || "West Bengal";
-          const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
-
-          setMapSelectedLocation({
-            address: street,
-            city: city,
-            state: state,
-            pincode: pincode,
-            lat: parseFloat(first.lat),
-            lng: parseFloat(first.lon),
-            displayName: first.display_name
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("Map search fallback", e);
-    } finally {
-      setIsGeocoding(false);
-    }
-  };
-
-  // Apply location selected from map modal
-  const handleApplyMapLocation = () => {
-    if (mapSelectedLocation) {
-      if (mapSelectedLocation.address) handleInputChange('address', mapSelectedLocation.address);
-      if (mapSelectedLocation.city) handleInputChange('city', mapSelectedLocation.city);
-      if (mapSelectedLocation.state) handleInputChange('state', mapSelectedLocation.state);
-      if (mapSelectedLocation.pincode) handleInputChange('pincode', mapSelectedLocation.pincode);
-      setPincodeAutoDetectedMsg(`Auto-filled from Map: ${mapSelectedLocation.city}, ${mapSelectedLocation.state}`);
-      showToast("Address, City, State & PIN code auto-filled from map!");
-    }
-    setIsMapModalOpen(false);
   };
 
   // Multi-Branch Management Modal Handlers
@@ -1755,6 +1578,53 @@ const GymProfile = () => {
       [holidayId]: !prev[holidayId]
     }));
   };
+
+  // Google Calendar Agenda Grouping (Chronological Month-by-Month)
+  const groupedHolidays = useMemo(() => {
+    const filtered = INDIAN_WB_HOLIDAYS
+      .filter(h => {
+        if (holidayFilter === "west_bengal") return h.type.includes("West Bengal");
+        if (holidayFilter === "national") return h.type.includes("National");
+        return true;
+      })
+      .filter(h => {
+        if (holidayYearFilter === "2026") return h.date.startsWith("2026");
+        if (holidayYearFilter === "2027") return h.date.startsWith("2027");
+        return true;
+      })
+      .filter(h => {
+        if (selectedHolidayMonth === "ALL") return true;
+        const monthMap = {
+          Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05", Jun: "06",
+          Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12"
+        };
+        const targetMonth = monthMap[selectedHolidayMonth];
+        return targetMonth ? h.date.split("-")[1] === targetMonth : true;
+      })
+      .filter(h => {
+        if (!holidaySearchQuery) return true;
+        const q = holidaySearchQuery.toLowerCase();
+        return (
+          h.name.toLowerCase().includes(q) ||
+          h.description.toLowerCase().includes(q) ||
+          h.dateFormatted.toLowerCase().includes(q) ||
+          h.day.toLowerCase().includes(q)
+        );
+      });
+
+    return filtered.reduce((groups, holiday) => {
+      const parts = holiday.dateFormatted.split(" ");
+      const monthNames = {
+        Jan: "January", Feb: "February", Mar: "March", Apr: "April",
+        May: "May", Jun: "June", Jul: "July", Aug: "August",
+        Sep: "September", Oct: "October", Nov: "November", Dec: "December"
+      };
+      const key = `${monthNames[parts[1]] || parts[1]} ${parts[2]}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(holiday);
+      return groups;
+    }, {});
+  }, [holidayFilter, holidayYearFilter, selectedHolidayMonth, holidaySearchQuery]);
 
   // Live Cover Banner Image Upload Handler
   const handleBannerUpload = (e) => {
@@ -2649,22 +2519,25 @@ const GymProfile = () => {
                             value={gymData.website} 
                             placeholder="e.g. https://www.yourgym.com"
                             onChange={(e) => handleInputChange('website', e.target.value)}
-                            className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
+                            className="w-full h-10 pl-9 pr-44 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
                           />
+                          <div className="absolute inset-y-0 right-1.5 flex items-center">
+                            <button
+                              type="button"
+                              onClick={() => setIsNoWebsiteModalOpen(true)}
+                              className="h-7 px-2.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-600 hover:text-zinc-950 border border-zinc-200/90 shadow-2xs text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer group shrink-0 active:scale-95"
+                              title="Don't have an official website? Click to explore options"
+                            >
+                              <HelpCircle size={12} strokeWidth={2} className="text-zinc-400 group-hover:text-zinc-600 transition-colors" />
+                              <span>Don't have a website?</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
 
                       {/* Facility Physical Address */}
                       <div className="space-y-1.5" ref={autocompleteContainerRef}>
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-semibold text-zinc-700">Street Address</label>
-                          {pincodeAutoDetectedMsg && (
-                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/70 flex items-center gap-1">
-                              <Check size={10} strokeWidth={2.5} />
-                              <span className="truncate max-w-[200px]">{pincodeAutoDetectedMsg}</span>
-                            </span>
-                          )}
-                        </div>
+                        <label className="text-xs font-semibold text-zinc-700">Street Address</label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
                             <MapPin size={14} strokeWidth={1.75} />
@@ -2690,10 +2563,10 @@ const GymProfile = () => {
                             <button 
                               type="button"
                               onClick={handleOpenMapModal}
-                              className="w-7 h-7 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white flex items-center justify-center shadow-2xs transition-all cursor-pointer group shrink-0"
+                              className="w-7 h-7 rounded-lg bg-white hover:bg-zinc-100 text-zinc-600 hover:text-zinc-950 border border-zinc-200/90 shadow-2xs flex items-center justify-center transition-all cursor-pointer group shrink-0 active:scale-95"
                               title="Choose location on map"
                             >
-                              <MapPin size={13} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                              <MapPin size={13.5} strokeWidth={2} className="text-zinc-500 group-hover:text-zinc-900 transition-colors" />
                             </button>
                           </div>
 
@@ -2701,8 +2574,9 @@ const GymProfile = () => {
                           {activeAutocompleteField === 'address' && autocompleteSuggestions.length > 0 && (
                             <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden py-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
                               <div className="px-3.5 py-1.5 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between text-[11px] font-semibold text-zinc-500">
-                                <span className="flex items-center gap-1.5">
-                                  <Sparkles size={11} className="text-amber-500" /> Suggested Addresses
+                                <span className="flex items-center gap-1.5 text-zinc-700">
+                                  <MapPin size={11} strokeWidth={2} className="text-zinc-400" />
+                                  <span>Suggested Addresses</span>
                                 </span>
                                 <span className="text-[10px] text-zinc-400">Click to auto-fill</span>
                               </div>
@@ -2984,28 +2858,45 @@ const GymProfile = () => {
                         </div>
 
                         {gymData.autoHolidayClosure && (
-                          <div className="pt-2.5 border-t border-zinc-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-emerald-50/70 p-3 rounded-xl border border-emerald-200/70">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                              <div className="min-w-0 text-xs">
-                                <span className="text-zinc-600 font-medium">Next Scheduled Closure: </span>
-                                <span className="font-bold text-emerald-950 truncate">{nextUpcomingHoliday.name}</span>
-                                <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">{nextUpcomingHoliday.dateFormatted} ({nextUpcomingHoliday.day})</span>
-                                {nextUpcomingHoliday.statusText && (
-                                  <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-zinc-900 text-white font-semibold">
-                                    {nextUpcomingHoliday.statusText}
-                                  </span>
-                                )}
+                          <div className="pt-2.5 border-t border-zinc-200/70">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/60 border border-emerald-200/80 rounded-xl px-3.5 py-2.5 transition-all shadow-2xs">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-100/90 border border-emerald-200 text-emerald-800 flex items-center justify-center shrink-0 shadow-2xs">
+                                  <Calendar size={15} strokeWidth={2.2} />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-800/90">
+                                      Next Scheduled Closure
+                                    </span>
+                                    {nextUpcomingHoliday.statusText && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-800 text-white tracking-wide">
+                                        {nextUpcomingHoliday.statusText}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs mt-0.5 min-w-0">
+                                    <span className="font-bold text-zinc-950 truncate">
+                                      {nextUpcomingHoliday.name}
+                                    </span>
+                                    <span className="text-zinc-400 shrink-0 font-normal">•</span>
+                                    <span className="text-zinc-600 font-medium text-[11px] shrink-0">
+                                      {nextUpcomingHoliday.dateFormatted} ({nextUpcomingHoliday.day})
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
+
+                              <button 
+                                type="button"
+                                onClick={() => setIsHolidayModalOpen(true)}
+                                className="h-7 px-2.5 rounded-lg bg-white hover:bg-emerald-100/60 text-emerald-900 border border-emerald-200/90 shadow-2xs text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 self-end sm:self-center active:scale-95"
+                                title="View official West Bengal and National gazetted holidays"
+                              >
+                                <span>View Calendar</span>
+                                <ArrowRight size={11} strokeWidth={2.5} className="text-emerald-700" />
+                              </button>
                             </div>
-                            <button 
-                              type="button"
-                              onClick={() => setIsHolidayModalOpen(true)}
-                              className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 underline underline-offset-2 cursor-pointer flex items-center gap-1 shrink-0"
-                            >
-                              <span>View West Bengal & National Calendar</span>
-                              <ArrowRight size={11} />
-                            </button>
                           </div>
                         )}
                       </div>
@@ -6179,359 +6070,29 @@ const GymProfile = () => {
       )}
 
 
-            {/* 10. INTERACTIVE MAP LOCATION & GEO-DETECTION MODAL */}
-      {typeof document !== "undefined" && createPortal(
-        <AnimatePresence>
-          {isMapModalOpen && (
-            <motion.div 
-              key="map-modal-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMapModalOpen(false)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
-              style={{ zIndex: 100000 }}
-            >
-              <motion.div 
-                key="map-modal-card"
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-3xl w-full flex flex-col max-h-[92vh] overflow-hidden select-none"
-              >
-                {/* Header */}
-                <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <MapPin size={18} strokeWidth={2} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Interactive Map Location & Geo-Detection</h3>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        Click anywhere on the interactive map or reposition the pin to auto-detect facility location details.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsMapModalOpen(false)}
-                    className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    <X size={15} strokeWidth={2} />
-                  </button>
-                </div>
-
-                {/* Search Bar (Clean alignment without Device GPS button or Quick Hubs) */}
-                <div className="p-4 bg-zinc-50/80 border-b border-zinc-200/80 shrink-0">
-                  <div className="relative">
-                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                    <input
-                      type="text"
-                      value={mapSearchQuery}
-                      onChange={(e) => setMapSearchQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleMapSearch(mapSearchQuery);
-                        }
-                      }}
-                      placeholder="Search landmark, sector, or road across Kolkata & India..."
-                      className="w-full h-10 pl-10 pr-24 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all font-medium shadow-2xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleMapSearch(mapSearchQuery)}
-                      disabled={isGeocoding}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 px-3.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
-                    >
-                      {isGeocoding ? (
-                        <RefreshCw size={11} className="animate-spin" />
-                      ) : (
-                        <Search size={11} strokeWidth={2.5} />
-                      )}
-                      <span>Search</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Interactive Clickable Slippy Tile Canvas */}
-                <div 
-                  onClick={handleMapCanvasClick}
-                  className="relative flex-1 min-h-[350px] bg-[#e5e9ec] overflow-hidden cursor-crosshair select-none group"
-                >
-                  {/* Native Slippy Map Tiles (3x3 grid centered on mapSelectedLocation) */}
-                  {(() => {
-                    const lat = mapSelectedLocation?.lat || 22.5726;
-                    const lng = mapSelectedLocation?.lng || 88.4311;
-                    const n = Math.pow(2, mapZoom);
-                    const rawX = (lng + 180) / 360 * n;
-                    const latRad = lat * Math.PI / 180;
-                    const rawY = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
-                    const tileX = Math.floor(rawX);
-                    const tileY = Math.floor(rawY);
-                    const tileOffsetX = (rawX - tileX) * 256;
-                    const tileOffsetY = (rawY - tileY) * 256;
-
-                    const tiles = [];
-                    for (let dy = -1; dy <= 1; dy++) {
-                      for (let dx = -1; dx <= 1; dx++) {
-                        const x = tileX + dx;
-                        const y = tileY + dy;
-                        tiles.push({
-                          x,
-                          y,
-                          key: `${mapZoom}-${x}-${y}`,
-                          left: `calc(50% + ${dx * 256 - tileOffsetX}px)`,
-                          top: `calc(50% + ${dy * 256 - tileOffsetY}px)`
-                        });
-                      }
-                    }
-
-                    return (
-                      <div className="absolute inset-0 pointer-events-none">
-                        {tiles.map(t => (
-                          <img
-                            key={t.key}
-                            src={`https://tile.openstreetmap.org/${mapZoom}/${t.x}/${t.y}.png`}
-                            alt=""
-                            className="w-[256px] h-[256px] absolute pointer-events-none filter contrast-[1.03] select-none"
-                            style={{ left: t.left, top: t.top }}
-                            onError={(e) => {
-                              e.currentTarget.style.opacity = '0.2';
-                            }}
-                          />
-                        ))}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Clickable Nearby Landmark Pins Plotted on Surface */}
-                  {POPULAR_WEST_BENGAL_LOCATIONS.map((preset) => {
-                    const lat = mapSelectedLocation?.lat || 22.5726;
-                    const lng = mapSelectedLocation?.lng || 88.4311;
-                    const n = Math.pow(2, mapZoom);
-                    const dLng = preset.lng - lng;
-                    const pxX = (dLng / 360) * n * 256;
-                    
-                    const latRad = lat * Math.PI / 180;
-                    const presetLatRad = preset.lat * Math.PI / 180;
-                    const mercY = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * 256;
-                    const presetMercY = (1 - Math.log(Math.tan(presetLatRad) + 1 / Math.cos(presetLatRad)) / Math.PI) / 2 * n * 256;
-                    const pxY = presetMercY - mercY;
-
-                    if (Math.abs(pxX) > 280 || Math.abs(pxY) > 150) return null;
-
-                    return (
-                      <button
-                        key={preset.name}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMapSelectedLocation({
-                            address: preset.address,
-                            city: preset.city,
-                            state: preset.state,
-                            pincode: preset.pincode,
-                            lat: preset.lat,
-                            lng: preset.lng,
-                            displayName: preset.name
-                          });
-                          setMapSearchQuery(preset.name);
-                        }}
-                        style={{
-                          left: `calc(50% + ${pxX}px)`,
-                          top: `calc(50% + ${pxY}px)`
-                        }}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 px-2 py-1 rounded-lg bg-white/95 hover:bg-zinc-900 hover:text-white text-zinc-800 border border-zinc-300 shadow-sm text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer z-10 hover:scale-105"
-                        title={`Click to position at ${preset.name}`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span className="truncate max-w-[120px]">{preset.name.split(",")[0]}</span>
-                      </button>
-                    );
-                  })}
-
-                  {/* Active Pin Center Marker */}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-20 flex flex-col items-center">
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/40 animate-ping absolute -bottom-2.5" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-600 border-2 border-white shadow-md absolute -bottom-1.5" />
-                    <motion.div 
-                      key={`${mapSelectedLocation?.lat}-${mapSelectedLocation?.lng}`}
-                      initial={{ y: -16, scale: 0.85 }}
-                      animate={{ y: 0, scale: 1 }}
-                      transition={{ type: "spring", stiffness: 450, damping: 22 }}
-                      className="p-2 rounded-2xl bg-zinc-900 text-white shadow-2xl border-2 border-white flex items-center justify-center mb-1"
-                    >
-                      <Building2 size={16} className="text-emerald-400" />
-                    </motion.div>
-                  </div>
-
-                  {/* Top Left: Live Coordinates */}
-                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-200/90 shadow-sm flex items-center gap-2 pointer-events-none z-20">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[11px] font-mono font-bold text-zinc-800">
-                      {mapSelectedLocation?.lat?.toFixed(5) || "22.57260"}° N, {mapSelectedLocation?.lng?.toFixed(5) || "88.43110"}° E
-                    </span>
-                  </div>
-
-                  {/* Top Center: Click Map Helper Pill */}
-                  <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-zinc-900/85 backdrop-blur-md text-white px-3 py-1.2 rounded-full text-[10px] font-medium shadow-md flex items-center gap-1.5 pointer-events-none z-20">
-                    <MapPin size={11} className="text-emerald-400" />
-                    <span>Click anywhere on the map to pin facility location</span>
-                  </div>
-
-                  {/* Top Right: Zoom & Directional Controls */}
-                  <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
-                    {/* Zoom Controls */}
-                    <div className="flex flex-col bg-white/95 rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMapZoom(z => Math.min(18, z + 1));
-                        }}
-                        className="w-8 h-8 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 font-bold text-sm cursor-pointer border-b border-zinc-100 transition-colors"
-                        title="Zoom In"
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMapZoom(z => Math.max(12, z - 1));
-                        }}
-                        className="w-8 h-8 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 font-bold text-sm cursor-pointer transition-colors"
-                        title="Zoom Out"
-                      >
-                        −
-                      </button>
-                    </div>
-
-                    {/* Pan Navigation Buttons */}
-                    <div className="flex flex-col items-center bg-white/95 rounded-xl border border-zinc-200 shadow-sm p-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newLat = (mapSelectedLocation?.lat || 22.5726) + 0.0015;
-                          const newLng = mapSelectedLocation?.lng || 88.4311;
-                          reverseGeocodeCoords(newLat, newLng);
-                        }}
-                        title="Pan North"
-                        className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
-                      >
-                        ▲
-                      </button>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const newLat = mapSelectedLocation?.lat || 22.5726;
-                            const newLng = (mapSelectedLocation?.lng || 88.4311) - 0.0015;
-                            reverseGeocodeCoords(newLat, newLng);
-                          }}
-                          title="Pan West"
-                          className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
-                        >
-                          ◀
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const newLat = mapSelectedLocation?.lat || 22.5726;
-                            const newLng = (mapSelectedLocation?.lng || 88.4311) + 0.0015;
-                            reverseGeocodeCoords(newLat, newLng);
-                          }}
-                          title="Pan East"
-                          className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
-                        >
-                          ▶
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newLat = (mapSelectedLocation?.lat || 22.5726) - 0.0015;
-                          const newLng = mapSelectedLocation?.lng || 88.4311;
-                          reverseGeocodeCoords(newLat, newLng);
-                        }}
-                        title="Pan South"
-                        className="w-6 h-6 rounded-md hover:bg-zinc-100 text-zinc-700 flex items-center justify-center text-[10px] cursor-pointer"
-                      >
-                        ▼
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Detected Location Result Card */}
-                <div className="p-4 bg-zinc-50 border-t border-zinc-200 space-y-3 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-800">
-                      <CheckCircle2 size={13} className="text-emerald-600" />
-                      <span>Resolved Address Details</span>
-                    </div>
-                    <span className="text-[10px] font-medium text-zinc-500">
-                      Click "Confirm & Auto-Fill" to sync with Gym Profile
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
-                    {/* Street */}
-                    <div className="md:col-span-2 p-2.5 rounded-xl bg-white border border-zinc-200/90 shadow-2xs">
-                      <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider block">Street Address</span>
-                      <span className="text-xs font-semibold text-zinc-900 truncate block mt-0.5">
-                        {mapSelectedLocation?.address || "Street address not detected"}
-                      </span>
-                    </div>
-
-                    {/* City & State */}
-                    <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90 shadow-2xs">
-                      <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider block">City & State</span>
-                      <span className="text-xs font-semibold text-zinc-900 truncate block mt-0.5">
-                        {mapSelectedLocation?.city || "—"}, {mapSelectedLocation?.state || "—"}
-                      </span>
-                    </div>
-
-                    {/* PIN */}
-                    <div className="p-2.5 rounded-xl bg-white border border-zinc-200/90 shadow-2xs">
-                      <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider block">Postal PIN Code</span>
-                      <span className="text-xs font-mono font-bold text-emerald-800 truncate block mt-0.5">
-                        {mapSelectedLocation?.pincode || "—"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Buttons (Cleanly aligned without OSM attribution line) */}
-                <div className="px-6 py-4 bg-white border-t border-zinc-100 flex items-center justify-end gap-2.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsMapModalOpen(false)}
-                    className="h-9 px-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleApplyMapLocation}
-                    className="h-9 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm border border-zinc-900"
-                  >
-                    <Check size={14} strokeWidth={2.5} />
-                    <span>Confirm & Auto-Fill Facility Details</span>
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+      {/* 10. INTERACTIVE MAP LOCATION & GEO-DETECTION MODAL (AUTHENTIC GOOGLE MAPS EXPERIENCE) */}
+      <FacilityLeafletMapModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        initialData={{
+          address: gymData.address,
+          city: gymData.city,
+          state: gymData.state,
+          pincode: gymData.pincode
+        }}
+        presets={POPULAR_WEST_BENGAL_LOCATIONS}
+        onSelectLocation={(loc) => {
+          setGymData(prev => ({
+            ...prev,
+            address: loc.address || prev.address,
+            city: loc.city || prev.city,
+            state: loc.state || prev.state,
+            pincode: loc.pincode || prev.pincode
+          }));
+          setHasChanges(true);
+          showToast(`Location applied: ${loc.city ? loc.city + ', ' : ''}${loc.state || ''}`);
+        }}
+      />
 
       {/* 11. MULTI-BRANCH NETWORK MODAL */}
       {typeof document !== "undefined" && createPortal(
@@ -6764,7 +6325,7 @@ const GymProfile = () => {
         document.body
       )}
 
-      {/* 12. OFFICIAL 2025-2026 WEST BENGAL & NATIONAL HOLIDAYS MODAL */}
+            {/* 12. OFFICIAL WEST BENGAL & NATIONAL HOLIDAYS (GOOGLE CALENDAR STYLE) */}
       {typeof document !== "undefined" && createPortal(
         <AnimatePresence>
           {isHolidayModalOpen && (
@@ -6774,21 +6335,21 @@ const GymProfile = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsHolidayModalOpen(false)}
-              className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
               style={{ zIndex: 100000 }}
             >
               <motion.div 
                 key="holiday-modal-card"
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                initial={{ opacity: 0, scale: 0.96, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                exit={{ opacity: 0, scale: 0.96, y: 12 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-3xl w-full flex flex-col max-h-[90vh] overflow-hidden select-none"
+                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-3xl w-full flex flex-col h-[85vh] min-h-[580px] max-h-[860px] overflow-hidden select-none"
               >
-                {/* Header */}
-                <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between shrink-0">
+                {/* Google Calendar Style Header */}
+                <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center justify-center shrink-0 shadow-2xs">
                       <Calendar size={18} strokeWidth={2} />
                     </div>
                     <div>
@@ -6796,12 +6357,12 @@ const GymProfile = () => {
                         <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
                           West Bengal & National Gazetted Holidays (2026–2027)
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[10px] font-semibold border border-zinc-200">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[10px] font-bold border border-blue-200">
                           {INDIAN_WB_HOLIDAYS.length} Gazetted Days
                         </span>
                       </div>
                       <p className="text-xs text-zinc-500 mt-0.5">
-                        Automated facility closures based on Govt. of West Bengal Finance Dept. & Govt. of India gazette orders.
+                        Official Govt. of West Bengal & Govt. of India Gazette orders for automated gym facility closures.
                       </p>
                     </div>
                   </div>
@@ -6814,143 +6375,289 @@ const GymProfile = () => {
                   </button>
                 </div>
 
-                {/* Filter and Search Bar */}
-                <div className="p-4 bg-zinc-50/80 border-b border-zinc-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
-                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-200/70">
-                    <button
-                      type="button"
-                      onClick={() => setHolidayFilter("all")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        holidayFilter === "all"
-                          ? "bg-white text-zinc-900 shadow-2xs font-bold"
-                          : "text-zinc-600 hover:text-zinc-900"
-                      }`}
-                    >
-                      All Holidays ({INDIAN_WB_HOLIDAYS.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHolidayFilter("west_bengal")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        holidayFilter === "west_bengal"
-                          ? "bg-white text-emerald-900 shadow-2xs font-bold"
-                          : "text-zinc-600 hover:text-zinc-900"
-                      }`}
-                    >
-                      West Bengal ({INDIAN_WB_HOLIDAYS.filter(h => h.type.includes("West Bengal")).length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHolidayFilter("national")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        holidayFilter === "national"
-                          ? "bg-white text-blue-900 shadow-2xs font-bold"
-                          : "text-zinc-600 hover:text-zinc-900"
-                      }`}
-                    >
-                      National ({INDIAN_WB_HOLIDAYS.filter(h => h.type.includes("National")).length})
-                    </button>
+                {/* Google Calendar Top Filter Toolbar */}
+                <div className="p-4 bg-zinc-50/80 border-b border-zinc-200/80 space-y-3 shrink-0">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    {/* Category Tabs */}
+                    <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-200/80 self-start">
+                      <button
+                        type="button"
+                        onClick={() => setHolidayFilter("all")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          holidayFilter === "all"
+                            ? "bg-white text-zinc-900 shadow-2xs font-bold"
+                            : "text-zinc-600 hover:text-zinc-900"
+                        }`}
+                      >
+                        All ({INDIAN_WB_HOLIDAYS.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHolidayFilter("west_bengal")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          holidayFilter === "west_bengal"
+                            ? "bg-white text-emerald-900 shadow-2xs font-bold"
+                            : "text-zinc-600 hover:text-zinc-900"
+                        }`}
+                      >
+                        West Bengal ({INDIAN_WB_HOLIDAYS.filter(h => h.type.includes("West Bengal")).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHolidayFilter("national")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          holidayFilter === "national"
+                            ? "bg-white text-blue-900 shadow-2xs font-bold"
+                            : "text-zinc-600 hover:text-zinc-900"
+                        }`}
+                      >
+                        National ({INDIAN_WB_HOLIDAYS.filter(h => h.type.includes("National")).length})
+                      </button>
+                    </div>
+
+                    {/* Year Selector & Search */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-200/80">
+                        {["all", "2026", "2027"].map(year => (
+                          <button
+                            key={year}
+                            type="button"
+                            onClick={() => setHolidayYearFilter(year)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                              holidayYearFilter === year
+                                ? "bg-white text-zinc-900 shadow-2xs font-bold"
+                                : "text-zinc-600 hover:text-zinc-900"
+                            }`}
+                          >
+                            {year === "all" ? "All Years" : year}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="relative min-w-[180px]">
+                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                        <input
+                          type="text"
+                          value={holidaySearchQuery}
+                          onChange={(e) => setHolidaySearchQuery(e.target.value)}
+                          placeholder="Search holiday or puja..."
+                          className="w-full h-8 pl-8 pr-3 rounded-lg border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="relative min-w-[200px]">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                    <input
-                      type="text"
-                      value={holidaySearchQuery}
-                      onChange={(e) => setHolidaySearchQuery(e.target.value)}
-                      placeholder="Search holiday or puja..."
-                      className="w-full h-8.5 pl-8.5 pr-3 rounded-lg border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900"
-                    />
+                  {/* Google Calendar Month Quick Jump Ribbon */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+                    <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider shrink-0 mr-1">Month:</span>
+                    {["ALL", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setSelectedHolidayMonth(m)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer shrink-0 ${
+                          selectedHolidayMonth === m
+                            ? "bg-zinc-900 text-white shadow-2xs font-bold"
+                            : "bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Holiday Items List */}
-                <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
-                  {INDIAN_WB_HOLIDAYS
-                    .filter(h => {
-                      if (holidayFilter === "west_bengal") return h.type.includes("West Bengal");
-                      if (holidayFilter === "national") return h.type.includes("National");
-                      return true;
-                    })
-                    .filter(h => {
-                      if (!holidaySearchQuery) return true;
-                      const q = holidaySearchQuery.toLowerCase();
-                      return h.name.toLowerCase().includes(q) || h.description.toLowerCase().includes(q) || h.dateFormatted.toLowerCase().includes(q);
-                    })
-                    .map(holiday => {
-                      const isOverridden = !!holidayOverrides[holiday.id];
-                      const isWB = holiday.type.includes("West Bengal");
-                      return (
-                        <div
-                          key={holiday.id}
-                          className="p-3.5 rounded-2xl border border-zinc-200/90 bg-white hover:border-zinc-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
-                        >
-                          {/* Date Block & Details */}
-                          <div className="flex items-start gap-3.5 min-w-0">
-                            {/* Calendar Block */}
-                            <div className="w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-200 flex flex-col items-center justify-center shrink-0 shadow-2xs">
-                              <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">
-                                {holiday.dateFormatted.split(" ")[1]}
-                              </span>
-                              <span className="text-base font-bold text-zinc-900 leading-none my-0.5">
-                                {holiday.dateFormatted.split(" ")[0]}
-                              </span>
-                              <span className="text-[9px] font-semibold text-zinc-500">
-                                {holiday.day.slice(0, 3)}
-                              </span>
-                            </div>
-
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-xs font-bold text-zinc-900">{holiday.name}</h4>
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
-                                  isWB 
-                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200" 
-                                    : "bg-blue-50 text-blue-800 border-blue-200"
-                                }`}>
-                                  {holiday.type}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                                {holiday.description}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Closure Status & Facility Override Toggle */}
-                          <div className="flex items-center gap-2 sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100">
-                            <button
-                              type="button"
-                              onClick={() => toggleHolidayOverride(holiday.id)}
-                              className={`h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
-                                isOverridden
-                                  ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
-                                  : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800"
-                              }`}
-                              title="Click to toggle morning session vs complete holiday closure"
-                            >
-                              <Clock size={12} strokeWidth={2} />
-                              <span>{isOverridden ? "Morning Only (6–11 AM)" : "Full Facility Closure"}</span>
-                            </button>
-                          </div>
+                {/* Google Calendar Agenda Events View (Month-by-Month Grouped) */}
+                <div className="p-4 sm:p-5 overflow-y-auto space-y-6 flex-1 bg-zinc-50/40">
+                  {Object.keys(groupedHolidays).length === 0 ? (
+                    <div className="py-16 text-center text-zinc-400 space-y-2">
+                      <Calendar size={36} className="mx-auto text-zinc-300" />
+                      <p className="text-xs font-semibold text-zinc-600">No gazetted holidays match your filters</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHolidayFilter("all");
+                          setHolidayYearFilter("all");
+                          setSelectedHolidayMonth("ALL");
+                          setHolidaySearchQuery("");
+                        }}
+                        className="text-xs text-zinc-900 underline font-semibold cursor-pointer"
+                      >
+                        Reset all filters
+                      </button>
+                    </div>
+                  ) : (
+                    Object.entries(groupedHolidays).map(([monthYear, holidays]) => (
+                      <div key={monthYear} className="space-y-2.5">
+                        {/* Month Header Banner */}
+                        <div className="sticky top-0 z-10 py-1 px-3 bg-zinc-100/90 backdrop-blur-sm rounded-xl border border-zinc-200/80 flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-800">
+                            {monthYear}
+                          </span>
+                          <span className="text-[10px] font-semibold text-zinc-500 bg-white px-2 py-0.5 rounded-full border border-zinc-200">
+                            {holidays.length} {holidays.length === 1 ? 'Closure' : 'Closures'}
+                          </span>
                         </div>
-                      );
-                    })}
+
+                        {/* Month Holiday Cards */}
+                        <div className="space-y-2">
+                          {holidays.map(holiday => {
+                            const isOverridden = !!holidayOverrides[holiday.id];
+                            const isWB = holiday.type.includes("West Bengal");
+                            const isNext = nextUpcomingHoliday?.id === holiday.id;
+
+                            return (
+                              <div
+                                key={holiday.id}
+                                className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs ${
+                                  isNext 
+                                    ? "bg-white border-emerald-400 ring-2 ring-emerald-500/20" 
+                                    : "bg-white border-zinc-200/90 hover:border-zinc-300"
+                                }`}
+                              >
+                                {/* Google Calendar Style Date Square & Details */}
+                                <div className="flex items-start gap-3.5 min-w-0">
+                                  {/* Calendar Day Block */}
+                                  <div className={`w-13 h-13 rounded-2xl border flex flex-col items-center justify-center shrink-0 shadow-2xs ${
+                                    isNext 
+                                      ? "bg-emerald-50 border-emerald-300 text-emerald-900" 
+                                      : "bg-zinc-50 border-zinc-200 text-zinc-900"
+                                  }`}>
+                                    <span className="text-[9px] uppercase font-bold text-zinc-400 tracking-wider">
+                                      {holiday.day.slice(0, 3)}
+                                    </span>
+                                    <span className="text-base font-bold leading-none my-0.5">
+                                      {holiday.dateFormatted.split(" ")[0]}
+                                    </span>
+                                    <span className="text-[9px] font-semibold text-zinc-500">
+                                      {holiday.dateFormatted.split(" ")[1]}
+                                    </span>
+                                  </div>
+
+                                  <div className="min-w-0 space-y-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className="text-xs font-bold text-zinc-900">{holiday.name}</h4>
+                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                                        isWB 
+                                          ? "bg-emerald-50 text-emerald-800 border-emerald-200" 
+                                          : "bg-blue-50 text-blue-800 border-blue-200"
+                                      }`}>
+                                        {holiday.type}
+                                      </span>
+                                      {isNext && (
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-700 text-white animate-pulse">
+                                          Next Upcoming Closure
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Operational Status Sub-line */}
+                                    <div className="flex items-center gap-2 text-[11px]">
+                                      <span className={`inline-flex items-center gap-1 font-semibold ${
+                                        isOverridden ? "text-amber-700" : "text-emerald-700"
+                                      }`}>
+                                        <Clock size={11} strokeWidth={2} />
+                                        {isOverridden ? "Morning Session Active (6:00 AM – 11:00 AM)" : "Full Facility Closure (All Day)"}
+                                      </span>
+                                    </div>
+
+                                    <p className="text-[11px] text-zinc-500 leading-relaxed font-normal">
+                                      {holiday.description}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Google Calendar Action Toggle */}
+                                <div className="flex items-center gap-2 sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleHolidayOverride(holiday.id)}
+                                    className={`h-8 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                                      isOverridden
+                                        ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                                        : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800"
+                                    }`}
+                                    title="Click to toggle between complete closure and morning workout block"
+                                  >
+                                    <Clock size={12} strokeWidth={2} />
+                                    <span>{isOverridden ? "Morning Only" : "Closed Full Day"}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
 
-                {/* Footer */}
+                {/* Google Calendar Footer */}
                 <div className="px-6 py-3.5 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between shrink-0">
                   <div className="text-[11px] text-zinc-500 flex items-center gap-1.5">
-                    <ShieldCheck size={13} className="text-emerald-600" />
-                    <span>Member app push & WhatsApp closure alerts are auto-queued 24h prior.</span>
+                    <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                    <span>Member app push notifications & WhatsApp closure alerts are auto-dispatched 24h prior.</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsHolidayModalOpen(false)}
-                    className="h-8.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors cursor-pointer"
+                    className="h-8.5 px-4.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Done & Close
                   </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* 13. OFFICIAL WEBSITE SOLUTIONS MODAL (BLANK SHELL FOR FUTURE CONTENT) */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isNoWebsiteModalOpen && (
+            <motion.div 
+              key="no-website-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsNoWebsiteModalOpen(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+              style={{ zIndex: 100000 }}
+            >
+              <motion.div 
+                key="no-website-modal-card"
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-xl w-full flex flex-col min-h-[380px] overflow-hidden select-none relative"
+              >
+                {/* Header */}
+                <div className="px-6 py-4.5 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <Globe size={18} strokeWidth={2} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-zinc-900 tracking-tight">Website Solutions & Setup</h3>
+                      <p className="text-[11px] text-zinc-500 font-normal mt-0.5">Official gym web presence and landing page options</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsNoWebsiteModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 flex items-center justify-center transition-colors cursor-pointer"
+                    title="Close"
+                  >
+                    <X size={15} strokeWidth={2.2} />
+                  </button>
+                </div>
+
+                {/* Blank Modal Content Area (Ready for future content) */}
+                <div className="p-8 flex-1 flex flex-col items-center justify-center min-h-[260px]">
+                  {/* Intentionally blank as requested */}
                 </div>
               </motion.div>
             </motion.div>
