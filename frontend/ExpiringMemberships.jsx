@@ -5,8 +5,6 @@ import {
   AlertTriangle,
   Archive,
   ArrowUpDown,
-  BarChart3,
-  Bell,
   Calendar,
   Check,
   CheckCircle2,
@@ -99,15 +97,6 @@ const laneConfig = {
 // SHARED UI COMPONENTS
 // ─────────────────────────────────────────
 function DashboardHeader({ title, description, stats, onRenew }) {
-  const [campaignLaunched, setCampaignLaunched] = useState(false);
-
-  const handleLaunchCampaign = () => {
-    setCampaignLaunched(true);
-    setTimeout(() => {
-      setCampaignLaunched(false);
-    }, 5000);
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between relative z-10">
@@ -119,146 +108,65 @@ function DashboardHeader({ title, description, stats, onRenew }) {
           <p className="mt-3 max-w-3xl text-xs font-semibold leading-relaxed text-slate-500">{description}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0 lg:mt-0 mt-4">
-          <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"><Bell size={18} /></button>
           <button onClick={onRenew} className="h-10 px-6 rounded-xl bg-slate-950 text-white flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"><Plus size={18} /> Renew Membership</button>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 relative z-10 items-stretch">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[640px] relative z-10 shrink-0">
-          <StatTile label="Expiring Today" value={stats.expiringToday} tone="rose" />
-          <StatTile label="Upcoming (Week)" value={stats.totalExpiring} tone="blue" />
-          <StatTile label="Revenue At Risk" value={currencyFormatter.format(stats.revenueAtRisk / 1000) + "K"} tone="amber" />
-          <StatTile label="Renewal Prob." value={`${stats.avgRenewalProb}%`} tone="emerald" />
-        </div>
-
-        <div className="flex-1 min-w-[280px] rounded-xl bg-slate-950 text-white p-3 flex flex-col justify-between border border-slate-800/80 relative overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:border-slate-700/80">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full -mr-12 -mt-12 blur-2xl pointer-events-none" />
-          
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              {campaignLaunched ? (
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.15em] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  Active
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.15em] bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                  Radar
-                </div>
-              )}
-            </div>
-            
-            <h3 className="text-xs font-black text-white tracking-tight leading-none mt-1">
-              Auto-Campaign: Annual Upgrades
-            </h3>
-            <p className="mt-1 text-[9px] font-semibold text-slate-400 leading-tight">
-              {campaignLaunched 
-                ? `Sending automated renewal reminders & 10% discounts...`
-                : `Targeting ${stats.totalExpiring} upcoming expiries with loyalty offers.`
-              }
-            </p>
-          </div>
-          
-          <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-900 pt-2">
-            <div className="flex flex-col">
-              <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider">Est. Revenue</span>
-              <strong className="text-xs font-black text-emerald-400 leading-none mt-0.5">
-                {currencyFormatter.format(stats.revenueAtRisk * 1.12)}
-              </strong>
-            </div>
-            <button 
-              onClick={handleLaunchCampaign}
-              disabled={campaignLaunched}
-              className={cn(
-                "h-7 px-2.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shadow-md",
-                campaignLaunched 
-                  ? "bg-emerald-600 text-white shadow-emerald-950/30 cursor-not-allowed" 
-                  : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/30 active:scale-95"
-              )}
-            >
-              {campaignLaunched ? (
-                <>Sending...</>
-              ) : (
-                <>Run Campaign <ChevronRight size={8} /></>
-              )}
-            </button>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10 w-full">
+        <StatTile 
+          label="Expiring Today" 
+          value={stats.expiringToday} 
+          badgeText={stats.expiringToday > 0 ? "Immediate" : "Clear"}
+          badgeTone={stats.expiringToday > 0 ? "rose" : "neutral"}
+          subtext={stats.expiringToday > 0 ? `${stats.expiringToday} member(s) expiring today` : "No memberships expiring today"}
+        />
+        <StatTile 
+          label="Upcoming (Week)" 
+          value={stats.totalExpiring} 
+          badgeText="7-Day Horizon"
+          badgeTone="blue"
+          subtext={`${stats.totalExpiring} total expiring in window`}
+        />
+        <StatTile 
+          label="Revenue At Risk" 
+          value={currencyFormatter.format(stats.revenueAtRisk)} 
+          badgeText="Exposure"
+          badgeTone="amber"
+          subtext="Total expiring contract value"
+        />
       </div>
     </div>
   );
 }
 
-function StatTile({ label, value, tone = "slate" }) {
-  const config = {
-    rose: {
-      border: "border-l-rose-500 border-slate-200/60",
-      dot: "bg-rose-500",
-      bg: "bg-rose-50/10",
-      badge: "bg-rose-100 text-rose-700",
-      badgeText: "Urgent",
-      subtext: "Immediate action required",
-    },
-    blue: {
-      border: "border-l-blue-500 border-slate-200/60",
-      dot: "bg-blue-500",
-      bg: "bg-blue-50/10",
-      badge: "bg-blue-100 text-blue-700",
-      badgeText: "Pipeline",
-      subtext: "4 of 5 members contacted",
-    },
-    amber: {
-      border: "border-l-amber-500 border-slate-200/60",
-      dot: "bg-amber-500",
-      bg: "bg-amber-50/10",
-      badge: "bg-amber-100 text-amber-700",
-      badgeText: "At Risk",
-      subtext: "Requires active recovery",
-    },
-    emerald: {
-      border: "border-l-emerald-500 border-slate-200/60",
-      dot: "bg-emerald-500",
-      bg: "bg-emerald-50/10",
-      badge: "bg-emerald-100 text-emerald-700",
-      badgeText: "+2.4% trend",
-      subtext: "Average retention health",
-    },
-    slate: {
-      border: "border-l-slate-400 border-slate-200/60",
-      dot: "bg-slate-400",
-      bg: "bg-white",
-      badge: "bg-slate-100 text-slate-700",
-      badgeText: "Info",
-      subtext: "System status stable",
-    },
-  }[tone];
+function StatTile({ label, value, badgeText, badgeTone = "neutral", subtext }) {
+  const badgeClasses = {
+    neutral: "bg-slate-100 text-slate-600 border-slate-200/80",
+    emerald: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+    rose: "bg-rose-50 text-rose-700 border-rose-200/60",
+    blue: "bg-blue-50 text-blue-700 border-blue-200/60",
+    amber: "bg-amber-50 text-amber-700 border-amber-200/60",
+  }[badgeTone] || "bg-slate-100 text-slate-600 border-slate-200/80";
 
   return (
-    <div className={cn(
-      "min-w-0 rounded-xl border border-l-4 p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md flex flex-col justify-between h-full",
-      config.border,
-      config.bg
-    )}>
+    <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between h-full">
       <div>
-        <div className="flex items-center justify-between gap-1 mb-1.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", config.dot)} />
-            <span className="block truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
-              {label}
-            </span>
-          </div>
-          <span className={cn("text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shrink-0", config.badge)}>
-            {config.badgeText}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans">
+            {label}
+          </span>
+          <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border", badgeClasses)}>
+            {badgeText}
           </span>
         </div>
-        <strong className="block truncate text-xl font-black tracking-tight text-slate-900 leading-none mt-0.5">
-          {value}
-        </strong>
+        <div className="mt-3.5 mb-1">
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 font-sans leading-none block">
+            {value}
+          </span>
+        </div>
       </div>
-      <p className="mt-2 text-[9px] font-semibold text-slate-500 leading-tight">
-        {config.subtext}
+      <p className="mt-3 text-xs font-normal text-slate-500 leading-normal">
+        {subtext}
       </p>
     </div>
   );
@@ -322,13 +230,6 @@ function BulkActionBar({ selectedCount, onClearSelection, onRenew, viewMode, set
             title="Table View"
           >
             <List size={18} />
-          </button>
-          <button 
-            onClick={() => setViewMode("analytics")}
-            className={cn("w-9 h-8 flex items-center justify-center rounded-md transition-all", viewMode === "analytics" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700")}
-            title="Analytics"
-          >
-            <BarChart3 size={18} />
           </button>
         </div>
         <div className="h-5 w-px bg-slate-300"></div>
@@ -484,7 +385,9 @@ function MemberCard({ member, onProfile, onAction }) {
           <div className={cn("rounded-xl border px-3.5 py-3 flex flex-col justify-between min-h-[62px] transition-colors", daysColorClass)}>
             <span className="block text-[8px] font-black uppercase tracking-widest text-slate-450 font-mono">Expires In</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-sm font-black leading-none">{member.daysRemaining} Days</span>
+              <span className="text-sm font-black leading-none">
+                {member.daysRemaining === 0 ? "Today" : member.daysRemaining < 0 ? `Expired (${Math.abs(member.daysRemaining)}d)` : `${member.daysRemaining} Days`}
+              </span>
             </div>
             <span className="block text-[9px] font-mono font-bold text-slate-400 mt-1">{member.expiryDate}</span>
           </div>
@@ -520,17 +423,26 @@ function MemberCard({ member, onProfile, onAction }) {
         </button>
 
         {/* CALL BUTTON - Native tel: link for macOS FaceTime / Phone Relay dialer */}
-        <a 
-          href={`tel:${(member.phone || "+919876543210").replace(/[^0-9+]/g, '')}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onAction?.("call", member);
-          }}
-          className="h-9 px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-blue-600 shadow-sm hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-blue-500/20 hover:shadow-md active:scale-[0.93] active:bg-blue-700 active:border-blue-700 transition-all flex items-center gap-1.5 shrink-0 text-[10px] font-black uppercase tracking-wider"
-          title={`Call ${member.name} (${member.phone || "+91 98765 43210"})`}
-        >
-          <Phone size={14} /> Call
-        </a>
+        {member.phone ? (
+          <a 
+            href={`tel:${member.phone.replace(/[^0-9+]/g, '')}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction?.("call", member);
+            }}
+            className="h-9 px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-blue-600 shadow-sm hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-blue-500/20 hover:shadow-md active:scale-[0.93] active:bg-blue-700 active:border-blue-700 transition-all flex items-center gap-1.5 shrink-0 text-[10px] font-black uppercase tracking-wider"
+            title={`Call ${member.name} (${member.phone})`}
+          >
+            <Phone size={14} /> Call
+          </a>
+        ) : (
+          <span 
+            className="h-9 px-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-450 flex items-center gap-1.5 shrink-0 text-[10px] font-black uppercase tracking-wider cursor-not-allowed"
+            title="No phone number recorded"
+          >
+            <Phone size={14} /> No Phone
+          </span>
+        )}
 
         {/* PROFILE BUTTON */}
         <button 
@@ -704,21 +616,23 @@ const MemberProfileDrawer = ({ isOpen, onClose, member, onAction }) => {
 
            <section className="space-y-4">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Engagement History</h3>
-              <div className="space-y-3">
-                 {[
-                   { date: "Yesterday", type: "WhatsApp", msg: "Expiry reminder sent." },
-                   { date: "3 days ago", type: "Call", msg: "Member interested in Annual Plan." },
-                   { date: "5 days ago", type: "Email", msg: "Loyalty offer delivered." },
-                 ].map((h, i) => (
-                   <div key={i} className="flex gap-4 items-start">
-                      <div className="w-2 h-2 rounded-full bg-slate-300 mt-1.5 shrink-0" />
-                      <div className="min-w-0">
-                         <span className="text-[10px] font-bold text-slate-500 uppercase">{h.date} · {h.type}</span>
-                         <p className="text-xs font-semibold text-slate-700">{h.msg}</p>
-                      </div>
-                   </div>
-                 ))}
-              </div>
+              {member.contactLogs && member.contactLogs.length > 0 ? (
+                <div className="space-y-3">
+                   {member.contactLogs.map((h, i) => (
+                     <div key={i} className="flex gap-4 items-start">
+                        <div className="w-2 h-2 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                        <div className="min-w-0">
+                           <span className="text-[10px] font-bold text-slate-500 uppercase">{h.date} · {h.type}</span>
+                           <p className="text-xs font-semibold text-slate-700">{h.msg}</p>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                  <p className="text-xs font-semibold text-slate-500">No previous contact logs recorded for this member.</p>
+                </div>
+              )}
            </section>
         </main>
 
@@ -736,27 +650,27 @@ const MemberProfileDrawer = ({ isOpen, onClose, member, onAction }) => {
 // ─────────────────────────────────────────
 // RENEWAL MODAL (Redesigned matching Add Member Modal design system)
 // ─────────────────────────────────────────
-const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = [] }) => {
+const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = [], plansList = [] }) => {
   const [activeStep, setActiveStep] = useState(1);
   const [activeMember, setActiveMember] = useState(initialMember || null);
   const [searchMember, setSearchMember] = useState("");
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
-  const [selectedPlanId, setSelectedPlanId] = useState("annual_elite");
+  const [selectedPlanId, setSelectedPlanId] = useState("");
   const [startDate, setStartDate] = useState(
     initialMember?.expiryDate || new Date().toISOString().split("T")[0]
   );
-  const [selectedAddons, setSelectedAddons] = useState(["pt_pass"]);
-  const [customDiscount, setCustomDiscount] = useState(10); // percentage
-  const [applyLoyaltyBonus, setApplyLoyaltyBonus] = useState(true);
+  const [selectedAddons, setSelectedAddons] = useState([]);
+  const [customDiscount, setCustomDiscount] = useState(0); // percentage
+  const [applyLoyaltyBonus, setApplyLoyaltyBonus] = useState(false);
   const [includeGst, setIncludeGst] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("upi");
-  const [txnRef, setTxnRef] = useState("UPI-88492019482");
+  const [txnRef, setTxnRef] = useState("");
   const [sendWhatsapp, setSendWhatsapp] = useState(true);
   const [sendSms, setSendSms] = useState(true);
-  const [notes, setNotes] = useState("Member requested annual renewal with loyalty retention offer.");
+  const [notes, setNotes] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const [selectedCoach, setSelectedCoach] = useState(initialMember?.pt || "Unassigned");
+  const [selectedCoach, setSelectedCoach] = useState(initialMember?.assignedTrainer || initialMember?.pt || "Unassigned");
   const [isCoachDropdownOpen, setIsCoachDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -764,59 +678,47 @@ const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = []
     if (initialMember?.expiryDate) {
       setStartDate(initialMember.expiryDate);
     }
-    setSelectedCoach(initialMember?.pt || "Unassigned");
+    setSelectedCoach(initialMember?.assignedTrainer || initialMember?.pt || "Unassigned");
   }, [initialMember]);
 
-  const coachesList = useMemo(
-    () => [
+  const coachesList = useMemo(() => {
+    const list = [
       {
-        id: "c5",
+        id: "c0",
         name: "Unassigned",
-        role: "No Personal Trainer Assigned",
-        specialty: "Self Guided Workout Access",
-        exp: "-",
+        role: "General Floor Access",
+        specialty: "Standard Workout Access",
         badge: "Default",
         badgeColor: "bg-slate-100 text-slate-500 border-slate-200",
       },
-      {
-        id: "c1",
-        name: "Rohan V.",
-        role: "Senior Fitness Trainer",
-        specialty: "Body Building & Retention",
-        exp: "6+ Yrs",
-        badge: "Available",
+    ];
+    const seen = new Set(["unassigned", "none", ""]);
+    if (initialMember?.assignedTrainer && !seen.has(initialMember.assignedTrainer.toLowerCase())) {
+      seen.add(initialMember.assignedTrainer.toLowerCase());
+      list.push({
+        id: "c-initial",
+        name: initialMember.assignedTrainer,
+        role: "Personal Trainer",
+        specialty: "Assigned Coach",
+        badge: "Assigned",
         badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
-      },
-      {
-        id: "c2",
-        name: "Priya M.",
-        role: "Strength & Conditioning Specialist",
-        specialty: "Powerlifting & Nutrition",
-        exp: "4+ Yrs",
-        badge: "Top Rated",
-        badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
-      },
-      {
-        id: "c3",
-        name: "Vikram S.",
-        role: "Cardio & HIIT Coach",
-        specialty: "Fat Loss & Endurance",
-        exp: "5+ Yrs",
-        badge: "Popular",
-        badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
-      },
-      {
-        id: "c4",
-        name: "Ananya K.",
-        role: "Yoga & Recovery Specialist",
-        specialty: "Mobility & Rehab",
-        exp: "3+ Yrs",
-        badge: "Available",
-        badgeColor: "bg-slate-100 text-slate-700 border-slate-200",
-      },
-    ],
-    []
-  );
+      });
+    }
+    (membersList || []).forEach((m) => {
+      if (m.assignedTrainer && !seen.has(m.assignedTrainer.toLowerCase())) {
+        seen.add(m.assignedTrainer.toLowerCase());
+        list.push({
+          id: `c-${m.assignedTrainer}`,
+          name: m.assignedTrainer,
+          role: "Fitness Trainer",
+          specialty: "Personal Training",
+          badge: "Active",
+          badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        });
+      }
+    });
+    return list;
+  }, [membersList, initialMember]);
 
   const activeCoachObj = useMemo(() => {
     return (
@@ -828,81 +730,9 @@ const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = []
     );
   }, [coachesList, selectedCoach]);
 
-  const defaultSearchMembers = useMemo(
-    () => [
-      {
-        id: "MEM-9081",
-        name: "Aarav Sharma",
-        phone: "+91 98765 43210",
-        email: "aarav.sharma@example.com",
-        plan: "Quarterly Pro",
-        expiryDate: "2026-07-24",
-        daysRemaining: 4,
-        status: "Expiring Soon",
-        renewalProbability: 85,
-        branch: "Downtown Branch",
-        pt: "Rohan V.",
-      },
-      {
-        id: "MEM-9082",
-        name: "Rohan Verma",
-        phone: "+91 98765 43211",
-        email: "rohan.v@example.com",
-        plan: "Annual Elite",
-        expiryDate: "2026-07-28",
-        daysRemaining: 8,
-        status: "Expiring Soon",
-        renewalProbability: 92,
-        branch: "Downtown Branch",
-        pt: "Priya M.",
-      },
-      {
-        id: "MEM-9083",
-        name: "Ananya Roy",
-        phone: "+91 98765 43212",
-        email: "ananya.r@example.com",
-        plan: "Monthly Basic",
-        expiryDate: "2026-07-22",
-        daysRemaining: 2,
-        status: "Urgent Expiry",
-        renewalProbability: 45,
-        branch: "Downtown Branch",
-        pt: "Vikram S.",
-      },
-      {
-        id: "MEM-9084",
-        name: "Priya Patel",
-        phone: "+91 98765 43213",
-        email: "priya.p@example.com",
-        plan: "Half-Yearly Flex",
-        expiryDate: "2026-08-01",
-        daysRemaining: 12,
-        status: "Upcoming Expiry",
-        renewalProbability: 78,
-        branch: "Downtown Branch",
-        pt: "Rohan V.",
-      },
-      {
-        id: "MEM-9085",
-        name: "Vikram Singh",
-        phone: "+91 98765 43214",
-        email: "vikram.s@example.com",
-        plan: "Annual Elite",
-        expiryDate: "2026-07-20",
-        daysRemaining: 0,
-        status: "Expired",
-        renewalProbability: 60,
-        branch: "Downtown Branch",
-        pt: "Priya M.",
-      },
-    ],
-    []
-  );
-
   const searchableMembers = useMemo(() => {
-    if (membersList && membersList.length > 0) return membersList;
-    return defaultSearchMembers;
-  }, [membersList, defaultSearchMembers]);
+    return membersList && membersList.length > 0 ? membersList : [];
+  }, [membersList]);
 
   const searchResults = useMemo(() => {
     if (!searchMember.trim()) return searchableMembers.slice(0, 5);
@@ -917,46 +747,50 @@ const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = []
       .slice(0, 6);
   }, [searchMember, searchableMembers]);
 
-  const plans = [
-    {
-      id: "annual_elite",
-      name: "Annual Elite Premium",
-      durationMonths: 12,
-      price: 24999,
-      badge: "Best Value (AI Pick)",
-      badgeColor: "bg-emerald-500 text-white",
-      benefits: ["All Branch Access", "12 Free PT Sessions", "Unlimited Sauna & Steam", "Priority Locker Access"],
-    },
-    {
-      id: "quarterly_pro",
-      name: "Quarterly Transformation",
-      durationMonths: 3,
-      price: 8500,
-      badge: "Popular",
-      badgeColor: "bg-indigo-500 text-white",
-      benefits: ["Single Branch Access", "2 Free PT Sessions", "Standard Locker Access", "App Workout Tracker"],
-    },
-    {
-      id: "monthly_starter",
-      name: "Monthly Starter",
-      durationMonths: 1,
-      price: 3200,
-      badge: "Short Term",
-      badgeColor: "bg-slate-600 text-white",
-      benefits: ["Single Branch Access", "Standard Gym Access", "Basic Fitness Assessment"],
-    },
-  ];
+  const plans = useMemo(() => {
+    if (plansList && plansList.length > 0) {
+      return plansList.map((p) => ({
+        id: p.id,
+        name: p.name || p.plan_name || "Membership Plan",
+        durationMonths: p.duration_months || (p.duration_days ? Math.max(1, Math.round(p.duration_days / 30)) : 1),
+        durationDays: p.duration_days || 30,
+        price: p.price !== undefined && p.price !== null ? p.price : (p.price_minor_units ? p.price_minor_units / 100 : 0),
+        badge: p.is_active ? "Active" : "Standard",
+        badgeColor: "bg-indigo-500 text-white",
+        benefits: p.description ? [p.description] : ["Gym Floor Access"],
+      }));
+    }
+    return [
+      {
+        id: "standard_renewal",
+        name: "Standard Membership",
+        durationMonths: 1,
+        durationDays: 30,
+        price: 0,
+        badge: "Standard",
+        badgeColor: "bg-slate-600 text-white",
+        benefits: ["Gym Floor Access"],
+      },
+    ];
+  }, [plansList]);
 
-  const currentPlanObj = plans.find((p) => p.id === selectedPlanId) || plans[0];
+  useEffect(() => {
+    if (!selectedPlanId && plans.length > 0) {
+      setSelectedPlanId(plans[0].id);
+    }
+  }, [plans, selectedPlanId]);
+
+  const currentPlanObj = plans.find((p) => p.id === selectedPlanId) || plans[0] || { price: 0, durationMonths: 1 };
 
   // Calculate Expiry Date based on duration
-  const calculateNewExpiry = (startStr, months) => {
+  const calculateNewExpiry = (startStr, months = 1) => {
     try {
-      const d = new Date(startStr);
-      d.setMonth(d.getMonth() + months);
+      const d = startStr ? new Date(startStr) : new Date();
+      if (isNaN(d.getTime())) return new Date().toISOString().split("T")[0];
+      d.setMonth(d.getMonth() + (months || 1));
       return d.toISOString().split("T")[0];
     } catch {
-      return "2027-07-24";
+      return new Date().toISOString().split("T")[0];
     }
   };
 
@@ -1228,7 +1062,7 @@ const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = []
                               </div>
                               <div className="flex justify-between items-center py-0.5 border-b border-white/5">
                                 <span className="text-slate-400 text-[10.5px] font-semibold">Home Branch</span>
-                                <strong className="text-slate-200 text-[10.5px] font-bold">{activeMember.branch || "Downtown Branch"}</strong>
+                                <strong className="text-slate-200 text-[10.5px] font-bold">{activeMember.branch || "Primary Facility"}</strong>
                               </div>
                               <div className="flex justify-between items-center py-0.5 border-b border-white/5">
                                 <span className="text-slate-400 text-[10.5px] font-semibold">Membership Tenure</span>
@@ -2098,36 +1932,56 @@ const RenewalModal = ({ isOpen, onClose, member: initialMember, membersList = []
 // ─────────────────────────────────────────
 // RETENTION FUNNEL
 // ─────────────────────────────────────────
-function RetentionFunnel({ members = [] }) {
-  const totalExpiring = members.length;
-  const contacted = members.filter(m => m.status === "Contacted" || m.status === "Interested" || m.status === "Renewed").length;
-  const interested = members.filter(m => m.status === "Interested" || m.status === "Renewed").length;
-  const renewed = members.filter(m => m.status === "Renewed").length;
-  const lost = members.filter(m => m.status === "Expired" || m.daysRemaining <= 0 || m.status === "Lost").length;
+function RetentionFunnel({ members = [], activeFilter = "expiring" }) {
+  const expiringMembers = members.filter(m => m.daysRemaining > 0 && m.daysRemaining <= 7);
+  // Do not display number until it's the data for the expiring members details
+  const hasExpiringData = activeFilter === "expiring" && expiringMembers.length > 0;
+  const totalExpiring = hasExpiringData ? expiringMembers.length : "—";
+
+  const targetMembers = activeFilter === "expiring" ? expiringMembers : members;
+  const contacted = targetMembers.filter(m => m.status === "Contacted" || m.status === "Interested" || m.status === "Renewed").length;
+  const interested = targetMembers.filter(m => m.status === "Interested" || m.status === "Renewed").length;
+  const renewed = targetMembers.filter(m => m.status === "Renewed").length;
+  const expiredCount = members.filter(m => m.status === "Expired" || m.daysRemaining <= 0 || m.status === "Lost").length;
 
   const stages = [
-    { label: "Total Expiring", value: totalExpiring, color: "bg-slate-50 border-slate-200 text-slate-700" },
-    { label: "Contacted", value: contacted, color: "bg-blue-50/60 border-blue-150 text-blue-700" },
-    { label: "Interested", value: interested, color: "bg-amber-50/60 border-amber-150 text-amber-700" },
-    { label: "Renewed", value: renewed, color: "bg-emerald-50/60 border-emerald-150 text-emerald-700" },
-    { label: "Lost Members", value: lost, color: "bg-rose-50/60 border-rose-150 text-rose-700" },
+    { label: "Total Expiring", value: totalExpiring, color: "bg-slate-50/90 border-slate-200/80 text-slate-800" },
+    { label: "Contacted", value: contacted, color: "bg-blue-50/70 border-blue-200/70 text-blue-700" },
+    { label: "Interested", value: interested, color: "bg-amber-50/70 border-amber-200/70 text-amber-700" },
+    { label: "Renewed", value: renewed, color: "bg-emerald-50/70 border-emerald-200/70 text-emerald-700" },
+    { label: "Expired Memberships", value: expiredCount, color: "bg-rose-50/70 border-rose-200/70 text-rose-700" },
   ];
 
   return (
-    <section className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-sm my-2">
-      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Retention Pipeline</h3>
-      <div className="flex items-center gap-1.5 h-16">
+    <section className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs my-2">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+          <Layers size={13} className="text-slate-400" />
+          Retention Pipeline
+        </h3>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+          Stage Breakdown
+        </span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-center">
         {stages.map((stage, i) => (
           <div 
             key={i} 
-            className={cn("relative flex-1 h-full flex flex-col items-center justify-center transition-all hover:scale-[1.01] border rounded-xl shadow-sm px-2 py-2.5", stage.color)}
+            className={cn(
+              "relative flex flex-col items-center justify-center transition-all hover:scale-[1.01] border rounded-xl shadow-xs py-3 px-2 text-center",
+              stage.color
+            )}
             title={`${stage.label}: ${stage.value}`}
           >
-            <span className="text-lg font-black leading-tight">{stage.value}</span>
-            <span className="text-[9px] font-black uppercase tracking-wider opacity-75 mt-0.5">{stage.label}</span>
-            {i < stages.length - 1 && (
-               <ChevronRight size={14} className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-350 bg-white rounded-full border border-slate-200 p-0.5 shadow-sm" />
-            )}
+            <span className={cn(
+              "text-xl font-black leading-tight tracking-tight font-sans",
+              stage.value === "—" && "text-slate-400 font-mono"
+            )}>
+              {stage.value}
+            </span>
+            <span className="text-[9px] font-black uppercase tracking-wider opacity-80 mt-1 truncate max-w-full">
+              {stage.label}
+            </span>
           </div>
         ))}
       </div>
@@ -2136,22 +1990,385 @@ function RetentionFunnel({ members = [] }) {
 }
 
 // ─────────────────────────────────────────
+// TABLE VIEW COMPONENT
+// ─────────────────────────────────────────
+function TableMemberAvatar({ member }) {
+  const [hasError, setHasError] = useState(false);
+  const photo = member.profilePhoto || (window.getDefaultAvatar ? window.getDefaultAvatar(member.gender, member.name) : "");
+  
+  const initials = useMemo(() => {
+    if (!member.name) return "M";
+    const parts = member.name.trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }, [member.name]);
+
+  if (!photo || hasError) {
+    return (
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-slate-100 border border-indigo-100/80 text-indigo-700 font-mono font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200/80 shrink-0 flex items-center justify-center shadow-xs">
+      <img
+        src={photo}
+        alt={member.name}
+        onError={() => setHasError(true)}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  );
+}
+
+function TableView({ members, onProfile, onAction }) {
+  const [sortField, setSortField] = useState("urgency");
+  const [sortOrder, setSortOrder] = useState("asc");
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder(field === "likelihood" ? "desc" : "asc");
+    }
+  };
+
+  const sortedMembers = useMemo(() => {
+    if (!members) return [];
+    return [...members].sort((a, b) => {
+      let comp = 0;
+      if (sortField === "name") {
+        comp = (a.name || "").localeCompare(b.name || "");
+      } else if (sortField === "plan") {
+        comp = (a.plan || "").localeCompare(b.plan || "");
+      } else if (sortField === "expiry" || sortField === "urgency") {
+        comp = (a.daysRemaining || 0) - (b.daysRemaining || 0);
+      } else if (sortField === "likelihood") {
+        comp = (a.renewalProbability || 0) - (b.renewalProbability || 0);
+      }
+      return sortOrder === "asc" ? comp : -comp;
+    });
+  }, [members, sortField, sortOrder]);
+
+  if (!members || members.length === 0) {
+    return (
+      <div className="min-h-[300px] grid place-items-center rounded-2xl border border-dashed border-slate-200 bg-white/90 p-10 text-center shadow-xs">
+        <div>
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-500 shadow-xs">
+            <Search className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <h2 className="mt-4 text-base font-black text-slate-950 font-sans tracking-tight">No records match this view</h2>
+          <p className="mt-1 text-xs text-slate-500 font-medium">Try adjusting your filter tabs or search keywords.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const expiredCount = members.filter(m => m.daysRemaining <= 0).length;
+  const urgentCount = members.filter(m => m.daysRemaining > 0 && m.daysRemaining <= 3).length;
+  const upcomingCount = members.filter(m => m.daysRemaining > 3 && m.daysRemaining <= 7).length;
+
+  return (
+    <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+      {/* Table Header Summary Ribbon */}
+      <div className="px-5 py-3 border-b border-slate-200/80 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-700 font-mono">
+            Expiring Members Roster
+          </span>
+          <span className="text-slate-300 font-light">•</span>
+          <span className="text-xs font-bold text-slate-600">
+            {members.length} {members.length === 1 ? "member" : "members"} in view
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {expiredCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 font-mono shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              {expiredCount} Expired
+            </span>
+          )}
+          {urgentCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 font-mono shadow-xs">
+              <AlertTriangle size={10} className="text-amber-600" />
+              {urgentCount} Critical (≤3d)
+            </span>
+          )}
+          {upcomingCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-sky-50 text-sky-800 border border-sky-200 font-mono shadow-xs">
+              <Clock size={10} className="text-sky-600" />
+              {upcomingCount} Upcoming (4-7d)
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse table-fixed min-w-[960px]">
+          <thead>
+            <tr className="bg-slate-50/90 border-b border-slate-200 text-[10px] font-black uppercase tracking-[0.08em] text-slate-500 select-none">
+              {/* Member */}
+              <th 
+                className="w-[26%] py-3.5 px-5 cursor-pointer hover:bg-slate-100/90 transition-colors group"
+                onClick={() => handleSort("name")}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Member Identity</span>
+                  <ArrowUpDown size={11} className={cn("transition-opacity", sortField === "name" ? "opacity-100 text-indigo-600" : "opacity-35 group-hover:opacity-70")} />
+                </div>
+              </th>
+
+              {/* Plan & Category */}
+              <th 
+                className="w-[17%] py-3.5 px-4 cursor-pointer hover:bg-slate-100/90 transition-colors group"
+                onClick={() => handleSort("plan")}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Plan & Tier</span>
+                  <ArrowUpDown size={11} className={cn("transition-opacity", sortField === "plan" ? "opacity-100 text-indigo-600" : "opacity-35 group-hover:opacity-70")} />
+                </div>
+              </th>
+
+              {/* Expiry Date */}
+              <th 
+                className="w-[15%] py-3.5 px-4 cursor-pointer hover:bg-slate-100/90 transition-colors group"
+                onClick={() => handleSort("expiry")}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Expiration</span>
+                  <ArrowUpDown size={11} className={cn("transition-opacity", sortField === "expiry" ? "opacity-100 text-indigo-600" : "opacity-35 group-hover:opacity-70")} />
+                </div>
+              </th>
+
+              {/* Proximity / Risk */}
+              <th 
+                className="w-[14%] py-3.5 px-4 cursor-pointer hover:bg-slate-100/90 transition-colors group"
+                onClick={() => handleSort("urgency")}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Status</span>
+                  <ArrowUpDown size={11} className={cn("transition-opacity", sortField === "urgency" ? "opacity-100 text-indigo-600" : "opacity-35 group-hover:opacity-70")} />
+                </div>
+              </th>
+
+              {/* Renewal Likelihood */}
+              <th 
+                className="w-[12%] py-3.5 px-4 cursor-pointer hover:bg-slate-100/90 transition-colors group"
+                onClick={() => handleSort("likelihood")}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Likelihood</span>
+                  <ArrowUpDown size={11} className={cn("transition-opacity", sortField === "likelihood" ? "opacity-100 text-indigo-600" : "opacity-35 group-hover:opacity-70")} />
+                </div>
+              </th>
+
+              {/* Contact */}
+              <th className="w-[16%] py-3.5 px-4">
+                <span>Contact</span>
+              </th>
+
+              {/* Actions */}
+              <th className="w-[10%] py-3.5 px-5 text-right">
+                <span>Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-xs">
+            {sortedMembers.map((member) => {
+              const isExpired = member.daysRemaining <= 0;
+              const isUrgent = member.daysRemaining > 0 && member.daysRemaining <= 3;
+
+              return (
+                <tr 
+                  key={member.id} 
+                  className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                  onClick={() => onProfile(member)}
+                >
+                  {/* Member identity */}
+                  <td className="py-3.5 px-5 align-middle">
+                    <div className="flex items-center gap-3">
+                      <TableMemberAvatar member={member} />
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-slate-900 block truncate group-hover:text-indigo-600 transition-colors text-xs leading-snug">
+                          {member.name}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="font-mono text-[10px] font-bold text-slate-400 block tracking-wider">
+                            {member.id}
+                          </span>
+                          {member.gender && member.gender !== "Unspecified" && (
+                            <>
+                              <span className="text-slate-300 text-[10px]">•</span>
+                              <span className="text-[10px] text-slate-400 capitalize">{member.gender}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Plan & Category */}
+                  <td className="py-3.5 px-4 align-middle">
+                    <span className="font-bold text-slate-800 block truncate text-xs leading-tight">
+                      {member.plan}
+                    </span>
+                    <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/60 mt-1">
+                      {member.category || "General"}
+                    </span>
+                  </td>
+
+                  {/* Expiry Date */}
+                  <td className="py-3.5 px-4 align-middle">
+                    <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-700">
+                      <Calendar size={12} className="text-slate-400 shrink-0" />
+                      <span>{member.expiryDate}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">
+                      {isExpired 
+                        ? (member.daysRemaining === 0 ? "Expires today" : `Expired ${Math.abs(member.daysRemaining)}d ago`)
+                        : `In ${member.daysRemaining} days`
+                      }
+                    </span>
+                  </td>
+
+                  {/* Proximity / Days remaining badge */}
+                  <td className="py-3.5 px-4 align-middle">
+                    {isExpired ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border font-mono bg-rose-50 text-rose-700 border-rose-200 shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                        {member.daysRemaining === 0 ? "Expires Today" : `Expired (${Math.abs(member.daysRemaining)}d)`}
+                      </span>
+                    ) : isUrgent ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border font-mono bg-amber-50 text-amber-800 border-amber-200 shadow-xs">
+                        <AlertTriangle size={11} className="text-amber-600 shrink-0" />
+                        {member.daysRemaining === 1 ? "1 day left" : `${member.daysRemaining} days left`}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border font-mono bg-sky-50 text-sky-800 border-sky-200 shadow-xs">
+                        <Clock size={11} className="text-sky-600 shrink-0" />
+                        {member.daysRemaining} days left
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Renewal Likelihood */}
+                  <td className="py-3.5 px-4 align-middle">
+                    <div className="w-24 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className={cn(
+                          "font-mono font-black text-xs",
+                          member.renewalProbability >= 70 ? "text-emerald-700" : member.renewalProbability >= 40 ? "text-amber-700" : "text-rose-700"
+                        )}>
+                          {member.renewalProbability}%
+                        </span>
+                        <span className={cn(
+                          "text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded font-sans",
+                          member.renewalProbability >= 70 
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" 
+                            : member.renewalProbability >= 40 
+                            ? "bg-amber-50 text-amber-700 border border-amber-200/60" 
+                            : "bg-rose-50 text-rose-700 border border-rose-200/60"
+                        )}>
+                          {member.renewalProbability >= 70 ? "High" : member.renewalProbability >= 40 ? "Mid" : "Risk"}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full rounded-full transition-all duration-300",
+                            member.renewalProbability >= 70 ? "bg-emerald-500" : member.renewalProbability >= 40 ? "bg-amber-500" : "bg-rose-500"
+                          )} 
+                          style={{ width: `${member.renewalProbability}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Contact & Coach */}
+                  <td className="py-3.5 px-4 align-middle" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-1">
+                      {member.phone ? (
+                        <a 
+                          href={`tel:${member.phone.replace(/[^0-9+]/g, '')}`}
+                          onClick={() => onAction?.("call", member)}
+                          className="font-mono text-[11px] font-bold text-slate-700 hover:text-indigo-600 transition-colors block leading-tight"
+                          title="Click to dial"
+                        >
+                          {member.phone}
+                        </a>
+                      ) : (
+                        <span className="inline-block text-[10px] font-semibold text-slate-400 italic bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 leading-tight">
+                          No Phone
+                        </span>
+                      )}
+
+                      <div className="flex items-center gap-1 text-[10px] text-slate-500 truncate max-w-[150px]">
+                        <User size={10} className="text-slate-400 shrink-0" />
+                        <span className="truncate">
+                          {member.assignedTrainer && member.assignedTrainer !== "Unassigned" && member.assignedTrainer !== "None"
+                            ? member.assignedTrainer
+                            : "Floor Access"}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="py-3.5 px-5 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button 
+                        type="button"
+                        onClick={() => onAction?.("renew", member)} 
+                        className="h-8 px-3 rounded-xl bg-slate-950 text-white hover:bg-indigo-600 text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
+                        title="Renew Membership"
+                      >
+                        <RotateCw size={11} /> Renew
+                      </button>
+
+                      <button 
+                        type="button"
+                        onClick={() => onProfile(member)} 
+                        className="w-8 h-8 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-100 hover:border-slate-300 text-slate-600 hover:text-slate-950 flex items-center justify-center transition-all shadow-xs"
+                        title="View Profile Drawer"
+                      >
+                        <Eye size={12} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
 // MAIN PAGE COMPONENT
 // ─────────────────────────────────────────
 const ExpiringMembershipsPage = () => {
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("table");
   const [query, setQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("expiring");
   const [selectedMember, setSelectedMember] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
   const [members, setMembers] = useState([]);
+  const [plans, setPlans] = useState([]);
 
   const fetchDBMembers = useCallback(async () => {
     try {
       const dbMembers = await window.__TAURI__.core.invoke("get_members_command", { limit: 10000, offset: 0 }).catch(() => []);
       const dbPlans = await window.__TAURI__.core.invoke("get_plans_command").catch(() => []);
       
+      setPlans(dbPlans || []);
+
       const plansMap = {};
       if (dbPlans && Array.isArray(dbPlans)) {
         dbPlans.forEach(p => {
@@ -2166,8 +2383,10 @@ const ExpiringMembershipsPage = () => {
           if (m.membership_status === "CANCELLED" || m.membership_status === "DELETED") return null;
 
           const planObj = m.membership_plan_id ? plansMap[m.membership_plan_id] : null;
-          const planName = planObj ? planObj.name : "General Membership";
-          const planPrice = planObj ? planObj.price : 1500;
+          const planName = planObj ? (planObj.name || planObj.plan_name || "General Membership") : "General Membership";
+          const planPrice = planObj 
+            ? (planObj.price !== undefined && planObj.price !== null ? planObj.price : (planObj.price_minor_units ? planObj.price_minor_units / 100 : 0))
+            : 0;
           
           // Determine plan duration in days (default to 30 days if not set)
           const planDurationDays = planObj 
@@ -2240,12 +2459,14 @@ const ExpiringMembershipsPage = () => {
 
           const memberName = (m.full_name && m.full_name.trim() !== "" && m.full_name !== "Unnamed Member") 
             ? m.full_name 
-            : `Gym Member ${m.member_code || (m.id ? m.id.substring(0, 4).toUpperCase() : "")}`;
+            : `Member ${m.member_code || (m.id ? m.id.substring(0, 4).toUpperCase() : "")}`;
+
+          const contactPhone = m.phone || m.phone_number || m.mobile || m.alternate_phone || "";
 
           return {
-            id: m.member_code || `GD-${m.id.substring(0,4).toUpperCase()}`,
+            id: m.member_code || (m.id ? `GD-${m.id.substring(0,4).toUpperCase()}` : "GD-0000"),
             name: memberName,
-            phone: m.phone || m.alternate_phone || m.phone_number || m.mobile || (m.member_code ? `+91 98${m.member_code.replace(/[^0-9]/g, '').slice(-7).padStart(7, '654321')}` : "+91 98765 43210"),
+            phone: contactPhone,
             initials,
             plan: planName,
             category,
@@ -2253,14 +2474,14 @@ const ExpiringMembershipsPage = () => {
             daysRemaining,
             renewalProbability,
             churnRisk,
-            lastAttendance: "Yesterday",
-            pendingDues: 0,
+            lastAttendance: m.last_attendance_at ? new Date(m.last_attendance_at).toLocaleDateString() : (m.updated_at ? new Date(m.updated_at).toLocaleDateString() : "No record"),
+            pendingDues: m.pending_dues || m.pendingDues || 0,
             lifetimeValue: planPrice,
             assignedTrainer,
-            lastContacted: "Never",
+            lastContacted: "Not yet contacted",
             status,
             color,
-            gender: m.gender || "Male",
+            gender: m.gender || "Unspecified",
             profilePhoto: m.profile_photo_path || null
           };
         })
@@ -2278,9 +2499,9 @@ const ExpiringMembershipsPage = () => {
   }, [fetchDBMembers]);
 
   const stats = useMemo(() => ({
-    totalExpiring: members.length,
+    totalExpiring: members.filter(m => m.daysRemaining > 0 && m.daysRemaining <= 7).length,
     expiringToday: members.filter(m => m.daysRemaining === 0).length,
-    revenueAtRisk: members.reduce((acc, m) => acc + (m.pendingDues || 5000), 0),
+    revenueAtRisk: members.reduce((acc, m) => acc + (m.lifetimeValue || 0), 0),
     avgRenewalProb: members.length ? Math.round(members.reduce((acc, m) => acc + m.renewalProbability, 0) / members.length) : 0,
   }), [members]);
 
@@ -2295,27 +2516,28 @@ const ExpiringMembershipsPage = () => {
 
       if (!matchesSearch) return false;
 
-      if (activeFilter === "critical") return m.daysRemaining <= 3;
-      if (activeFilter === "today") return m.daysRemaining === 0;
-      if (activeFilter === "highValue") return m.lifetimeValue >= 5000;
+      if (activeFilter === "expired") {
+        return m.daysRemaining <= 0 || m.status === "Expired";
+      }
 
-      return true;
+      // "expiring" filter: show only those who are gonna expire within 7 days
+      return m.daysRemaining > 0 && m.daysRemaining <= 7;
     });
   }, [members, query, activeFilter]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const CARDS_PER_PAGE = 6;
+  const ITEMS_PER_PAGE = viewMode === "table" ? 10 : 6;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, activeFilter]);
+  }, [query, activeFilter, viewMode]);
 
-  const totalPages = Math.ceil(filteredMembers.length / CARDS_PER_PAGE);
+  const totalPages = Math.ceil(filteredMembers.length / ITEMS_PER_PAGE);
 
   const paginatedMembers = useMemo(() => {
-    const start = (currentPage - 1) * CARDS_PER_PAGE;
-    return filteredMembers.slice(start, start + CARDS_PER_PAGE);
-  }, [filteredMembers, currentPage]);
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredMembers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredMembers, currentPage, ITEMS_PER_PAGE]);
 
   const groupedMembers = useMemo(() => {
     return paginatedMembers.reduce((groups, m) => {
@@ -2330,8 +2552,9 @@ const ExpiringMembershipsPage = () => {
        setSelectedMember(member);
        setIsRenewalOpen(true);
     } else if (type === "call") {
-       const rawPhone = member?.phone || "+91 98765 43210";
-       const cleanPhone = rawPhone.replace(/[^0-9+]/g, '');
+       if (!member?.phone) return;
+       const cleanPhone = member.phone.replace(/[^0-9+]/g, '');
+       if (!cleanPhone) return;
        
        // Instant device call contact handler (macOS FaceTime / Phone Relay / Native Dialer)
        if (window.__TAURI__?.shell?.open) {
@@ -2359,7 +2582,7 @@ const ExpiringMembershipsPage = () => {
 
   const resetView = useCallback(() => {
     setQuery("");
-    setActiveFilter("all");
+    setActiveFilter("expiring");
   }, []);
 
   const openRenewalModal = useCallback(() => {
@@ -2396,15 +2619,6 @@ const ExpiringMembershipsPage = () => {
                 type="search"
               />
             </label>
-            <div className="flex gap-2">
-              <button className="h-11 px-4 rounded-xl bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors flex items-center gap-2 border border-emerald-100 shadow-sm">
-                <Zap size={14} />
-                AI Insights
-              </button>
-              <button className="h-11 px-4 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-colors border border-slate-200 shadow-sm">
-                Revenue Forecast
-              </button>
-            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-3.5 mt-3.5">
@@ -2434,16 +2648,6 @@ const ExpiringMembershipsPage = () => {
                 >
                   <List size={18} />
                 </button>
-                <button 
-                  onClick={() => setViewMode("analytics")}
-                  className={cn(
-                    "w-9 h-8 flex items-center justify-center rounded-lg transition-all", 
-                    viewMode === "analytics" ? "bg-slate-950 text-white shadow-sm" : "text-slate-950 hover:text-slate-700"
-                  )}
-                  title="Analytics"
-                >
-                  <BarChart3 size={18} />
-                </button>
               </div>
             </div>
 
@@ -2454,10 +2658,16 @@ const ExpiringMembershipsPage = () => {
                 Filter
               </span>
               {[
-                { id: "all", label: "All Members", predicate: () => true },
-                { id: "critical", label: "Critical Risk", predicate: (m) => m.churnRisk === "High" || m.churnRisk === "Extreme" },
-                { id: "today", label: "Expiring Today", predicate: (m) => m.daysRemaining === 0 },
-                { id: "premium", label: "High Value", predicate: (m) => m.category === "Premium" },
+                { 
+                  id: "expiring", 
+                  label: "Expiring Memberships", 
+                  predicate: (m) => m.daysRemaining > 0 && m.daysRemaining <= 7 
+                },
+                { 
+                  id: "expired", 
+                  label: "Expired Memberships", 
+                  predicate: (m) => m.daysRemaining <= 0 || m.status === "Expired" 
+                },
               ].map((filter) => {
                 const isActive = activeFilter === filter.id;
                 const count = members.filter(filter.predicate).length;
@@ -2485,7 +2695,7 @@ const ExpiringMembershipsPage = () => {
           </div>
         </section>
 
-        <RetentionFunnel members={members} />
+        <RetentionFunnel members={members} activeFilter={activeFilter} />
 
         <section className="pt-2 flex-1 flex flex-col justify-between">
           {viewMode === "grid" && (
@@ -2515,11 +2725,19 @@ const ExpiringMembershipsPage = () => {
             </div>
           )}
 
+          {viewMode === "table" && (
+            <TableView 
+              members={paginatedMembers} 
+              onProfile={openProfile} 
+              onAction={handleAction} 
+            />
+          )}
+
           {/* PAGINATION PANEL */}
-          {viewMode !== "analytics" && filteredMembers.length > 0 && (
+          {filteredMembers.length > 0 && (
             <div className="mt-auto pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none font-mono">
-                PAGE {currentPage} OF {totalPages || 1} ({filteredMembers.length} EXPIRING MEMBERS)
+                PAGE {currentPage} OF {totalPages || 1} ({filteredMembers.length} {activeFilter === "expired" ? "EXPIRED" : "EXPIRING"} MEMBERS)
               </span>
               
               <div className="flex items-center gap-2">
@@ -2563,7 +2781,7 @@ const ExpiringMembershipsPage = () => {
 
       <AnimatePresence>
         {isDrawerOpen && <MemberProfileDrawer isOpen={isDrawerOpen} onClose={closeDrawer} member={selectedMember} onAction={handleAction} />}
-        {isRenewalOpen && <RenewalModal isOpen={isRenewalOpen} onClose={closeRenewalModal} member={selectedMember} membersList={members} />}
+        {isRenewalOpen && <RenewalModal isOpen={isRenewalOpen} onClose={closeRenewalModal} member={selectedMember} membersList={members} plansList={plans} />}
       </AnimatePresence>
     </div>
   );

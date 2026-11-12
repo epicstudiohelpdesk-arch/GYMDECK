@@ -49,68 +49,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_OPTIONS = ["All", "Expired", "Cancelled", "Terminated"];
 
-const MOCK_PAST_MEMBERS = [
-  {
-    id: "MBR-0112",
-    name: "Rohan Sharma",
-    phone: "+91 98765 43210",
-    email: "rohan.sharma@example.com",
-    status: "Expired",
-    inactiveDays: 14,
-    recoveryValue: 1999,
-    reason: "Plan Expired - Forgot to renew",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Rohan",
-    gender: "Male"
-  },
-  {
-    id: "MBR-0238",
-    name: "Priyanka Chopra",
-    phone: "+91 99887 76655",
-    email: "priyanka.c@gmail.com",
-    status: "Cancelled",
-    inactiveDays: 32,
-    recoveryValue: 2499,
-    reason: "Relocated to Hyderabad for work",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Priyanka",
-    gender: "Female"
-  },
-  {
-    id: "MBR-0412",
-    name: "Amit Patel",
-    phone: "+91 91234 56789",
-    email: "amit.patel@yahoo.com",
-    status: "Terminated",
-    inactiveDays: 65,
-    recoveryValue: 3999,
-    reason: "Repeated violation of gym safety policies",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Amit",
-    gender: "Male"
-  },
-  {
-    id: "MBR-0519",
-    name: "Sneha Reddy",
-    phone: "+91 98888 77777",
-    email: "sneha.reddy@outlook.com",
-    status: "Expired",
-    inactiveDays: 8,
-    recoveryValue: 1999,
-    reason: "Personal medical pause (knee injury)",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Sneha",
-    gender: "Female"
-  },
-  {
-    id: "MBR-0683",
-    name: "Arjun Kapoor",
-    phone: "+91 97777 66666",
-    email: "arjun.k@example.com",
-    status: "Cancelled",
-    inactiveDays: 45,
-    recoveryValue: 2999,
-    reason: "Subscription cost budget constraints",
-    image: "https://api.dicebear.com/7.x/adventurer/svg?seed=Arjun",
-    gender: "Male"
-  }
-];
+const MOCK_PAST_MEMBERS = [];
 
 const MOCK_PLANS = [
   { id: "1", name: "Monthly Starter Pack", duration: "1 Month", price: 1999 },
@@ -189,21 +128,31 @@ const getRecoveryScore = (member) => {
   return { score, label, color, ringColor };
 };
 
-const normalizeMember = (m) => {
-  let inactiveDays = 45;
+const normalizeMember = (m, plansMap = {}) => {
+  let inactiveDays = 30;
   if (m.inactiveDays !== undefined) inactiveDays = m.inactiveDays;
   else if (m.daysSinceExpiry !== undefined) inactiveDays = m.daysSinceExpiry;
-  else if (m.deleted_at) {
+  else if (m.expires_at) {
+    inactiveDays = Math.max(1, Math.floor((new Date() - new Date(m.expires_at)) / (1000 * 60 * 60 * 24)));
+  } else if (m.deleted_at) {
     inactiveDays = Math.max(0, Math.floor((new Date() - new Date(m.deleted_at)) / (1000 * 60 * 60 * 24)));
   }
 
   let recoveryValue = 1999;
   if (m.recoveryValue !== undefined) recoveryValue = m.recoveryValue;
   else if (m.potentialRevenue !== undefined) recoveryValue = m.potentialRevenue;
+  else if (m.membership_plan_id && plansMap[m.membership_plan_id]) {
+    const p = plansMap[m.membership_plan_id];
+    recoveryValue = p.price !== undefined ? p.price : (p.price_minor_units ? p.price_minor_units / 100 : 1999);
+  }
 
   let status = "Expired";
   if (m.status) status = m.status;
-  else if (m.reactivationScore === "High") status = "Expired";
+  else if (m.membership_status) {
+    if (m.membership_status === "CANCELLED" || m.membership_status === "Cancelled") status = "Cancelled";
+    else if (m.membership_status === "TERMINATED" || m.membership_status === "Terminated") status = "Terminated";
+    else status = "Expired";
+  } else if (m.reactivationScore === "High") status = "Expired";
   else if (m.reactivationScore === "Medium") status = "Cancelled";
   else if (m.reactivationScore === "Low") status = "Terminated";
 
@@ -218,9 +167,12 @@ const normalizeMember = (m) => {
     ? photo
     : (window.getDefaultAvatar ? window.getDefaultAvatar(m.gender, name) : getInitialsAvatar(name));
 
+  const planObj = m.membership_plan_id ? plansMap[m.membership_plan_id] : null;
+  const planName = planObj ? (planObj.plan_name || planObj.name || "Standard Membership") : "Standard Membership";
+
   return {
     id: m.id || m.member_code || `MBR-${Math.floor(1000 + Math.random() * 9000)}`,
-    member_code: m.member_code || m.id || "N/A",
+    member_code: m.member_code || (m.id ? `GD-${String(m.id).substring(0, 4).toUpperCase()}` : "N/A"),
     name: name,
     phone: m.phone || "+91 99999 88888",
     email: m.email || "N/A",
@@ -228,7 +180,10 @@ const normalizeMember = (m) => {
     inactiveDays: inactiveDays,
     recoveryValue: recoveryValue,
     reason: reason,
-    image: image
+    image: image,
+    planName: planName,
+    gender: m.gender || "Unspecified",
+    expiryDate: m.expires_at ? new Date(m.expires_at).toISOString().split("T")[0] : null
   };
 };
 
@@ -237,14 +192,15 @@ const getInitialPastMembers = () => {
     const stored = localStorage.getItem("gymdeck_past_members");
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed && parsed.length > 0) {
-        return parsed.map(normalizeMember);
+      if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+        // Strip out any leftover mock fake names
+        const nonMock = parsed.filter(m => !["Rohan Sharma", "Priyanka Chopra", "Amit Patel", "Sneha Reddy", "Arjun Kapoor"].includes(m.name));
+        return nonMock.map(m => normalizeMember(m));
       }
     }
-    localStorage.setItem("gymdeck_past_members", JSON.stringify(MOCK_PAST_MEMBERS));
-    return MOCK_PAST_MEMBERS.map(normalizeMember);
+    return [];
   } catch (e) { 
-    return MOCK_PAST_MEMBERS.map(normalizeMember); 
+    return []; 
   }
 };
 
@@ -313,15 +269,17 @@ export default function PastMembers() {
     setIsLoading(true);
     if (window.__TAURI__) {
       try {
-        const [membersFromDb, dbPlans] = await Promise.all([
-          window.__TAURI__.core.invoke("get_past_members_command", { limit: 100, offset: 0 }),
-          window.__TAURI__.core.invoke("get_plans_command")
+        const [pastMembersFromDb, allMembersFromDb, dbPlans] = await Promise.all([
+          window.__TAURI__.core.invoke("get_past_members_command", { limit: 1000, offset: 0 }).catch(() => []),
+          window.__TAURI__.core.invoke("get_members_command", { limit: 10000, offset: 0 }).catch(() => []),
+          window.__TAURI__.core.invoke("get_plans_command").catch(() => [])
         ]);
 
-        const formattedMembers = membersFromDb.map(normalizeMember);
-        setPastMembers(formattedMembers);
-        
-        if (dbPlans && dbPlans.length > 0) {
+        const plansMap = {};
+        if (dbPlans && Array.isArray(dbPlans)) {
+          dbPlans.forEach(p => {
+            plansMap[p.id] = p;
+          });
           setPlans(dbPlans.map(p => ({
             id: p.id,
             name: p.plan_name,
@@ -329,8 +287,99 @@ export default function PastMembers() {
             price: p.price
           })));
         }
+
+        const existingIds = new Set();
+        
+        // 1. Process soft-deleted / archived past members
+        const formattedPastMembers = (pastMembersFromDb || []).map(m => {
+          const item = normalizeMember(m, plansMap);
+          existingIds.add(String(item.id));
+          return item;
+        });
+
+        // 2. Identify all expired members whose memberships expired and have NOT been renewed
+        const now = new Date();
+        const expiredUnrenewedMembers = [];
+
+        (allMembersFromDb || []).forEach(m => {
+          if (!m || existingIds.has(String(m.id))) return;
+          if (m.membership_status === "CANCELLED" || m.membership_status === "DELETED") return;
+
+          const planObj = m.membership_plan_id ? plansMap[m.membership_plan_id] : null;
+          const planName = planObj ? (planObj.plan_name || planObj.name || "General Membership") : "General Membership";
+          const planPrice = planObj 
+            ? (planObj.price !== undefined && planObj.price !== null ? planObj.price : (planObj.price_minor_units ? planObj.price_minor_units / 100 : 0))
+            : 0;
+          
+          const planDurationDays = planObj 
+            ? (planObj.duration_days || (planObj.duration_months ? planObj.duration_months * 30 : 30))
+            : 30;
+
+          let expiryDateObj = null;
+          if (m.expires_at) {
+            expiryDateObj = new Date(m.expires_at);
+          } else if (m.joined_at || m.created_at) {
+            const startDate = new Date(m.joined_at || m.created_at);
+            expiryDateObj = new Date(startDate.getTime() + planDurationDays * 24 * 60 * 60 * 1000);
+          }
+
+          let isExpired = false;
+          let inactiveDays = 1;
+
+          if (expiryDateObj && !isNaN(expiryDateObj.getTime())) {
+            const diffTime = expiryDateObj - now;
+            const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (daysRemaining <= 0) {
+              isExpired = true;
+              inactiveDays = Math.max(1, Math.abs(daysRemaining));
+            }
+          } else if (m.membership_status === "EXPIRED" || m.membership_status === "Expired") {
+            isExpired = true;
+            inactiveDays = 30;
+          }
+
+          const isRenewed = m.membership_status === "RENEWED" || m.membership_status === "Renewed";
+          
+          // Display in Past Members if membership expired and NOT renewed
+          if (isExpired && !isRenewed) {
+            const memberName = (m.full_name && m.full_name.trim() !== "" && m.full_name !== "Unnamed Member")
+              ? m.full_name
+              : `Member ${m.member_code || (m.id ? String(m.id).substring(0, 4).toUpperCase() : "")}`;
+
+            const contactPhone = m.phone || m.phone_number || m.mobile || m.alternate_phone || "N/A";
+            const photo = m.profile_photo_path || m.image;
+            const image = (photo && !photo.includes("dicebear.com"))
+              ? photo
+              : (window.getDefaultAvatar ? window.getDefaultAvatar(m.gender, memberName) : getInitialsAvatar(memberName));
+
+            let reason = m.notes && !m.notes.startsWith("Trainer:") && m.notes.trim() !== ""
+              ? m.notes
+              : `Plan (${planName}) Expired - Not Renewed`;
+
+            existingIds.add(String(m.id));
+            expiredUnrenewedMembers.push({
+              id: m.id || m.member_code,
+              member_code: m.member_code || (m.id ? `GD-${String(m.id).substring(0, 4).toUpperCase()}` : "N/A"),
+              name: memberName,
+              phone: contactPhone,
+              email: m.email || "N/A",
+              status: "Expired",
+              inactiveDays: inactiveDays,
+              recoveryValue: planPrice || 1999,
+              reason: reason,
+              image: image,
+              planName: planName,
+              gender: m.gender || "Unspecified",
+              expiryDate: expiryDateObj ? expiryDateObj.toISOString().split("T")[0] : null,
+              isExpiredActive: true,
+            });
+          }
+        });
+
+        const combinedMembers = [...formattedPastMembers, ...expiredUnrenewedMembers];
+        setPastMembers(combinedMembers);
       } catch (err) { 
-        console.error(err); 
+        console.error("PastMembers fetch error:", err); 
         setPastMembers(getInitialPastMembers());
       } finally { 
         setIsLoading(false); 
@@ -448,6 +497,11 @@ export default function PastMembers() {
         // 1. Purge old archived member record permanently from database
         await window.__TAURI__.core.invoke("permanent_delete_member_command", { memberId: reactivateMember.id });
         
+        // Calculate expires_at based on plan duration
+        const durationDays = plan.duration ? (parseInt(plan.duration) || 30) : 30;
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
         // Construct standard Rust-compatible member schema representation
         const rustMember = {
           id: crypto.randomUUID(),
@@ -457,7 +511,7 @@ export default function PastMembers() {
           phone: reactivateMember.phone || "0000000000",
           alternate_phone: "",
           email: reactivateMember.email === "N/A" ? "" : reactivateMember.email,
-          gender: "OTHER",
+          gender: reactivateMember.gender || "OTHER",
           blood_group: null,
           dob: "1995-01-01",
           address: "Reactivated",
@@ -465,14 +519,14 @@ export default function PastMembers() {
           weight: "70",
           membership_plan_id: plan.id,
           membership_status: "ACTIVE",
-          joined_at: new Date().toISOString(),
-          expires_at: null,
+          joined_at: now.toISOString(),
+          expires_at: expiresAt.toISOString(),
           profile_photo_path: reactivateMember.image || null,
           notes: `Reactivated with plan: ${plan.name}`,
           created_by_user_id: "00000000-0000-0000-0000-000000000000", // Overwritten by backend
           updated_by_user_id: "00000000-0000-0000-0000-000000000000", // Overwritten by backend
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
           deleted_at: null,
           deleted_by_user_id: null
         };
