@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   ArrowRight,
   Building,
+  Calendar,
+  Camera,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -23,6 +25,7 @@ import {
   Layers,
   Maximize2,
   Minus,
+  Phone,
   Plus,
   Printer,
   QrCode,
@@ -34,6 +37,7 @@ import {
   ShieldCheck,
   Smartphone,
   Tag,
+  Timer,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -252,9 +256,7 @@ const DEFAULT_DB_PLANS = [
 
 const SEGMENT_CHIPS = [
   { id: "all", label: "All Expired" },
-  { id: "dues", label: "With Dues" },
-  { id: "recent", label: "Recently Expired (≤30d)" },
-  { id: "long", label: "Long Expired (>30d)" }
+  { id: "dues", label: "With Dues" }
 ];
 
 // ─────────────────────────────────────────
@@ -264,6 +266,8 @@ const SEGMENT_CHIPS = [
 const CollectFeesPage = () => {
   const sentinelRef = useRef(null);
   const planDropdownRef = useRef(null);
+  const walkInPlanDropdownRef = useRef(null);
+  const photoInputRef = useRef(null);
   const [isHeaderStuck, setIsHeaderStuck] = useState(false);
 
   // Members & DB state
@@ -275,12 +279,14 @@ const CollectFeesPage = () => {
 
   // Custom Gym Plan Dropdown State
   const [isPlanDropdownOpen, setIsPlanDropdownOpen] = useState(false);
+  const [isWalkInPlanDropdownOpen, setIsWalkInPlanDropdownOpen] = useState(false);
   const [planSearchQuery, setPlanSearchQuery] = useState("");
 
   // Invoice & Pricing State
   const [invoiceItems, setInvoiceItems] = useState([]);
   const [discountValue, setDiscountValue] = useState(0);
-  const [applyGst, setApplyGst] = useState(true); // 18% GST toggle
+  const [applyGst, setApplyGst] = useState(false); // 18% GST toggle (default unchecked)
+  const [includePastDues, setIncludePastDues] = useState(true); // Past dues clearance toggle
   const [paymentMethod, setPaymentMethod] = useState("UPI"); // UPI | Cash | Card | BankTransfer
 
   // Cash Desk specific state
@@ -460,14 +466,20 @@ const CollectFeesPage = () => {
     return invoiceItems.reduce((acc, item) => acc + (item.qty * item.price) - item.discount, 0);
   }, [invoiceItems]);
 
+  // Past dues calculation if member has outstanding balance
+  const duesToAdd = useMemo(() => {
+    if (!selectedMember || !selectedMember.pendingDues || selectedMember.pendingDues <= 0) return 0;
+    return includePastDues ? selectedMember.pendingDues : 0;
+  }, [selectedMember, includePastDues]);
+
   const tax = useMemo(() => {
     if (!applyGst) return 0;
     return Math.max(0, (subtotal - discountValue) * 0.18);
   }, [subtotal, discountValue, applyGst]);
 
   const totalPayable = useMemo(() => {
-    return Math.max(0, Math.round(subtotal - discountValue + tax));
-  }, [subtotal, discountValue, tax]);
+    return Math.max(0, Math.round(subtotal - discountValue + tax + duesToAdd));
+  }, [subtotal, discountValue, tax, duesToAdd]);
 
   // Dynamic Change calculation for Cash Desk
   const cashChangeDue = useMemo(() => {
@@ -513,8 +525,6 @@ const CollectFeesPage = () => {
 
       // Segment filter
       if (activeSegment === "dues" && m.pendingDues <= 0 && !m.tags.includes("Pending Dues")) return false;
-      if (activeSegment === "recent" && m.daysExpiredAgo > 30 && !m.tags.includes("Recently Expired")) return false;
-      if (activeSegment === "long" && m.daysExpiredAgo <= 30 && !m.tags.includes("Long Expired")) return false;
 
       // Search query
       if (memberSearch.trim()) {
@@ -532,14 +542,10 @@ const CollectFeesPage = () => {
   // Select an expired member & auto-refresh invoice default item
   const handleSelectMember = useCallback((member) => {
     setSelectedMember(member);
+    setIncludePastDues(true);
     if (member.id?.startsWith("WK-")) {
       setInvoiceItems([
         { id: Date.now(), name: "Gym Day Pass & Locker Access", qty: 1, price: 500, discount: 0 }
-      ]);
-    } else if (member.pendingDues > 0) {
-      setInvoiceItems([
-        { id: Date.now(), name: `${member.plan || "Membership"} Renewal`, qty: 1, price: member.planPrice || 3500, discount: 0 },
-        { id: Date.now() + 1, name: `Past Outstanding Due Clearance`, qty: 1, price: member.pendingDues, discount: 0 }
       ]);
     } else {
       setInvoiceItems([
@@ -550,48 +556,128 @@ const CollectFeesPage = () => {
 
   // Quick Walk-in Guest Creator
   const handleCreateWalkIn = useCallback(() => {
+    const walkInId = `WK-${Math.floor(1000 + Math.random() * 9000)}`;
     const walkInMember = {
-      id: `WK-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: walkInId,
       rawId: Date.now(),
-      name: "Walk-in Guest",
+      name: "",
       gender: "male",
-      phone: "+91 90000 00000",
-      status: "EXPIRED",
-      plan: "Day Pass / Single Visit",
+      phone: "",
+      photo: null,
+      isWalkIn: true,
+      status: "ACTIVE",
+      plan: "Walk-in Guest Day Pass",
       planPrice: 500,
+      duration: "1 Day",
+      timeLimit: "2 Hours",
       expiry: "Today",
-      daysRemaining: -1,
-      daysExpiredAgo: 1,
+      daysRemaining: 1,
+      daysExpiredAgo: 0,
       pendingDues: 0,
       wallet: 0,
-      tags: ["Walk-in", "Expired"]
+      tags: ["Walk-in"]
     };
     setSelectedMember(walkInMember);
+    setIncludePastDues(false);
     setInvoiceItems([
-      { id: Date.now(), name: "Gym Day Pass & Locker Access", qty: 1, price: 500, discount: 0 }
+      { id: Date.now(), name: "Walk-in Guest Day Pass", qty: 1, price: 500, discount: 0 }
     ]);
   }, []);
+
+  // Desk plans for walk-in custom dropdown (only walk-in guest plans by default)
+  const walkInPlansList = useMemo(() => {
+    return [
+      { id: "wp-1", name: "Walk-in Guest Day Pass", price: 500, duration: "1 Day", timeLimit: "2 Hours", description: "Full floor workout pass & locker access" },
+      { id: "wp-2", name: "Walk-in Trial Session", price: 300, duration: "1 Day", timeLimit: "90 Mins", description: "Single entry session with gym trainer guide" },
+      { id: "wp-3", name: "Walk-in Weekend Pass", price: 1000, duration: "2 Days", timeLimit: "Full Day", description: "Saturday & Sunday access with spa & sauna" },
+      { id: "wp-4", name: "Walk-in Weekly Visitor Pass", price: 1500, duration: "7 Days", timeLimit: "Full Day", description: "7-day temporary visitor access pass" }
+    ];
+  }, []);
+
+  // Select a plan from custom walk-in dropdown
+  const handleWalkInPlanSelect = useCallback((plan) => {
+    setSelectedMember(prev => prev ? {
+      ...prev,
+      plan: plan.name,
+      planPrice: plan.price,
+      duration: plan.duration || "1 Day",
+      timeLimit: plan.timeLimit || "2 Hours"
+    } : prev);
+
+    setInvoiceItems([
+      { id: Date.now(), name: plan.name, qty: 1, price: plan.price, discount: 0 }
+    ]);
+  }, []);
+
+  // Walk-in photo upload handler
+  const handleWalkInPhotoUpload = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Url = event.target?.result;
+      if (base64Url && typeof base64Url === "string") {
+        setSelectedMember(prev => prev ? { ...prev, photo: base64Url } : prev);
+      }
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  // Update walk-in text fields
+  const handleUpdateWalkInField = useCallback((field, value) => {
+    setSelectedMember(prev => prev ? { ...prev, [field]: value } : prev);
+  }, []);
+
+  // Change walk-in membership plan
+  const handleWalkInPlanChange = useCallback((chosenPlanName) => {
+    let price = 500;
+    if (chosenPlanName === "Day Pass / Single Visit") price = 500;
+    else if (chosenPlanName === "Weekend Warrior Pass") price = 1000;
+    else if (chosenPlanName === "Weekly Visitor Pass") price = 1500;
+    else if (chosenPlanName === "Monthly Standard Fitness") price = 2500;
+    else if (chosenPlanName === "Quarterly Strength & Cardio") price = 6500;
+    else if (chosenPlanName === "Annual Pro Elite") price = 18000;
+    else {
+      const match = dbPlans.find(p => (p.name || p.plan_name) === chosenPlanName);
+      if (match?.price !== undefined) price = match.price;
+      else if (match?.price_minor_units) price = match.price_minor_units / 100;
+    }
+
+    setSelectedMember(prev => prev ? { ...prev, plan: chosenPlanName, planPrice: price } : prev);
+    setInvoiceItems([
+      { id: Date.now(), name: chosenPlanName, qty: 1, price: price, discount: 0 }
+    ]);
+  }, [dbPlans]);
 
   // Payment Confirmation Action
   const handleProcessPayment = useCallback(() => {
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
+      const memberToRecord = selectedMember ? {
+        ...selectedMember,
+        name: selectedMember.name?.trim() || (selectedMember.isWalkIn ? "Walk-in Guest" : "Member"),
+        phone: selectedMember.phone?.trim() || (selectedMember.isWalkIn ? "+91 90000 00000" : "—")
+      } : null;
+
       const txnRecord = {
         txnId: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
         invoiceNo: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
         amount: totalPayable,
         method: paymentMethod,
-        member: selectedMember,
+        member: memberToRecord,
         timestamp: new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
         settledTo: receivingAccount.bankName,
         utr: enteredUtr || (paymentMethod === "UPI" ? `UPI${Math.floor(100000000000 + Math.random() * 900000000000)}` : posSlipRef || "CASH-DESK-01"),
-        items: [...invoiceItems]
+        items: [
+          ...invoiceItems,
+          ...(duesToAdd > 0 ? [{ id: `due-${Date.now()}`, name: `Past Outstanding Due Clearance (${memberToRecord?.name || "Member"})`, qty: 1, price: duesToAdd, discount: 0 }] : [])
+        ]
       };
       setCompletedTxn(txnRecord);
       setIsSuccess(true);
     }, 700);
-  }, [totalPayable, paymentMethod, selectedMember, receivingAccount, enteredUtr, posSlipRef, invoiceItems]);
+  }, [totalPayable, paymentMethod, selectedMember, receivingAccount, enteredUtr, posSlipRef, invoiceItems, duesToAdd]);
 
   const resetBilling = useCallback(() => {
     setIsSuccess(false);
@@ -614,8 +700,11 @@ const CollectFeesPage = () => {
       if (planDropdownRef.current && !planDropdownRef.current.contains(event.target)) {
         setIsPlanDropdownOpen(false);
       }
+      if (walkInPlanDropdownRef.current && !walkInPlanDropdownRef.current.contains(event.target)) {
+        setIsWalkInPlanDropdownOpen(false);
+      }
     };
-    if (isPlanDropdownOpen) {
+    if (isPlanDropdownOpen || isWalkInPlanDropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("touchstart", handleClickOutside);
     }
@@ -623,7 +712,7 @@ const CollectFeesPage = () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [isPlanDropdownOpen]);
+  }, [isPlanDropdownOpen, isWalkInPlanDropdownOpen]);
 
   // Filtered DB plans for search
   const filteredPlans = useMemo(() => {
@@ -795,20 +884,20 @@ const CollectFeesPage = () => {
 
   return (
     <LocalErrorBoundary>
-      <div className="collect-fees-workspace min-h-screen bg-slate-50/50 p-6 space-y-6 font-sans text-slate-900 selection:bg-indigo-100">
+      <div className="collect-fees-workspace min-h-screen bg-slate-50/50 pt-2 px-6 pb-6 space-y-4 font-sans text-slate-900 selection:bg-indigo-100">
         <div ref={sentinelRef} style={{ height: "1px", marginBottom: "-1px", pointerEvents: "none" }} />
 
         {/* ════════════════════════════════════════════════════════════
             1. TOP EXECUTIVE HEADER (CLEAN & PROPERLY POSITIONED)
         ════════════════════════════════════════════════════════════ */}
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80">
+        <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-3 border-b border-slate-200/80">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">
               <span>Payments & Billing</span>
               <span>/</span>
               <span className="text-indigo-600 font-black">Collect Fees</span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
               Collect Fees & Desk Billing
             </h1>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -816,15 +905,15 @@ const CollectFeesPage = () => {
             </p>
           </div>
 
-          {/* Properly Positioned Walk-In Billing Primary Action */}
-          <div className="flex items-center">
+          {/* Top Right Positioned Walk-In Billing Action */}
+          <div className="flex items-center shrink-0 self-start sm:self-auto">
             <button
               type="button"
               onClick={handleCreateWalkIn}
-              className="h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="h-9 px-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
             >
               <Plus size={15} strokeWidth={2.5} />
-              <span>+ Walk-In Billing</span>
+              <span>Walk-In Billing</span>
             </button>
           </div>
         </header>
@@ -903,8 +992,6 @@ const CollectFeesPage = () => {
                     if (!isExpired) return false;
                     if (chip.id === "all") return true;
                     if (chip.id === "dues") return m.pendingDues > 0 || m.tags.includes("Pending Dues");
-                    if (chip.id === "recent") return m.daysExpiredAgo <= 30 || m.tags.includes("Recently Expired");
-                    if (chip.id === "long") return m.daysExpiredAgo > 30 || m.tags.includes("Long Expired");
                     return true;
                   }).length;
 
@@ -1038,7 +1125,7 @@ const CollectFeesPage = () => {
                 onClick={handleCreateWalkIn}
                 className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-all cursor-pointer shadow-2xs"
               >
-                + Bill Guest
+                Bill Guest
               </button>
             </div>
 
@@ -1051,156 +1138,372 @@ const CollectFeesPage = () => {
             
             {/* CARD 1: MEMBER SELECTION & PROFILE BANNER */}
             {selectedMember ? (
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5">
-                <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
-                  <div className="flex items-center gap-3.5">
-                    {/* Large High-Res Profile Image */}
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border-2 border-indigo-100 bg-slate-100 shadow-sm relative">
-                      <img
-                        src={resolveMemberPhoto(selectedMember)}
-                        alt={selectedMember?.name || "Member"}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = getInitialsAvatar(selectedMember?.name || "Member", selectedMember?.gender);
-                        }}
+              selectedMember.isWalkIn ? (
+                /* ────────────────────────────────────────────────────────
+                   INTERACTIVE WALK-IN GUEST REGISTRATION CARD
+                ──────────────────────────────────────────────────────── */
+                <div className="bg-white rounded-2xl border-2 border-indigo-200/90 shadow-2xs p-5 relative">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {/* Photo Avatar with Real Upload Trigger */}
+                      <input
+                        type="file"
+                        ref={photoInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleWalkInPhotoUpload}
                       />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-base font-black text-slate-900 leading-tight">
-                          {selectedMember?.name || "Select Member"}
-                        </h2>
-                        <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                          {selectedMember?.id || "GD-0000"}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
-                          EXPIRED ({selectedMember?.daysExpiredAgo || 1}d ago)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedMember(null);
-                            setInvoiceItems([]);
-                          }}
-                          className="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors ml-1 cursor-pointer flex items-center gap-1"
-                          title="Deselect Member"
-                        >
-                          <X size={12} />
-                          <span>Clear Selection</span>
-                        </button>
+                      <div
+                        onClick={() => photoInputRef.current?.click()}
+                        className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border-2 border-dashed border-indigo-300 hover:border-indigo-600 bg-indigo-50/70 shadow-xs relative cursor-pointer group transition-all flex items-center justify-center"
+                        title="Click to upload guest photo"
+                      >
+                        {selectedMember.photo ? (
+                          <img
+                            src={selectedMember.photo}
+                            alt="Guest Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-indigo-500 group-hover:text-indigo-700">
+                            <Camera size={18} strokeWidth={2.2} />
+                            <span className="text-[8px] font-black uppercase tracking-tight mt-0.5">Photo</span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <Camera size={16} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-500 font-medium mt-1 flex-wrap">
-                        <span>Phone: <strong className="text-slate-800">{selectedMember?.phone}</strong></span>
-                        <span>•</span>
-                        <span>Expired Plan: <strong className="text-slate-800">{selectedMember?.plan}</strong></span>
-                        <span>•</span>
-                        <span>Expiry Date: <strong className="text-rose-600">{selectedMember?.expiry}</strong></span>
+
+                      {/* Guest Info: Badges & Paired Inputs (Name + Contact Number) */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Walk-In Guest
+                          </span>
+                          <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                            ID: {selectedMember.id}
+                          </span>
+                        </div>
+                        {/* Name and Contact Number Side-by-Side */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div className="relative flex items-center w-full">
+                            <div className="absolute left-3 flex items-center pointer-events-none text-slate-400">
+                              <User size={14} strokeWidth={2.2} />
+                            </div>
+                            <input
+                              type="text"
+                              value={selectedMember.name}
+                              onChange={(e) => handleUpdateWalkInField("name", e.target.value)}
+                              placeholder="Guest Full Name..."
+                              className="w-full h-10 pl-9 pr-3 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none shadow-2xs transition-all font-sans"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="relative flex items-center w-full">
+                            <div className="absolute left-3 flex items-center pointer-events-none text-slate-400">
+                              <Phone size={13} strokeWidth={2.2} />
+                            </div>
+                            <input
+                              type="tel"
+                              value={selectedMember.phone}
+                              onChange={(e) => handleUpdateWalkInField("phone", e.target.value)}
+                              placeholder="Contact Number (+91...)"
+                              className="w-full h-10 pl-9 pr-3 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none font-mono shadow-2xs transition-all"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Outstanding Dues Pill */}
-                  <div className="text-right shrink-0">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Past Outstanding Dues
-                    </span>
-                    <span className={`text-base font-black font-mono ${
-                      selectedMember?.pendingDues > 0 ? "text-rose-600" : "text-emerald-600"
-                    }`}>
-                      {currencyFormatter.format(selectedMember?.pendingDues || 0)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Quick Item Presets Strip */}
-                <div className="pt-3.5 flex items-center gap-2 flex-wrap text-xs">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
-                    Quick Add:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInvoiceItems(prev => [
-                        ...prev,
-                        { id: Date.now(), name: `${selectedMember?.plan || "Membership"} Renewal`, qty: 1, price: selectedMember?.planPrice || 3500, discount: 0 }
-                      ]);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[11px] transition-all cursor-pointer shadow-2xs"
-                  >
-                    + Renew Expired Plan ({currencyFormatter.format(selectedMember?.planPrice || 3500)})
-                  </button>
-                  {selectedMember?.pendingDues > 0 && (
+                    {/* Top Right Corner Cross Button to Clear Walk-In */}
                     <button
                       type="button"
                       onClick={() => {
-                        setInvoiceItems(prev => [
-                          ...prev,
-                          { id: Date.now(), name: `Outstanding Due Clearance (${selectedMember.name})`, qty: 1, price: selectedMember.pendingDues, discount: 0 }
-                        ]);
+                        setSelectedMember(null);
+                        setInvoiceItems([]);
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] transition-all cursor-pointer"
+                      className="w-8 h-8 rounded-xl border border-slate-200/90 bg-slate-50 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-2xs group"
+                      title="Cancel Walk-In"
+                      aria-label="Cancel Walk-In"
                     >
-                      + Clear Due ({currencyFormatter.format(selectedMember.pendingDues)})
+                      <X size={16} strokeWidth={2.4} className="group-hover:scale-110 transition-transform" />
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInvoiceItems(prev => [
-                        ...prev,
-                        { id: Date.now(), name: "Personal Training Session (1 Hour)", qty: 1, price: 1500, discount: 0 }
-                      ]);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200/60 font-bold text-[11px] text-slate-700 transition-all cursor-pointer"
-                  >
-                    + Personal Training
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInvoiceItems(prev => [
-                        ...prev,
-                        { id: Date.now(), name: "Quarterly Locker Space Rental", qty: 1, price: 800, discount: 0 }
-                      ]);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200/60 font-bold text-[11px] text-slate-700 transition-all cursor-pointer"
-                  >
-                    + Locker Space
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* CLEAN & PROFESSIONAL EMPTY SELECTION STATE */
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5">
-                <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50/80 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                      <User size={22} strokeWidth={2} />
+                  </div>
+
+                  {/* Editable Fields Grid: Membership Plan, Duration + Time Limit, Issue Date */}
+                  <div className="mt-4 pt-3.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                    {/* Field 1: Custom Membership Plan Dropdown (Only Walk-In Guest Plans) */}
+                    <div ref={walkInPlanDropdownRef} className="sm:col-span-5 relative">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                        Membership Plan
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsWalkInPlanDropdownOpen(prev => !prev)}
+                        className="w-full h-10 px-3 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 rounded-xl flex items-center justify-between text-xs font-bold text-slate-800 transition-all cursor-pointer shadow-2xs group"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                          <Layers size={13} className="text-indigo-600 shrink-0" strokeWidth={2.2} />
+                          <span className="truncate">{selectedMember.plan || "Select Plan"}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="font-mono text-[10px] font-black text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                            {currencyFormatter.format(selectedMember.planPrice || 500)}
+                          </span>
+                          <ChevronDown size={13} className={`text-slate-400 transition-transform ${isWalkInPlanDropdownOpen ? "rotate-180 text-indigo-600" : ""}`} />
+                        </div>
+                      </button>
+
+                      {/* Custom Dropdown Menu Panel */}
+                      <AnimatePresence>
+                        {isWalkInPlanDropdownOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                            className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 bg-white rounded-2xl border border-slate-200/90 shadow-2xl z-50 overflow-hidden"
+                          >
+                            <div className="px-3.5 py-2 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-500">
+                              <span>Walk-In Guest Plans</span>
+                              <span className="font-mono text-indigo-600 font-bold">{walkInPlansList.length} Options</span>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
+                              {walkInPlansList.map(plan => {
+                                const isSelected = selectedMember.plan === plan.name;
+                                return (
+                                  <button
+                                    key={plan.id || plan.name}
+                                    type="button"
+                                    onClick={() => {
+                                      handleWalkInPlanSelect(plan);
+                                      setIsWalkInPlanDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer border ${
+                                      isSelected
+                                        ? "bg-indigo-50/80 border-indigo-200 text-indigo-950 font-bold shadow-2xs"
+                                        : "hover:bg-slate-50 border-transparent text-slate-800"
+                                    }`}
+                                  >
+                                    <div className="min-w-0 pr-2">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-black truncate">{plan.name}</span>
+                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-600 font-mono shrink-0">
+                                          {plan.duration}
+                                        </span>
+                                      </div>
+                                      {plan.description && (
+                                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{plan.description}</p>
+                                      )}
+                                    </div>
+                                    <div className="shrink-0 flex items-center gap-2">
+                                      <span className="font-mono text-xs font-black text-slate-900 bg-white px-1.5 py-0.5 rounded border border-slate-200/80 shadow-2xs">
+                                        {currencyFormatter.format(plan.price)}
+                                      </span>
+                                      {isSelected && (
+                                        <Check size={13} className="text-indigo-600" strokeWidth={3} />
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-sm font-black text-slate-900 leading-tight">
-                          Select a Member to Begin
-                        </h2>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
-                          Awaiting Selection
+
+                    {/* Field 2: Duration (Days) & Session Time Limit */}
+                    <div className="sm:col-span-4">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                        Duration & Time Limit
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {/* Day Validity Input */}
+                        <div className="relative flex items-center w-full" title="Pass Duration / Validity">
+                          <div className="absolute left-2.5 flex items-center pointer-events-none text-slate-400">
+                            <Clock size={12} strokeWidth={2.2} />
+                          </div>
+                          <input
+                            type="text"
+                            value={selectedMember.duration || "1 Day"}
+                            onChange={(e) => handleUpdateWalkInField("duration", e.target.value)}
+                            placeholder="1 Day"
+                            className="w-full h-10 pl-8 pr-2 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none font-mono shadow-2xs transition-all"
+                          />
+                        </div>
+
+                        {/* Session Time Limit Input */}
+                        <div className="relative flex items-center w-full" title="Session Time Limit">
+                          <div className="absolute left-2.5 flex items-center pointer-events-none text-slate-400">
+                            <Timer size={12} strokeWidth={2.2} />
+                          </div>
+                          <input
+                            type="text"
+                            value={selectedMember.timeLimit || "2 Hours"}
+                            onChange={(e) => handleUpdateWalkInField("timeLimit", e.target.value)}
+                            placeholder="2 Hours"
+                            className="w-full h-10 pl-8 pr-2 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none font-mono shadow-2xs transition-all"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Field 3: Desk Issue Date */}
+                    <div className="sm:col-span-3">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                        Desk Issue Date
+                      </label>
+                      <div className="h-10 px-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-800 shadow-2xs select-none">
+                        <Calendar size={13} className="text-slate-400 shrink-0" strokeWidth={2.2} />
+                        <span className="truncate">
+                          Today ({new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })})
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 font-medium mt-1">
-                        Choose an expired member from the directory on the left, or initiate a walk-in guest checkout.
-                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ────────────────────────────────────────────────────────
+                   READ-ONLY EXPIRED MEMBER PROFILE BANNER
+                ──────────────────────────────────────────────────────── */
+                <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      {/* Large High-Res Profile Image */}
+                      <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border-2 border-indigo-100 bg-slate-100 shadow-sm relative">
+                        <img
+                          src={resolveMemberPhoto(selectedMember)}
+                          alt={selectedMember?.name || "Member"}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = getInitialsAvatar(selectedMember?.name || "Member", selectedMember?.gender);
+                          }}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-base font-black text-slate-900 leading-tight capitalize truncate">
+                            {selectedMember?.name || "Select Member"}
+                          </h2>
+                          <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                            {selectedMember?.id || "GD-0000"}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
+                            EXPIRED ({selectedMember?.daysExpiredAgo || 1}d ago)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-slate-500 text-xs">
+                          <span className="font-medium text-slate-600">Member ID: <span className="font-mono font-bold text-slate-800">{selectedMember?.id}</span></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cross button at top right corner to clear member */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMember(null);
+                        setInvoiceItems([]);
+                      }}
+                      className="w-8 h-8 rounded-xl border border-slate-200/90 bg-slate-50 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-2xs group"
+                      title="Clear selected member"
+                      aria-label="Clear member"
+                    >
+                      <X size={16} strokeWidth={2.4} className="group-hover:scale-110 transition-transform" />
+                    </button>
+                  </div>
+
+                  {/* Structured Metadata Badges Row */}
+                  <div className="mt-4 pt-3.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-500 shrink-0 shadow-2xs">
+                        <Phone size={13} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Phone</span>
+                        <span className="text-xs font-bold text-slate-800 truncate block font-mono">{selectedMember?.phone || "—"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-slate-500 shrink-0 shadow-2xs">
+                        <Layers size={13} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Expired Plan</span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">{selectedMember?.plan || "General Membership"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-rose-50/60 border border-rose-200/60">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-rose-200/80 flex items-center justify-center text-rose-600 shrink-0 shadow-2xs">
+                        <Calendar size={13} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-rose-500 block leading-tight">Expired On</span>
+                        <span className="text-xs font-bold text-rose-700 truncate block">{selectedMember?.expiry || "Overdue"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              /* CLEAN & EXECUTIVE EMPTY SELECTION STATE */
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-50/80 border border-indigo-100/90 text-indigo-600 flex items-center justify-center shrink-0 shadow-2xs">
+                    <User size={26} strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-base font-black text-slate-900 tracking-tight leading-tight">
+                        Select a Member to Begin
+                      </h2>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
+                        Awaiting Selection
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                      Choose an expired member from the directory on the left to review their details, renew their plan, and collect outstanding dues.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Structured 3-Column Visual Guided Steps */}
+                <div className="mt-4 pt-3.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                    <div className="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-indigo-600 shrink-0 shadow-2xs">
+                      <Users size={13} strokeWidth={2.2} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Step 1</span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">Choose Member</span>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleCreateWalkIn}
-                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0 flex items-center gap-1.5"
-                  >
-                    <Plus size={13} strokeWidth={2.5} />
-                    <span>+ Bill Walk-in Guest</span>
-                  </button>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                    <div className="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-indigo-600 shrink-0 shadow-2xs">
+                      <Layers size={13} strokeWidth={2.2} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Step 2</span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">Itemize Fees</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                    <div className="w-7 h-7 rounded-lg bg-white border border-slate-200/80 flex items-center justify-center text-indigo-600 shrink-0 shadow-2xs">
+                      <CreditCard size={13} strokeWidth={2.2} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Step 3</span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">Collect Payment</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1402,24 +1705,27 @@ const CollectFeesPage = () => {
                           </div>
 
                           {/* Search box inside dropdown */}
-                          <div className="p-2 border-b border-slate-100 bg-white">
-                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 rounded-lg border border-slate-200/80 focus-within:border-indigo-500 focus-within:bg-white transition-all">
-                              <Search size={13} className="text-slate-400 shrink-0" />
+                          <div className="p-2.5 border-b border-slate-100 bg-slate-50/60">
+                            <div className="relative flex items-center w-full">
+                              <div className="absolute left-3 flex items-center pointer-events-none text-slate-400">
+                                <Search size={14} strokeWidth={2.2} />
+                              </div>
                               <input
                                 type="text"
-                                placeholder="Search plan name or duration..."
+                                placeholder="Search plan by name or duration..."
                                 value={planSearchQuery}
                                 onChange={(e) => setPlanSearchQuery(e.target.value)}
-                                className="w-full text-xs font-semibold text-slate-800 placeholder:text-slate-400 bg-transparent outline-none"
+                                className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/10 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none shadow-2xs transition-all"
                                 autoFocus
                               />
                               {planSearchQuery && (
                                 <button
                                   type="button"
                                   onClick={() => setPlanSearchQuery("")}
-                                  className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                                  className="absolute right-2.5 p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                                  title="Clear search"
                                 >
-                                  <X size={12} />
+                                  <X size={13} />
                                 </button>
                               )}
                             </div>
@@ -1494,6 +1800,30 @@ const CollectFeesPage = () => {
                   <span>Subtotal</span>
                   <span className="font-bold text-slate-900 font-mono">{currencyFormatter.format(subtotal)}</span>
                 </div>
+
+                {/* Member Past Dues row (displayed when member has pending dues) */}
+                {selectedMember?.pendingDues > 0 && (
+                  <div className="flex items-center justify-between text-slate-600 font-medium">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-rose-600 flex items-center gap-1.5">
+                        <AlertCircle size={13} className="text-rose-600 shrink-0" />
+                        Past Outstanding Dues
+                      </span>
+                      <label className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-500 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={includePastDues}
+                          onChange={(e) => setIncludePastDues(e.target.checked)}
+                          className="rounded text-rose-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                        />
+                        <span>Collect With Renewal</span>
+                      </label>
+                    </div>
+                    <span className={`font-bold font-mono ${includePastDues ? "text-rose-600" : "text-slate-400"}`}>
+                      +{currencyFormatter.format(duesToAdd)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between text-slate-600 font-medium">
                   <div className="flex items-center gap-1.5">
@@ -1690,28 +2020,6 @@ const CollectFeesPage = () => {
                         </a>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Optional UTR input */}
-                  <div>
-                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
-                      <span>12-Digit Bank UTR / UPI Ref (Optional)</span>
-                      <button
-                        type="button"
-                        onClick={() => setEnteredUtr(`UPI${Math.floor(100000000000 + Math.random() * 900000000000)}`)}
-                        className="text-indigo-400 hover:text-indigo-300 font-bold cursor-pointer"
-                      >
-                        Auto-generate Ref
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={18}
-                      value={enteredUtr}
-                      onChange={(e) => setEnteredUtr(e.target.value)}
-                      placeholder="e.g. 428190392812"
-                      className="w-full h-10 bg-slate-950/80 border border-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl px-3.5 text-xs text-white placeholder:text-slate-600 outline-none font-mono tracking-wider shadow-2xs transition-all"
-                    />
                   </div>
                 </div>
               )}

@@ -47,9 +47,7 @@ const stageRegistry = [
   { stages: ["daily-checkin", "attendance"], load: () => import("./DailyCheckin.jsx"), mount: "mountDailyCheckin" },
   { stages: ["attendance-reports"], load: () => import("./AttendanceReports.jsx"), mount: "mountAttendanceReports" },
   { stages: ["payments"], load: () => import("./CollectFees.jsx"), mount: "mountCollectFees" },
-  { stages: ["pending-dues"], load: () => import("./PendingDues.jsx"), mount: "mountPendingDues" },
   { stages: ["payment-history"], load: () => import("./PaymentHistory.jsx"), mount: "mountPaymentHistory" },
-  { stages: ["payment-reconciliation", "reconciliation"], load: () => import("./PaymentReconciliation.jsx"), mount: "mountPaymentReconciliation", argKey: "paymentReconciliationStage" },
   { stages: ["trainers"], load: () => import("./AllTrainers.jsx"), mount: "mountAllTrainers" },
   { stages: ["assign-trainer"], load: () => import("./AssignTrainer.jsx"), mount: "mountAssignTrainer" },
   { stages: ["trainer-schedule"], load: () => import("./TrainerSchedule.jsx"), mount: "mountTrainerSchedule" },
@@ -766,9 +764,7 @@ const DOM = {
   get dailyCheckinStage() { return document.querySelector('[data-stage="daily-checkin"]'); },
   get attendanceReportsStage() { return document.querySelector('[data-stage="attendance-reports"]'); },
   get paymentsStage() { return document.querySelector('[data-stage="payments"]'); },
-  get pendingDuesStage() { return document.querySelector('[data-stage="pending-dues"]'); },
   get paymentHistoryStage() { return document.querySelector('[data-stage="payment-history"]'); },
-  get paymentReconciliationStage() { return document.querySelector('[data-stage="payment-reconciliation"]'); },
   get trainersStage() { return document.querySelector('[data-stage="trainers"]'); },
   get assignTrainerStage() { return document.querySelector('[data-stage="assign-trainer"]'); },
   get trainerScheduleStage() { return document.querySelector('[data-stage="trainer-schedule"]'); },
@@ -799,10 +795,7 @@ const viewLabels = {
   attendance: "Daily Check-in",
   "attendance-reports": "Attendance Reports",
   payments: "Collect Fees",
-  "pending-dues": "Pending Dues",
   "payment-history": "Payment History",
-  "payment-reconciliation": "Payment Reconciliation",
-  reconciliation: "Payment Reconciliation",
   trainers: "All Trainers",
   "assign-trainer": "Assign Trainer",
   "trainer-schedule": "Trainer Schedule",
@@ -3350,6 +3343,9 @@ const stageAliases = {
   "attendance": "daily-checkin",
   "account": "profile",
   "leads-prospects": "coming-soon",
+  "pending-dues": "payments",
+  "payment-reconciliation": "payment-history",
+  "reconciliation": "payment-history",
 };
 
 const stageVisibilityConfig = [
@@ -3361,9 +3357,7 @@ const stageVisibilityConfig = [
   { key: "daily-checkin", el: () => DOM.dailyCheckinStage },
   { key: "attendance-reports", el: () => DOM.attendanceReportsStage },
   { key: "payments", el: () => DOM.paymentsStage },
-  { key: "pending-dues", el: () => DOM.pendingDuesStage },
   { key: "payment-history", el: () => DOM.paymentHistoryStage },
-  { key: "payment-reconciliation", el: () => DOM.paymentReconciliationStage },
   { key: "trainers", el: () => DOM.trainersStage },
   { key: "assign-trainer", el: () => DOM.assignTrainerStage },
   { key: "trainer-schedule", el: () => DOM.trainerScheduleStage },
@@ -3552,6 +3546,7 @@ if (clearSearchBtn) {
 }
 
 const setActiveView = (viewName) => {
+  window.setActiveView = setActiveView;
   console.log(`GymDeck: Switching to view: ${viewName}`);
   const isCompactNavigation = window.matchMedia("(max-width: 1180px)").matches;
   const safeView = viewLabels[viewName] ? viewName : "dashboard";
@@ -3764,6 +3759,7 @@ const loadMembersFromBackend = async (resetPage = true) => {
     const members = await window.__TAURI__.core.invoke("get_members_command", { limit: 5000, offset: 0 });
     console.log(`GymDeck: Loaded ${members.length} members from backend.`);
     cachedMembers = members;
+    window.cachedMembers = members;
 
     if (resetPage) {
       currentMembersPage = 1;
@@ -5489,6 +5485,7 @@ window.addEventListener("resize", () => {
 });
 
 // Expose modal state controllers globally for React cross-component access
+window.setActiveView = setActiveView;
 window.setDocumentModalState = setDocumentModalState;
 window.setDocumentModalContent = setDocumentModalContent;
 
