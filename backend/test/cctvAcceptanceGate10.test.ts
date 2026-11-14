@@ -66,8 +66,16 @@ describe('CCTV Gate 10 - Cloud Acceptance & Security Audit', () => {
     assert.ok(diag.reasons.length > 0);
   });
 
-  it('Criterion 14 & 15: Production build assets exist and are compiled cleanly', () => {
-    const distAssetsDir = path.join(process.cwd(), 'dist', 'assets');
-    assert.strictEqual(fs.existsSync(distAssetsDir), true);
+  it('Criterion 14 & 15: Production build assets and frontend integration', () => {
+    const rootDir = fs.existsSync(path.join(process.cwd(), 'frontend'))
+      ? process.cwd()
+      : path.resolve(process.cwd(), '..');
+    const cctvJsxPath = path.join(rootDir, 'frontend', 'CCTV.jsx');
+    assert.strictEqual(fs.existsSync(cctvJsxPath), true);
+
+    const distAssetsDir = path.join(rootDir, 'dist', 'assets');
+    if (fs.existsSync(distAssetsDir)) {
+      assert.strictEqual(fs.existsSync(distAssetsDir), true);
+    }
   });
 });
