@@ -2,19 +2,38 @@
  * GymDeck Cloud Backend - Server Bootstrap & Graceful Lifecycle Manager
  */
 
-import { Server } from 'http';
+import { Server, createServer } from 'http';
+import { WebSocketServer } from 'ws';
 import { createApp } from './app';
 import { config } from '../../shared/config';
 import { logger } from '../../shared/logging';
 import { closeDatabasePool } from '../../shared/database';
 import { communicationRetentionWorker } from '../../services/communications/retentionWorker';
+import { cctvSignalingService } from '../../services/cctv/cctvSignalingService';
 
 let server: Server | null = null;
+let wss: WebSocketServer | null = null;
 
 export function startServer(): Server {
   const app = createApp();
+  server = createServer(app);
 
-  server = app.listen(config.PORT, config.HOST, () => {
+  // Initialize CCTV WebRTC Signaling WebSocket server
+  wss = new WebSocketServer({ noServer: true });
+  cctvSignalingService.init(wss);
+
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = new URL(request.url || '', `http://${request.headers.host}`).pathname;
+    if (pathname === '/v1/cctv/signaling') {
+      wss!.handleUpgrade(request, socket, head, (ws) => {
+        wss!.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
+
+  server.listen(config.PORT, config.HOST, () => {
     logger.info(`🚀 GymDeck Cloud Gateway listening at http://${config.HOST}:${config.PORT}`, {
       environment: config.NODE_ENV,
       port: config.PORT,

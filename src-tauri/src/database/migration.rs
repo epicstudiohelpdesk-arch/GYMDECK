@@ -117,6 +117,38 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         ALTER TABLE inventory ADD COLUMN unit_price_minor_units INTEGER;
         UPDATE inventory SET unit_price_minor_units = CAST(ROUND(unit_price * 100.0) AS INTEGER) WHERE unit_price IS NOT NULL AND unit_price_minor_units IS NULL;",
     ),
+    (
+        7,
+        "Add local CCTV cache tables for offline gate pass and camera monitoring",
+        "CREATE TABLE IF NOT EXISTS local_cctv_gateways (
+            id TEXT PRIMARY KEY,
+            gym_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            status TEXT NOT NULL,
+            host_local_ip TEXT,
+            last_heartbeat_at DATETIME,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS local_cctv_cameras (
+            id TEXT PRIMARY KEY,
+            gym_id TEXT NOT NULL,
+            recorder_id TEXT,
+            channel_number INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            location_zone TEXT NOT NULL DEFAULT 'GENERAL',
+            ip_address TEXT,
+            codec TEXT NOT NULL DEFAULT 'H264',
+            resolution_main TEXT,
+            resolution_sub TEXT,
+            fps INTEGER DEFAULT 15,
+            is_active BOOLEAN NOT NULL DEFAULT 1,
+            status TEXT NOT NULL DEFAULT 'IDLE',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_local_cctv_cameras_gym ON local_cctv_cameras(gym_id);",
+    ),
 ];
 
 fn validate_legacy_monetary_records(conn: &Connection) -> Result<(), crate::errors::AppError> {

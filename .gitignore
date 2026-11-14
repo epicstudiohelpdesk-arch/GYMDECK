@@ -25,6 +25,7 @@ scratch/
 *.sqlite
 *.sqlite*
 *.bak
+cctv_exports/
 
 # Android build & cache
 .gradle/

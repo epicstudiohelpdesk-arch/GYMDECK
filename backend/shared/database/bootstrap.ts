@@ -687,4 +687,17 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       break;
     }
   }
+
+  // CCTV Subsystem migration (additive; safe to re-run).
+  const cctvCandidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0003_cctv_subsystem.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0003_cctv_subsystem.sql'),
+    path.join(__dirname, 'migrations', '0003_cctv_subsystem.sql'),
+  ];
+  for (const file of cctvCandidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
 }

@@ -3849,6 +3849,31 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   z-index: 100 !important;
 }
 
+.cctv-stage {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  opacity: 0;
+  transform: translateY(18px) scale(0.99);
+  pointer-events: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+  transition: opacity 240ms ease, transform 240ms ease;
+  background-color: #f8fafc;
+  will-change: scroll-position;
+}
+
+.cctv-stage.is-active {
+  display: block !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+}
+
 .past-members-shell {
   display: flex;
   flex-direction: column;
@@ -4905,6 +4930,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 @media (max-width: 1660px) {
   .members-stage,
   .past-members-stage,
+  .cctv-stage,
   .expiring-memberships-stage,
   .freeze-pause-stage,
   .daily-checkin-stage,
@@ -5053,6 +5079,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 @media (max-width: 1280px) {
   .members-stage,
   .past-members-stage,
+  .cctv-stage,
   .expiring-memberships-stage,
   .freeze-pause-stage,
   .daily-checkin-stage,
@@ -7818,6 +7845,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .dashboard-stage.is-hidden,
   .members-stage:not(.is-active),
   .past-members-stage:not(.is-active),
+  .cctv-stage:not(.is-active),
   .expiring-memberships-stage:not(.is-active),
   .freeze-pause-stage:not(.is-active),
   .daily-checkin-stage:not(.is-active),
@@ -7848,6 +7876,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 
   .members-stage,
   .past-members-stage,
+  .cctv-stage,
   .expiring-memberships-stage,
   .freeze-pause-stage,
   .daily-checkin-stage,

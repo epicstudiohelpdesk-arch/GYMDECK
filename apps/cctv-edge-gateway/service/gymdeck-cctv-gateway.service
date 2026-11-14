@@ -1,0 +1,26 @@
+[Unit]
+Description=GymDeck CCTV Edge Gateway Background Daemon
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gymdeck
+WorkingDirectory=/opt/gymdeck-cctv-gateway
+ExecStart=/usr/bin/node /opt/gymdeck-cctv-gateway/dist/index.js
+Restart=always
+RestartSec=5s
+
+# Security Sandboxing
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/gymdeck-cctv-gateway /home/gymdeck/.gymdeck
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Environment
+Environment=NODE_ENV=production
+Environment=PORT=49152
+
+[Install]
+WantedBy=multi-user.target

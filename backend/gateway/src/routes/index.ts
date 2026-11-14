@@ -7,6 +7,7 @@ import ownerRouter from './owner';
 import syncRouter from './sync';
 import webhookRouter from './webhooks';
 import paymentConfigRouter from './paymentConfig';
+import cctvRouter from './cctv';
 
 const router: Router = Router();
 
@@ -15,6 +16,9 @@ router.use('/', healthRouter);
 
 // Payment Configuration & Onboarding API (/v1/payments)
 router.use('/v1/payments', paymentConfigRouter);
+
+// Security & CCTV API (/v1/cctv)
+router.use('/v1/cctv', cctvRouter);
 
 // Authentication API (/v1/auth)
 router.use('/v1/auth/owner', ownerAuthRouter);

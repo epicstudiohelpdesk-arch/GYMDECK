@@ -16,3 +16,4 @@ export * from './progress';
 export * from './audit';
 export * from './sync';
 export * from './payments';
+export * from './cctv';

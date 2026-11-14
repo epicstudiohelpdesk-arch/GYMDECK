@@ -62,6 +62,7 @@ const stageRegistry = [
   { stages: ["gym-profile"], load: () => import("./GymProfile.jsx"), mount: "mountGymProfile", argKey: "gymProfileStage" },
   { stages: ["account", "profile"], load: () => import("./Profile.jsx"), mount: "mountProfile", argKey: "profileStage" },
   { stages: ["past-members"], load: () => import("./PastMembers.jsx"), mount: "mountPastMembers" },
+  { stages: ["cctv", "security-cctv"], load: () => import("./CCTV.jsx"), mount: "mountCctv", argKey: "cctvStage" },
 ];
 
 const stageMap = new Map();
@@ -777,7 +778,8 @@ const DOM = {
   get trainerPerformanceStage() { return document.querySelector('[data-stage="trainer-performance"]'); },
   get gymProfileStage() { return document.querySelector('[data-stage="gym-profile"]'); },
   get profileStage() { return document.querySelector('[data-stage="profile"]'); },
-  get pastMembersStage() { return document.querySelector('[data-stage="past-members"]'); }
+  get pastMembersStage() { return document.querySelector('[data-stage="past-members"]'); },
+  get cctvStage() { return document.querySelector('[data-stage="cctv"]'); }
 };
 const viewLabels = {
   dashboard: "Dashboard",
@@ -809,7 +811,9 @@ const viewLabels = {
   "trainer-performance": "Trainer Performance",
   settings: "Settings",
   "gym-profile": "Gym Profile",
-  account: "Profile"
+  account: "Profile",
+  cctv: "Security & CCTV",
+  "security-cctv": "Security & CCTV"
 };
 const previewOrder = Object.keys(viewLabels).filter((view) => view !== "dashboard");
 const MEMBER_DELETED_STORAGE_KEY = "gymdeck-deleted-member-ids";
@@ -3343,6 +3347,7 @@ const stageAliases = {
   "pending-dues": "payments",
   "payment-reconciliation": "payment-history",
   "reconciliation": "payment-history",
+  "security-cctv": "cctv",
 };
 
 const stageVisibilityConfig = [
@@ -3369,6 +3374,7 @@ const stageVisibilityConfig = [
   { key: "gym-profile", el: () => DOM.gymProfileStage },
   { key: "profile", el: () => DOM.profileStage },
   { key: "past-members", el: () => DOM.pastMembersStage },
+  { key: "cctv", el: () => DOM.cctvStage },
   { key: "coming-soon", el: () => comingSoonStage },
 ];
 
