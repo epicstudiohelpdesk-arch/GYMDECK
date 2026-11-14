@@ -2646,12 +2646,12 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px;
-  border-radius: 8px;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 16px;
   background: #ffffff;
-  border: 1px solid #dfe6f0;
-  box-shadow: 0 18px 34px rgba(31, 41, 55, 0.08);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.06);
 }
 
 .manual-entry-stage {
@@ -2892,12 +2892,12 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px;
-  border-radius: 8px;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 16px;
   background: #ffffff;
-  border: 1px solid #dfe6f0;
-  box-shadow: 0 18px 34px rgba(31, 41, 55, 0.08);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.06);
 }
 
 .generate-receipt-stage {
@@ -3711,26 +3711,6 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 }
 
 .gym-profile-stage.is-active {
-  display: block !important;
-  opacity: 1 !important;
-  transform: none !important;
-  pointer-events: auto !important;
-  z-index: 100 !important;
-}
-
-.app-settings-stage {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transform: translateY(18px) scale(0.99);
-  pointer-events: none;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-  transition: opacity 240ms ease, transform 240ms ease;
-  background-color: #f8fafc;
-}
-
-.app-settings-stage.is-active {
   display: block !important;
   opacity: 1 !important;
   transform: none !important;

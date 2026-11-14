@@ -1,625 +1,414 @@
 import BrandFooter from "./BrandFooter.jsx";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Shield,
   ShieldCheck,
-  ShieldAlert,
-  Users,
+  Shield,
   Search,
-  Plus,
-  Filter,
-  MoreVertical,
-  LayoutGrid,
   List,
-  ChevronRight,
-  ChevronDown,
-  TrendingUp,
-  Activity,
-  AlertCircle,
-  CheckCircle2,
-  Lock,
-  Key,
-  Eye,
-  Edit3,
-  Trash2,
-  Copy,
-  UserPlus,
-  UserCheck,
-  X,
-  FileText,
-  Brain,
-  Globe,
-  Settings,
-  History,
-  Download,
-  ArrowUpRight,
-  Layers,
-  Zap,
-  Briefcase,
-  Award,
-  BookOpen,
-  PieChart,
   Grid3X3,
-  Network,
-  Scale,
-  MoreHorizontal,
-  Bell,
   Check,
-  Info
+  Minus,
+  ChevronRight,
+  Key,
+  Info,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
-// ─────────────────────────────────────────
-// CONSTANTS & MOCK DATA
-// ─────────────────────────────────────────
+// Role and permission reference. The grants below mirror the desktop
+// authorization guard in src-tauri/src/permissions/mod.rs exactly.
 
-const KPIS = [
-  { id: 1, label: "Total Roles", value: "12", trend: "+2", isUp: true, subtext: "4 system, 8 custom" },
-  { id: 2, label: "Active Staff", value: "48", trend: "+5", isUp: true, subtext: "Across 4 branches" },
-  { id: 3, label: "Restricted Permissions", value: "142", trend: "Secure", isUp: true, subtext: "Zero leaks detected" },
-  { id: 4, label: "Branch Administrators", value: "6", trend: "Stable", isUp: true, subtext: "1 per main zone" },
-  { id: 5, label: "Pending Role Requests", value: "3", trend: "-1", isUp: true, subtext: "Requires review" },
-  { id: 6, label: "Security Alerts", value: "0", trend: "Clean", isUp: true, subtext: "Last 24 hours" },
-  { id: 7, label: "Payroll Access Holders", value: "4", trend: "Restricted", isUp: true, subtext: "High-privilege users" },
-  { id: 8, label: "Custom Roles Created", value: "8", trend: "+1", isUp: true, subtext: "Department specific" }
+const PERMISSIONS = [
+  { id: "ManageMembers", label: "Manage Members", description: "Create and update member records." },
+  { id: "ManageFinances", label: "Manage Finances", description: "Payments, billing and financial records." },
+  { id: "ManageSystem", label: "Manage System", description: "System-level controls and configuration." },
+  { id: "ViewReports", label: "View Reports", description: "Analytics, reports and performance data." },
+  { id: "ManageTrainers", label: "Manage Trainers", description: "Trainer roster and staff assignments." },
+  { id: "ManageOwnProfile", label: "Manage Own Profile", description: "Edit the signed-in user's own profile." },
 ];
 
-const ROLE_GROUPS = [
-  { id: "admin", name: "Administration", count: 4, color: "text-indigo-600", bg: "bg-indigo-50" },
-  { id: "trainers", name: "Trainers", count: 18, color: "text-emerald-600", bg: "bg-emerald-50" },
-  { id: "finance", name: "Finance", count: 3, color: "text-amber-600", bg: "bg-amber-50" },
-  { id: "frontdesk", name: "Front Desk", count: 12, color: "text-rose-600", bg: "bg-rose-50" },
-  { id: "ops", name: "Operations", count: 6, color: "text-blue-600", bg: "bg-blue-50" },
-  { id: "hr", name: "HR", count: 2, color: "text-purple-600", bg: "bg-purple-50" }
+const PERMISSION_MAP = Object.fromEntries(PERMISSIONS.map((p) => [p.id, p]));
+
+const ROLE_TEMPLATES = [
+  {
+    id: "SUPER_ADMIN",
+    name: "Super Admin",
+    description: "Unrestricted access to every permission in the desktop permission set.",
+    permissions: ["ManageMembers", "ManageFinances", "ManageSystem", "ViewReports", "ManageTrainers", "ManageOwnProfile"],
+    accent: { icon: "bg-indigo-50 text-indigo-600", dot: "bg-indigo-500" },
+  },
+  {
+    id: "ADMIN",
+    name: "Administrator",
+    description: "Every permission except system-level management.",
+    permissions: ["ManageMembers", "ManageFinances", "ViewReports", "ManageTrainers", "ManageOwnProfile"],
+    accent: { icon: "bg-violet-50 text-violet-600", dot: "bg-violet-500" },
+  },
+  {
+    id: "RECEPTIONIST",
+    name: "Receptionist",
+    description: "Front-desk access to member records and personal profile settings.",
+    permissions: ["ManageMembers", "ManageOwnProfile"],
+    accent: { icon: "bg-sky-50 text-sky-600", dot: "bg-sky-500" },
+  },
+  {
+    id: "ACCOUNTANT",
+    name: "Accountant",
+    description: "Financial operations and reporting; member and trainer management are not granted.",
+    permissions: ["ManageFinances", "ViewReports", "ManageOwnProfile"],
+    accent: { icon: "bg-emerald-50 text-emerald-600", dot: "bg-emerald-500" },
+  },
+  {
+    id: "TRAINER",
+    name: "Trainer",
+    description: "Reporting visibility plus self-service profile access.",
+    permissions: ["ViewReports", "ManageOwnProfile"],
+    accent: { icon: "bg-amber-50 text-amber-600", dot: "bg-amber-500" },
+  },
 ];
 
-const MOCK_ROLES = [
-  { 
-    id: "ROL-001", 
-    name: "Super Admin", 
-    dept: "Administration", 
-    level: "Full Access", 
-    staff: 2, 
-    perms: 128, 
-    scope: "All Branches", 
-    modified: "2h ago", 
-    status: "active" 
-  },
-  { 
-    id: "ROL-002", 
-    name: "Branch Manager", 
-    dept: "Operations", 
-    level: "Limited Access", 
-    staff: 4, 
-    perms: 84, 
-    scope: "Branch Only", 
-    modified: "Yesterday", 
-    status: "active" 
-  },
-  { 
-    id: "ROL-003", 
-    name: "Senior Trainer", 
-    dept: "Trainers", 
-    level: "Limited Access", 
-    staff: 8, 
-    perms: 42, 
-    scope: "Branch Only", 
-    modified: "3 days ago", 
-    status: "active" 
-  },
-  { 
-    id: "ROL-004", 
-    name: "Accountant", 
-    dept: "Finance", 
-    level: "Custom Access", 
-    staff: 2, 
-    perms: 36, 
-    scope: "Regional", 
-    modified: "1 week ago", 
-    status: "active" 
-  },
-  { 
-    id: "ROL-005", 
-    name: "Receptionist", 
-    dept: "Front Desk", 
-    level: "Limited Access", 
-    staff: 12, 
-    perms: 24, 
-    scope: "Branch Only", 
-    modified: "4h ago", 
-    status: "active" 
-  }
-];
+const hasPermission = (role, permissionId) => role.permissions.includes(permissionId);
 
-const MODULES = [
-  "Membership Management",
-  "Payments & Billing",
-  "Attendance Tracking",
-  "Trainers & Staff",
-  "Reports & Analytics",
-  "Payroll & Commission",
-  "System Settings"
-];
-
-// ─────────────────────────────────────────
-// COMPONENTS
-// ─────────────────────────────────────────
-
-const StatCard = ({ kpi }) => (
-  <article className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
-    <div className="flex justify-between items-start mb-2">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{kpi.label}</span>
-      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${kpi.isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-        {kpi.trend}
-      </span>
-    </div>
-    <div className="flex items-baseline gap-2">
-      <strong className="text-2xl font-black text-slate-900">{kpi.value}</strong>
-    </div>
-    <p className="text-[11px] font-medium text-slate-500 mt-1">{kpi.subtext}</p>
+const StatCard = ({ label, value, hint }) => (
+  <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+    <p className="mt-2 text-2xl font-black leading-none tracking-tight text-slate-900">{value}</p>
+    <p className="mt-2 text-[11px] font-medium leading-snug text-slate-500">{hint}</p>
   </article>
 );
 
-const StaffRoles = () => {
-  console.log("GymDeck: StaffRoles component is rendering...");
-  const [viewMode, setViewMode] = useState("table"); // table | matrix
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(null);
+const AccessBadge = ({ fullAccess }) => (
+  <span
+    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+      fullAccess ? "bg-indigo-50 text-indigo-700" : "bg-slate-100 text-slate-600"
+    }`}
+  >
+    <span className={`h-1.5 w-1.5 rounded-full ${fullAccess ? "bg-indigo-500" : "bg-slate-400"}`} />
+    {fullAccess ? "Full access" : "Scoped access"}
+  </span>
+);
 
-  const handleCreateRole = () => {
-    console.log("GymDeck: Opening Create Role drawer");
-    setSelectedRole(null);
-    setIsDrawerOpen(true);
-  };
-
-  const handleEditRole = (role) => {
-    console.log("GymDeck: Opening Edit Role drawer for:", role.name);
-    setSelectedRole(role);
-    setIsDrawerOpen(true);
-  };
+const RoleCard = ({ role }) => {
+  const fullAccess = role.permissions.length === PERMISSIONS.length;
 
   return (
-    <div className="staff-roles-shell font-sans text-slate-900 selection:bg-indigo-100">
-      {/* 5. TOP UTILITY HEADER */}
-      <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-          <span className="hover:text-slate-900 cursor-pointer">Trainers & Staff</span>
-          <ChevronRight size={14} className="opacity-40" />
-          <span className="text-slate-900 font-bold font-sans">Staff Roles</span>
-        </div>
-
-        <div className="flex-1 max-w-2xl px-12 relative">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search roles, permissions, staff hierarchy..."
-              className="w-full h-11 pl-12 pr-4 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
-            />
+    <article className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${role.accent.icon}`}>
+            {fullAccess ? <ShieldCheck size={19} /> : <Shield size={19} />}
+          </span>
+          <div>
+            <h3 className="text-sm font-black tracking-tight text-slate-900">{role.name}</h3>
+            <p className="mt-1 font-mono text-[10px] font-semibold tracking-wide text-slate-400">{role.id}</p>
           </div>
         </div>
+        <AccessBadge fullAccess={fullAccess} />
+      </div>
 
-        <div className="flex items-center gap-3">
-          <button className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-2">
-            <History size={16} />
-            Access Logs
-          </button>
-          <button 
-            onClick={handleCreateRole}
-            className="h-10 px-6 rounded-xl bg-slate-950 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 flex items-center gap-2"
-          >
-            <Plus size={16} />
-            Create Role
-          </button>
+      <p className="mt-4 text-xs font-medium leading-relaxed text-slate-500">{role.description}</p>
+
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Granted permissions</h4>
+          <span className="text-[10px] font-bold text-slate-500">
+            {role.permissions.length} of {PERMISSIONS.length}
+          </span>
+        </div>
+        <ul className="mt-3 space-y-2">
+          {role.permissions.map((permissionId) => (
+            <li key={permissionId} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                <Check size={11} strokeWidth={3} />
+              </span>
+              {PERMISSION_MAP[permissionId]?.label || permissionId}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </article>
+  );
+};
+
+const PermissionMatrix = ({ permissions }) => (
+  <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[860px] border-collapse text-left">
+        <caption className="sr-only">Permissions granted to each desktop role template</caption>
+        <thead>
+          <tr className="border-b border-slate-100 bg-slate-50/70">
+            <th scope="col" className="sticky left-0 z-10 bg-slate-50/95 px-5 py-4 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+              Permission
+            </th>
+            {ROLE_TEMPLATES.map((role) => (
+              <th key={role.id} scope="col" className="px-4 py-4 text-center">
+                <span className="block text-[11px] font-black text-slate-700">{role.name}</span>
+                <span className="mt-0.5 block font-mono text-[9px] font-semibold tracking-wide text-slate-400">
+                  {role.id}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {permissions.map((permission) => (
+            <tr key={permission.id} className="group hover:bg-slate-50/60">
+              <th scope="row" className="sticky left-0 z-10 bg-white px-5 py-4 text-left group-hover:bg-slate-50/60">
+                <span className="block text-xs font-bold text-slate-800">{permission.label}</span>
+                <span className="mt-0.5 block text-[10px] font-medium text-slate-400">{permission.description}</span>
+              </th>
+              {ROLE_TEMPLATES.map((role) => {
+                const granted = hasPermission(role, permission.id);
+                return (
+                  <td key={role.id} className="px-4 py-4 text-center">
+                    <span
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
+                        granted ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-300"
+                      }`}
+                      title={granted ? `${role.name}: granted` : `${role.name}: not granted`}
+                    >
+                      {granted ? <Check size={13} strokeWidth={3} /> : <Minus size={13} strokeWidth={3} />}
+                      <span className="sr-only">{granted ? "Granted" : "Not granted"}</span>
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <div className="flex flex-wrap items-center gap-4 border-t border-slate-100 px-5 py-3 text-[10px] font-semibold text-slate-500">
+      <span className="inline-flex items-center gap-1.5">
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+          <Check size={10} strokeWidth={3} />
+        </span>
+        Granted
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+          <Minus size={10} strokeWidth={3} />
+        </span>
+        Not granted
+      </span>
+      <span className="ml-auto text-slate-400">Source: desktop permission guard</span>
+    </div>
+  </div>
+);
+
+const StaffRoles = () => {
+  const [viewMode, setViewMode] = useState("roles");
+  const [searchQuery, setSearchQuery] = useState("");
+  const query = searchQuery.trim().toLowerCase();
+
+  const filteredRoles = useMemo(() => {
+    if (!query) return ROLE_TEMPLATES;
+    return ROLE_TEMPLATES.filter((role) =>
+      [role.name, role.id, role.description, ...role.permissions.map((id) => PERMISSION_MAP[id]?.label || id)]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [query]);
+
+  const filteredPermissions = useMemo(() => {
+    if (!query) return PERMISSIONS;
+    return PERMISSIONS.filter((permission) =>
+      [
+        permission.label,
+        permission.description,
+        ...ROLE_TEMPLATES.filter((role) => hasPermission(role, permission.id)).map((role) => role.name),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [query]);
+
+  const fullAccessCount = ROLE_TEMPLATES.filter((role) => role.permissions.length === PERMISSIONS.length).length;
+
+  return (
+    <div className="staff-roles-shell font-sans text-slate-900">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm font-medium text-slate-500">
+          <span>Trainers &amp; Staff</span>
+          <ChevronRight size={14} className="text-slate-300" />
+          <span className="font-bold text-slate-900">Staff Roles</span>
+        </nav>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="relative w-full sm:w-80">
+            <span className="sr-only">Search roles and permissions</span>
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search roles or permissions"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs font-semibold text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </label>
+          <div className="flex rounded-xl border border-slate-200 bg-white p-1" role="group" aria-label="View mode">
+            <button
+              type="button"
+              aria-pressed={viewMode === "roles"}
+              onClick={() => setViewMode("roles")}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                viewMode === "roles" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <List size={13} />
+              Roles
+            </button>
+            <button
+              type="button"
+              aria-pressed={viewMode === "matrix"}
+              onClick={() => setViewMode("matrix")}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                viewMode === "matrix" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <Grid3X3 size={13} />
+              Matrix
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* 6. PAGE TITLE SECTION */}
-      <div className="flex justify-between items-end mb-2 relative z-10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Staff Roles</h1>
-          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-[720px]">
-            Manage staff hierarchy, permissions, operational access, and organizational responsibilities across your fitness ecosystem.
+          <h1 className="text-3xl font-black leading-none tracking-tight text-slate-900">Staff Roles</h1>
+          <p className="mt-2 max-w-2xl text-xs font-semibold leading-relaxed text-slate-500">
+            Read-only reference for the role templates and permission grants recognised by the desktop authorization guard.
           </p>
         </div>
-        <div className="flex gap-2">
-          {['Role Hierarchy', 'Access Policies', 'Audit Insights', 'Permission Templates'].map(pill => (
-            <span key={pill} className="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              {pill}
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <Key size={12} className="text-indigo-500" />
+          Role reference
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Role templates" value={ROLE_TEMPLATES.length} hint="Recognised by the desktop permission guard" />
+        <StatCard label="Permissions" value={PERMISSIONS.length} hint="Distinct capabilities in the permission set" />
+        <StatCard label="Full-access roles" value={fullAccessCount} hint="Roles granted every permission" />
+        <StatCard label="Default decision" value="Deny" hint="Roles without an explicit grant receive no access" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:items-start">
+        <section className="xl:col-span-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              {viewMode === "roles" ? "Role templates" : "Permission matrix"}
+            </h2>
+            <span className="text-[10px] font-bold text-slate-400">
+              {viewMode === "roles"
+                ? `${filteredRoles.length} of ${ROLE_TEMPLATES.length} roles`
+                : `${filteredPermissions.length} of ${PERMISSIONS.length} permissions`}
             </span>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* 7. KPI ANALYTICS STRIP */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-2 relative z-10">
-        {KPIS.map(kpi => <StatCard key={kpi.id} kpi={kpi} />)}
-      </div>
-
-      <div className="staff-roles-workspace">
-
-        {/* 8. MAIN WORKSPACE */}
-        <div className="grid grid-cols-12 gap-6 items-start">
-          
-          {/* 9. LEFT PANEL → ROLE GROUPS */}
-          <aside className="col-span-2 space-y-6 sticky top-24">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Role Groups</h4>
-              <div className="space-y-2">
-                {ROLE_GROUPS.map(group => (
-                  <div key={group.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group">
-                    <span className="text-[11px] font-bold text-slate-600 group-hover:text-slate-900">{group.name}</span>
-                    <span className={`text-[10px] font-black ${group.color} ${group.bg} px-1.5 py-0.5 rounded-md`}>{group.count}</span>
-                  </div>
+          {viewMode === "roles" ? (
+            filteredRoles.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {filteredRoles.map((role) => (
+                  <RoleCard key={role.id} role={role} />
                 ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Organization Tree</h4>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                  <span className="text-[11px] font-black text-slate-900 uppercase">Owner</span>
-                </div>
-                <div className="ml-4 space-y-4 border-l-2 border-slate-50 pl-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[11px] font-bold text-slate-600 uppercase">Branch Manager</span>
-                  </div>
-                  <div className="ml-4 space-y-4 border-l-2 border-slate-50 pl-4">
-                    {['Trainers', 'Front Desk', 'Support'].map(child => (
-                      <div key={child} className="flex items-center gap-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                        <span className="text-[11px] font-bold text-slate-400 uppercase">{child}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          {/* 10. CENTER WORKSPACE → ROLE MANAGEMENT */}
-          <section className="col-span-7 space-y-6">
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="flex bg-slate-100 p-1 rounded-xl">
-                  <button 
-                    onClick={() => setViewMode("table")}
-                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-                      viewMode === "table" ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <List size={14} />
-                    Table View
-                  </button>
-                  <button 
-                    onClick={() => setViewMode("matrix")}
-                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-                      viewMode === "matrix" ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <Grid3X3 size={14} />
-                    Permission Matrix
-                  </button>
-                </div>
-                <div className="h-6 w-px bg-slate-100 mx-2" />
-                <span className="text-xs font-bold text-slate-500 italic">Showing all organizational roles</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="h-9 px-4 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-colors">
-                  Filter Dept
-                </button>
-              </div>
-            </div>
-
-            {viewMode === "table" ? (
-              <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Role Name</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Department</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Staff</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Scope</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Last Modified</th>
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {MOCK_ROLES.map(role => (
-                      <tr key={role.id} className="hover:bg-slate-50/30 transition-colors group">
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                              role.level === 'Full Access' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'
-                            }`}>
-                              <Shield size={16} fill={role.level === 'Full Access' ? 'currentColor' : 'none'} />
-                            </div>
-                            <span className="text-sm font-black text-slate-900 tracking-tight">{role.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{role.dept}</span>
-                        </td>
-                        <td className="px-6 py-5 text-center">
-                          <span className="text-xs font-black text-slate-700 bg-slate-50 px-2 py-1 rounded-lg">{role.staff}</span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
-                            <Globe size={12} className="text-slate-400" />
-                            {role.scope}
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className="text-[11px] font-medium text-slate-400">{role.modified}</span>
-                        </td>
-                        <td className="px-6 py-5 text-right">
-                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleEditRole(role)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Edit3 size={16} /></button>
-                            <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Copy size={16} /></button>
-                            <button className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={16} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             ) : (
-              <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 sticky left-0 bg-slate-50 z-10">Module</th>
-                      {MOCK_ROLES.map(role => (
-                        <th key={role.id} className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center min-w-[120px]">
-                          {role.name}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {MODULES.map(mod => (
-                      <tr key={mod} className="hover:bg-slate-50/30 transition-colors group">
-                        <td className="px-6 py-5 sticky left-0 bg-white group-hover:bg-slate-50/30 z-10">
-                          <span className="text-xs font-black text-slate-900 tracking-tight">{mod}</span>
-                        </td>
-                        {MOCK_ROLES.map(role => {
-                          const hasAccess = role.level === 'Full Access' || (role.name === 'Branch Manager' && mod !== 'System Settings');
-                          return (
-                            <td key={role.id} className="px-6 py-5 text-center">
-                              <div className="flex justify-center">
-                                {hasAccess ? (
-                                  <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                    <Check size={14} strokeWidth={3} />
-                                  </div>
-                                ) : (
-                                  <div className="w-6 h-6 rounded-full bg-slate-50 text-slate-300 flex items-center justify-center">
-                                    <X size={14} strokeWidth={3} />
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="rounded-2xl border border-slate-200/80 bg-white px-6 py-14 text-center shadow-sm">
+                <p className="text-sm font-bold text-slate-800">No roles match “{searchQuery}”</p>
+                <p className="mt-1 text-xs font-medium text-slate-500">Try a role name, identifier, or permission.</p>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="mt-4 rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+                >
+                  Clear search
+                </button>
               </div>
-            )}
+            )
+          ) : filteredPermissions.length > 0 ? (
+            <PermissionMatrix permissions={filteredPermissions} />
+          ) : (
+            <div className="rounded-2xl border border-slate-200/80 bg-white px-6 py-14 text-center shadow-sm">
+              <p className="text-sm font-bold text-slate-800">No permissions match “{searchQuery}”</p>
+              <p className="mt-1 text-xs font-medium text-slate-500">Try a permission name or a role that holds it.</p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="mt-4 rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+        </section>
+
+        <aside className="space-y-4 xl:col-span-4">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <h2 className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Evaluation rules</h2>
+            <ol className="mt-4 space-y-4">
+              {[
+                "The guard receives the role stored on the signed-in staff account and the permission being requested.",
+                "Access is granted only when the role template explicitly lists that permission.",
+                "Roles without a matching grant are denied; there is no implicit elevation.",
+              ].map((rule, index) => (
+                <li key={rule} className="flex gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-600">
+                    {index + 1}
+                  </span>
+                  <p className="text-xs font-medium leading-relaxed text-slate-500">{rule}</p>
+                </li>
+              ))}
+            </ol>
           </section>
 
-          {/* 13. RIGHT PANEL → SECURITY & AI INSIGHTS */}
-          <aside className="col-span-3 space-y-6 sticky top-24">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <ShieldCheck size={120} className="text-indigo-900" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-200">
-                    <Brain size={16} fill="white" />
-                  </div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-900">Security Insights</h4>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <ShieldAlert size={14} className="text-amber-600" />
-                      <strong className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">Elevated Access Alert</strong>
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed">
-                      <span className="font-black">Branch Manager</span> role currently has financial approval permissions.
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
-                    <div className="flex justify-between items-start mb-2">
-                      <strong className="text-[10px] font-black text-indigo-900 uppercase tracking-tighter">AI Recommendation</strong>
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed">
-                      Separate <span className="font-black">Payroll</span> and <span className="font-black">Billing</span> permissions for better audit trails.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Staff Status</h4>
-                <div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Active Now
-                </div>
-              </div>
-              <div className="space-y-4">
-                {[
-                  { label: "Admins Online", value: "2", color: "text-indigo-600", bg: "bg-indigo-50" },
-                  { label: "Branch Managers", value: "4", color: "text-emerald-600", bg: "bg-emerald-50" },
-                  { label: "Suspended Users", value: "0", color: "text-rose-600", bg: "bg-rose-50" }
-                ].map(stat => (
-                  <div key={stat.label} className="flex items-center justify-between p-3 rounded-2xl border border-slate-50 hover:bg-slate-50 transition-colors">
-                    <span className="text-[11px] font-bold text-slate-500">{stat.label}</span>
-                    <strong className={`text-xs font-black ${stat.color} ${stat.bg} px-2 py-0.5 rounded-lg`}>{stat.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-slate-900 rounded-[32px] p-6 text-white shadow-2xl relative overflow-hidden group">
-              <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-all duration-700" />
-              <div className="relative z-10">
-                <h4 className="text-xs font-black uppercase tracking-widest mb-4">RBAC Integrity</h4>
-                <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-                  Every permission change is cryptographically signed and logged in the enterprise audit vault.
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <Info size={16} />
+              </span>
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Role assignment</h2>
+                <p className="mt-2 text-xs font-medium leading-relaxed text-slate-500">
+                  A staff member&apos;s role is stored on their account in the encrypted local database. This page documents the
+                  templates only; it does not create or edit staff accounts.
                 </p>
-                <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Audit Vault</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Verifying...</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-indigo-400" />
-                    <span className="text-xs font-black text-white">Advanced RBAC Enabled</span>
-                  </div>
-                </div>
               </div>
             </div>
-          </aside>
-        </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <h2 className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Permission catalog</h2>
+            <ul className="mt-4 space-y-3">
+              {PERMISSIONS.map((permission) => (
+                <li key={permission.id} className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded bg-slate-100 text-slate-500">
+                    <Key size={9} />
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">{permission.label}</p>
+                    <p className="text-[10px] font-medium leading-snug text-slate-400">{permission.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </aside>
       </div>
-
-      {/* 12. CREATE ROLE MODAL / DRAWER */}
-      <AnimatePresence>
-        {isDrawerOpen && (
-          <React.Fragment key="staff-roles-drawer">
-            <motion.div 
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsDrawerOpen(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]"
-            />
-            <motion.aside 
-              key="aside"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-[560px] bg-white z-[101] shadow-2xl flex flex-col"
-            >
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedRole ? 'Edit Role' : 'Create New Role'}</h2>
-                  <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Define authority & scope</p>
-                </div>
-                <button 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Role Name</label>
-                      <input 
-                        type="text" 
-                        defaultValue={selectedRole?.name}
-                        placeholder="e.g. Branch Manager"
-                        className="w-full h-12 bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 rounded-xl px-4 text-xs font-bold transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Department</label>
-                      <select className="w-full h-12 bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 rounded-xl px-4 text-xs font-bold transition-all">
-                        {ROLE_GROUPS.map(g => <option key={g.id}>{g.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Access Level</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {['Full Access', 'Limited', 'Read-Only'].map(level => (
-                        <button key={level} className={`h-11 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${level === 'Limited' ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-500'}`}>
-                          {level}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 pb-2">Module Permissions</h4>
-                  {MODULES.map(mod => (
-                    <div key={mod} className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between border border-slate-50">
-                      <div>
-                        <p className="text-xs font-black text-slate-900">{mod}</p>
-                        <p className="text-[9px] font-medium text-slate-500 mt-0.5">Control access to {mod.toLowerCase()} module</p>
-                      </div>
-                      <div className="flex gap-2">
-                         <div className="w-10 h-6 bg-indigo-600 rounded-full relative cursor-pointer shadow-inner">
-                            <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
-                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex gap-3">
-                  <ShieldAlert className="text-rose-500 shrink-0" size={18} />
-                  <p className="text-[10px] font-bold text-rose-800 leading-relaxed italic">
-                    Caution: Modifying system roles may affect operational continuity. Changes will be logged in the primary audit trail.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-3">
-                <button 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="flex-1 h-12 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all"
-                >
-                  Cancel
-                </button>
-                <button className="flex-[2] h-12 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
-                  {selectedRole ? 'Update Role Authority' : 'Create Role Infrastructure'}
-                </button>
-              </div>
-            </motion.aside>
-          </React.Fragment>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
-// ─────────────────────────────────────────
-// MOUNTING SYSTEM
-// ─────────────────────────────────────────
-
 export const mountStaffRoles = () => {
-  console.log("GymDeck: Mounting StaffRoles component...");
   const container = document.querySelector('[data-stage="staff-roles"]');
   if (!container) {
     console.error("GymDeck: StaffRoles container not found!");
     return null;
   }
-  
+
   try {
     const root = createRoot(container);
     root.render(<><StaffRoles /><BrandFooter /></>);
-    console.log("GymDeck: StaffRoles rendered successfully.");
     return root;
   } catch (err) {
     console.error("GymDeck: Critical mount failure in StaffRoles:", err);

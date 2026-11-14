@@ -60,7 +60,6 @@ const stageRegistry = [
   { stages: ["member-growth"], load: () => import("./MembershipGrowth.jsx"), mount: "mountMembershipGrowth" },
   { stages: ["trainer-performance"], load: () => import("./TrainerPerformance.jsx"), mount: "mountTrainerPerformance", argKey: "trainerPerformanceStage" },
   { stages: ["gym-profile"], load: () => import("./GymProfile.jsx"), mount: "mountGymProfile", argKey: "gymProfileStage" },
-  { stages: ["app-settings"], load: () => import("./AppSettings.jsx"), mount: "mountAppSettings", argKey: "appSettingsStage" },
   { stages: ["account", "profile"], load: () => import("./Profile.jsx"), mount: "mountProfile", argKey: "profileStage" },
   { stages: ["past-members"], load: () => import("./PastMembers.jsx"), mount: "mountPastMembers" },
 ];
@@ -777,7 +776,6 @@ const DOM = {
   get memberGrowthStage() { return document.querySelector('[data-stage="member-growth"]'); },
   get trainerPerformanceStage() { return document.querySelector('[data-stage="trainer-performance"]'); },
   get gymProfileStage() { return document.querySelector('[data-stage="gym-profile"]'); },
-  get appSettingsStage() { return document.querySelector('[data-stage="app-settings"]'); },
   get profileStage() { return document.querySelector('[data-stage="profile"]'); },
   get pastMembersStage() { return document.querySelector('[data-stage="past-members"]'); }
 };
@@ -811,7 +809,6 @@ const viewLabels = {
   "trainer-performance": "Trainer Performance",
   settings: "Settings",
   "gym-profile": "Gym Profile",
-  "app-settings": "App Settings",
   account: "Profile"
 };
 const previewOrder = Object.keys(viewLabels).filter((view) => view !== "dashboard");
@@ -3370,7 +3367,6 @@ const stageVisibilityConfig = [
   { key: "member-growth", el: () => DOM.memberGrowthStage },
   { key: "trainer-performance", el: () => DOM.trainerPerformanceStage },
   { key: "gym-profile", el: () => DOM.gymProfileStage },
-  { key: "app-settings", el: () => DOM.appSettingsStage },
   { key: "profile", el: () => DOM.profileStage },
   { key: "past-members", el: () => DOM.pastMembersStage },
   { key: "coming-soon", el: () => comingSoonStage },

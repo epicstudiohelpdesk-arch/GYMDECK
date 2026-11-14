@@ -676,6 +676,36 @@ const CollectFeesPage = () => {
       };
       setCompletedTxn(txnRecord);
       setIsSuccess(true);
+
+      // Synchronize with GymDeck Master Payment History Ledger
+      try {
+        const existingLedger = JSON.parse(localStorage.getItem("gymdeck_transaction_ledger") || "[]");
+        const newLedgerEntry = {
+          id: txnRecord.txnId,
+          invoiceId: txnRecord.invoiceNo,
+          member: {
+            name: memberToRecord?.name || "Walk-in Guest",
+            id: memberToRecord?.id || "GD-WALKIN",
+            phone: memberToRecord?.phone || "—",
+            image: memberToRecord?.photo || ""
+          },
+          type: invoiceItems[0]?.name || (selectedMember?.isWalkIn ? "Walk-in Desk Pass" : "Membership Fee Collection"),
+          amount: totalPayable,
+          tax: Math.round(totalPayable * 0.18 / 1.18),
+          method: paymentMethod === "Cash" ? "Cash Desk" : paymentMethod === "Card" ? "Credit Card (POS)" : paymentMethod === "BankTransfer" ? "Bank Transfer (IMPS)" : "UPI (Direct QR)",
+          date: new Date().toISOString().replace("T", " ").substring(0, 16),
+          displayDate: txnRecord.timestamp,
+          branch: "Main Branch",
+          status: "Successful",
+          staff: "Front Desk Cashier",
+          utr: txnRecord.utr,
+          settledTo: txnRecord.settledTo
+        };
+        localStorage.setItem("gymdeck_transaction_ledger", JSON.stringify([newLedgerEntry, ...existingLedger]));
+        window.dispatchEvent(new CustomEvent("gymdeck:ledger-updated", { detail: newLedgerEntry }));
+      } catch (err) {
+        console.warn("GymDeck: Failed to sync payment to master ledger", err);
+      }
     }, 700);
   }, [totalPayable, paymentMethod, selectedMember, receivingAccount, enteredUtr, posSlipRef, invoiceItems, duesToAdd]);
 
