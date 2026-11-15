@@ -525,6 +525,32 @@
           <button class="dialog-btn dialog-btn-danger" type="button" data-logout-confirm>Yes, log out</button>
         </div>
       </section>
+      <!-- Discard Unsaved Registration Dialog -->
+      <div class="discard-dialog-backdrop" id="discardMemberDialogBackdrop" hidden></div>
+      <section
+        class="discard-dialog logout-dialog"
+        id="discardMemberDialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="discard-dialog-title"
+        aria-describedby="discard-dialog-copy"
+        hidden
+      >
+        <p class="logout-dialog-kicker">Confirm action</p>
+        <h2 id="discard-dialog-title">Discard unsaved changes?</h2>
+        <p id="discard-dialog-copy">
+          Information you have entered across this registration will not be saved and all fields will be reset. Do you really want to exit?
+        </p>
+        <div class="logout-dialog-actions">
+          <button class="dialog-btn dialog-btn-muted" type="button" id="discardMemberCancelBtn">Keep Editing</button>
+          <button class="dialog-btn dialog-btn-danger" type="button" id="discardMemberConfirmBtn">
+            <span>Discard &amp; Exit</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-arrow-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </section>
       <div class="document-modal-backdrop" hidden></div>
       <section
         class="document-modal luxury-modal"
@@ -1595,12 +1621,16 @@
                   </div>
 
                   <!-- Right Column: Payment Mode Selection -->
-                  <div class="billing-engine-pane">
+                  <div class="billing-engine-pane" id="billingEnginePane">
                     <div class="billing-pane-header">
-                      <span class="billing-pane-title">Select Payment Mode</span>
+                      <span class="billing-pane-title" id="billingPaneTitle">Select Payment Mode</span>
+                      <button type="button" class="billing-qr-change-mode-btn" id="qrSwitchModeBtn" aria-label="Change Mode" style="display: none;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        <span>Change Mode</span>
+                      </button>
                     </div>
 
-                    <div class="payment-modes-stack">
+                    <div class="payment-modes-stack" id="paymentModesStack">
                       <!-- Cash -->
                       <label class="payment-mode-option active" data-pay-mode="Cash" role="button" tabindex="0" aria-label="Cash Settlement">
                         <input type="radio" name="paymentMode" value="Cash" checked style="display: none;" />
@@ -1729,6 +1759,60 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- Dynamic QR Overlay Box (Directly overlays the red-boxed payment mode area) -->
+                    <div class="dynamic-qr-overlay-pane" id="dynamicQrOverlayBox" style="display: none;">
+                      <div class="qr-overlay-body">
+                        <!-- Left: Vector QR Frame + Live Badge -->
+                        <div class="qr-code-frame-col">
+                          <div class="qr-frame-box" id="qrCanvasWrapper">
+                            <div class="qr-code-mount" id="qrCodeSvgMount">
+                              <span class="qr-code-loading-text">Generating Dynamic QR...</span>
+                            </div>
+                          </div>
+                          <div class="qr-live-pill">
+                            <span class="qr-live-dot"></span>
+                            <span class="qr-live-text">Live Dynamic QR</span>
+                          </div>
+                        </div>
+
+                        <!-- Right: Amount + Beneficiary Info + App Rail -->
+                        <div class="qr-details-col">
+                          <div class="qr-amount-block">
+                            <span class="qr-amount-label">Amount Payable</span>
+                            <div class="qr-amount-value-row">
+                              <span class="qr-amount-value pay-expected-amount" id="qrPayableAmountText">₹0</span>
+                              <span class="qr-amount-badge">INSTANT</span>
+                            </div>
+                          </div>
+
+                          <div class="qr-beneficiary-block">
+                            <div class="qr-beneficiary-header">
+                              <span class="qr-verified-icon">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                              </span>
+                              <span class="qr-beneficiary-label">Verified Settlement</span>
+                            </div>
+                            <div class="qr-beneficiary-name" id="qrAccountHolderText">Gym Beneficiary</div>
+                            <div class="qr-beneficiary-vpa" id="qrAccountVpaText">settlement@upi</div>
+                          </div>
+
+                          <div class="qr-rail-block">
+                            <span class="qr-rail-title">Supported Apps:</span>
+                            <div class="qr-rail-pills">
+                              <span class="qr-rail-tag">GPay</span>
+                              <span class="qr-rail-tag">PhonePe</span>
+                              <span class="qr-rail-tag">Paytm</span>
+                              <span class="qr-rail-tag">BHIM</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="qr-overlay-footer-note">
+                        <span class="qr-footer-desc">Scan with any UPI application to complete payment. Ledger updates automatically upon receipt.</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1832,15 +1916,161 @@
                   window.hasSettlementAccount = checkSettlementAccounts;
                   window.refreshSettlementAccountStatus = refreshAccountsStatus;
 
+                  const getSettlementUpiAccount = () => {
+                    try {
+                      const raw = localStorage.getItem("gymdeck_bank_accounts");
+                      if (raw) {
+                        const accounts = JSON.parse(raw);
+                        if (Array.isArray(accounts) && accounts.length > 0) {
+                          const valid = accounts.filter(a => a && a.verificationStatus !== "DISABLED" && a.status !== "DISABLED");
+                          if (valid.length > 0) {
+                            const upiAcc = valid.find(a => (a.isPrimaryInflow || a.role === "INFLOW" || a.role === "BOTH") && (a.upiId || a.upiVpa)) ||
+                                           valid.find(a => (a.upiId || a.upiVpa)) ||
+                                           valid[0];
+                            if (upiAcc) {
+                              return {
+                                vpa: (upiAcc.upiId || upiAcc.upiVpa || (upiAcc.accountNumber ? `${upiAcc.accountNumber}@upi` : "")).trim(),
+                                name: (upiAcc.accountHolderName || upiAcc.beneficiaryName || upiAcc.accountHolder || "Gym Beneficiary").trim(),
+                                bankName: upiAcc.bankName || "Settlement Bank"
+                              };
+                            }
+                          }
+                        }
+                      }
+                    } catch (e) {}
+
+                    try {
+                      const activeRaw = localStorage.getItem("gymdeck_active_receiving_account");
+                      if (activeRaw) {
+                        const active = JSON.parse(activeRaw);
+                        if (active && (active.upiVpa || active.upiId)) {
+                          return {
+                            vpa: (active.upiVpa || active.upiId).trim(),
+                            name: (active.accountHolder || active.beneficiaryName || "Gym Beneficiary").trim(),
+                            bankName: active.bankName || "Settlement Bank"
+                          };
+                        }
+                      }
+                    } catch (e) {}
+
+                    return null;
+                  };
+
+                  const renderDynamicQrCode = () => {
+                    const mount = document.getElementById("qrCodeSvgMount");
+                    if (!mount) return;
+
+                    const acc = getSettlementUpiAccount();
+                    const vpaEl = document.getElementById("qrAccountVpaText");
+                    const nameEl = document.getElementById("qrAccountHolderText");
+                    const amountTextEl = document.getElementById("qrPayableAmountText");
+
+                    const rawTotalText = document.getElementById("billingTotalAmount")?.textContent || "₹0";
+                    const numAmount = parseFloat(rawTotalText.replace(/[^0-9.]/g, "")) || 0;
+                    const formattedAmount = `₹${numAmount.toLocaleString()}`;
+
+                    if (amountTextEl) amountTextEl.textContent = formattedAmount;
+
+                    if (!acc || !acc.vpa) {
+                      if (vpaEl) vpaEl.textContent = "No UPI ID Configured";
+                      if (nameEl) nameEl.textContent = "Unconfigured Settlement";
+                      mount.innerHTML = '<span class="qr-code-error-text" style="font-size: 10.5px; color: #ef4444; font-weight: 600; text-align: center; display: block; padding: 10px;">No active settlement account found</span>';
+                      return;
+                    }
+
+                    if (vpaEl) vpaEl.textContent = acc.vpa;
+                    if (nameEl) nameEl.textContent = acc.name;
+
+                    const invoiceNum = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+                    const note = encodeURIComponent("GymDeck Membership");
+                    const upiUri = `upi://pay?pa=${encodeURIComponent(acc.vpa)}&pn=${encodeURIComponent(acc.name)}&am=${numAmount.toFixed(2)}&cu=INR&tn=${note}&tr=${invoiceNum}`;
+
+                    try {
+                      const qrFn = window.qrcode || (typeof qrcode !== "undefined" ? qrcode : null);
+                      if (typeof qrFn === "function") {
+                        const qr = qrFn(0, "M");
+                        qr.addData(upiUri);
+                        qr.make();
+                        mount.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
+                      } else {
+                        // Fallback SVG indicator while library initializes
+                        mount.innerHTML = '<svg viewBox="0 0 24 24" width="76" height="76" fill="currentColor" class="mock-qr-svg"><rect x="2" y="2" width="6" height="6"/><rect x="3" y="3" width="4" height="4" fill="#ffffff"/><rect x="16" y="2" width="6" height="6"/><rect x="17" y="3" width="4" height="4" fill="#ffffff"/><rect x="2" y="16" width="6" height="6"/><rect x="3" y="17" width="4" height="4" fill="#ffffff"/></svg>';
+                      }
+                    } catch (err) {
+                      console.error("Failed to render dynamic QR:", err);
+                    }
+                  };
+
+                  window.renderBillingDynamicQr = renderDynamicQrCode;
+
+                  const activateDynamicQrMode = () => {
+                    const titleEl = document.getElementById("billingPaneTitle");
+                    const switchBtn = document.getElementById("qrSwitchModeBtn");
+                    const stack = document.getElementById("paymentModesStack");
+                    const cashText = document.getElementById("cashSettlementTextual");
+                    const helper = document.getElementById("paymentHelperBox");
+                    const overlay = document.getElementById("dynamicQrOverlayBox");
+
+                    if (titleEl) titleEl.textContent = "SCAN QR TO PAY";
+                    if (switchBtn) switchBtn.style.display = "inline-flex";
+
+                    if (stack) stack.style.setProperty("display", "none", "important");
+                    if (cashText) cashText.style.setProperty("display", "none", "important");
+                    if (helper) helper.style.setProperty("display", "none", "important");
+                    if (overlay) overlay.style.setProperty("display", "flex", "important");
+
+                    renderDynamicQrCode();
+                  };
+
+                  const deactivateDynamicQrMode = () => {
+                    const titleEl = document.getElementById("billingPaneTitle");
+                    const switchBtn = document.getElementById("qrSwitchModeBtn");
+                    const stack = document.getElementById("paymentModesStack");
+                    const overlay = document.getElementById("dynamicQrOverlayBox");
+
+                    if (titleEl) titleEl.textContent = "Select Payment Mode";
+                    if (switchBtn) switchBtn.style.display = "none";
+                    if (overlay) overlay.style.setProperty("display", "none", "important");
+                    if (stack) stack.style.removeProperty("display");
+
+                    const cashCard = document.querySelector('.payment-mode-option[data-pay-mode="Cash"]');
+                    if (cashCard) {
+                      document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
+                      cashCard.classList.add("active");
+                      const radio = cashCard.querySelector("input[type='radio']");
+                      if (radio) radio.checked = true;
+                      previousActiveMode = "Cash";
+                      updateHelper("Cash");
+                    }
+                  };
+                  window.deactivateDynamicQrMode = deactivateDynamicQrMode;
+
+                  document.getElementById("qrSwitchModeBtn")?.addEventListener("click", () => {
+                    deactivateDynamicQrMode();
+                  });
+
                   window.addEventListener("gymdeck:banking_accounts_updated", () => {
                     refreshAccountsStatus();
+                    const overlay = document.getElementById("dynamicQrOverlayBox");
+                    if (overlay && overlay.style.display !== "none") {
+                      renderDynamicQrCode();
+                    }
                   });
 
                   const updateHelper = (mode, subMode) => {
                     const cashTextual = document.getElementById("cashSettlementTextual");
                     const helperBox = document.querySelector(".payment-helper-box");
+                    const qrOverlay = document.getElementById("dynamicQrOverlayBox");
+                    const titleEl = document.getElementById("billingPaneTitle");
+                    const switchBtn = document.getElementById("qrSwitchModeBtn");
+                    const stack = document.getElementById("paymentModesStack");
 
                     if (mode === "Cash") {
+                      if (qrOverlay) qrOverlay.style.setProperty('display', 'none', 'important');
+                      if (titleEl) titleEl.textContent = 'Select Payment Mode';
+                      if (switchBtn) switchBtn.style.display = 'none';
+                      if (stack) stack.style.removeProperty('display');
+
                       if (cashTextual) cashTextual.style.setProperty('display', 'flex', 'important');
                       if (helperBox) helperBox.style.setProperty('display', 'none', 'important');
                       document.querySelectorAll(".payment-helper-box .helper-message").forEach(msg => {
@@ -1849,27 +2079,37 @@
                       return;
                     }
 
-                    // Mode is not Cash (e.g. UPI)
+                    if (mode === 'UPI' && subMode === 'id') {
+                      if (qrOverlay) qrOverlay.style.setProperty('display', 'none', 'important');
+                      if (titleEl) titleEl.textContent = 'Select Payment Mode';
+                      if (switchBtn) switchBtn.style.display = 'none';
+                      if (stack) stack.style.removeProperty('display');
+
+                      if (cashTextual) cashTextual.style.setProperty('display', 'none', 'important');
+                      if (helperBox) helperBox.style.setProperty('display', 'flex', 'important');
+
+                      document.querySelectorAll(".payment-helper-box .helper-message").forEach(msg => {
+                        msg.style.setProperty('display', 'none', 'important');
+                      });
+                      const activeMsg = document.querySelector(".payment-helper-box .helper-upi-id");
+                      if (activeMsg) {
+                        activeMsg.style.setProperty('display', 'flex', 'important');
+                      }
+                      return;
+                    }
+
+                    if (mode === 'UPI' && subMode === 'qr') {
+                      activateDynamicQrMode();
+                      return;
+                    }
+
+                    // Fallback
+                    if (qrOverlay) qrOverlay.style.setProperty('display', 'none', 'important');
+                    if (titleEl) titleEl.textContent = 'Select Payment Mode';
+                    if (switchBtn) switchBtn.style.display = 'none';
+                    if (stack) stack.style.removeProperty('display');
                     if (cashTextual) cashTextual.style.setProperty('display', 'none', 'important');
                     if (helperBox) helperBox.style.setProperty('display', 'flex', 'important');
-
-                    document.querySelectorAll(".payment-helper-box .helper-message").forEach(msg => {
-                      msg.style.setProperty('display', 'none', 'important');
-                    });
-                    
-                    let targetClass = mode.toLowerCase();
-                    if (targetClass === 'upi') {
-                      targetClass = 'upi-' + (subMode || 'qr');
-                    }
-                    
-                    const activeMsg = document.querySelector(".payment-helper-box .helper-" + targetClass);
-                    if (activeMsg) {
-                      activeMsg.style.setProperty('display', 'flex', 'important');
-                    }
-
-                    if (targetClass === 'upi-qr') {
-                      refreshAccountsStatus();
-                    }
                   };
 
                   setDate();
@@ -2023,7 +2263,7 @@
                     qrOptionBtn?.classList.remove('is-active-warning');
 
                     closeUpiSubmodalFunc(false);
-                    updateHelper('UPI', 'qr');
+                    activateDynamicQrMode();
                   });
 
                   // Action for "Configure Banking & Settlement" button inside the Select UPI Method submodal

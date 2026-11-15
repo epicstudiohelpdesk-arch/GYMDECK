@@ -1,3 +1,8 @@
+import { qrcode } from "./qr-lib.js";
+if (typeof window !== "undefined") {
+  window.qrcode = qrcode;
+}
+
 // Fix macOS NSSpellServer timeout spam by disabling spellcheck globally
 const disableSpellcheck = (el) => {
   if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
@@ -533,6 +538,13 @@ const planningNextButton = document.querySelector("[data-planning-next]");
 const paymentBackButton = document.querySelector("[data-payment-back]");
 const paymentSaveFinishButton = document.querySelector("[data-payment-save-finish]");
 
+// Discard unsaved registration changes dialog
+const discardMemberDialog = document.getElementById("discardMemberDialog");
+const discardMemberDialogBackdrop = document.getElementById("discardMemberDialogBackdrop");
+const discardMemberCancelBtn = document.getElementById("discardMemberCancelBtn");
+const discardMemberConfirmBtn = document.getElementById("discardMemberConfirmBtn");
+let lastDiscardMemberTrigger = null;
+
 const uploadPreviewUrls = new Map();
 const memberDocsRegistry = new Map(); // Professional Registry for Session Documents
 
@@ -1015,6 +1027,32 @@ const setAddMemberModalState = (isOpen, triggerButton = null) => {
   }, 600);
 
   lastAddMemberTrigger?.focus?.();
+};
+
+const setDiscardMemberDialogState = (isOpen) => {
+  if (!discardMemberDialog || !discardMemberDialogBackdrop) {
+    return;
+  }
+
+  if (isOpen) {
+    lastDiscardMemberTrigger = document.activeElement;
+    discardMemberDialog.hidden = false;
+    discardMemberDialogBackdrop.hidden = false;
+    // Force reflow for smooth animation
+    discardMemberDialog.offsetHeight;
+    document.body.classList.add("discard-dialog-open");
+    discardMemberCancelBtn?.focus();
+    return;
+  }
+
+  document.body.classList.remove("discard-dialog-open");
+  setTimeout(() => {
+    if (!document.body.classList.contains("discard-dialog-open")) {
+      discardMemberDialog.hidden = true;
+      discardMemberDialogBackdrop.hidden = true;
+    }
+  }, 180);
+  lastDiscardMemberTrigger?.focus?.();
 };
 
 const setDocUploadModalState = (isOpen, memberName = "") => {
@@ -1750,10 +1788,201 @@ const resetMemberForm = () => {
   resetCustomHeightUI();
   resetCustomWeightUI();
 
+  // Explicitly clear all textual fields and textareas on Page 1
+  const textLabels = [
+    "Full Name",
+    "Contact Number",
+    "Alternate Contact",
+    "Email Address",
+    "Address"
+  ];
+  textLabels.forEach((label) => {
+    const field = getMemberField(label);
+    const inp = field?.querySelector("input, textarea");
+    if (inp) inp.value = "";
+  });
+
+  // Explicitly clear selects
+  const selectLabels = ["Gender", "Blood Group"];
+  selectLabels.forEach((label) => {
+    const field = getMemberField(label);
+    const select = field?.querySelector("select");
+    if (select) {
+      select.value = "";
+      select.selectedIndex = 0;
+      const wrapper = field?.querySelector(".custom-select-wrapper");
+      if (wrapper) syncCustomDropdownValue(wrapper);
+    }
+  });
+
+  // Clear plan selection cards
+  document.querySelectorAll(".plan-select-card").forEach((card) => {
+    card.classList.remove("is-selected", "is-expanded");
+  });
+
+  // Reset Page 5 Payment Modes and Dynamic QR
+  if (typeof window.deactivateDynamicQrMode === "function") {
+    window.deactivateDynamicQrMode();
+  }
+  const upiCardEl = document.querySelector('.payment-mode-option[data-pay-mode="UPI"]');
+  if (upiCardEl) {
+    upiCardEl.classList.remove("active");
+    upiCardEl.dataset.subMode = "";
+  }
+  const upiSubmodal = document.getElementById("selectUpiSubmodal");
+  if (upiSubmodal) {
+    upiSubmodal.classList.remove("active");
+    upiSubmodal.setAttribute("hidden", "true");
+  }
+  const upiNameTxt = document.getElementById("upiCardNameText");
+  if (upiNameTxt) upiNameTxt.textContent = "UPI / Push VPA";
+  const upiDescTxt = document.getElementById("upiCardDescText");
+  if (upiDescTxt) upiDescTxt.textContent = "Selected: Enter UPI address";
+
+  const cashCardEl = document.querySelector('.payment-mode-option[data-pay-mode="Cash"]');
+  if (cashCardEl) {
+    document.querySelectorAll(".payment-mode-option").forEach((c) => c.classList.remove("active"));
+    cashCardEl.classList.add("active");
+    const radio = cashCardEl.querySelector("input[type='radio']");
+    if (radio) radio.checked = true;
+  }
+  const cashVerifyBox = document.getElementById("cashSettlementTextual");
+  if (cashVerifyBox) cashVerifyBox.style.setProperty("display", "flex", "important");
+  const verifyAmountSpan = document.getElementById("cashVerificationAmount");
+  if (verifyAmountSpan) verifyAmountSpan.textContent = "₹0";
+
+  const receiptToggle = document.getElementById("receiptToggle");
+  if (receiptToggle) receiptToggle.checked = true;
+
+  // Clear modal page classes and pending state
+  addMemberModal?.classList.remove("is-page-2", "is-page-3", "is-page-4", "is-page-5", "is-only-doc-upload");
+  pendingMemberData = null;
+  memberFormMode = "add";
+  editingMemberId = null;
+
+  if (typeof updateBillingSummary === "function") {
+    updateBillingSummary();
+  }
+
   if (docUploadSaveButton) {
     docUploadSaveButton.removeAttribute("disabled");
   }
 };
+
+const isAddMemberModalDirty = () => {
+  if (!addMemberModal || addMemberModal.hidden || !document.body.classList.contains("member-form-open")) {
+    return false;
+  }
+  // Ignore in verification-only document upload flow
+  if (addMemberModal.classList.contains("is-only-doc-upload") || activeVerificationMemberId || document.body.classList.contains("verification-modal-open")) {
+    return false;
+  }
+
+  // If progressed past Page 1
+  if (
+    addMemberModal.classList.contains("is-page-2") ||
+    addMemberModal.classList.contains("is-page-3") ||
+    addMemberModal.classList.contains("is-page-4") ||
+    addMemberModal.classList.contains("is-page-5")
+  ) {
+    return true;
+  }
+
+  // If pending member data exists
+  if (pendingMemberData) {
+    return true;
+  }
+
+  // If photo is uploaded
+  const previewImg = document.querySelector("[data-member-photo-preview]");
+  if (previewImg && !previewImg.hidden && previewImg.src && !previewImg.src.endsWith("#") && previewImg.src !== window.location.href) {
+    return true;
+  }
+
+  // If documents uploaded
+  if (typeof uploadPreviewUrls !== "undefined" && uploadPreviewUrls && uploadPreviewUrls.size > 0) {
+    return true;
+  }
+
+  // If plan is selected
+  if (selectedPlanId) {
+    return true;
+  }
+
+  // Check DOB input
+  if (addMemberDobInput && addMemberDobInput.value && addMemberDobInput.value.trim() !== "") {
+    return true;
+  }
+
+  // Check Page 1 inputs
+  const fields = [
+    "Full Name",
+    "Contact Number",
+    "Alternate Contact",
+    "Email Address",
+    "Height",
+    "Weight",
+    "Gender",
+    "Blood Group",
+    "Address"
+  ];
+
+  for (const label of fields) {
+    const val = getFieldValue(label);
+    if (val && val.trim() !== "") {
+      return true;
+    }
+  }
+
+  // Fallback: check any input/textarea inside addMemberForm
+  if (addMemberForm) {
+    const inputs = addMemberForm.querySelectorAll("input:not([type='hidden']), textarea");
+    for (const inp of inputs) {
+      if (inp.type === "file") {
+        if (inp.files && inp.files.length > 0) return true;
+      } else if (inp.value && inp.value.trim() !== "" && inp.value.trim() !== "0") {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+const closeAndResetAddMemberModal = () => {
+  clearMemberFormErrors();
+  resetMemberForm();
+  const prevMemberId = activeVerificationMemberId;
+  const isVerificationOpen = document.body.classList.contains("verification-modal-open");
+  setAddMemberModalState(false);
+  if (prevMemberId && isVerificationOpen) {
+    const row = document.querySelector(`[data-member-card][data-member-id="${prevMemberId}"]`);
+    if (row) {
+      initVerificationCenter(row, lastDocumentTrigger);
+    }
+  }
+};
+
+const attemptCloseAddMemberModal = () => {
+  if (isAddMemberModalDirty()) {
+    setDiscardMemberDialogState(true);
+    return;
+  }
+  closeAndResetAddMemberModal();
+};
+
+discardMemberCancelBtn?.addEventListener("click", () => {
+  setDiscardMemberDialogState(false);
+});
+
+discardMemberDialogBackdrop?.addEventListener("click", () => {
+  setDiscardMemberDialogState(false);
+});
+
+discardMemberConfirmBtn?.addEventListener("click", () => {
+  setDiscardMemberDialogState(false);
+  closeAndResetAddMemberModal();
+});
 
 const setFieldValue = (label, value, selector = "input, textarea, select") => {
   const field = getMemberField(label);
@@ -4057,15 +4286,7 @@ addMemberOpenButtons.forEach((button) => {
 });
 
 addMemberBackdrop?.addEventListener("click", () => {
-  const prevMemberId = activeVerificationMemberId;
-  const isVerificationOpen = document.body.classList.contains("verification-modal-open");
-  setAddMemberModalState(false);
-  if (prevMemberId && isVerificationOpen) {
-    const row = document.querySelector(`[data-member-card][data-member-id="${prevMemberId}"]`);
-    if (row) {
-      initVerificationCenter(row, lastDocumentTrigger);
-    }
-  }
+  attemptCloseAddMemberModal();
 });
 
 // Member photo upload selectors
@@ -4147,16 +4368,7 @@ photoUploadNextButton?.addEventListener("click", async () => {
 
 addMemberCloseButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    clearMemberFormErrors();
-    const prevMemberId = activeVerificationMemberId;
-    const isVerificationOpen = document.body.classList.contains("verification-modal-open");
-    setAddMemberModalState(false);
-    if (prevMemberId && isVerificationOpen) {
-      const row = document.querySelector(`[data-member-card][data-member-id="${prevMemberId}"]`);
-      if (row) {
-        initVerificationCenter(row, lastDocumentTrigger);
-      }
-    }
+    attemptCloseAddMemberModal();
   });
 });
 
@@ -4923,6 +5135,12 @@ membersRefreshButton?.addEventListener("click", async () => {
 // CONSOLIDATED ESC KEY LISTENER (Stacked modal dismissal flow)
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    // 0. Discard Registration Changes Confirmation Dialog
+    if (document.body.classList.contains("discard-dialog-open")) {
+      setDiscardMemberDialogState(false);
+      return;
+    }
+
     // 1. Delete Confirmation Modal (front-most)
     const deleteConfirmModal = document.getElementById('deleteConfirmModal');
     if (deleteConfirmModal && !deleteConfirmModal.hidden) {
@@ -4945,15 +5163,7 @@ window.addEventListener("keydown", (event) => {
 
     // 4. Add/Edit Member Modal / Member Form
     if (document.body.classList.contains("member-form-open")) {
-      const prevMemberId = activeVerificationMemberId;
-      const isVerificationOpen = document.body.classList.contains("verification-modal-open");
-      setAddMemberModalState(false);
-      if (prevMemberId && isVerificationOpen) {
-        const row = document.querySelector(`[data-member-card][data-member-id="${prevMemberId}"]`);
-        if (row) {
-          initVerificationCenter(row, lastDocumentTrigger);
-        }
-      }
+      attemptCloseAddMemberModal();
       return;
     }
 
@@ -5668,7 +5878,7 @@ const initStickyHeaderObserver = () => {
 initStickyHeaderObserver();
 
 // --- Page 5 Payment Navigation ---
-const updateBillingSummary = () => {
+function updateBillingSummary() {
   const billingPlanName = document.getElementById("billingPlanName");
   const billingPlanPrice = document.getElementById("billingPlanPrice");
   const billingJoiningFee = document.getElementById("billingJoiningFee");
@@ -5704,6 +5914,11 @@ const updateBillingSummary = () => {
   document.querySelectorAll(".pay-expected-amount").forEach(el => {
     el.textContent = formattedTotal;
   });
+  if (typeof window.renderBillingDynamicQr === "function") {
+    try {
+      window.renderBillingDynamicQr();
+    } catch (e) {}
+  }
 };
 
 planningNextButton?.addEventListener("click", () => {
