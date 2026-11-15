@@ -56,28 +56,18 @@ import { motion, AnimatePresence } from "framer-motion";
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 // ─────────────────────────────────────────
-// MOCK DATA
+// CONSTANTS & CLEAN STATE
 // ─────────────────────────────────────────
 const KPI_STATS = [
-  { label: "Total Attendance", value: "842", tone: "indigo", icon: Users, change: "+14%", changeType: "positive" },
-  { label: "Avg. Duration", value: "72m", tone: "blue", icon: Timer, change: "-3%", changeType: "neutral" },
-  { label: "Peak Occupancy", value: "92", tone: "rose", icon: Activity, change: "+8%", changeType: "negative" },
-  { label: "Growth Rate", value: "12.4%", tone: "emerald", icon: TrendingUp, change: "+2.1%", changeType: "positive" },
+  { label: "Total Attendance", value: "0", tone: "indigo", icon: Users, change: null },
+  { label: "Avg. Duration", value: "0m", tone: "blue", icon: Timer, change: null },
+  { label: "Peak Occupancy", value: "0", tone: "rose", icon: Activity, change: null },
+  { label: "Growth Rate", value: "0%", tone: "emerald", icon: TrendingUp, change: null },
 ];
 
-const MEMBER_ENGAGEMENT = [
-  { name: "Highly Active", count: 428, color: "#10b981", percent: 65 },
-  { name: "Moderate", count: 182, color: "#3b82f6", percent: 25 },
-  { name: "At Risk", count: 42, color: "#f59e0b", percent: 7 },
-  { name: "Inactive", count: 18, color: "#ef4444", percent: 3 },
-];
+const MEMBER_ENGAGEMENT = [];
 
-const ATTENDANCE_LOGS = [
-  { id: "REP-01", name: "Rohan Verma", mId: "MBR-0428", plan: "Annual Elite", visits: 24, avgWeek: 5.2, lastVisit: "Today", streak: 12, risk: "Low", probability: 94 },
-  { id: "REP-02", name: "Aisha Khan", mId: "MBR-0417", plan: "Monthly Fitness", visits: 8, avgWeek: 2.1, lastVisit: "2 days ago", streak: 0, risk: "Medium", probability: 62 },
-  { id: "REP-03", name: "Vikram Malhotra", mId: "MBR-0842", plan: "PT + Strength", visits: 42, avgWeek: 6.0, lastVisit: "Today", streak: 28, risk: "Low", probability: 98 },
-  { id: "REP-04", name: "Priya Desai", mId: "MBR-0899", plan: "Corporate", visits: 4, avgWeek: 0.8, lastVisit: "8 days ago", streak: 0, risk: "High", probability: 34 },
-];
+const ATTENDANCE_LOGS = [];
 
 // ─────────────────────────────────────────
 // SHARED UI COMPONENTS
@@ -130,10 +120,9 @@ function DashboardView() {
                 </div>
              </div>
              <div className="h-[300px] flex items-end gap-3 px-2">
-                {[42, 28, 15, 64, 82, 95, 48, 36, 72, 88, 54, 40].map((v, i) => (
+                {[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map((v, i) => (
                    <div key={i} className="flex-1 group relative">
-                      <motion.div initial={{ height: 0 }} animate={{ height: `${v}%` }} transition={{ delay: i * 0.05 }} className={cn("w-full rounded-t-xl transition-all group-hover:brightness-90", i === 5 ? "bg-indigo-500" : "bg-slate-200")} />
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">{v}%</div>
+                      <motion.div initial={{ height: 0 }} animate={{ height: `4px` }} className="w-full rounded-t-xl bg-slate-200" />
                       <span className="block text-[8px] font-bold text-slate-400 text-center mt-2">{6 + i}:00</span>
                    </div>
                 ))}
@@ -144,16 +133,10 @@ function DashboardView() {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-32 -mt-32" />
                 <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2 mb-6"><Zap size={14} /> AI Attendance Insights</h3>
                 <div className="space-y-6">
-                   {[
-                     { label: "Morning Decline", msg: "Footfall in 6 AM - 8 AM slot dropped 14% this week.", tone: "rose" },
-                     { label: "Peak Congestion", msg: "7 PM overcrowding predicted for tomorrow. Suggest session caps.", tone: "amber" },
-                     { label: "Inactive Cluster", msg: "24 members haven't visited in 12 days. Churn risk high.", tone: "indigo" },
-                   ].map((insight, i) => (
-                     <div key={i} className="space-y-2">
-                        <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded border", insight.tone === 'rose' ? 'text-rose-400 border-rose-900/50 bg-rose-950/30' : insight.tone === 'amber' ? 'text-amber-400 border-amber-900/50 bg-amber-950/30' : 'text-indigo-400 border-indigo-900/50 bg-indigo-950/30')}>{insight.label}</span>
-                        <p className="text-xs font-bold text-slate-300 leading-relaxed">{insight.msg}</p>
-                     </div>
-                   ))}
+                   <div className="space-y-2">
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded border text-indigo-400 border-indigo-900/50 bg-indigo-950/30">System Active</span>
+                      <p className="text-xs font-bold text-slate-300 leading-relaxed">No attendance anomalies detected. AI monitoring is active across turnstiles.</p>
+                   </div>
                 </div>
                 <button className="mt-8 w-full h-11 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all">Generate Strategy</button>
              </div>
@@ -163,32 +146,28 @@ function DashboardView() {
           <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-enterprise">
              <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2"><PieChart size={14} className="text-indigo-500" /> Engagement Mix</h3>
              <div className="space-y-4">
-                {MEMBER_ENGAGEMENT.map(e => (
-                   <div key={e.name} className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-tight"><span className="text-slate-500">{e.name}</span><span className="text-slate-950">{e.count} Members</span></div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: `${e.percent}%` }} className="h-full rounded-full" style={{ backgroundColor: e.color }} /></div>
-                   </div>
-                ))}
+                {MEMBER_ENGAGEMENT.length === 0 ? (
+                   <p className="text-xs text-slate-400 text-center py-6">No member engagement data recorded yet.</p>
+                ) : (
+                   MEMBER_ENGAGEMENT.map(e => (
+                      <div key={e.name} className="space-y-2">
+                         <div className="flex justify-between text-[10px] font-black uppercase tracking-tight"><span className="text-slate-500">{e.name}</span><span className="text-slate-950">{e.count} Members</span></div>
+                         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: `${e.percent}%` }} className="h-full rounded-full" style={{ backgroundColor: e.color }} /></div>
+                      </div>
+                   ))
+                )}
              </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-enterprise">
              <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2"><UserCheck size={14} className="text-emerald-500" /> Trainer Pull</h3>
              <div className="space-y-4">
-                {[{ name: "Ankit Kumar", sessions: 42, growth: "+12%" }, { name: "Sneha Patel", sessions: 38, growth: "+5%" }, { name: "Manav Rao", sessions: 24, growth: "-2%" }].map((t, i) => (
-                   <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                      <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">{t.name[0]}</div><span className="text-xs font-black text-slate-900">{t.name}</span></div>
-                      <div className="text-right"><span className="block text-sm font-black text-slate-950">{t.sessions}</span><span className={cn("text-[9px] font-bold uppercase", t.growth.startsWith('+') ? 'text-emerald-600' : 'text-rose-600')}>{t.growth}</span></div>
-                   </div>
-                ))}
+                <p className="text-xs text-slate-400 text-center py-6">No trainer sessions recorded yet.</p>
              </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-enterprise">
              <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2"><Globe size={14} className="text-blue-500" /> Regional Footfall</h3>
              <div className="space-y-4">
-                {[{ name: "Main Branch", load: "High", color: "text-rose-600 bg-rose-50" }, { name: "Koramangala", load: "Stable", color: "text-emerald-600 bg-emerald-50" }, { name: "Indiranagar", load: "Low", color: "text-blue-600 bg-blue-50" }].map((b, i) => (
-                   <div key={i} className="flex items-center justify-between group cursor-pointer hover:translate-x-1 transition-all"><span className="text-xs font-black text-slate-700">{b.name}</span><span className={cn("text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md", b.color)}>{b.load}</span></div>
-                ))}
-                <button className="w-full mt-4 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors">Compare All <ChevronRight size={12} /></button>
+                <p className="text-xs text-slate-400 text-center py-6">No regional footfall recorded.</p>
              </div>
           </div>
        </div>
@@ -221,19 +200,29 @@ function TableView() {
              </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-             {ATTENDANCE_LOGS.map(log => (
-                <tr key={log.id} className="hover:bg-slate-50/80 transition-colors group">
-                   <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                         <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs text-slate-600">{log.name[0]}</div>
-                         <div><span className="block text-sm font-black text-slate-950">{log.name}</span><span className="block text-[10px] font-bold text-slate-400 uppercase">{log.mId}</span></div>
-                      </div>
+             {ATTENDANCE_LOGS.length === 0 ? (
+                <tr>
+                   <td colSpan={4} className="py-12 text-center text-slate-400">
+                      <Users size={28} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                      <p className="text-xs font-semibold text-slate-600">No attendance records found</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Member check-in history and frequency will appear here</p>
                    </td>
-                   <td className="px-6 py-4"><span className="block text-xs font-black text-slate-900">{log.plan}</span><span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded-md inline-block mt-1", log.risk === 'Low' ? 'bg-emerald-50 text-emerald-600' : log.risk === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600')}>Risk: {log.risk}</span></td>
-                   <td className="px-6 py-4"><div className="flex items-center gap-4"><div className="flex flex-col min-w-[70px]"><span className="text-xs font-black text-slate-900">{log.visits} Visits</span><span className="text-[9px] font-bold text-slate-400 uppercase">This Month</span></div><div className="flex flex-col min-w-[70px]"><span className="text-xs font-black text-slate-900">{log.probability}%</span><span className="text-[9px] font-bold text-slate-400 uppercase">Renewal Prob.</span></div></div></td>
-                   <td className="px-6 py-4 text-right"><button className="w-10 h-10 rounded-xl inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-950 transition-all"><MoreVertical size={16} /></button></td>
                 </tr>
-             ))}
+             ) : (
+                ATTENDANCE_LOGS.map(log => (
+                   <tr key={log.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="px-6 py-4">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs text-slate-600">{log.name[0]}</div>
+                            <div><span className="block text-sm font-black text-slate-950">{log.name}</span><span className="block text-[10px] font-bold text-slate-400 uppercase">{log.mId}</span></div>
+                         </div>
+                      </td>
+                      <td className="px-6 py-4"><span className="block text-xs font-black text-slate-900">{log.plan}</span><span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded-md inline-block mt-1", log.risk === 'Low' ? 'bg-emerald-50 text-emerald-600' : log.risk === 'Medium' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600')}>Risk: {log.risk}</span></td>
+                      <td className="px-6 py-4"><div className="flex items-center gap-4"><div className="flex flex-col min-w-[70px]"><span className="text-xs font-black text-slate-900">{log.visits} Visits</span><span className="text-[9px] font-bold text-slate-400 uppercase">This Month</span></div><div className="flex flex-col min-w-[70px]"><span className="text-xs font-black text-slate-900">{log.probability}%</span><span className="text-[9px] font-bold text-slate-400 uppercase">Renewal Prob.</span></div></div></td>
+                      <td className="px-6 py-4 text-right"><button className="w-10 h-10 rounded-xl inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-950 transition-all"><MoreVertical size={16} /></button></td>
+                   </tr>
+                ))
+             )}
           </tbody>
        </table>
     </div>

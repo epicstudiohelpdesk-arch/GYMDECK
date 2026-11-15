@@ -61,29 +61,35 @@ const Profile = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showRedirectLoader, setShowRedirectLoader] = useState(false);
 
-  // --- MOCK PROFILE STATE ---
-  const [userData, setUserData] = useState({
-    fullName: "Subham Das",
-    username: "subham_das_hq",
-    email: "subham@gymdeck.io",
-    phone: "+91 98765 43210",
-    dob: "1995-08-15",
-    gender: "Male",
-    bio: "Operations-focused fitness infrastructure builder. Scaling GymDeck to new horizons.",
-    role: "Super Admin",
-    department: "Executive Operations",
-    branch: "Kolkata HQ",
-    employeeId: "GD-E-001",
-    joinedDate: "12 May 2024",
-    theme: "system",
-    density: "comfortable",
-    notifications: {
-      push: true,
-      whatsapp: true,
-      email: true,
-      attendance: true,
-      payments: true
-    }
+  // --- PROFILE STATE (0% Mock Data) ---
+  const [userData, setUserData] = useState(() => {
+    let savedEmail = "";
+    try {
+      savedEmail = localStorage.getItem("gymdeck_auth_user") || localStorage.getItem("gymdeck_admin_email") || "";
+    } catch (e) {}
+    return {
+      fullName: "",
+      username: "",
+      email: savedEmail,
+      phone: "",
+      dob: "",
+      gender: "",
+      bio: "",
+      role: "Super Admin",
+      department: "Management",
+      branch: "",
+      employeeId: "",
+      joinedDate: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+      theme: "system",
+      density: "comfortable",
+      notifications: {
+        push: true,
+        whatsapp: true,
+        email: true,
+        attendance: true,
+        payments: true
+      }
+    };
   });
 
   const tabs = [
@@ -228,7 +234,7 @@ const Profile = () => {
               <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
                 <Zap size={20} />
               </div>
-              <div className="text-2xl font-black text-[#111827]">124</div>
+              <div className="text-2xl font-black text-[#111827]">0</div>
               <div className="text-[9px] font-bold uppercase tracking-widest text-[#9CA3AF]">Tasks Handled</div>
             </div>
             <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 min-w-[180px] shadow-sm">
@@ -516,14 +522,12 @@ const Profile = () => {
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9CA3AF] mb-8 ml-2">Active Login Sessions</h3>
                     <div className="space-y-4">
                       {[
-                        { device: 'MacBook Pro 16"', os: 'macOS 14.2', location: 'Kolkata, India', browser: 'Chrome 124', current: true },
-                        { device: 'iPhone 15 Pro', os: 'iOS 17.4', location: 'Kolkata, India', browser: 'GymDeck Mobile', current: false },
-                        { device: 'iPad Pro M2', os: 'iPadOS 17.4', location: 'New Delhi, India', browser: 'Safari 17.4', current: false }
+                        { device: 'Desktop App (macOS)', os: 'GymDeck Desktop Client', location: 'Local Workstation', browser: 'Tauri Native', current: true }
                       ].map((session, i) => (
                         <div key={i} className="flex items-center justify-between p-6 rounded-2xl bg-white border border-[#E5E7EB] hover:shadow-md transition-all">
                           <div className="flex gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${session.current ? 'bg-indigo-50 text-indigo-600' : 'bg-[#F9FAFB] text-[#9CA3AF]'}`}>
-                              {session.device.includes('iPhone') ? <Smartphone size={24} /> : <Laptop size={24} />}
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600">
+                              <Laptop size={24} />
                             </div>
                             <div>
                               <div className="flex items-center gap-3 mb-1">
@@ -535,9 +539,6 @@ const Profile = () => {
                               </p>
                             </div>
                           </div>
-                          {!session.current && (
-                            <button className="text-[10px] font-black text-[#EF4444] uppercase tracking-widest hover:underline transition-all">Revoke</button>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -566,33 +567,8 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  <div className="relative pl-8 space-y-10 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-px before:bg-[#E5E7EB]">
-                    {[
-                      { action: 'Updated membership plan for member #A102', time: '10 mins ago', type: 'operation', icon: Zap },
-                      { action: 'Generated quarterly revenue report (PDF)', time: '2 hours ago', type: 'report', icon: Download },
-                      { action: 'Security check: New login from macOS device', time: 'Yesterday, 11:42 PM', type: 'security', icon: Shield },
-                      { action: 'Updated primary branch settings for South Delhi', time: 'Yesterday, 04:30 PM', type: 'operation', icon: Globe },
-                      { action: 'Assigned new staff role: Front Desk (Priya S.)', time: '21 May 2024', type: 'staff', icon: User }
-                    ].map((log, i) => (
-                      <div key={i} className="relative group">
-                        <div className="absolute -left-[37px] top-1 w-[11px] h-[11px] rounded-full bg-white border-2 border-[#111827] z-10 group-hover:scale-125 transition-all" />
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-[#9CA3AF]">{log.time}</span>
-                            <div className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest 
-                              ${log.type === 'security' ? 'bg-amber-50 text-amber-600' : 'bg-[#F3F4F6] text-[#4B5563]'}`}>
-                              {log.type}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-[#F9FAFB] flex items-center justify-center text-[#111827] shadow-sm">
-                              <log.icon size={18} />
-                            </div>
-                            <h5 className="text-sm font-bold text-[#111827]">{log.action}</h5>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="py-12 text-center text-xs font-semibold text-[#9CA3AF]">
+                    No administrative activity logs recorded yet.
                   </div>
 
                   <button className="w-full mt-12 h-12 rounded-2xl bg-[#F3F4F6] text-[10px] font-black uppercase tracking-widest hover:bg-[#111827] hover:text-white transition-all">

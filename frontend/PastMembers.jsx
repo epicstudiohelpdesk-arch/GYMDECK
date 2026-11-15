@@ -51,11 +51,7 @@ const STATUS_OPTIONS = ["All", "Expired", "Cancelled", "Terminated"];
 
 const MOCK_PAST_MEMBERS = [];
 
-const MOCK_PLANS = [
-  { id: "1", name: "Monthly Starter Pack", duration: "1 Month", price: 1999 },
-  { id: "2", name: "Quarterly Transformation", duration: "3 Months", price: 4999 },
-  { id: "3", name: "Premium Annual Elite", duration: "12 Months", price: 14999 }
-];
+const MOCK_PLANS = [];
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -256,7 +252,7 @@ export default function PastMembers() {
   const [viewMode, setViewMode] = useState("table"); // "grid", "table", "analytics"
   const [selectedMember, setSelectedMember] = useState(null);
   const [reactivateMember, setReactivateMember] = useState(null);
-  const [plans, setPlans] = useState(MOCK_PLANS);
+  const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [deleteConfirmMember, setDeleteConfirmMember] = useState(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);

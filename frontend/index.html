@@ -621,195 +621,251 @@
               Start a clean new profile with all the key member information captured in one focused flow.
             </p>
             <p class="member-form-alert" data-member-form-alert hidden></p>
-            <form class="member-form-grid" novalidate>
-              <label class="member-field" data-field-label="Full Name">
-                <span>Full Name <em>*</em></span>
-                <input type="text" placeholder="Enter member name" required />
-                <small class="member-field-error" hidden>Please enter the member's full name.</small>
-              </label>
-              <label class="member-field" data-field-label="Contact Number">
-                <span>Contact Number <em>*</em></span>
-                <input type="tel" placeholder="Enter primary contact" required />
-                <small class="member-field-error" hidden>Please enter the primary contact number.</small>
-              </label>
-              <label class="member-field" data-field-label="Alternate Contact">
-                <span>Alternate Contact</span>
-                <input type="tel" placeholder="Enter alternate contact" />
-                <small class="member-field-error" hidden>Please enter the alternate contact number.</small>
-              </label>
-              <label class="member-field" data-field-label="Email Address">
-                <span>Email Address</span>
-                <input type="email" placeholder="Enter email address" />
-                <small class="member-field-error" hidden>Please enter a valid email address.</small>
-              </label>
-              <label class="member-field" data-field-label="Date of Birth">
-                <span>Date of Birth <em>*</em></span>
-                <div class="date-input-wrap" data-date-picker>
-                  <input
-                    class="date-display-input"
-                    type="text"
-                    placeholder="Select date of birth"
-                    readonly
-                    required
-                    data-member-dob-display
-                  />
-                  <input type="hidden" data-member-dob-input />
-                  <button class="date-picker-btn" type="button" aria-label="Open date picker" data-member-dob-trigger>
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M7 4v4" />
-                      <path d="M17 4v4" />
-                      <rect x="4" y="6.5" width="16" height="13" rx="3" />
-                      <path d="M4 10h16" />
-                      <path d="M8 13h3" />
-                    </svg>
-                  </button>
-                  <section class="date-picker-panel" data-date-picker-panel hidden>
-                    <div class="date-picker-header">
-                      <div class="date-picker-header-copy">
-                        <span class="date-picker-label">Choose Date</span>
-                        <button class="date-picker-title" type="button" data-date-picker-title>
-                          <strong data-date-picker-month>April 2026</strong>
-                          <span>Choose Year</span>
-                        </button>
-                      </div>
-                      <div class="date-picker-nav">
-                        <button type="button" aria-label="Previous month" data-date-picker-prev>
+            <div class="plans-empty-state-card registration-engine-card">
+              <div class="plans-empty-grid-pattern"></div>
+              <div class="plans-empty-content-wrap">
+                <div class="plans-empty-topbar">
+                  <div class="plans-tags-group">
+                    <span class="plans-tag-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
+                      Personal details
+                    </span>
+                    <span class="plans-tag-divider">•</span>
+                    <span class="plans-tag-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                      </svg>
+                      Body metrics
+                    </span>
+                    <span class="plans-tag-divider">•</span>
+                    <span class="plans-tag-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      Address
+                    </span>
+                  </div>
+                </div>
+
+                <div class="registration-engine-grid">
+                  <form class="member-form-grid registration-form-grid" novalidate>
+                    <!-- Row 1: Primary Identity & Contact -->
+                    <label class="member-field" data-field-label="Full Name">
+                      <span>Full Name <em>*</em></span>
+                      <input type="text" placeholder="Enter member name" required />
+                      <small class="member-field-error" hidden>Please enter the member's full name.</small>
+                    </label>
+
+                    <label class="member-field" data-field-label="Contact Number">
+                      <span>Contact Number <em>*</em></span>
+                      <input type="tel" placeholder="Enter primary contact" required />
+                      <small class="member-field-error" hidden>Please enter the primary contact number.</small>
+                    </label>
+
+                    <label class="member-field" data-field-label="Email Address">
+                      <span>Email Address</span>
+                      <input type="email" placeholder="Enter email address" />
+                      <small class="member-field-error" hidden>Please enter a valid email address.</small>
+                    </label>
+
+                    <!-- Row 2: Secondary Contact & Demographics -->
+                    <label class="member-field" data-field-label="Date of Birth">
+                      <span>Date of Birth <em>*</em></span>
+                      <div class="date-input-wrap" data-date-picker>
+                        <input
+                          class="date-display-input"
+                          type="text"
+                          placeholder="Select date of birth"
+                          readonly
+                          required
+                          data-member-dob-display
+                        />
+                        <input type="hidden" data-member-dob-input />
+                        <button class="date-picker-btn" type="button" aria-label="Open date picker" data-member-dob-trigger>
                           <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="m14 6-6 6 6 6" />
+                            <path d="M7 4v4" />
+                            <path d="M17 4v4" />
+                            <rect x="4" y="6.5" width="16" height="13" rx="3" />
+                            <path d="M4 10h16" />
+                            <path d="M8 13h3" />
                           </svg>
                         </button>
-                        <button type="button" aria-label="Next month" data-date-picker-next>
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="m10 6 6 6-6 6" />
+                        <section class="date-picker-panel" data-date-picker-panel hidden>
+                          <div class="date-picker-header">
+                            <div class="date-picker-header-copy">
+                              <span class="date-picker-label">Choose Date</span>
+                              <button class="date-picker-title" type="button" data-date-picker-title>
+                                <strong data-date-picker-month>April 2026</strong>
+                                <span>Choose Year</span>
+                              </button>
+                            </div>
+                            <div class="date-picker-nav">
+                              <button type="button" aria-label="Previous month" data-date-picker-prev>
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="m14 6-6 6 6 6" />
+                                </svg>
+                              </button>
+                              <button type="button" aria-label="Next month" data-date-picker-next>
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="m10 6 6 6-6 6" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="date-picker-weekdays" aria-hidden="true">
+                            <span>Sun</span>
+                            <span>Mon</span>
+                            <span>Tue</span>
+                            <span>Wed</span>
+                            <span>Thu</span>
+                            <span>Fri</span>
+                            <span>Sat</span>
+                          </div>
+                          <div class="date-picker-grid" data-date-picker-grid></div>
+                          <div class="date-picker-years" data-date-picker-years hidden></div>
+                          <div class="date-picker-actions">
+                            <button type="button" data-date-picker-clear>Clear</button>
+                            <button type="button" data-date-picker-today>Done</button>
+                          </div>
+                        </section>
+                      </div>
+                      <small class="member-field-error" hidden>Please select the member's date of birth.</small>
+                    </label>
+
+                    <div class="member-field" data-field-label="Gender">
+                      <span>Gender <em>*</em></span>
+                      <div class="custom-select-wrapper">
+                        <select required data-member-gender-input style="display: none !important;">
+                          <option value="" disabled selected>Select gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                        <div class="custom-dropdown-trigger" data-dropdown-trigger="gender">
+                          <span class="custom-dropdown-value">Select gender</span>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m6 9 6 6 6-6"/>
                           </svg>
-                        </button>
+                        </div>
+                        <div class="custom-dropdown-menu grid-3" data-dropdown-menu="gender">
+                          <div class="custom-dropdown-item" data-value="Male">Male</div>
+                          <div class="custom-dropdown-item" data-value="Female">Female</div>
+                          <div class="custom-dropdown-item" data-value="Other">Other</div>
+                        </div>
                       </div>
+                      <small class="member-field-error" hidden>Please select the member's gender.</small>
                     </div>
-                    <div class="date-picker-weekdays" aria-hidden="true">
-                      <span>Sun</span>
-                      <span>Mon</span>
-                      <span>Tue</span>
-                      <span>Wed</span>
-                      <span>Thu</span>
-                      <span>Fri</span>
-                      <span>Sat</span>
-                    </div>
-                    <div class="date-picker-grid" data-date-picker-grid></div>
-                    <div class="date-picker-years" data-date-picker-years hidden></div>
-                    <div class="date-picker-actions">
-                      <button type="button" data-date-picker-clear>Clear</button>
-                      <button type="button" data-date-picker-today>Done</button>
-                    </div>
-                  </section>
-                </div>
-                <small class="member-field-error" hidden>Please select the member's date of birth.</small>
-              </label>
-              <div class="member-field" data-field-label="Height">
-                <span>Height</span>
-                <input type="hidden" class="height-final-value" />
-                <div class="height-input-container">
-                  <div class="height-inputs-area">
-                    <input type="number" class="height-val-input cm-input" placeholder="e.g. 175" min="50" max="250" />
-                    <div class="ft-in-inputs" hidden>
-                      <div class="ft-input-group">
-                        <input type="number" class="height-val-input ft-input" placeholder="Ft" min="1" max="8" />
-                        <span class="height-input-suffix">ft</span>
+
+                    <label class="member-field" data-field-label="Alternate Contact">
+                      <span>Alternate Contact</span>
+                      <input type="tel" placeholder="Enter alternate contact" />
+                      <small class="member-field-error" hidden>Please enter the alternate contact number.</small>
+                    </label>
+
+                    <!-- Row 3: Physical & Health Metrics -->
+                    <div class="member-field" data-field-label="Height">
+                      <span>Height</span>
+                      <input type="hidden" class="height-final-value" />
+                      <div class="height-input-container">
+                        <div class="height-inputs-area">
+                          <input type="number" class="height-val-input cm-input" placeholder="Enter height" min="50" max="250" />
+                          <div class="ft-in-inputs" hidden>
+                            <div class="ft-input-group">
+                              <input type="number" class="height-val-input ft-input" placeholder="5" min="1" max="8" />
+                              <span class="height-input-suffix">ft</span>
+                            </div>
+                            <div class="ft-in-divider"></div>
+                            <div class="in-input-group">
+                              <input type="number" class="height-val-input in-input" placeholder="9" min="0" max="11" />
+                              <span class="height-input-suffix">in</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="height-unit-selector">
+                          <button class="unit-btn active" type="button" data-unit="cm">cm</button>
+                          <button class="unit-btn" type="button" data-unit="ft">ft/in</button>
+                        </div>
                       </div>
-                      <div class="ft-in-divider"></div>
-                      <div class="in-input-group">
-                        <input type="number" class="height-val-input in-input" placeholder="In" min="0" max="11" />
-                        <span class="height-input-suffix">in</span>
-                      </div>
+                      <small class="member-field-error" hidden></small>
                     </div>
-                  </div>
-                  <div class="height-unit-selector">
-                    <button class="unit-btn active" type="button" data-unit="cm">cm</button>
-                    <button class="unit-btn" type="button" data-unit="ft">ft/in</button>
-                  </div>
+
+                    <div class="member-field" data-field-label="Weight">
+                      <span>Weight</span>
+                      <input type="hidden" class="weight-final-value" />
+                      <div class="weight-input-container">
+                        <div class="weight-inputs-area">
+                          <input type="number" class="weight-val-input kg-input" placeholder="e.g. 70" min="10" max="300" />
+                          <input type="number" class="weight-val-input lbs-input" placeholder="e.g. 154" min="20" max="660" hidden />
+                        </div>
+                        <div class="weight-unit-selector">
+                          <button class="unit-btn active" type="button" data-unit="kg">kg</button>
+                          <button class="unit-btn" type="button" data-unit="lbs">lbs</button>
+                        </div>
+                      </div>
+                      <small class="member-field-error" hidden></small>
+                    </div>
+
+                    <div class="member-field" data-field-label="Blood Group">
+                      <span>Blood Group</span>
+                      <div class="custom-select-wrapper">
+                        <select data-member-bloodgroup-input style="display: none !important;">
+                          <option value="" selected>Select Blood Group (Optional)</option>
+                          <option value="A+">A+</option>
+                          <option value="A-">A-</option>
+                          <option value="B+">B+</option>
+                          <option value="B-">B-</option>
+                          <option value="O+">O+</option>
+                          <option value="O-">O-</option>
+                          <option value="AB+">AB+</option>
+                          <option value="AB-">AB-</option>
+                        </select>
+                        <div class="custom-dropdown-trigger" data-dropdown-trigger="bloodgroup">
+                          <span class="custom-dropdown-value">Select Blood Group (Optional)</span>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m6 9 6 6 6-6"/>
+                          </svg>
+                        </div>
+                        <div class="custom-dropdown-menu grid-2" data-dropdown-menu="bloodgroup">
+                          <div class="custom-dropdown-item placeholder" data-value="">Select Blood Group (Optional)</div>
+                          <div class="custom-dropdown-item" data-value="A+">A+</div>
+                          <div class="custom-dropdown-item" data-value="A-">A-</div>
+                          <div class="custom-dropdown-item" data-value="B+">B+</div>
+                          <div class="custom-dropdown-item" data-value="B-">B-</div>
+                          <div class="custom-dropdown-item" data-value="O+">O+</div>
+                          <div class="custom-dropdown-item" data-value="O-">O-</div>
+                          <div class="custom-dropdown-item" data-value="AB+">AB+</div>
+                          <div class="custom-dropdown-item" data-value="AB-">AB-</div>
+                        </div>
+                      </div>
+                      <small class="member-field-error" hidden></small>
+                    </div>
+
+                    <!-- Row 4: Residential Address (Full Width) -->
+                    <label class="member-field member-field-span-3" data-field-label="Address">
+                      <span>Address <em>*</em></span>
+                      <textarea rows="1" placeholder="Enter complete residential address" required style="resize: none;"></textarea>
+                      <small class="member-field-error" hidden>Please enter the residential address.</small>
+                    </label>
+                  </form>
                 </div>
-                <small class="member-field-error" hidden></small>
               </div>
-              <div class="member-field" data-field-label="Weight">
-                <span>Weight</span>
-                <input type="hidden" class="weight-final-value" />
-                <div class="weight-input-container">
-                  <div class="weight-inputs-area">
-                    <input type="number" class="weight-val-input kg-input" placeholder="e.g. 70" min="10" max="300" />
-                    <input type="number" class="weight-val-input lbs-input" placeholder="e.g. 154" min="20" max="660" hidden />
-                  </div>
-                  <div class="weight-unit-selector">
-                    <button class="unit-btn active" type="button" data-unit="kg">kg</button>
-                    <button class="unit-btn" type="button" data-unit="lbs">lbs</button>
-                  </div>
-                </div>
-                <small class="member-field-error" hidden></small>
-              </div>
-              <div class="member-field" data-field-label="Gender">
-                <span>Gender <em>*</em></span>
-                <div class="custom-select-wrapper">
-                  <select required data-member-gender-input style="display: none !important;">
-                    <option value="" disabled selected>Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  <div class="custom-dropdown-trigger" data-dropdown-trigger="gender">
-                    <span class="custom-dropdown-value">Select gender</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m6 9 6 6 6-6"/>
-                    </svg>
-                  </div>
-                  <div class="custom-dropdown-menu grid-3" data-dropdown-menu="gender">
-                    <div class="custom-dropdown-item" data-value="Male">Male</div>
-                    <div class="custom-dropdown-item" data-value="Female">Female</div>
-                    <div class="custom-dropdown-item" data-value="Other">Other</div>
-                  </div>
-                </div>
-                <small class="member-field-error" hidden>Please select the member's gender.</small>
-              </div>
-              <div class="member-field" data-field-label="Blood Group">
-                <span>Blood Group</span>
-                <div class="custom-select-wrapper">
-                  <select data-member-bloodgroup-input style="display: none !important;">
-                    <option value="" selected>Select Blood Group (Optional)</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                  </select>
-                  <div class="custom-dropdown-trigger" data-dropdown-trigger="bloodgroup">
-                    <span class="custom-dropdown-value">Select Blood Group (Optional)</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m6 9 6 6 6-6"/>
-                    </svg>
-                  </div>
-                  <div class="custom-dropdown-menu grid-2" data-dropdown-menu="bloodgroup">
-                    <div class="custom-dropdown-item placeholder" data-value="">Select Blood Group (Optional)</div>
-                    <div class="custom-dropdown-item" data-value="A+">A+</div>
-                    <div class="custom-dropdown-item" data-value="A-">A-</div>
-                    <div class="custom-dropdown-item" data-value="B+">B+</div>
-                    <div class="custom-dropdown-item" data-value="B-">B-</div>
-                    <div class="custom-dropdown-item" data-value="O+">O+</div>
-                    <div class="custom-dropdown-item" data-value="O-">O-</div>
-                    <div class="custom-dropdown-item" data-value="AB+">AB+</div>
-                    <div class="custom-dropdown-item" data-value="AB-">AB-</div>
-                  </div>
-                </div>
-                <small class="member-field-error" hidden></small>
-              </div>
-              <label class="member-field member-field-span-2" data-field-label="Address">
-                <span>Address <em>*</em></span>
-                <textarea rows="1" placeholder="Enter complete residential address" required style="min-height: 56px; resize: none;"></textarea>
-                <small class="member-field-error" hidden>Please enter the residential address.</small>
-              </label>
-              <div class="member-form-disclaimer member-field-wide">
-                <span><em>*</em> Fields marked with a red star are mandatory.</span>
-              </div>
-            </form>
+            </div>
+
+            <!-- Mandatory Info Note (Below and outside the dotted box) -->
+            <div class="registration-form-note">
+              <span class="registration-form-note-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+              </span>
+              <span><em>*</em> Fields marked with a red star are mandatory. Identity documents can be added right after saving.</span>
+            </div>
           </div>
 
           <!-- Page 2: Profile Photo Upload -->
@@ -824,26 +880,154 @@
               Please upload a clear profile photo of the member for identification and membership card generation.
             </p>
 
+            <div class="plans-empty-state-card identity-engine-card">
+              <div class="plans-empty-grid-pattern"></div>
+              <div class="plans-empty-content-wrap">
+                <div class="plans-empty-topbar">
+                  <div class="plans-status-pill">
+                    <span class="plans-status-dot"></span>
+                    <span class="plans-status-sub">Awaiting Portrait</span>
+                  </div>
+                  <div class="plans-tags-group">
+                    <span class="plans-tag-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      Verified Portrait
+                    </span>
+                    <span class="plans-tag-divider">•</span>
+                    <span class="plans-tag-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Encrypted Local Storage
+                    </span>
+                  </div>
+                </div>
+                <div class="identity-engine-grid">
+                  <div class="identity-engine-left">
             <div class="photo-capture-container">
                 <div class="photo-preview-circle" data-member-photo-trigger>
                     <img src="" alt="" data-member-photo-preview hidden />
                     <div class="photo-placeholder-icon">
-                        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        <span class="photo-placeholder-glyph" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                        </span>
                         <span>Upload Photo</span>
+                        <small>Click to browse files</small>
                     </div>
+                    <span class="photo-upload-badge" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>
+                    </span>
                     <input type="file" accept="image/*" data-member-photo-input hidden />
                 </div>
                 <div class="photo-capture-meta">
-                    <p class="photo-capture-recommendation">Recommended: High quality JPG or PNG</p>
-                    <button type="button" class="btn-change-photo" data-member-photo-trigger data-photo-change-btn>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px;">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                            <circle cx="12" cy="13" r="4"></circle>
-                        </svg>
-                        <span>Change Photo</span>
-                    </button>
+                    <div class="photo-capture-tips">
+                        <span class="photo-tip">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Front-facing
+                        </span>
+                        <span class="photo-tip">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            JPG or PNG
+                        </span>
+                    </div>
                 </div>
             </div>
+                  </div>
+                  <div class="identity-engine-right">
+                    <div class="identity-engine-info">
+                      <h3 class="plans-empty-title">Add a clear member portrait</h3>
+                      <p class="plans-empty-desc">Upload a front-facing photo for identification and membership card generation. The portrait is stored with the member profile and can be replaced before finishing.</p>
+                    </div>
+                    <div class="identity-engine-actions">
+                      <button type="button" class="btn-plan-create" data-member-photo-trigger>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>
+                        <span>Upload Photo</span>
+                      </button>
+                      <button type="button" class="btn-use-camera" data-use-camera>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                        <span>Use Camera</span>
+                      </button>
+                      <button type="button" class="btn-change-photo" data-member-photo-trigger data-photo-change-btn>
+                        <span>Change Photo</span>
+                      </button>
+                    </div>
+                <div class="camera-unavailable-note" data-camera-note hidden>
+                    <span class="camera-unavailable-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z" />
+                            <path d="m3 3 18 18" />
+                        </svg>
+                    </span>
+                    <div class="camera-unavailable-copy">
+                        <strong>Use Camera is available only on mobile</strong>
+                        <p>Camera capture works exclusively in the GYMDECK mobile app. Install GYMDECK from the Google Play Store or Apple App Store to take or update member photos with your device camera.</p>
+                    </div>
+                    <button type="button" class="camera-unavailable-close" data-camera-note-close aria-label="Dismiss message">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6 18 18M18 6 6 18" /></svg>
+                    </button>
+                </div>
+
+                <div class="identity-engine-specs">
+                  <div class="plans-spec-card">
+                    <div class="plans-spec-icon-wrap is-emerald">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="plans-spec-text">
+                      <span class="plans-spec-title">Identity Verification</span>
+                      <span class="plans-spec-sub">Portrait is linked to the member record for check-in</span>
+                    </div>
+                  </div>
+                  <div class="plans-spec-card">
+                    <div class="plans-spec-icon-wrap is-indigo">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
+                    <div class="plans-spec-text">
+                      <span class="plans-spec-title">Encrypted Local Storage</span>
+                      <span class="plans-spec-sub">Saved with the member profile in GymDeck's local data store</span>
+                    </div>
+                  </div>
+                  <div class="plans-spec-card">
+                    <div class="plans-spec-icon-wrap is-blue">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+                    </div>
+                    <div class="plans-spec-text">
+                      <span class="plans-spec-title">Membership Card Ready</span>
+                      <span class="plans-spec-sub">Auto-cropped portrait for ID cards and member records</span>
+                    </div>
+                  </div>
+                </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="doc-upload-disclaimer" role="note">
+              <div class="doc-upload-disclaimer-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </div>
+              <div class="doc-upload-disclaimer-copy">
+                <strong>Photo guidelines &amp; privacy</strong>
+                <p>Use a clear, front-facing photo with even lighting and no filters. The image is used only for identification and membership card generation, and is stored with the member's profile in GymDeck's local data store. You can replace or remove it at any time before finishing.</p>
+              </div>
+            </div>
+
+            <script>
+              (function () {
+                const note = document.querySelector('[data-camera-note]');
+                const openBtn = document.querySelector('[data-use-camera]');
+                if (!note || !openBtn) return;
+                const closeBtn = note.querySelector('[data-camera-note-close]');
+                openBtn.addEventListener('click', () => {
+                  note.hidden = false;
+                  note.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                });
+                closeBtn?.addEventListener('click', () => { note.hidden = true; });
+                document.addEventListener('keydown', (event) => {
+                  if (event.key === 'Escape' && !note.hidden) note.hidden = true;
+                });
+              })();
+            </script>
 
           </div>
 
@@ -865,8 +1049,10 @@
               <div class="doc-upload-card" data-doc-type="aadhaar">
                 <div class="doc-upload-card-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <path d="M7 15h0M11 15h0M15 15h0M7 11h0M11 11h0M15 11h0" />
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <circle cx="8" cy="11" r="2" />
+                    <path d="M5.5 16c.4-1.4 1.4-2 2.5-2s2.1.6 2.5 2" />
+                    <path d="M14 10h5M14 13h5M14 16h3" />
                   </svg>
                 </div>
                 <div class="doc-upload-card-content">
@@ -881,10 +1067,10 @@
                       hidden
                     />
                     <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="aadhaar">
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
+                      <svg class="doc-upload-trigger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 16V4" />
+                        <path d="m7 9 5-5 5 5" />
+                        <path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" />
                       </svg>
                       Upload
                     </button>
@@ -930,10 +1116,10 @@
                       hidden
                     />
                     <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="pan">
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
+                      <svg class="doc-upload-trigger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 16V4" />
+                        <path d="m7 9 5-5 5 5" />
+                        <path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" />
                       </svg>
                       Upload
                     </button>
@@ -980,10 +1166,10 @@
                       hidden
                     />
                     <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="health">
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
+                      <svg class="doc-upload-trigger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 16V4" />
+                        <path d="m7 9 5-5 5 5" />
+                        <path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" />
                       </svg>
                       Upload
                     </button>
@@ -1031,10 +1217,10 @@
                       hidden
                     />
                     <button class="doc-upload-trigger" type="button" data-doc-upload-trigger="others">
-                      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;margin-right:6px;">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
+                      <svg class="doc-upload-trigger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 16V4" />
+                        <path d="m7 9 5-5 5 5" />
+                        <path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" />
                       </svg>
                       Upload
                     </button>
@@ -1061,6 +1247,19 @@
               </div>
             </div>
 
+            <div class="doc-upload-disclaimer" role="note">
+              <div class="doc-upload-disclaimer-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </div>
+              <div class="doc-upload-disclaimer-copy">
+                <strong>Document handling &amp; privacy</strong>
+                <p>Aadhaar Card is required to complete the profile. Residential Proof, Health Certificate and Other documents are optional. Accepted formats: JPG, PNG or PDF. Files are attached to this member's profile and stored in GymDeck's local data store; you can replace or remove any upload before finishing.</p>
+              </div>
+            </div>
+
           </div>
 
           <!-- Page 4: Membership Planning -->
@@ -1076,25 +1275,182 @@
             </p>
 
             <!-- Membership Planning Content -->
-            <div class="planning-grid" id="add-member-planning-grid">
-               <!-- We can add plan selection here later, for now just a placeholder to match the layout -->
-               <div class="planning-placeholder">
-                  <p>Membership plans will be listed here.</p>
-               </div>
+            <div class="planning-grid has-empty-state" id="add-member-planning-grid">
+              <div class="plans-empty-state-card">
+                <div class="plans-empty-grid-pattern"></div>
+                <div class="plans-empty-content-wrap">
+                  <!-- Top Bar: Status Pill & Capabilities Chips -->
+                  <div class="plans-empty-topbar">
+                    <div class="plans-status-pill">
+                      <span class="plans-status-dot"></span>
+                      <span class="plans-status-kicker">MEMBERSHIP ENGINE READY</span>
+                      <span class="plans-status-divider">•</span>
+                      <span class="plans-status-sub">Awaiting First Plan</span>
+                    </div>
+
+                    <div class="plans-tags-group">
+                      <span class="plans-tag-item">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+                          <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
+                          <circle cx="12" cy="12" r="2"/>
+                          <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
+                          <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/>
+                        </svg>
+                        Multi-Tier &amp; Flexible Durations
+                      </span>
+                      <span class="plans-tag-divider">•</span>
+                      <span class="plans-tag-item">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        Automated Dues &amp; Access Control
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Main Grid: Left Onboarding Content + Right Capability Cards -->
+                  <div class="plans-empty-main-grid">
+                    <!-- Left Section: Plan Badge Icon, Headline, Description & CTAs -->
+                    <div class="plans-empty-left">
+                      <div class="plans-icon-wrapper">
+                        <div class="plans-icon-box">
+                          <div class="plans-icon-inner">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="2" y="4" width="20" height="16" rx="3"/>
+                              <line x1="2" y1="10" x2="22" y2="10"/>
+                              <line x1="6" y1="15" x2="10" y2="15"/>
+                            </svg>
+                          </div>
+                        </div>
+                        <div class="plans-icon-plus-badge">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div class="plans-empty-info">
+                        <h3 class="plans-empty-title">No Membership Plans Configured</h3>
+                        <p class="plans-empty-desc">
+                          Create standard, tiered, or custom duration membership packages to assign automated billing cycles, gym floor privileges, and renewal tracking.
+                        </p>
+
+                        <div class="plans-empty-actions">
+                          <button type="button" class="btn-plan-create" id="btn-empty-create-plan">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="12" y1="5" x2="12" y2="19"/>
+                              <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            <span>Create Plan</span>
+                          </button>
+
+                          <button type="button" class="btn-plan-skip" id="btn-empty-skip-plan">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                            </svg>
+                            <span>Proceed Without Plan</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Right Section: 3 Capability Micro-Cards -->
+                    <div class="plans-empty-specs">
+                      <div class="plans-spec-card">
+                        <div class="plans-spec-icon-wrap is-emerald">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                          </svg>
+                        </div>
+                        <div class="plans-spec-text">
+                          <span class="plans-spec-title">Flexible Billing Cycles</span>
+                          <span class="plans-spec-sub">Monthly, quarterly, annual or customized terms</span>
+                        </div>
+                      </div>
+
+                      <div class="plans-spec-card">
+                        <div class="plans-spec-icon-wrap is-indigo">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <polyline points="9 12 11 14 15 10"/>
+                          </svg>
+                        </div>
+                        <div class="plans-spec-text">
+                          <span class="plans-spec-title">Automated Renewal &amp; Expiry</span>
+                          <span class="plans-spec-sub">Live grace period alerts &amp; member reminders</span>
+                        </div>
+                      </div>
+
+                      <div class="plans-spec-card">
+                        <div class="plans-spec-icon-wrap is-blue">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                            <polyline points="2 17 12 22 22 17"/>
+                            <polyline points="2 12 12 17 22 12"/>
+                          </svg>
+                        </div>
+                        <div class="plans-spec-text">
+                          <span class="plans-spec-title">Tier &amp; Facility Privileges</span>
+                          <span class="plans-spec-sub">Gym floor, PT inclusive or general facility access</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- One-Time Joining Fee Input -->
-            <div class="joining-fee-container">
-              <label for="member-joining-fee">One-Time Joining Fee (INR)</label>
-              <div class="joining-fee-input-wrapper">
-                <span class="joining-fee-currency">₹</span>
-                <input 
-                  type="number" 
-                  id="member-joining-fee" 
-                  value="0" 
-                  placeholder="0" 
-                  min="0"
-                />
+            <!-- One-Time Joining Fee Control Card -->
+            <div class="joining-fee-card joining-fee-container">
+              <div class="joining-fee-info-side">
+                <div class="joining-fee-title-row">
+                  <div class="joining-fee-icon-badge">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="5" width="20" height="14" rx="2"/>
+                      <line x1="2" y1="10" x2="22" y2="10"/>
+                    </svg>
+                  </div>
+                  <div class="joining-fee-title-group">
+                    <label for="member-joining-fee" class="joining-fee-label">One-Time Joining Fee (INR)</label>
+                    <span class="joining-fee-discretionary-badge">Discretionary</span>
+                  </div>
+                </div>
+                
+                <p class="joining-fee-disclaimer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="joining-fee-disclaimer-icon">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  <span>Admission &amp; registration fee is flexible and can be customized, discounted, or waived by gym owners, managers, trainers, or admission staff.</span>
+                </p>
+              </div>
+
+              <div class="joining-fee-input-side">
+                <div class="joining-fee-input-wrapper">
+                  <span class="joining-fee-currency">₹</span>
+                  <input 
+                    type="number" 
+                    id="member-joining-fee" 
+                    value="0" 
+                    placeholder="0" 
+                    min="0"
+                  />
+                  <button type="button" class="joining-fee-waive-btn" id="btn-waive-joining-fee" title="Waive fee (Set to ₹0)">
+                    Waive
+                  </button>
+                </div>
+                
+                <div class="joining-fee-preset-row">
+                  <span class="joining-fee-presets-label">Quick:</span>
+                  <button type="button" class="joining-fee-preset-chip" data-amount="0">₹0</button>
+                  <button type="button" class="joining-fee-preset-chip" data-amount="500">₹500</button>
+                  <button type="button" class="joining-fee-preset-chip" data-amount="1000">₹1,000</button>
+                  <button type="button" class="joining-fee-preset-chip" data-amount="1500">₹1,500</button>
+                </div>
               </div>
             </div>
 
@@ -1104,215 +1460,318 @@
           <div class="member-form-page" data-member-form-page="5">
             <div class="member-form-top">
               <div>
-                <p class="member-form-kicker-premium">Collect Initial Payment</p>
-                <h2 id="payment-title" class="checkout-title-premium">Bill Summary &amp; Pay</h2>
+                <p class="member-form-kicker">Payment Settlement</p>
+                <h2 id="payment-title">Bill Summary &amp; Pay</h2>
               </div>
             </div>
-            <p class="member-form-copy-premium">
-              Verify the billing details and record the transaction to activate the membership.
+            <p id="payment-copy" class="member-form-copy">
+              Review membership itemization, select a verified payment mode, and activate the member profile.
             </p>
 
-            <div class="payment-split-layout">
-              <!-- Left Column: Premium Ticket Receipt -->
-              <div class="checkout-billing-section">
-                <div class="premium-receipt-card">
-                  <!-- Receipt Top Ribbon -->
-                  <div class="receipt-header">
-                    <div class="receipt-brand">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                      <span>INVOICE SUMMARY</span>
-                    </div>
-                    <span class="receipt-status-badge">PENDING</span>
-                  </div>
-                  
-                  <div class="receipt-meta">
-                    <span class="receipt-id">TX-GD-REC-24B</span>
-                    <span class="receipt-date" id="receiptCurrentDate">-</span>
+            <!-- Main Unified Engine Canvas (Page 4 Blueprint Style) -->
+            <div class="plans-empty-state-card billing-engine-card">
+              <div class="plans-empty-grid-pattern"></div>
+              <div class="plans-empty-content-wrap">
+                <!-- Top Bar: Status Pill & Capabilities Chips -->
+                <div class="plans-empty-topbar">
+                  <div class="plans-status-pill">
+                    <span class="plans-status-dot"></span>
+                    <span class="plans-status-sub">Ref: <strong class="receipt-id">TX-GD-REC-24B</strong> • <span id="receiptCurrentDate">-</span></span>
                   </div>
 
-                  <div class="receipt-divider"></div>
-
-                  <!-- Details -->
-                  <div class="receipt-item-list">
-                    <div class="receipt-item-row">
-                      <div class="item-label-group">
-                        <div class="item-icon-wrapper plan-glow">
-                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                        </div>
-                        <div class="item-text">
-                          <span class="item-name">Selected Plan</span>
-                          <span class="item-desc">Membership type</span>
-                        </div>
-                      </div>
-                      <span id="billingPlanName" class="item-value badge-plan-premium">-</span>
-                    </div>
-
-                    <div class="receipt-item-row">
-                      <div class="item-label-group">
-                        <div class="item-icon-wrapper price-glow">
-                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M18 8.01h.01M6 16.01h.01"/></svg>
-                        </div>
-                        <div class="item-text">
-                          <span class="item-name">Plan Price</span>
-                          <span class="item-desc">Base membership rate</span>
-                        </div>
-                      </div>
-                      <span id="billingPlanPrice" class="item-value">₹0</span>
-                    </div>
-
-                    <div class="receipt-item-row">
-                      <div class="item-label-group">
-                        <div class="item-icon-wrapper fee-glow">
-                          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                        </div>
-                        <div class="item-text">
-                          <span class="item-name">Joining Fee</span>
-                          <span class="item-desc">One-time registration</span>
-                        </div>
-                      </div>
-                      <span id="billingJoiningFee" class="item-value">₹0</span>
-                    </div>
-                  </div>
-
-                  <!-- Tear-off line -->
-                  <div class="receipt-tear-line"></div>
-
-                  <!-- Total -->
-                  <div class="receipt-total-section">
-                    <div class="total-label-group">
-                      <span class="total-label">Total Amount</span>
-                      <span class="total-subtext">Tax inclusive summary</span>
-                    </div>
-                    <div class="total-value-wrapper">
-                      <span id="billingTotalAmount" class="receipt-total-value">₹0</span>
-                    </div>
+                  <div class="plans-tags-group">
+                    <span class="plans-tag-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                      Verified Itemization
+                    </span>
+                    <span class="plans-tag-divider">•</span>
+                    <span class="plans-tag-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                      256-Bit Encrypted Ledger
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              <!-- Right Column: Payment Method Selection -->
-              <div class="checkout-payment-section">
-                <span class="payment-selection-title">Select Payment Mode</span>
-                <div class="payment-modes-stack">
-                  <!-- Cash -->
-                  <label class="payment-mode-option active" data-pay-mode="Cash">
-                    <input type="radio" name="paymentMode" value="Cash" checked style="display: none;" />
-                    <div class="payment-mode-left">
-                      <div class="payment-mode-icon-wrapper cash-icon">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01"/></svg>
-                      </div>
-                      <div class="payment-mode-details">
-                        <span class="payment-mode-name">Cash</span>
-                        <span class="payment-mode-desc">Collect physical cash from the member</span>
-                      </div>
+                <!-- Main Grid: Left Section (Invoice Itemization + Total Bar) + Right Section (Payment Mode Select & Helper) -->
+                <div class="billing-engine-grid">
+                  <!-- Left Column: Itemization + Total -->
+                  <div class="billing-engine-pane">
+                    <div class="billing-pane-header">
+                      <span class="billing-pane-title">Invoice Itemization</span>
                     </div>
-                    <div class="payment-mode-selector">
-                      <div class="custom-radio-indicator"></div>
-                    </div>
-                  </label>
 
-                  <!-- UPI -->
-                  <label class="payment-mode-option" data-pay-mode="UPI">
-                    <input type="radio" name="paymentMode" value="UPI" style="display: none;" />
-                    <div class="payment-mode-left">
-                      <div class="payment-mode-icon-wrapper upi-icon">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14" rx="2" /><line x1="3" y1="10" x2="21" y2="10"/><line x1="7" y1="15" x2="13" y2="15"/></svg>
-                      </div>
-                      <div class="payment-mode-details">
-                        <span class="payment-mode-name" id="upiCardNameText">UPI / Scan QR</span>
-                        <span class="payment-mode-desc" id="upiCardDescText">Scan dynamic QR code via UPI app</span>
-                      </div>
-                    </div>
-                    <div class="payment-mode-selector">
-                      <div class="custom-radio-indicator"></div>
-                    </div>
-                  </label>
-
-                  <!-- Card -->
-                  <label class="payment-mode-option" data-pay-mode="Card">
-                    <input type="radio" name="paymentMode" value="Card" style="display: none;" />
-                    <div class="payment-mode-left">
-                      <div class="payment-mode-icon-wrapper card-icon">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                      </div>
-                      <div class="payment-mode-details">
-                        <span class="payment-mode-name">Card Terminal</span>
-                        <span class="payment-mode-desc">Process credit or debit card swipe/tap</span>
-                      </div>
-                    </div>
-                    <div class="payment-mode-selector">
-                      <div class="custom-radio-indicator"></div>
-                    </div>
-                  </label>
-                </div>
-                
-                <!-- Dynamic Helper Box based on selection -->
-                <div class="payment-helper-box">
-                  <!-- Cash helper -->
-                  <div class="helper-message helper-cash">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    <span>Please count cash currency accurately and store it in the register drawer before saving.</span>
-                  </div>
-
-                  <!-- UPI ID helper -->
-                  <div class="helper-message helper-upi-id">
-                    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
-                      <div style="display: flex; gap: 10px; align-items: flex-start;">
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-top: 2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        <span>Enter the member's UPI address (VPA) below to trigger a push payment request directly to their UPI app.</span>
-                      </div>
-                      <div class="upi-id-input-container">
-                        <input type="text" placeholder="member@upi" class="upi-id-input-field" id="upiIdInputField" />
-                        <button class="upi-request-btn" type="button" id="upiRequestPushBtn">Request</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- UPI QR helper -->
-                  <div class="helper-message helper-upi-qr">
-                    <div class="upi-qr-display-container">
-                      <div class="upi-qr-frame">
-                        <div class="qr-scanner-line" style="position: absolute; top: 0; left: 0; right: 0; height: 2.5px; background: #6366f1; box-shadow: 0 0 8px #6366f1;"></div>
-                        <svg viewBox="0 0 24 24" width="60" height="60" fill="currentColor" class="mock-qr-svg">
-                          <rect x="2" y="2" width="6" height="6" fill="#1e293b"/>
-                          <rect x="3" y="3" width="4" height="4" fill="#ffffff"/>
-                          <rect x="16" y="2" width="6" height="6" fill="#1e293b"/>
-                          <rect x="17" y="3" width="4" height="4" fill="#ffffff"/>
-                          <rect x="2" y="16" width="6" height="6" fill="#1e293b"/>
-                          <rect x="3" y="17" width="4" height="4" fill="#ffffff"/>
-                          <rect x="10" y="2" width="2" height="2"/>
-                          <rect x="13" y="4" width="2" height="2"/>
-                          <rect x="9" y="8" width="3" height="1"/>
-                          <rect x="10" y="11" width="2" height="2"/>
-                          <rect x="14" y="9" width="2" height="3"/>
-                          <rect x="18" y="10" width="3" height="2"/>
-                          <rect x="2" y="10" width="4" height="2"/>
-                          <rect x="9" y="15" width="2" height="4"/>
-                          <rect x="15" y="16" width="4" height="2"/>
-                          <rect x="19" y="19" width="3" height="3"/>
-                          <rect x="13" y="13" width="2" height="2"/>
-                        </svg>
-                      </div>
-                      <div class="upi-qr-details">
-                        <div class="upi-qr-status">
-                          <span class="qr-status-indicator pulse"></span>
-                          <span class="qr-status-text">Awaiting UPI Scan...</span>
+                    <div class="billing-spec-list">
+                      <!-- Item 1: Selected Plan -->
+                      <div class="billing-spec-row">
+                        <div class="billing-spec-left">
+                          <div class="plans-spec-icon-wrap is-indigo">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                              <polyline points="2 17 12 22 22 17"/>
+                              <polyline points="2 12 12 17 22 12"/>
+                            </svg>
+                          </div>
+                          <div class="billing-spec-info">
+                            <span class="billing-spec-name">Membership Plan</span>
+                            <span class="billing-spec-desc">Selected tier package</span>
+                          </div>
                         </div>
-                        <span class="upi-qr-help-text">Ask member to scan this QR code using any UPI app (GPay, PhonePe, Paytm) to complete payment.</span>
+                        <span id="billingPlanName" class="badge-plan-premium">No Plan Selected</span>
+                      </div>
+
+                      <!-- Item 2: Plan Base Fee -->
+                      <div class="billing-spec-row">
+                        <div class="billing-spec-left">
+                          <div class="plans-spec-icon-wrap is-emerald">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="2" y="6" width="20" height="12" rx="2" />
+                              <circle cx="12" cy="12" r="2" />
+                              <path d="M6 12h.01M18 12h.01"/>
+                            </svg>
+                          </div>
+                          <div class="billing-spec-info">
+                            <span class="billing-spec-name">Base Plan Fee</span>
+                            <span class="billing-spec-desc">Membership rate</span>
+                          </div>
+                        </div>
+                        <span id="billingPlanPrice" class="billing-price-val">₹0</span>
+                      </div>
+
+                      <!-- Item 3: One-Time Joining Fee -->
+                      <div class="billing-spec-row">
+                        <div class="billing-spec-left">
+                          <div class="plans-spec-icon-wrap is-amber">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                              <circle cx="8.5" cy="7" r="4"/>
+                              <line x1="20" y1="8" x2="20" y2="14"/>
+                              <line x1="23" y1="11" x2="17" y2="11"/>
+                            </svg>
+                          </div>
+                          <div class="billing-spec-info">
+                            <span class="billing-spec-name">One-Time Joining Fee</span>
+                            <span class="billing-spec-desc">Registration charge</span>
+                          </div>
+                        </div>
+                        <span id="billingJoiningFee" class="billing-price-val">₹0</span>
+                      </div>
+
+                      <!-- Item 4: Taxes & Surcharges -->
+                      <div class="billing-spec-row">
+                        <div class="billing-spec-left">
+                          <div class="plans-spec-icon-wrap is-blue">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                              <polyline points="9 12 11 14 15 10"/>
+                            </svg>
+                          </div>
+                          <div class="billing-spec-info">
+                            <span class="billing-spec-name">Taxes &amp; Surcharges</span>
+                            <span class="billing-spec-desc">Inclusive of all taxes</span>
+                          </div>
+                        </div>
+                        <span class="billing-tax-val">Included (₹0)</span>
+                      </div>
+                    </div>
+
+                    <!-- Total Section -->
+                    <div class="billing-total-bar">
+                      <div class="billing-total-label-wrap">
+                        <span class="billing-total-label">Total Amount Payable</span>
+                        <span class="billing-total-subtext">Tax inclusive summary</span>
+                      </div>
+                      <div class="billing-total-val-wrap">
+                        <span id="billingTotalAmount" class="billing-total-amount">₹0</span>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Card helper -->
-                  <div class="helper-message helper-card">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    <span>Initiate sale transaction on POS terminal. Ensure reader displays "Approved" message.</span>
+                  <!-- Right Column: Payment Mode Selection -->
+                  <div class="billing-engine-pane">
+                    <div class="billing-pane-header">
+                      <span class="billing-pane-title">Select Payment Mode</span>
+                    </div>
+
+                    <div class="payment-modes-stack">
+                      <!-- Cash -->
+                      <label class="payment-mode-option active" data-pay-mode="Cash">
+                        <input type="radio" name="paymentMode" value="Cash" checked style="display: none;" />
+                        <div class="payment-mode-left">
+                          <div class="plans-spec-icon-wrap is-emerald">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="2" y="6" width="20" height="12" rx="2" />
+                              <circle cx="12" cy="12" r="2" />
+                              <path d="M6 12h.01M18 12h.01"/>
+                            </svg>
+                          </div>
+                          <div class="payment-mode-details">
+                            <span class="payment-mode-name">Cash Settlement</span>
+                            <span class="payment-mode-desc">Collect physical currency at desk</span>
+                          </div>
+                        </div>
+                        <div class="payment-mode-right">
+                          <span class="payment-mode-tag is-cash">DIRECT DESK</span>
+                          <div class="custom-radio-indicator"></div>
+                        </div>
+                      </label>
+
+                      <!-- UPI -->
+                      <label class="payment-mode-option" data-pay-mode="UPI">
+                        <input type="radio" name="paymentMode" value="UPI" style="display: none;" />
+                        <div class="payment-mode-left">
+                          <div class="plans-spec-icon-wrap is-indigo">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="3" y="5" width="18" height="14" rx="2" />
+                              <line x1="3" y1="10" x2="21" y2="10"/>
+                              <line x1="7" y1="15" x2="13" y2="15"/>
+                            </svg>
+                          </div>
+                          <div class="payment-mode-details">
+                            <span class="payment-mode-name" id="upiCardNameText">UPI / Scan QR</span>
+                            <span class="payment-mode-desc" id="upiCardDescText">Dynamic QR scan or VPA push</span>
+                          </div>
+                        </div>
+                        <div class="payment-mode-right">
+                          <span class="payment-mode-tag is-upi">INSTANT</span>
+                          <div class="custom-radio-indicator"></div>
+                        </div>
+                      </label>
+
+                      <!-- Card Terminal (Dotted borders, Coming Soon, Non-clickable, Inactive) -->
+                      <div class="payment-mode-option is-disabled is-coming-soon" data-pay-mode="Card" aria-disabled="true" tabindex="-1">
+                        <div class="payment-mode-left">
+                          <div class="plans-spec-icon-wrap is-card-coming-soon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="2" y="5" width="20" height="14" rx="2"/>
+                              <line x1="2" y1="10" x2="22" y2="10"/>
+                              <line x1="6" y1="15" x2="10" y2="15"/>
+                            </svg>
+                          </div>
+                          <div class="payment-mode-details">
+                            <span class="payment-mode-name">Card Terminal</span>
+                            <span class="payment-mode-desc">POS reader swipe, tap &amp; chip processing</span>
+                          </div>
+                        </div>
+                        <div class="payment-mode-right">
+                          <span class="coming-soon-badge">COMING SOON</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Dynamic Helper Box based on selection -->
+                    <div class="payment-helper-box">
+                      <!-- Cash helper -->
+                      <div class="helper-message helper-cash">
+                        <div class="helper-icon-wrap is-cash">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /></svg>
+                        </div>
+                        <div class="helper-content">
+                          <strong class="helper-title">Cash Settlement Verification</strong>
+                          <span class="helper-desc">Collect exact cash of <strong class="pay-expected-amount" style="color: #059669; font-family: monospace;">₹0</strong> and store it in the cash drawer before saving.</span>
+                        </div>
+                      </div>
+
+                      <!-- UPI ID helper -->
+                      <div class="helper-message helper-upi-id">
+                        <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                          <div style="display: flex; gap: 8px; align-items: flex-start;">
+                            <div class="helper-icon-wrap is-upi">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </div>
+                            <div class="helper-content">
+                              <strong class="helper-title">UPI Push Payment</strong>
+                              <span class="helper-desc">Enter member's UPI ID to send payment request directly to their phone app.</span>
+                            </div>
+                          </div>
+                          <div class="upi-id-input-container">
+                            <input type="text" placeholder="member@okhdfcbank" class="upi-id-input-field" id="upiIdInputField" />
+                            <button class="upi-request-btn" type="button" id="upiRequestPushBtn">Request</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- UPI QR helper -->
+                      <div class="helper-message helper-upi-qr">
+                        <div class="upi-qr-display-container">
+                          <div class="upi-qr-frame">
+                            <div class="qr-scanner-line"></div>
+                            <svg viewBox="0 0 24 24" width="56" height="56" fill="currentColor" class="mock-qr-svg">
+                              <rect x="2" y="2" width="6" height="6" fill="#1e293b"/>
+                              <rect x="3" y="3" width="4" height="4" fill="#ffffff"/>
+                              <rect x="16" y="2" width="6" height="6" fill="#1e293b"/>
+                              <rect x="17" y="3" width="4" height="4" fill="#ffffff"/>
+                              <rect x="2" y="16" width="6" height="6" fill="#1e293b"/>
+                              <rect x="3" y="17" width="4" height="4" fill="#ffffff"/>
+                              <rect x="10" y="2" width="2" height="2"/>
+                              <rect x="13" y="4" width="2" height="2"/>
+                              <rect x="9" y="8" width="3" height="1"/>
+                              <rect x="10" y="11" width="2" height="2"/>
+                              <rect x="14" y="9" width="2" height="3"/>
+                              <rect x="18" y="10" width="3" height="2"/>
+                              <rect x="2" y="10" width="4" height="2"/>
+                              <rect x="9" y="15" width="2" height="4"/>
+                              <rect x="15" y="16" width="4" height="2"/>
+                              <rect x="19" y="19" width="3" height="3"/>
+                              <rect x="13" y="13" width="2" height="2"/>
+                            </svg>
+                          </div>
+                          <div class="upi-qr-details">
+                            <div class="upi-qr-status">
+                              <span class="qr-status-indicator pulse"></span>
+                              <span class="qr-status-text">Dynamic QR Ready (<span class="pay-expected-amount">₹0</span>)</span>
+                            </div>
+                            <span class="upi-qr-help-text">Ask member to scan this QR code using GPay, PhonePe, Paytm, or BHIM.</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
+            <!-- Secondary Control Card (styled exactly like Page 4's joining-fee-card) -->
+            <div class="joining-fee-card billing-confirmation-card">
+              <div class="joining-fee-info-side">
+                <div class="joining-fee-title-row">
+                  <div class="joining-fee-icon-badge" style="background: #eef2ff; color: #4f46e5; border: 1px solid #e0e7ff;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                  </div>
+                  <div class="joining-fee-title-group">
+                    <label for="sendDigitalReceiptCheck" class="joining-fee-label" style="cursor: pointer;">Generate &amp; Send Digital Receipt</label>
+                    <span class="joining-fee-discretionary-badge" style="background: #ecfdf5; color: #059669; border-color: #d1fae5;">Automated</span>
+                  </div>
+                </div>
+                
+                <p class="joining-fee-disclaimer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="joining-fee-disclaimer-icon">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <span>Instant System Receipt • Encrypted 256-bit audit record delivered via WhatsApp / SMS upon profile activation.</span>
+                </p>
+              </div>
 
+              <div class="billing-receipt-action-side">
+                <label class="billing-receipt-switch">
+                  <input type="checkbox" id="sendDigitalReceiptCheck" checked class="digital-receipt-toggle-input" />
+                  <span class="billing-receipt-slider"></span>
+                </label>
+              </div>
+            </div>
             <script>
               (function() {
                 const init = () => {
@@ -1358,6 +1817,11 @@
                   // Monitor previous mode selection changes
                   document.querySelectorAll(".payment-mode-option").forEach(card => {
                     card.addEventListener("click", (e) => {
+                      if (card.classList.contains("is-disabled") || card.dataset.payMode === 'Card') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
                       const mode = card.dataset.payMode;
                       if (mode !== 'UPI') {
                         previousActiveMode = mode;

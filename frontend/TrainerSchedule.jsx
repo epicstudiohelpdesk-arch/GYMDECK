@@ -61,75 +61,36 @@ const DAYS = [
 ];
 
 const KPIS = [
-  { id: 1, label: "Active Trainers Today", value: "24", trend: "+2", isUp: true, subtext: "Peak attendance" },
-  { id: 2, label: "PT Sessions Scheduled", value: "142", trend: "+12.5%", isUp: true, subtext: "84% capacity" },
-  { id: 3, label: "Trainers Available", value: "6", trend: "-2", isUp: false, subtext: "On floor now" },
-  { id: 4, label: "Schedule Conflicts", value: "0", trend: "Clean", isUp: true, subtext: "Conflict-free week" },
-  { id: 5, label: "Shift Coverage %", value: "98.2%", trend: "+1.4%", isUp: true, subtext: "Optimal staffing" },
-  { id: 6, label: "Avg Trainer Utilization", value: "76%", trend: "-2.1%", isUp: false, subtext: "Healthy balance" },
-  { id: 7, label: "Upcoming Sessions", value: "18", trend: "Next 2h", isUp: true, subtext: "Fully prepared" },
-  { id: 8, label: "Trainers On Leave", value: "3", trend: "Approved", isUp: true, subtext: "Replacements active" }
+  { id: 1, label: "Active Trainers Today", value: "0", trend: "0", isUp: true, subtext: "On duty" },
+  { id: 2, label: "PT Sessions Scheduled", value: "0", trend: "0%", isUp: true, subtext: "0% capacity" },
+  { id: 3, label: "Trainers Available", value: "0", trend: "0", isUp: false, subtext: "Available" },
+  { id: 4, label: "Schedule Conflicts", value: "0", trend: "Clean", isUp: true, subtext: "Conflict-free" },
+  { id: 5, label: "Shift Coverage %", value: "0%", trend: "0%", isUp: true, subtext: "Shift coverage" },
+  { id: 6, label: "Avg Trainer Utilization", value: "0%", trend: "0%", isUp: false, subtext: "Utilization rate" },
+  { id: 7, label: "Upcoming Sessions", value: "0", trend: "Next 2h", isUp: true, subtext: "Sessions" },
+  { id: 8, label: "Trainers On Leave", value: "0", trend: "0", isUp: true, subtext: "On leave" }
 ];
 
-const MOCK_TRAINERS = [
-  { id: "TR-101", name: "Ankit Kumar", specialization: "Strength", status: "available", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ankit" },
-  { id: "TR-102", name: "Sneha Patel", specialization: "Yoga", status: "busy", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sneha" },
-  { id: "TR-103", name: "Manav Rao", specialization: "CrossFit", status: "booked", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Manav" },
-  { id: "TR-104", name: "Priya Sharma", specialization: "Nutritionist", status: "off", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Priya" }
-];
+const MOCK_TRAINERS = [];
 
-const MOCK_SESSIONS = [
-  { 
-    id: 1, 
-    trainer: "Ankit Kumar", 
-    member: "Rohan Verma", 
-    type: "Personal Training", 
-    day: "Mon", 
-    start: 7, 
-    duration: 1.5, 
-    color: "bg-indigo-50 border-indigo-200 text-indigo-700",
-    status: "upcoming"
-  },
-  { 
-    id: 2, 
-    trainer: "Sneha Patel", 
-    member: "Meera Nair", 
-    type: "Yoga Flow", 
-    day: "Wed", 
-    start: 8, 
-    duration: 1, 
-    color: "bg-emerald-50 border-emerald-200 text-emerald-700",
-    status: "active"
-  },
-  { 
-    id: 3, 
-    trainer: "Manav Rao", 
-    member: "Aarav Sharma", 
-    type: "HIIT Session", 
-    day: "Mon", 
-    start: 17, 
-    duration: 1, 
-    color: "bg-amber-50 border-amber-200 text-amber-700",
-    status: "upcoming"
-  }
-];
+const MOCK_SESSIONS = [];
 
 // ─────────────────────────────────────────
 // COMPONENTS
 // ─────────────────────────────────────────
 
 const StatCard = ({ kpi }) => (
-  <article className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
-    <div className="flex justify-between items-start mb-2">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{kpi.label}</span>
-      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${kpi.isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+  <article className="bg-white p-3 lg:p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all min-w-0">
+    <div className="flex justify-between items-start mb-1.5 gap-1 min-w-0">
+      <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-wider text-slate-400 truncate">{kpi.label}</span>
+      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${kpi.isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
         {kpi.trend}
       </span>
     </div>
-    <div className="flex items-baseline gap-2">
-      <strong className="text-2xl font-black text-slate-900">{kpi.value}</strong>
+    <div className="flex items-baseline gap-1.5">
+      <strong className="text-xl lg:text-2xl font-black text-slate-900 leading-none">{kpi.value}</strong>
     </div>
-    <p className="text-[11px] font-medium text-slate-500 mt-1">{kpi.subtext}</p>
+    <p className="text-[10px] font-medium text-slate-500 mt-1 truncate">{kpi.subtext}</p>
   </article>
 );
 
@@ -194,7 +155,7 @@ const TrainerSchedule = () => {
       </div>
 
       {/* 7. KPI ANALYTICS STRIP */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-2 relative z-10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 lg:gap-3 mb-2 relative z-10 w-full min-w-0">
         {KPIS.map(kpi => <StatCard key={kpi.id} kpi={kpi} />)}
       </div>
 
@@ -208,22 +169,26 @@ const TrainerSchedule = () => {
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Staff List</h4>
               <div className="space-y-4">
-                {MOCK_TRAINERS.map(trainer => (
-                  <div key={trainer.id} className="flex items-center gap-3 group cursor-pointer">
-                    <div className="relative">
-                      <img src={trainer.image} alt="" className="w-10 h-10 rounded-xl bg-slate-50 grayscale group-hover:grayscale-0 transition-all" />
-                      <span className={`absolute -right-1 -bottom-1 w-3 h-3 rounded-full border-2 border-white ${
-                        trainer.status === 'available' ? 'bg-emerald-500' : 
-                        trainer.status === 'busy' ? 'bg-amber-500' :
-                        trainer.status === 'booked' ? 'bg-rose-500' : 'bg-slate-300'
-                      }`} />
+                {MOCK_TRAINERS.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-4 text-center">No trainers registered.</p>
+                ) : (
+                  MOCK_TRAINERS.map(trainer => (
+                    <div key={trainer.id} className="flex items-center gap-3 group cursor-pointer">
+                      <div className="relative">
+                        <img src={trainer.image} alt="" className="w-10 h-10 rounded-xl bg-slate-50 grayscale group-hover:grayscale-0 transition-all" />
+                        <span className={`absolute -right-1 -bottom-1 w-3 h-3 rounded-full border-2 border-white ${
+                          trainer.status === 'available' ? 'bg-emerald-500' : 
+                          trainer.status === 'busy' ? 'bg-amber-500' :
+                          trainer.status === 'booked' ? 'bg-rose-500' : 'bg-slate-300'
+                        }`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-900 truncate">{trainer.name}</p>
+                        <p className="text-[9px] font-bold text-slate-400 truncate tracking-tight">{trainer.specialization}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-black text-slate-900 truncate">{trainer.name}</p>
-                      <p className="text-[9px] font-bold text-slate-400 truncate tracking-tight">{trainer.specialization}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -344,20 +309,21 @@ const TrainerSchedule = () => {
                   <ArrowUpRight size={16} className="text-slate-400" />
                 </div>
                 <div className="space-y-4">
-                  {MOCK_TRAINERS.map(trainer => (
-                    <div key={trainer.id} className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <span>{trainer.name}</span>
-                        <span>{trainer.status === 'available' ? '78%' : trainer.status === 'busy' ? '94%' : '42%'}</span>
+                  {MOCK_TRAINERS.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-4 text-center">No trainer utilization data.</p>
+                  ) : (
+                    MOCK_TRAINERS.map(trainer => (
+                      <div key={trainer.id} className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          <span>{trainer.name}</span>
+                          <span>0%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-indigo-500" style={{ width: '0%' }} />
+                        </div>
                       </div>
-                      <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${trainer.status === 'busy' ? 'bg-rose-500' : 'bg-indigo-500'}`} 
-                          style={{ width: trainer.status === 'available' ? '78%' : trainer.status === 'busy' ? '94%' : '42%' }} 
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -370,26 +336,24 @@ const TrainerSchedule = () => {
                   <div className="relative w-32 h-32">
                     <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                       <circle cx="18" cy="18" r="16" fill="none" className="stroke-slate-50" strokeWidth="4" />
-                      <circle cx="18" cy="18" r="16" fill="none" className="stroke-indigo-500" strokeWidth="4" strokeDasharray="65, 100" />
-                      <circle cx="18" cy="18" r="16" fill="none" className="stroke-emerald-500" strokeWidth="4" strokeDasharray="25, 100" strokeDashoffset="-65" />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <strong className="text-lg font-black text-slate-900">142</strong>
+                      <strong className="text-lg font-black text-slate-900">0</strong>
                       <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Total</span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Strength (65%)</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Strength (0%)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Yoga (25%)</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Yoga (0%)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-slate-300" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Others (10%)</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Others (0%)</span>
                     </div>
                   </div>
                 </div>
@@ -415,20 +379,10 @@ const TrainerSchedule = () => {
                   <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
                     <div className="flex items-center gap-2 mb-2">
                       <Activity size={14} className="text-indigo-600" />
-                      <strong className="text-[10px] font-black text-slate-900 uppercase">Demand Spike Alert</strong>
+                      <strong className="text-[10px] font-black text-slate-900 uppercase">Schedule Status</strong>
                     </div>
                     <p className="text-[11px] font-medium text-slate-600 leading-relaxed">
-                      Peak PT demand expected between <span className="font-black">6 PM – 8 PM</span>. Consider opening 2 more slots.
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-rose-50/50 rounded-2xl border border-rose-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle size={14} className="text-rose-500" />
-                      <strong className="text-[10px] font-black text-slate-900 uppercase">Utilization Risk</strong>
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed">
-                      <span className="font-black">Rahul Sharma</span> is nearing overbooking threshold (94%). 
+                      Schedules are synchronized. Active slot recommendations will appear once sessions are booked.
                     </p>
                   </div>
                 </div>
@@ -445,8 +399,8 @@ const TrainerSchedule = () => {
               </div>
               <div className="space-y-4">
                 {[
-                  { label: "Floor Trainers", value: "8", color: "text-indigo-600", bg: "bg-indigo-50" },
-                  { label: "Ongoing PTs", value: "14", color: "text-amber-600", bg: "bg-amber-50" },
+                  { label: "Floor Trainers", value: "0", color: "text-indigo-600", bg: "bg-indigo-50" },
+                  { label: "Ongoing PTs", value: "0", color: "text-amber-600", bg: "bg-amber-50" },
                   { label: "Uncovered Shifts", value: "0", color: "text-emerald-600", bg: "bg-emerald-50" }
                 ].map(stat => (
                   <div key={stat.label} className="flex items-center justify-between p-3 rounded-2xl border border-slate-50 hover:bg-slate-50 transition-colors">

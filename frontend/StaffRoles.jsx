@@ -286,7 +286,7 @@ const StaffRoles = () => {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Role templates" value={ROLE_TEMPLATES.length} hint="Recognised by the desktop permission guard" />
         <StatCard label="Permissions" value={PERMISSIONS.length} hint="Distinct capabilities in the permission set" />
         <StatCard label="Full-access roles" value={fullAccessCount} hint="Roles granted every permission" />

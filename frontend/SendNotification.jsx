@@ -170,20 +170,7 @@ const CHANNELS = [
   }
 ];
 
-const DEFAULT_MEMBERS = [
-  { id: "MBR-0211", name: "Aarav Sharma", phone: "+91 98765 43210", email: "aarav.sharma@example.com", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80", plan: "Annual Elite", status: "ACTIVE", tags: ["PT Clients"] },
-  { id: "MBR-0521", name: "Priya Desai", phone: "+91 98123 45678", email: "priya.desai@example.com", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80", plan: "Quarterly Pro", status: "EXPIRING", tags: ["Expiring Memberships"] },
-  { id: "MBR-0184", name: "Ankit Kumar", phone: "+91 97234 56789", email: "ankit.k@example.com", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80", plan: "Monthly Starter", status: "ACTIVE", tags: ["PT Clients"] },
-  { id: "MBR-0932", name: "Kabir Singh", phone: "+91 99345 67890", email: "kabir.s@example.com", photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80", plan: "Standard Access", status: "PENDING_DUES", tags: ["Pending Dues"] },
-  { id: "MBR-0418", name: "Sneha Patel", phone: "+91 96456 78901", email: "sneha.p@example.com", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80", plan: "Annual Elite", status: "ACTIVE", tags: [] },
-  { id: "MBR-0305", name: "Rahul Verma", phone: "+91 95567 89012", email: "rahul.v@example.com", photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80", plan: "Student Basic", status: "ACTIVE", tags: [] },
-  { id: "MBR-0789", name: "Meera Nair", phone: "+91 94678 90123", email: "meera.nair@example.com", photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80", plan: "Quarterly Pro", status: "EXPIRING", tags: ["Expiring Memberships", "PT Clients"] },
-  { id: "MBR-0654", name: "Rohan Joshi", phone: "+91 93789 01234", email: "rohan.j@example.com", photo: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=80", plan: "Monthly Starter", status: "PENDING_DUES", tags: ["Pending Dues"] },
-  { id: "MBR-0823", name: "Vikram Malhotra", phone: "+91 92890 12345", email: "vikram.m@example.com", photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80", plan: "Annual Elite", status: "ACTIVE", tags: ["PT Clients"] },
-  { id: "MBR-0147", name: "Neha Kapoor", phone: "+91 91901 23456", email: "neha.k@example.com", photo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80", plan: "Weekend VIP", status: "ACTIVE", tags: [] },
-  { id: "MBR-0499", name: "Siddharth Rao", phone: "+91 90012 34567", email: "siddharth.r@example.com", photo: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&q=80", plan: "Corporate Wellness", status: "EXPIRING", tags: ["Expiring Memberships"] },
-  { id: "MBR-0731", name: "Tanvi Shah", phone: "+91 98901 45678", email: "tanvi.s@example.com", photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&q=80", plan: "Standard Access", status: "PENDING_DUES", tags: ["Pending Dues"] }
-];
+const DEFAULT_MEMBERS = [];
 
 const SEGMENT_CHIPS = [
   { id: "all", label: "All Members" },
@@ -309,7 +296,7 @@ const SendNotification = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Recipient Selection State
-  const [membersList, setMembersList] = useState(DEFAULT_MEMBERS);
+  const [membersList, setMembersList] = useState([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
   const [recipientSearch, setRecipientSearch] = useState("");
   const [activeSegment, setActiveSegment] = useState("all");
@@ -320,7 +307,7 @@ const SendNotification = () => {
     if (typeof window !== "undefined" && window.__TAURI__?.core?.invoke) {
       window.__TAURI__.core.invoke("get_members_command", { limit: 5000, offset: 0 })
         .then((dbMembers) => {
-          if (Array.isArray(dbMembers) && dbMembers.length > 0) {
+          if (Array.isArray(dbMembers)) {
             const mapped = dbMembers.map((m, idx) => ({
               id: m.member_code || (m.id ? String(m.id) : `MBR-${String(idx + 1).padStart(4, "0")}`),
               rawId: m.id,

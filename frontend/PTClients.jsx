@@ -63,132 +63,27 @@ import { motion, AnimatePresence } from "framer-motion";
 // ─────────────────────────────────────────
 
 const PT_CLIENT_GROUPS = [
-  { id: "active", label: "Active Clients", count: 42, color: "text-emerald-600", bg: "bg-emerald-50", icon: CheckCircle2 },
-  { id: "expiring", label: "Expiring Packages", count: 7, color: "text-amber-600", bg: "bg-amber-50", icon: Clock3 },
-  { id: "inactive", label: "Inactive Clients", count: 12, color: "text-slate-400", bg: "bg-slate-50", icon: X },
-  { id: "high-attendance", label: "High Attendance", count: 28, color: "text-indigo-600", bg: "bg-indigo-50", icon: Zap },
-  { id: "pending", label: "Pending Sessions", count: 5, color: "text-rose-600", bg: "bg-rose-50", icon: Calendar }
+  { id: "active", label: "Active Clients", count: 0, color: "text-emerald-600", bg: "bg-emerald-50", icon: CheckCircle2 },
+  { id: "expiring", label: "Expiring Packages", count: 0, color: "text-amber-600", bg: "bg-amber-50", icon: Clock3 },
+  { id: "inactive", label: "Inactive Clients", count: 0, color: "text-slate-400", bg: "bg-slate-50", icon: X },
+  { id: "high-attendance", label: "High Attendance", count: 0, color: "text-indigo-600", bg: "bg-indigo-50", icon: Zap },
+  { id: "pending", label: "Pending Sessions", count: 0, color: "text-rose-600", bg: "bg-rose-50", icon: Calendar }
 ];
 
 const FITNESS_GOALS = ["Weight Loss", "Muscle Gain", "Rehabilitation", "Athletes", "Senior Fitness", "Cardio Transformation"];
 
 
-const MOCK_PT_CLIENTS = [
-  {
-    id: "PTC-1001",
-    name: "Rohan Verma",
-    email: "rohan.v@example.com",
-    phone: "+91 98765 43210",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rohan",
-    status: "active",
-    trainer: "Ankit Kumar",
-    package: "Premium Elite (24 Sessions)",
-    sessionsCompleted: 18,
-    totalSessions: 24,
-    attendanceRate: 92,
-    goal: "Muscle Gain",
-    expiryDate: "2026-06-15",
-    revenue: 45000,
-    lastSession: "Yesterday",
-    progress: 75,
-    metrics: {
-      weight: "78.5 kg",
-      targetWeight: "82.0 kg",
-      bodyFat: "18.2%",
-      bmi: "24.5",
-      muscleGain: "+2.4 kg"
-    },
-    engagementScore: 94
-  },
-  {
-    id: "PTC-1002",
-    name: "Aisha Khan",
-    email: "aisha.k@example.com",
-    phone: "+91 98111 22233",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aisha",
-    status: "expiring",
-    trainer: "Sneha Patel",
-    package: "Monthly Starter (12 Sessions)",
-    sessionsCompleted: 10,
-    totalSessions: 12,
-    attendanceRate: 85,
-    goal: "Weight Loss",
-    expiryDate: "2026-05-25",
-    revenue: 12000,
-    lastSession: "2 days ago",
-    progress: 83,
-    metrics: {
-      weight: "64.2 kg",
-      targetWeight: "58.0 kg",
-      bodyFat: "24.5%",
-      bmi: "22.1",
-      muscleGain: "-0.5 kg"
-    },
-    engagementScore: 78
-  },
-  {
-    id: "PTC-1003",
-    name: "Vikram Malhotra",
-    email: "vikram.m@example.com",
-    phone: "+91 99000 12345",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Vikram",
-    status: "active",
-    trainer: "Manav Rao",
-    package: "Transformation Pro (36 Sessions)",
-    sessionsCompleted: 12,
-    totalSessions: 36,
-    attendanceRate: 98,
-    goal: "Athletes",
-    expiryDate: "2026-08-10",
-    revenue: 85000,
-    lastSession: "Today",
-    progress: 33,
-    metrics: {
-      weight: "82.0 kg",
-      targetWeight: "80.0 kg",
-      bodyFat: "12.5%",
-      bmi: "23.8",
-      muscleGain: "+1.2 kg"
-    },
-    engagementScore: 99
-  },
-  {
-    id: "PTC-1004",
-    name: "Meera Nair",
-    email: "meera.n@example.com",
-    phone: "+91 98222 33344",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Meera",
-    status: "inactive",
-    trainer: "Priya Sharma",
-    package: "Senior Vitality (20 Sessions)",
-    sessionsCompleted: 15,
-    totalSessions: 20,
-    attendanceRate: 65,
-    goal: "Senior Fitness",
-    expiryDate: "2026-04-30",
-    revenue: 18000,
-    lastSession: "12 days ago",
-    progress: 75,
-    metrics: {
-      weight: "58.5 kg",
-      targetWeight: "60.0 kg",
-      bodyFat: "22.1%",
-      bmi: "21.5",
-      muscleGain: "+0.2 kg"
-    },
-    engagementScore: 42
-  }
-];
+const MOCK_PT_CLIENTS = [];
 
 const PT_ANALYTICS = [
-  { id: 1, label: "Active PT Clients", value: "142", trend: "+12.5%", isUp: true, subtext: "Peak attendance", icon: Users },
-  { id: 2, label: "Sessions Today", value: "24", trend: "+2", isUp: true, subtext: "84% capacity", icon: Clock },
-  { id: 3, label: "PT Revenue (MTD)", value: "₹8.4L", trend: "+18.2%", isUp: true, subtext: "Target: ₹10L", icon: BarChart3 },
-  { id: 4, label: "Upcoming Renewals", value: "18", trend: "-5", isUp: true, subtext: "Next 7 days", icon: RefreshCw },
-  { id: 5, label: "Avg Attendance %", value: "88.4%", trend: "+2.1%", isUp: true, subtext: "System healthy", icon: Activity },
-  { id: 6, label: "Active Plans", value: "96", trend: "+8", isUp: true, subtext: "Across 4 goals", icon: Target },
-  { id: 7, label: "Package Expiry", value: "12", trend: "Critical", isUp: false, subtext: "Action required", icon: AlertCircle },
-  { id: 8, label: "Trainer Utilization", value: "76%", trend: "-2.1%", isUp: false, subtext: "Healthy balance", icon: Award }
+  { id: 1, label: "Active PT Clients", value: "0", trend: "0%", isUp: true, subtext: "Active clients", icon: Users },
+  { id: 2, label: "Sessions Today", value: "0", trend: "0", isUp: true, subtext: "0% capacity", icon: Clock },
+  { id: 3, label: "PT Revenue (MTD)", value: "₹0", trend: "0%", isUp: true, subtext: "Target: ₹0", icon: BarChart3 },
+  { id: 4, label: "Upcoming Renewals", value: "0", trend: "0", isUp: true, subtext: "Next 7 days", icon: RefreshCw },
+  { id: 5, label: "Avg Attendance %", value: "0%", trend: "0%", isUp: true, subtext: "System healthy", icon: Activity },
+  { id: 6, label: "Active Plans", value: "0", trend: "0", isUp: true, subtext: "Across goals", icon: Target },
+  { id: 7, label: "Package Expiry", value: "0", trend: "0", isUp: false, subtext: "Action required", icon: AlertCircle },
+  { id: 8, label: "Trainer Utilization", value: "0%", trend: "0%", isUp: false, subtext: "Healthy balance", icon: Award }
 ];
 
 // ─────────────────────────────────────────
@@ -663,15 +558,23 @@ export default function PTClients() {
 
             {viewMode === "grid" ? (
               <div className="grid grid-cols-2 gap-6">
-                <AnimatePresence mode="popLayout">
-                  {filteredClients.map((client) => (
-                    <ClientCard 
-                      key={client.id} 
-                      client={client} 
-                      onClick={handleClientClick} 
-                    />
-                  ))}
-                </AnimatePresence>
+                {filteredClients.length === 0 ? (
+                  <div className="col-span-2 py-16 text-center bg-white rounded-3xl border border-slate-200">
+                    <Users size={32} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                    <p className="text-sm font-semibold text-slate-700">No personal training clients found</p>
+                    <p className="text-xs text-slate-400 mt-1">Assign members to personal trainers to track sessions and fitness milestones</p>
+                  </div>
+                ) : (
+                  <AnimatePresence mode="popLayout">
+                    {filteredClients.map((client) => (
+                      <ClientCard 
+                        key={client.id} 
+                        client={client} 
+                        onClick={handleClientClick} 
+                      />
+                    ))}
+                  </AnimatePresence>
+                )}
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
@@ -687,49 +590,59 @@ export default function PTClients() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredClients.map((client) => (
-                      <tr key={client.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => handleClientClick(client)}>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-3">
-                            <img src={client.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
-                            <div>
-                              <p className="text-sm font-black text-slate-900 leading-tight">{client.name}</p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{client.id}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <p className="text-sm font-bold text-slate-700">{client.trainer}</p>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-slate-900">{client.totalSessions - client.sessionsCompleted}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">of {client.totalSessions}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${client.attendanceRate}%` }} />
-                            </div>
-                            <span className="text-xs font-black text-slate-900">{client.attendanceRate}%</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                            client.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 
-                            client.status === 'expiring' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {client.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-5 text-right">
-                          <button className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 transition-colors">
-                            <MoreHorizontal size={18} />
-                          </button>
+                    {filteredClients.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center text-slate-400">
+                          <Users size={32} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                          <p className="text-sm font-semibold text-slate-700">No personal training clients found</p>
+                          <p className="text-xs text-slate-400 mt-1">Assign members to personal trainers to track sessions and fitness milestones</p>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredClients.map((client) => (
+                        <tr key={client.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => handleClientClick(client)}>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <img src={client.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" />
+                              <div>
+                                <p className="text-sm font-black text-slate-900 leading-tight">{client.name}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{client.id}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <p className="text-sm font-bold text-slate-700">{client.trainer}</p>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-black text-slate-900">{client.totalSessions - client.sessionsCompleted}</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">of {client.totalSessions}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${client.attendanceRate}%` }} />
+                              </div>
+                              <span className="text-xs font-black text-slate-900">{client.attendanceRate}%</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                              client.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 
+                              client.status === 'expiring' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {client.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <button className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 transition-colors">
+                              <MoreHorizontal size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -747,24 +660,9 @@ export default function PTClients() {
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">AI PT Insights</h3>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="w-1 h-10 bg-amber-400 rounded-full" />
+                  <div className="w-1 h-10 bg-indigo-400 rounded-full" />
                   <div>
-                    <p className="text-xs font-black text-slate-900 leading-snug">7 PT clients nearing package expiry within 5 days.</p>
-                    <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-2 hover:underline">Send Reminders</button>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-1 h-10 bg-emerald-400 rounded-full" />
-                  <div>
-                    <p className="text-xs font-black text-slate-900 leading-snug">Weight loss program engagement increased 12% this week.</p>
-                    <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-2 hover:underline">View Progress</button>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-1 h-10 bg-rose-400 rounded-full" />
-                  <div>
-                    <p className="text-xs font-black text-slate-900 leading-snug">Client "Rohan Verma" missed 2 sessions. Risk of churn.</p>
-                    <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-2 hover:underline">Contact Trainer</button>
+                    <p className="text-xs font-black text-slate-900 leading-snug">All PT clients on schedule. Churn risk and session follow-up alerts will appear here.</p>
                   </div>
                 </div>
               </div>
@@ -772,31 +670,10 @@ export default function PTClients() {
 
             <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Live Session Status</h3>
-              <div className="space-y-5">
-                {[1, 2, 3].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Trainer${i}`} className="w-10 h-10 rounded-xl" />
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-slate-900 leading-none mb-1">Coach Vikram</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Leg Transformation</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-black text-slate-900">42m / 60m</p>
-                      <div className="w-12 h-1 bg-slate-100 rounded-full mt-1">
-                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: '70%' }} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="py-8 text-center text-slate-400">
+                <Clock size={24} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                <p className="text-xs font-semibold text-slate-600">No live PT sessions currently active</p>
               </div>
-              <button className="w-full mt-6 py-4 bg-slate-50 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-100 transition-colors">
-                View All Live Sessions
-              </button>
             </div>
 
             <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-8 rounded-[40px] text-white relative overflow-hidden shadow-2xl shadow-indigo-100">
@@ -822,15 +699,15 @@ export default function PTClients() {
               </select>
             </div>
             <div className="h-48 flex items-end gap-3 px-2">
-              {[40, 65, 45, 90, 75, 100].map((h, i) => (
+              {[0, 0, 0, 0, 0, 0].map((h, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
                   <motion.div 
                     initial={{ height: 0 }}
-                    animate={{ height: `${h}%` }}
+                    animate={{ height: `4px` }}
                     className="w-full bg-slate-100 rounded-t-xl group-hover:bg-indigo-500 transition-colors relative"
                   >
                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                      ₹{h}k
+                      ₹0
                     </div>
                   </motion.div>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">

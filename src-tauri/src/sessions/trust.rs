@@ -21,9 +21,7 @@ impl TrustEngine {
         let hw_uid = machine_uid::get().unwrap_or_else(|_| "UNKNOWN_HW_UID".to_string());
         hasher.update(hw_uid.as_bytes());
 
-        // 2. OS Invariants
-        let _sys = System::new_all();
-        
+        // 2. OS Invariants (Using static OS queries without costly full-system process scanning)
         if let Some(os_name) = System::name() {
             hasher.update(os_name.as_bytes());
         }

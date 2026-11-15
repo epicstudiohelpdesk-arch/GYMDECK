@@ -812,7 +812,12 @@ const autofillRememberedCredentials = () => {
                         document.querySelector('.auth-form input[placeholder*="password"]');
   const checkbox = document.getElementById('remember');
 
-  if (!emailInput || !passwordInput || !checkbox) return;
+  if (!emailInput || !passwordInput) return;
+
+  // Clear any residual values so inputs are always blank on initial load
+  emailInput.value = "";
+  passwordInput.value = "";
+  if (checkbox) checkbox.checked = false;
 
   const rememberedEmail = localStorage.getItem('gymdeck_remembered_email');
   const expires = localStorage.getItem('gymdeck_remember_expires');
@@ -823,10 +828,9 @@ const autofillRememberedCredentials = () => {
       let accounts = {};
       try { accounts = JSON.parse(accountsStr); } catch (e) {}
 
-      if (accounts[rememberedEmail]) {
+      if (accounts[rememberedEmail] && checkbox && checkbox.checked) {
         emailInput.value = rememberedEmail;
         passwordInput.value = accounts[rememberedEmail];
-        checkbox.checked = false;
       }
     } else {
       localStorage.removeItem('gymdeck_remembered_email');

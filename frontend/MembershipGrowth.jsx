@@ -52,39 +52,33 @@ import { createRoot } from "react-dom/client";
 const BRANCHES = ["All Branches", "Main Branch", "Downtown", "North Gym", "East Side"];
 
 const GROWTH_KPIS = [
-  { id: 1, label: "Total Active", value: "2,842", trend: "+8.4%", isUp: true, icon: Users, color: "bg-indigo-600" },
-  { id: 2, label: "New Joins (Mo)", value: "148", trend: "+12.1%", isUp: true, icon: UserPlus, color: "bg-emerald-500" },
-  { id: 3, label: "Growth Rate", value: "14.2%", trend: "+2.4%", isUp: true, icon: TrendingUp, color: "bg-blue-500" },
-  { id: 4, label: "Renewal Rate", value: "78%", trend: "-1.2%", isUp: false, icon: RefreshCcw, color: "bg-amber-500" },
-  { id: 5, label: "Churn Rate", value: "4.2%", trend: "-0.5%", isUp: true, icon: UserMinus, color: "bg-rose-500" },
-  { id: 6, label: "Avg Lifetime", value: "14.2 Mo", trend: "+1.1 Mo", isUp: true, icon: Clock, color: "bg-purple-500" },
-  { id: 7, label: "PT Conversion", value: "24%", trend: "+5.8%", isUp: true, icon: Target, color: "bg-cyan-500" },
-  { id: 8, label: "Rev Per Member", value: "₹4,850", trend: "+₹420", isUp: true, icon: DollarSign, color: "bg-orange-500" }
+  { id: 1, label: "Total Active", value: "0", trend: "0%", isUp: true, icon: Users, color: "bg-indigo-600" },
+  { id: 2, label: "New Joins (Mo)", value: "0", trend: "0%", isUp: true, icon: UserPlus, color: "bg-emerald-500" },
+  { id: 3, label: "Growth Rate", value: "0%", trend: "0%", isUp: true, icon: TrendingUp, color: "bg-blue-500" },
+  { id: 4, label: "Renewal Rate", value: "0%", trend: "0%", isUp: false, icon: RefreshCcw, color: "bg-amber-500" },
+  { id: 5, label: "Churn Rate", value: "0%", trend: "0%", isUp: true, icon: UserMinus, color: "bg-rose-500" },
+  { id: 6, label: "Avg Lifetime", value: "0 Mo", trend: "0 Mo", isUp: true, icon: Clock, color: "bg-purple-500" },
+  { id: 7, label: "PT Conversion", value: "0%", trend: "0%", isUp: true, icon: Target, color: "bg-cyan-500" },
+  { id: 8, label: "Rev Per Member", value: "₹0", trend: "₹0", isUp: true, icon: DollarSign, color: "bg-orange-500" }
 ];
 
 const MEMBER_SEGMENTS = [
-  { id: "monthly", label: "Monthly Plans", count: 842, color: "text-blue-500" },
-  { id: "quarterly", label: "Quarterly Plans", count: 1240, color: "text-indigo-500" },
-  { id: "annual", label: "Annual Plans", count: 642, color: "text-emerald-500" },
-  { id: "pt", label: "PT Members", count: 428, color: "text-orange-500" },
-  { id: "vip", label: "VIP Members", count: 112, color: "text-purple-500" }
+  { id: "monthly", label: "Monthly Plans", count: 0, color: "text-blue-500" },
+  { id: "quarterly", label: "Quarterly Plans", count: 0, color: "text-indigo-500" },
+  { id: "annual", label: "Annual Plans", count: 0, color: "text-emerald-500" },
+  { id: "pt", label: "PT Members", count: 0, color: "text-orange-500" },
+  { id: "vip", label: "VIP Members", count: 0, color: "text-purple-500" }
 ];
 
 const FUNNEL_DATA = [
-  { stage: "Lead", value: "2,400", sub: "New Inquiries", percent: "100%" },
-  { stage: "Trial", value: "1,200", sub: "Trial Passes", percent: "50%" },
-  { stage: "Member", value: "640", sub: "Conversions", percent: "26%" },
-  { stage: "PT Client", value: "142", sub: "Upsells", percent: "6%" },
-  { stage: "Renewed", value: "480", sub: "Retention", percent: "75%" }
+  { stage: "Lead", value: "0", sub: "New Inquiries", percent: "0%" },
+  { stage: "Trial", value: "0", sub: "Trial Passes", percent: "0%" },
+  { stage: "Member", value: "0", sub: "Conversions", percent: "0%" },
+  { stage: "PT Client", value: "0", sub: "Upsells", percent: "0%" },
+  { stage: "Renewed", value: "0", sub: "Retention", percent: "0%" }
 ];
 
-const MOCK_GROWTH_LIST = [
-  { id: "MEM-8801", name: "Vikrant Singh", plan: "Annual Elite", joinDate: "2026-05-18", status: "Active", attendance: 92, ltv: "₹18,000", pt: "Yes", branch: "Main Branch", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Vikrant" },
-  { id: "MEM-8802", name: "Ishita Rao", plan: "Quarterly Pro", joinDate: "2026-05-15", status: "Pending Renewal", attendance: 45, ltv: "₹8,500", pt: "No", branch: "Downtown", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ishita" },
-  { id: "MEM-8803", name: "Kabir Mehra", plan: "Monthly Basic", joinDate: "2026-05-20", status: "Active", attendance: 100, ltv: "₹2,499", pt: "No", branch: "North Gym", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kabir" },
-  { id: "MEM-8804", name: "Zoya Khan", plan: "Annual Elite", joinDate: "2026-05-10", status: "Active", attendance: 88, ltv: "₹18,000", pt: "Yes", branch: "East Side", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Zoya" },
-  { id: "MEM-8805", name: "Arjun Das", plan: "Pro Plus", joinDate: "2026-05-12", status: "Expired", attendance: 12, ltv: "₹12,400", pt: "Yes", branch: "Main Branch", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Arjun" }
-];
+const MOCK_GROWTH_LIST = [];
 
 // ─────────────────────────────────────────
 // SUB-COMPONENTS
@@ -342,7 +336,7 @@ const MembershipGrowth = () => {
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead to Long-Term Retention</span>
                   </div>
                   <div className="flex items-center gap-3">
-                     <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest border border-emerald-100">+14.2% Efficiency</div>
+                     <div className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest border border-slate-200">0% Efficiency</div>
                   </div>
                </div>
 
@@ -405,46 +399,56 @@ const MembershipGrowth = () => {
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-50">
-                        {MOCK_GROWTH_LIST.map((mem, idx) => (
-                           <motion.tr 
-                              key={mem.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
-                              className="hover:bg-slate-50/80 transition-all group cursor-pointer"
-                           >
-                              <td className="px-8 py-5">
-                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 group-hover:scale-110 transition-transform">
-                                       <img src={mem.image} alt={mem.name} className="w-full h-full object-cover" />
+                        {MOCK_GROWTH_LIST.length === 0 ? (
+                           <tr>
+                              <td colSpan={6} className="py-12 text-center text-slate-400">
+                                 <Users size={28} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                                 <p className="text-xs font-semibold text-slate-600">No member acquisition records found</p>
+                                 <p className="text-[11px] text-slate-400 mt-0.5">Member cohorts and lifetime value will appear here</p>
+                              </td>
+                           </tr>
+                        ) : (
+                           MOCK_GROWTH_LIST.map((mem, idx) => (
+                              <motion.tr 
+                                 key={mem.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
+                                 className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                              >
+                                 <td className="px-8 py-5">
+                                    <div className="flex items-center gap-3">
+                                       <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 group-hover:scale-110 transition-transform">
+                                          <img src={mem.image} alt={mem.name} className="w-full h-full object-cover" />
+                                       </div>
+                                       <div>
+                                          <span className="block text-[12px] font-black text-slate-900 leading-tight mb-0.5">{mem.name}</span>
+                                          <span className="text-[9px] font-bold text-slate-400 uppercase">{mem.branch}</span>
+                                       </div>
                                     </div>
-                                    <div>
-                                       <span className="block text-[12px] font-black text-slate-900 leading-tight mb-0.5">{mem.name}</span>
-                                       <span className="text-[9px] font-bold text-slate-400 uppercase">{mem.branch}</span>
+                                 </td>
+                                 <td className="px-6 py-5">
+                                    <span className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-[9px] font-black text-indigo-600 uppercase tracking-widest">{mem.plan}</span>
+                                 </td>
+                                 <td className="px-6 py-5">
+                                    <span className="text-[11px] font-bold text-slate-500 uppercase">{mem.joinDate}</span>
+                                 </td>
+                                 <td className="px-6 py-5">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${mem.pt === 'Yes' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-300'}`}>
+                                       {mem.pt === 'Yes' ? <Target size={14} /> : <Users size={14} />}
                                     </div>
-                                 </div>
-                              </td>
-                              <td className="px-6 py-5">
-                                 <span className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-[9px] font-black text-indigo-600 uppercase tracking-widest">{mem.plan}</span>
-                              </td>
-                              <td className="px-6 py-5">
-                                 <span className="text-[11px] font-bold text-slate-500 uppercase">{mem.joinDate}</span>
-                              </td>
-                              <td className="px-6 py-5">
-                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${mem.pt === 'Yes' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-300'}`}>
-                                    {mem.pt === 'Yes' ? <Target size={14} /> : <Users size={14} />}
-                                 </div>
-                              </td>
-                              <td className="px-6 py-5">
-                                 <div className="flex items-center gap-3">
-                                    <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
-                                       <div className={`h-full ${mem.attendance > 70 ? 'bg-emerald-500' : mem.attendance > 40 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${mem.attendance}%` }} />
+                                 </td>
+                                 <td className="px-6 py-5">
+                                    <div className="flex items-center gap-3">
+                                       <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
+                                          <div className={`h-full ${mem.attendance > 70 ? 'bg-emerald-500' : mem.attendance > 40 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${mem.attendance}%` }} />
+                                       </div>
+                                       <span className="text-[10px] font-black text-slate-900">{mem.attendance}%</span>
                                     </div>
-                                    <span className="text-[10px] font-black text-slate-900">{mem.attendance}%</span>
-                                 </div>
-                              </td>
-                              <td className="px-8 py-5 text-right">
-                                 <span className="text-[12px] font-black text-slate-900 uppercase">{mem.ltv}</span>
-                              </td>
-                           </motion.tr>
-                        ))}
+                                 </td>
+                                 <td className="px-8 py-5 text-right">
+                                    <span className="text-[12px] font-black text-slate-900 uppercase">{mem.ltv}</span>
+                                 </td>
+                              </motion.tr>
+                           ))
+                        )}
                      </tbody>
                   </table>
                </div>

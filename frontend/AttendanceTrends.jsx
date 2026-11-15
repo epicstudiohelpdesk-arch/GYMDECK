@@ -58,27 +58,21 @@ const ATTENDANCE_CATEGORIES = [
 ];
 
 const MOCK_PEAK_HOURS = [
-  { hour: "06 AM", val: 45 }, { hour: "07 AM", val: 85 }, { hour: "08 AM", val: 95 },
-  { hour: "09 AM", val: 70 }, { hour: "10 AM", val: 40 }, { hour: "11 AM", val: 25 },
-  { hour: "12 PM", val: 15 }, { hour: "01 PM", val: 20 }, { hour: "02 PM", val: 18 },
-  { hour: "03 PM", val: 30 }, { hour: "04 PM", val: 55 }, { hour: "05 PM", val: 80 },
-  { hour: "06 PM", val: 100 }, { hour: "07 PM", val: 92 }, { hour: "08 PM", val: 75 },
-  { hour: "09 PM", val: 45 }, { hour: "10 PM", val: 20 }
+  { hour: "06 AM", val: 0 }, { hour: "07 AM", val: 0 }, { hour: "08 AM", val: 0 },
+  { hour: "09 AM", val: 0 }, { hour: "10 AM", val: 0 }, { hour: "11 AM", val: 0 },
+  { hour: "12 PM", val: 0 }, { hour: "01 PM", val: 0 }, { hour: "02 PM", val: 0 },
+  { hour: "03 PM", val: 0 }, { hour: "04 PM", val: 0 }, { hour: "05 PM", val: 0 },
+  { hour: "06 PM", val: 0 }, { hour: "07 PM", val: 0 }, { hour: "08 PM", val: 0 },
+  { hour: "09 PM", val: 0 }, { hour: "10 PM", val: 0 }
 ];
 
 const MOCK_DAILY_STATS = [
-  { day: "Mon", checkins: 245 }, { day: "Tue", checkins: 210 }, { day: "Wed", checkins: 265 },
-  { day: "Thu", checkins: 230 }, { day: "Fri", checkins: 280 }, { day: "Sat", checkins: 195 },
-  { day: "Sun", checkins: 150 }
+  { day: "Mon", checkins: 0 }, { day: "Tue", checkins: 0 }, { day: "Wed", checkins: 0 },
+  { day: "Thu", checkins: 0 }, { day: "Fri", checkins: 0 }, { day: "Sat", checkins: 0 },
+  { day: "Sun", checkins: 0 }
 ];
 
-const ENGAGEMENT_RECORDS = [
-  { id: "MEM-4421", name: "Rahul Sharma", tier: "Elite", branch: "Main Branch", streak: "12 Days", lastCheckin: "Today, 07:15 AM", status: "Active", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rahul" },
-  { id: "MEM-4422", name: "Anjali Gupta", tier: "Pro", branch: "Downtown", streak: "4 Days", lastCheckin: "Today, 08:30 AM", status: "Active", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Anjali" },
-  { id: "MEM-4423", name: "Vikram Malhotra", tier: "Elite", branch: "Main Branch", streak: "0 Days", lastCheckin: "Yesterday, 06:45 PM", status: "Inactive", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Vikram" },
-  { id: "MEM-4424", name: "Sanya Iyer", tier: "Basic", branch: "North Gym", streak: "22 Days", lastCheckin: "Today, 09:10 AM", status: "Active", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sanya" },
-  { id: "MEM-4425", name: "Amit Verma", tier: "Pro Plus", branch: "East Side", streak: "1 Day", lastCheckin: "Today, 10:20 AM", status: "Active", image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Amit" }
-];
+const ENGAGEMENT_RECORDS = [];
 
 // ─────────────────────────────────────────
 // SUB-COMPONENTS
@@ -183,14 +177,14 @@ const AttendanceTrends = () => {
 
       {/* 7. KPI ANALYTICS STRIP */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-2 relative z-10">
-        <KPICard title="Check-ins Today" value="428" trend="+14.2%" isUp={true} icon={UserCheck} color="bg-indigo-600" delay={0.05} />
-        <KPICard title="Peak Occupancy" value="92%" trend="+8.1%" isUp={true} icon={Flame} color="bg-rose-500" delay={0.1} />
-        <KPICard title="Avg. Duration" value="72m" trend="+5.2%" isUp={true} icon={Timer} color="bg-blue-500" delay={0.15} />
-        <KPICard title="Retention Rate" value="84%" trend="+2.4%" isUp={true} icon={Award} color="bg-emerald-500" delay={0.2} />
-        <KPICard title="Morning Batch" value="184" trend="-4.2%" isUp={false} icon={CloudSun} color="bg-amber-500" delay={0.25} />
-        <KPICard title="Evening Batch" value="244" trend="+6.1%" isUp={true} icon={Moon} color="bg-purple-500" delay={0.3} />
-        <KPICard title="Weekly Growth" value="+12%" trend="Stable" isUp={true} icon={Activity} delay={0.35} color="bg-cyan-500" />
-        <KPICard title="Inactive (7D)" value="42" trend="-8%" isUp={true} icon={UserMinus} color="bg-slate-500" delay={0.4} />
+        <KPICard title="Check-ins Today" value="0" trend="0%" isUp={true} icon={UserCheck} color="bg-indigo-600" delay={0.05} />
+        <KPICard title="Peak Occupancy" value="0%" trend="0%" isUp={true} icon={Flame} color="bg-rose-500" delay={0.1} />
+        <KPICard title="Avg. Duration" value="0m" trend="0%" isUp={true} icon={Timer} color="bg-blue-500" delay={0.15} />
+        <KPICard title="Retention Rate" value="0%" trend="0%" isUp={true} icon={Award} color="bg-emerald-500" delay={0.2} />
+        <KPICard title="Morning Batch" value="0" trend="0%" isUp={false} icon={CloudSun} color="bg-amber-500" delay={0.25} />
+        <KPICard title="Evening Batch" value="0" trend="0%" isUp={true} icon={Moon} color="bg-purple-500" delay={0.3} />
+        <KPICard title="Weekly Growth" value="0%" trend="Stable" isUp={true} icon={Activity} delay={0.35} color="bg-cyan-500" />
+        <KPICard title="Inactive (7D)" value="0" trend="0%" isUp={true} icon={UserMinus} color="bg-slate-500" delay={0.4} />
       </div>
 
       <div className="attendance-analytics-workspace">
@@ -241,10 +235,10 @@ const AttendanceTrends = () => {
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-4">Operational Filters</span>
                 <div className="space-y-2">
                   {[
-                    { label: "High Occupancy", color: "bg-rose-500", count: "90%+" },
-                    { label: "Active Streaks", color: "bg-emerald-500", count: "124" },
-                    { label: "Churn Risk", color: "bg-amber-500", count: "18" },
-                    { label: "Peak Load", color: "bg-indigo-500", count: "06 PM" }
+                    { label: "High Occupancy", color: "bg-rose-500", count: "0" },
+                    { label: "Active Streaks", color: "bg-emerald-500", count: "0" },
+                    { label: "Churn Risk", color: "bg-amber-500", count: "0" },
+                    { label: "Peak Load", color: "bg-indigo-500", count: "00:00" }
                   ].map((filter, i) => (
                     <button key={i} className="w-full flex items-center gap-3 px-4 py-3 rounded-[16px] border border-slate-200 bg-white hover:border-indigo-500 hover:bg-indigo-50/20 transition-all group">
                       <span className={`w-2 h-2 rounded-full ${filter.color}`} />
@@ -352,39 +346,49 @@ const AttendanceTrends = () => {
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-50">
-                        {ENGAGEMENT_RECORDS.map((rec, idx) => (
-                           <motion.tr 
-                              key={rec.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
-                              className="hover:bg-slate-50/80 transition-all group cursor-pointer"
-                           >
-                              <td className="px-8 py-5">
-                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
-                                       <img src={rec.image} alt={rec.name} className="w-full h-full object-cover" />
+                        {ENGAGEMENT_RECORDS.length === 0 ? (
+                           <tr>
+                              <td colSpan={5} className="py-12 text-center text-slate-400">
+                                 <Users size={28} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                                 <p className="text-xs font-semibold text-slate-600">No member check-in records found</p>
+                                 <p className="text-[11px] text-slate-400 mt-0.5">Live turnstile and QR pass check-ins will populate here</p>
+                              </td>
+                           </tr>
+                        ) : (
+                           ENGAGEMENT_RECORDS.map((rec, idx) => (
+                              <motion.tr 
+                                 key={rec.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
+                                 className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                              >
+                                 <td className="px-8 py-5">
+                                    <div className="flex items-center gap-3">
+                                       <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                                          <img src={rec.image} alt={rec.name} className="w-full h-full object-cover" />
+                                       </div>
+                                       <div>
+                                          <span className="block text-[12px] font-black text-slate-900 leading-tight mb-0.5">{rec.name}</span>
+                                          <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-tighter">{rec.tier} Member</span>
+                                       </div>
                                     </div>
-                                    <div>
-                                       <span className="block text-[12px] font-black text-slate-900 leading-tight mb-0.5">{rec.name}</span>
-                                       <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-tighter">{rec.tier} Member</span>
+                                 </td>
+                                 <td className="px-6 py-5 text-[11px] font-bold text-slate-600 uppercase">{rec.lastCheckin}</td>
+                                 <td className="px-6 py-5">
+                                    <div className="flex items-center gap-2">
+                                       <Flame size={14} className="text-orange-500" />
+                                       <span className="text-[11px] font-black text-slate-900 uppercase">{rec.streak}</span>
                                     </div>
-                                 </div>
-                              </td>
-                              <td className="px-6 py-5 text-[11px] font-bold text-slate-600 uppercase">{rec.lastCheckin}</td>
-                              <td className="px-6 py-5">
-                                 <div className="flex items-center gap-2">
-                                    <Flame size={14} className="text-orange-500" />
-                                    <span className="text-[11px] font-black text-slate-900 uppercase">{rec.streak}</span>
-                                 </div>
-                              </td>
-                              <td className="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase">{rec.branch}</td>
-                              <td className="px-8 py-5 text-right">
-                                 <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                    rec.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                                 }`}>
-                                    {rec.status}
-                                 </span>
-                              </td>
-                           </motion.tr>
-                        ))}
+                                 </td>
+                                 <td className="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase">{rec.branch}</td>
+                                 <td className="px-8 py-5 text-right">
+                                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                       rec.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                                    }`}>
+                                       {rec.status}
+                                    </span>
+                                 </td>
+                              </motion.tr>
+                           ))
+                        )}
                      </tbody>
                   </table>
                </div>
@@ -410,19 +414,11 @@ const AttendanceTrends = () => {
                   </div>
 
                   <div className="space-y-4">
-                     <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 hover:border-indigo-500/50 transition-all cursor-default group/item">
+                     <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 transition-all cursor-default group/item">
                         <div className="flex gap-4">
                            <Users size={18} className="text-emerald-400 shrink-0 mt-0.5" />
                            <p className="text-[13px] font-medium text-slate-300 leading-relaxed">
-                              Morning batch engagement up <span className="font-black text-white">22%</span>. Opportunity for new class slot at 08 AM.
-                           </p>
-                        </div>
-                     </div>
-                     <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 hover:border-indigo-500/50 transition-all cursor-default group/item">
-                        <div className="flex gap-4">
-                           <AlertCircle size={18} className="text-rose-400 shrink-0 mt-0.5" />
-                           <p className="text-[13px] font-medium text-slate-300 leading-relaxed">
-                              <span className="font-black text-white">12 Elite members</span> haven't visited in 5 days. Churn risk detected.
+                              Turnstile telemetry online. Real-time batch attendance insights will stream here.
                            </p>
                         </div>
                      </div>

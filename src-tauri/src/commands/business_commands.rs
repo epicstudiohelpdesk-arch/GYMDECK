@@ -114,8 +114,13 @@ pub async fn create_member_command(
 ) -> Result<(), AppError> {
     let ctx = get_auth_context(&state).await?;
     
-    // Perform background PDF optimization if needed
-    optimize_uploaded_documents(&mut documents);
+    // Perform background PDF optimization in blocking pool only if large PDFs are present
+    if documents.iter().any(|d| d.file_content.len() > 200 * 1024 && (d.doc_name.to_lowercase().ends_with(".pdf") || d.file_content.starts_with(b"%PDF"))) {
+        documents = tokio::task::spawn_blocking(move || {
+            optimize_uploaded_documents(&mut documents);
+            documents
+        }).await.map_err(|e| AppError::Database(e.to_string()))?;
+    }
     
     // Dispatch to the dedicated write-worker to avoid SQLITE_BUSY deadlocks
     state.async_db.dispatch_write(Box::new(move |conn| {

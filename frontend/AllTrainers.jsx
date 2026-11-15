@@ -92,21 +92,21 @@ const KPICard = ({ label, value, trend, icon: Icon, tone, iconFill }) => {
   const currentTone = tones[tone] || tones.indigo;
 
   return (
-    <div className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-xl p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-sm transition-all duration-200 flex flex-col justify-between gap-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+    <div className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-xl p-2.5 sm:p-3 xl:p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-sm transition-all duration-200 flex flex-col justify-between gap-2 min-w-0">
+      <div className="flex items-center justify-between gap-1.5 min-w-0">
+        <span className="text-[9px] sm:text-[9.5px] xl:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate min-w-0" title={label}>
           {label}
         </span>
-        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${currentTone.icon}`}>
-          <Icon size={15} strokeWidth={2.2} className={iconFill ? "fill-amber-400 text-amber-500" : ""} />
+        <div className={`w-7 h-7 xl:w-8 xl:h-8 rounded-lg border flex items-center justify-center shrink-0 ${currentTone.icon}`}>
+          <Icon size={14} strokeWidth={2.2} className={iconFill ? "fill-amber-400 text-amber-500" : ""} />
         </div>
       </div>
-      <div className="flex items-baseline justify-between gap-2 pt-0.5">
-        <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+      <div className="flex items-center justify-between gap-1.5 pt-0.5 min-w-0">
+        <h3 className="text-xl sm:text-[22px] xl:text-2xl font-black text-slate-900 tracking-tight leading-none shrink-0">
           {value}
         </h3>
         {trend && (
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${currentTone.trend}`}>
+          <span className={`text-[8.5px] sm:text-[9px] xl:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-md border shrink-0 whitespace-nowrap ${currentTone.trend}`}>
             {trend}
           </span>
         )}
@@ -2337,34 +2337,34 @@ export default function AllTrainers() {
       {/* ─────────────────────────────────────────
           KPI ANALYTICS STRIP
           ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 mb-2 relative z-10">
+      <div className="grid grid-cols-5 gap-2 sm:gap-2.5 lg:gap-3 xl:gap-3.5 mb-2 relative z-10 w-full min-w-0">
         <KPICard 
           label="Total Trainers" 
           value={totalTrainers.toString()} 
           icon={UserCheck} 
           tone="indigo" 
-          trend={totalTrainers === 0 ? "0 registered" : `${totalTrainers} active staff`} 
+          trend={totalTrainers === 0 ? "0 registered" : `${totalTrainers} active`} 
         />
         <KPICard 
           label="Active PT Sessions" 
           value={totalSessionsToday.toString()} 
           icon={Dumbbell} 
           tone="emerald" 
-          trend={totalSessionsToday === 0 ? "0 active now" : `${totalSessionsToday} scheduled today`} 
+          trend={totalSessionsToday === 0 ? "0 active now" : `${totalSessionsToday} active`} 
         />
         <KPICard 
           label="Trainers On Shift" 
           value={activeShiftCount.toString()} 
           icon={CalendarClock} 
           tone="blue" 
-          trend={activeShiftCount === 0 ? "None on duty" : `${activeShiftCount} on duty now`} 
+          trend={activeShiftCount === 0 ? "None on duty" : `${activeShiftCount} on duty`} 
         />
         <KPICard 
           label="PT Revenue Today" 
           value={formattedRevenue} 
           icon={IndianRupee} 
           tone="amber" 
-          trend={totalRevenue === 0 ? "₹0 logged today" : `From ${revenueTrainersCount} trainers`} 
+          trend={totalRevenue === 0 ? "₹0 logged today" : `From ${revenueTrainersCount} staff`} 
         />
         <KPICard 
           label="Avg Rating" 
@@ -2372,7 +2372,7 @@ export default function AllTrainers() {
           icon={Star} 
           iconFill={avgRating !== "0.0"} 
           tone="rose" 
-          trend={ratedStaff.length === 0 ? "No ratings yet" : `Based on ${ratedStaff.length} staff`} 
+          trend={ratedStaff.length === 0 ? "No ratings yet" : `${ratedStaff.length} rated`} 
         />
       </div>
 

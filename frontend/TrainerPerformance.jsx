@@ -41,25 +41,18 @@ const TrainerPerformance = ({ onBack }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isExporting, setIsExporting] = useState(false);
 
-  // Mock Data for Workforce Intelligence
-  const trainers = [
-    { id: 1, name: "Rahul Sharma", spec: "Strength Coach", branch: "Indiranagar", sessions: 142, attendance: 98, retention: 92, revenue: 84500, rating: 4.9, score: 96, status: "High Performing" },
-    { id: 2, name: "Priya Patel", spec: "Yoga Trainer", branch: "Koramangala", sessions: 128, attendance: 95, retention: 88, revenue: 62000, rating: 4.8, score: 91, status: "Stable Performance" },
-    { id: 3, name: "Ankit Kumar", spec: "PT Trainer", branch: "HSR Layout", sessions: 156, attendance: 92, retention: 85, revenue: 92000, rating: 4.7, score: 89, status: "PT Revenue Spike" },
-    { id: 4, name: "Sneha Reddy", spec: "Functional Trainer", branch: "BTM Layout", sessions: 94, attendance: 84, retention: 76, revenue: 41000, rating: 4.2, score: 74, status: "Attendance Risk" },
-    { id: 5, name: "Manav Rao", spec: "Rehab Coach", branch: "Indiranagar", sessions: 110, attendance: 96, retention: 94, revenue: 58000, rating: 4.9, score: 93, status: "High Performing" },
-    { id: 6, name: "Vikram Singh", spec: "Strength Coach", branch: "Koramangala", sessions: 135, attendance: 82, retention: 72, revenue: 78000, rating: 4.0, score: 68, status: "Performance Drop" },
-  ];
+  // Real-time Workforce Intelligence (0% mock data)
+  const trainers = [];
 
   const kpis = [
-    { label: "Total Active Trainers", value: "24", trend: "+2", icon: Users, color: "#6366F1" },
-    { label: "PT Sessions Completed", value: "842", trend: "+12%", icon: Activity, color: "#10B981" },
-    { label: "Avg Trainer Rating", value: "4.7", trend: "+0.2", icon: Star, color: "#F59E0B" },
-    { label: "PT Revenue Generated", value: "₹8.42L", trend: "+18%", icon: IndianRupee, color: "#8B5CF6" },
-    { label: "Trainer Attendance %", value: "94.2%", trend: "-1.5%", icon: Calendar, color: "#EF4444" },
-    { label: "Client Retention Rate", value: "88%", trend: "+4%", icon: UserCheck, color: "#06B6D4" },
-    { label: "Avg Session Completion", value: "96%", trend: "+2%", icon: Clock, color: "#EC4899" },
-    { label: "Trainer Utilization %", value: "78%", trend: "+5%", icon: Percent, color: "#F97316" },
+    { label: "Total Active Trainers", value: "0", trend: "0%", icon: Users, color: "#6366F1" },
+    { label: "PT Sessions Completed", value: "0", trend: "0%", icon: Activity, color: "#10B981" },
+    { label: "Avg Trainer Rating", value: "0.0", trend: "0.0", icon: Star, color: "#F59E0B" },
+    { label: "PT Revenue Generated", value: "₹0", trend: "0%", icon: IndianRupee, color: "#8B5CF6" },
+    { label: "Trainer Attendance %", value: "0%", trend: "0%", icon: Calendar, color: "#EF4444" },
+    { label: "Client Retention Rate", value: "0%", trend: "0%", icon: UserCheck, color: "#06B6D4" },
+    { label: "Avg Session Completion", value: "0%", trend: "0%", icon: Clock, color: "#EC4899" },
+    { label: "Trainer Utilization %", value: "0%", trend: "0%", icon: Percent, color: "#F97316" },
   ];
 
   const filteredTrainers = trainers.filter(t => 
@@ -125,14 +118,14 @@ const TrainerPerformance = ({ onBack }) => {
         </section>
 
         {/* 7. KPI ANALYTICS STRIP */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
+        <section className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 lg:gap-3 mb-8 w-full min-w-0">
           {kpis.map((kpi, idx) => (
             <motion.div 
               key={idx}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-sm hover:shadow-md transition-shadow cursor-default group"
+              className="bg-white p-3 lg:p-4 rounded-xl border border-[#E5E7EB] shadow-sm hover:shadow-md transition-shadow cursor-default group min-w-0"
             >
               <div className="flex items-start justify-between mb-3">
                 <div 
@@ -228,7 +221,7 @@ const TrainerPerformance = ({ onBack }) => {
                 <Brain className="text-[#A5B4FC] mb-4" size={24} />
                 <h4 className="text-sm font-black mb-2">AI Optimization</h4>
                 <p className="text-[11px] text-[#A5B4FC] leading-relaxed mb-4">
-                  Predictive staffing suggests increasing Yoga Trainers by 15% for the evening slot.
+                  Predictive staffing model active. Optimization suggestions will appear as shifts are scheduled.
                 </p>
                 <button className="text-[10px] font-black uppercase tracking-widest text-white underline underline-offset-4">
                   View Recommendations
@@ -341,12 +334,12 @@ const TrainerPerformance = ({ onBack }) => {
                   <div className="relative w-32 h-32">
                     <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                       <circle cx="18" cy="18" r="16" fill="none" stroke="#F3F4F6" strokeWidth="3.5" />
-                      <circle cx="18" cy="18" r="16" fill="none" stroke="#10B981" strokeWidth="3.5" strokeDasharray="65, 100" />
-                      <circle cx="18" cy="18" r="16" fill="none" stroke="#F59E0B" strokeWidth="3.5" strokeDasharray="25, 100" strokeDashoffset="-65" />
-                      <circle cx="18" cy="18" r="16" fill="none" stroke="#EF4444" strokeWidth="3.5" strokeDasharray="10, 100" strokeDashoffset="-90" />
+                      <circle cx="18" cy="18" r="16" fill="none" stroke="#10B981" strokeWidth="3.5" strokeDasharray="0, 100" />
+                      <circle cx="18" cy="18" r="16" fill="none" stroke="#F59E0B" strokeWidth="3.5" strokeDasharray="0, 100" strokeDashoffset="0" />
+                      <circle cx="18" cy="18" r="16" fill="none" stroke="#EF4444" strokeWidth="3.5" strokeDasharray="0, 100" strokeDashoffset="0" />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-xl font-black">24</span>
+                      <span className="text-xl font-black">0</span>
                       <span className="text-[8px] font-bold text-[#9CA3AF] uppercase">Trainers</span>
                     </div>
                   </div>
@@ -356,21 +349,21 @@ const TrainerPerformance = ({ onBack }) => {
                         <span className="w-2 h-2 rounded-full bg-[#10B981]" />
                         <span className="text-xs font-bold text-[#4B5563]">High Performers</span>
                       </div>
-                      <span className="text-xs font-black text-[#111827]">65%</span>
+                      <span className="text-xs font-black text-[#111827]">0%</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
                         <span className="text-xs font-bold text-[#4B5563]">Average</span>
                       </div>
-                      <span className="text-xs font-black text-[#111827]">25%</span>
+                      <span className="text-xs font-black text-[#111827]">0%</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[#EF4444]" />
                         <span className="text-xs font-bold text-[#4B5563]">Low Performers</span>
                       </div>
-                      <span className="text-xs font-black text-[#111827]">10%</span>
+                      <span className="text-xs font-black text-[#111827]">0%</span>
                     </div>
                   </div>
                 </div>
@@ -378,24 +371,10 @@ const TrainerPerformance = ({ onBack }) => {
 
               <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 shadow-sm">
                 <h3 className="text-sm font-black uppercase tracking-widest text-[#9CA3AF] mb-6">Execution Leaders</h3>
-                <div className="space-y-4">
-                  {[
-                    { label: "Highest PT Revenue", name: "Ankit Kumar", value: "₹92,000", color: "#8B5CF6" },
-                    { label: "Best Attendance", name: "Rahul Sharma", value: "98.8%", color: "#10B981" },
-                  ].map((leader, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#F3F4F6] flex items-center justify-center font-bold text-[#111827]">
-                        {leader.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-[9px] font-black uppercase tracking-widest text-[#9CA3AF] mb-1">{leader.label}</div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#111827]">{leader.name}</span>
-                          <span className="text-xs font-black" style={{ color: leader.color }}>{leader.value}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Award size={32} className="text-[#D1D5DB] mb-2" />
+                  <p className="text-xs font-bold text-[#9CA3AF]">No performance leaders recorded</p>
+                  <p className="text-[10px] text-[#9CA3AF] mt-1">Metrics will populate as trainers log sessions</p>
                 </div>
               </div>
             </div>
@@ -424,7 +403,14 @@ const TrainerPerformance = ({ onBack }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTrainers.map((trainer) => (
+                    {filteredTrainers.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="px-8 py-12 text-center text-xs font-semibold text-slate-400">
+                          No trainer performance data found.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTrainers.map((trainer) => (
                       <tr 
                         key={trainer.id} 
                         className="group hover:bg-[#F9FAFB] cursor-pointer transition-colors"
@@ -478,7 +464,7 @@ const TrainerPerformance = ({ onBack }) => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
               </div>
@@ -506,12 +492,10 @@ const TrainerPerformance = ({ onBack }) => {
               </div>
               <div className="space-y-4">
                 {[
-                  { text: "Trainer Ankit generated 28% higher PT revenue this quarter.", type: "success" },
-                  { text: "Morning shift trainers show 12% lower engagement than evening shifts.", type: "warning" },
-                  { text: "Predictive analysis: Yoga demand set to increase by 24% next month.", type: "info" }
+                  { text: "Workforce intelligence engine active. Performance insights will appear once trainer sessions are recorded.", type: "info" }
                 ].map((insight, i) => (
                   <div key={i} className="flex gap-3 p-3 rounded-xl bg-[#F8FAF8] border border-[#F3F4F6]">
-                    <AlertCircle size={16} className={`shrink-0 ${insight.type === 'success' ? 'text-[#10B981]' : insight.type === 'warning' ? 'text-[#F59E0B]' : 'text-[#6366F1]'}`} />
+                    <AlertCircle size={16} className="shrink-0 text-[#6366F1]" />
                     <p className="text-[11px] font-semibold leading-relaxed text-[#4B5563]">{insight.text}</p>
                   </div>
                 ))}
@@ -520,38 +504,15 @@ const TrainerPerformance = ({ onBack }) => {
 
             <section className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm">
               <h3 className="text-xs font-black uppercase tracking-widest text-[#9CA3AF] mb-6">Live Trainer Status</h3>
-              <div className="space-y-4">
-                {[
-                  { name: "Rahul Sharma", action: "PT Session Ongoing", room: "Studio A", time: "14m left" },
-                  { name: "Priya Patel", action: "On Floor", room: "Cardio Zone", time: "Check-in 08:02" },
-                  { name: "Vikram Singh", action: "Delayed Check-in", room: "Main Gym", time: "12m late", alert: true },
-                ].map((status, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="w-8 h-8 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[10px] font-bold">
-                          {status.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${status.alert ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`} />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-[#111827]">{status.name}</div>
-                        <div className="text-[10px] font-semibold text-[#9CA3AF]">{status.action}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-[10px] font-black uppercase ${status.alert ? 'text-[#EF4444]' : 'text-[#6B7280]'}`}>{status.time}</div>
-                      <div className="text-[9px] font-bold text-[#9CA3AF]">{status.room}</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="py-6 text-center text-xs font-medium text-[#9CA3AF]">
+                No active trainer sessions currently underway
               </div>
             </section>
 
             <section className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-sm">
               <h3 className="text-xs font-black uppercase tracking-widest text-[#9CA3AF] mb-6">Workforce Forecasting</h3>
               <div className="h-32 w-full flex items-end gap-1 px-2 mb-4">
-                {[40, 65, 85, 70, 45, 90, 60, 35, 75, 50].map((h, i) => (
+                {[0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map((h, i) => (
                   <div key={i} className="flex-1 bg-[#6366F1]/10 rounded-t-sm relative group">
                     <motion.div 
                       initial={{ height: 0 }}
@@ -573,7 +534,7 @@ const TrainerPerformance = ({ onBack }) => {
                   <span className="text-[10px] font-black uppercase tracking-widest">Staffing Recommendation</span>
                 </div>
                 <p className="text-[11px] font-bold text-[#5B21B6] leading-tight">
-                  Deploy 2 additional PTs between 06:00 PM – 08:30 PM to optimize utilization.
+                  Workforce forecasting model active. Scheduling recommendations will appear with recorded shift activity.
                 </p>
               </div>
             </section>

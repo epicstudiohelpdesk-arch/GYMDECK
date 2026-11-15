@@ -165,7 +165,7 @@
             <p>Sign in to continue to your GymDeck account</p>
           </div>
 
-          <form class="auth-form" action="./frontend/index.html" data-redirect="./frontend/index.html" data-enter-state="dashboard">
+          <form class="auth-form" action="./frontend/index.html" data-redirect="./frontend/index.html" data-enter-state="dashboard" autocomplete="off">
             <div class="field">
               <span class="field-label">Email address</span>
               <div class="input-wrap">
@@ -175,7 +175,7 @@
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                   </svg>
                 </span>
-                <input type="email" placeholder="Enter your email" required />
+                <input type="email" placeholder="Enter your email" autocomplete="off" required />
               </div>
             </div>
 
@@ -190,7 +190,7 @@
                     <path d="M12 17.5V19"/>
                   </svg>
                 </span>
-                <input type="password" placeholder="Enter your password" required />
+                <input type="password" placeholder="Enter your password" autocomplete="new-password" required />
                 <button class="field-icon toggle-password" type="button" aria-label="Show password">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />

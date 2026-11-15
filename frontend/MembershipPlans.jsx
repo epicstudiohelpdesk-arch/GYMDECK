@@ -107,128 +107,19 @@ const getPlanVisual = (plan) => {
 };
 
 const PORTFOLIO_STATS = {
-  activePlans: 8,
-  monthlyRevenue: 1450000,
-  renewalRate: 68,
-  expiring30Days: 48,
-  forecastedRenewal: 680000,
-  prevMonthRevenue: 1320000,
-  prevRenewalRate: 64,
-  potentialRevenue: 820000
+  activePlans: 0,
+  monthlyRevenue: 0,
+  renewalRate: 0,
+  expiring30Days: 0,
+  forecastedRenewal: 0,
+  prevMonthRevenue: 0,
+  prevRenewalRate: 0,
+  potentialRevenue: 0
 };
 
-const INITIAL_MOCK_PLANS = [
-  {
-    id: "A1",
-    name: "Annual Elite Performance",
-    category: "Transformation",
-    price: 18999,
-    joiningFee: 1500,
-    duration: "365 Days",
-    activeMembers: 342,
-    revenue: 8550000,
-    monthlyContribution: 712500,
-    renewalRate: 88,
-    retention: 92,
-    trend: "+12%",
-    trendUp: true,
-    status: "Healthy",
-    membersEnrolled: 342,
-    growth: 12,
-    risk: "Low",
-    color: "from-slate-800 to-indigo-900"
-  },
-  {
-    id: "Q1",
-    name: "Quarterly Transformation",
-    category: "Bodybuilding",
-    price: 7999,
-    joiningFee: 1000,
-    duration: "90 Days",
-    activeMembers: 156,
-    revenue: 1092000,
-    monthlyContribution: 364000,
-    renewalRate: 74,
-    retention: 78,
-    trend: "+4%",
-    trendUp: true,
-    status: "Healthy",
-    membersEnrolled: 156,
-    growth: 4,
-    risk: "Low",
-    color: "from-slate-800 to-indigo-900"
-  },
-  {
-    id: "M1",
-    name: "Monthly Entry Starter",
-    category: "General",
-    price: 1999,
-    joiningFee: 500,
-    duration: "30 Days",
-    activeMembers: 412,
-    revenue: 1236000,
-    monthlyContribution: 103000,
-    renewalRate: 42,
-    retention: 54,
-    trend: "-14%",
-    trendUp: false,
-    status: "At Risk",
-    membersEnrolled: 412,
-    growth: -14,
-    risk: "High",
-    color: "from-slate-800 to-rose-900"
-  },
-  {
-    id: "S1",
-    name: "Student Basic Flex",
-    category: "Student",
-    price: 1299,
-    joiningFee: 250,
-    duration: "30 Days",
-    activeMembers: 218,
-    revenue: 436000,
-    monthlyContribution: 36333,
-    renewalRate: 68,
-    retention: 72,
-    trend: "+2%",
-    trendUp: true,
-    status: "Growing",
-    membersEnrolled: 218,
-    growth: 2,
-    risk: "Medium",
-    color: "from-slate-800 to-amber-900"
-  }
-];
+const INITIAL_MOCK_PLANS = [];
 
-const RECOMMENDATIONS = [
-  {
-    id: 1,
-    title: "Monthly Starter Churn Alert",
-    description: "Renewals decreased by 14% this month. Churn risk detected for 12 members across the Monthly Entry Starter plan.",
-    severity: "High",
-    impact: "Potential ₹45k Revenue Loss",
-    action: "Review Churn Data",
-    color: "rose"
-  },
-  {
-    id: 2,
-    title: "Annual Upgrade Opportunity",
-    description: "31 members on Quarterly plans are eligible for Annual Elite conversion. Estimated revenue uplift of ₹3.2L.",
-    severity: "Medium",
-    impact: "₹3.2L Revenue Boost",
-    action: "Launch Campaign",
-    color: "amber"
-  },
-  {
-    id: 3,
-    title: "Pricing Strategy Optimization",
-    description: "Premium Elite plan retention is at 96%. Current pricing is 18% under market value for comparable plans.",
-    severity: "Low",
-    impact: "8% Margin Increase",
-    action: "Analyze Market",
-    color: "indigo"
-  }
-];
+const RECOMMENDATIONS = [];
 
 
 const FILTER_OPTIONS = ["All", "Active", "At Risk", "Growing", "Highest Revenue", "Newest"];
@@ -1884,31 +1775,7 @@ export default function MembershipPortfolioDashboard() {
         const mapped = dbPlans.map(mapPlanData);
         setPlans(mapped);
       } else {
-        // Seed the initial mock plans
-        for (const mock of INITIAL_MOCK_PLANS) {
-          const planData = {
-            id: mock.id,
-            gym_id: "00000000-0000-0000-0000-000000000000",
-            plan_name: mock.name,
-            duration_days: parseInt(mock.duration) || 30,
-            price: mock.price,
-            description: `${mock.category}||${mock.joiningFee || 0}||${mock.description || ""}`,
-            is_active: true,
-            created_by_user_id: "00000000-0000-0000-0000-000000000000",
-            updated_by_user_id: "00000000-0000-0000-0000-000000000000",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            deleted_at: null
-          };
-          try {
-            await window.__TAURI__.core.invoke("create_plan_command", { plan: planData });
-          } catch (e) {
-            console.error("Failed to seed plan:", e);
-          }
-        }
-        const seeded = await window.__TAURI__.core.invoke("get_plans_command");
-        const mapped = seeded.map(mapPlanData);
-        setPlans(mapped);
+        setPlans([]);
       }
     } catch (err) {
       console.error("Failed to load plans from DB:", err);
@@ -2105,8 +1972,6 @@ export default function MembershipPortfolioDashboard() {
             <KPICard
               label="Active Membership Plans"
               value={`${PORTFOLIO_STATS.activePlans} Plans`}
-              trend="+2"
-              trendUp={true}
               subtitle="Across active categories"
               icon={LayoutGrid}
               accent="indigo"
@@ -2114,17 +1979,14 @@ export default function MembershipPortfolioDashboard() {
             <KPICard
               label="Monthly Revenue Generated"
               value={formatCurrency(PORTFOLIO_STATS.monthlyRevenue)}
-              trend="+9.8%"
               trendUp={true}
-              subtitle={`${formatCompact(PORTFOLIO_STATS.monthlyRevenue / PORTFOLIO_STATS.activePlans)} avg per plan`}
+              subtitle={PORTFOLIO_STATS.activePlans > 0 ? `${formatCompact(PORTFOLIO_STATS.monthlyRevenue / PORTFOLIO_STATS.activePlans)} avg per plan` : "₹0 avg per plan"}
               icon={DollarSign}
               accent="emerald"
             />
             <KPICard
               label="Average Plan Retention"
-              value="89%"
-              trend="+1.2%"
-              trendUp={true}
+              value="0%"
               subtitle="Weighted index rating"
               icon={TrendingUp}
               accent="amber"
@@ -2515,48 +2377,56 @@ export default function MembershipPortfolioDashboard() {
                   <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
                     <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-5">Plan Performance Comparison</h3>
                     <div className="space-y-4">
-                      {plans.map(plan => (
-                        <div key={plan.id} className="flex items-center gap-4">
-                          <div className="w-7 h-7 rounded-lg bg-slate-950 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{plan.id.length > 4 ? plan.id.substring(0, 3).toUpperCase() : plan.id}</div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-slate-900 truncate">{plan.name}</p>
-                            <p className="text-[9px] text-slate-400">{plan.activeMembers} members</p>
+                      {plans.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-6">No membership plans created yet.</p>
+                      ) : (
+                        plans.map(plan => (
+                          <div key={plan.id} className="flex items-center gap-4">
+                            <div className="w-7 h-7 rounded-lg bg-slate-950 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{plan.id.length > 4 ? plan.id.substring(0, 3).toUpperCase() : plan.id}</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-slate-900 truncate">{plan.name}</p>
+                              <p className="text-[9px] text-slate-400">{plan.activeMembers} members</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-bold text-slate-900">{formatCompact(plan.revenue)}</p>
+                              <p className={cn("text-[9px] font-semibold", plan.trendUp ? "text-emerald-600" : "text-rose-600")}>{plan.trend}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs font-bold text-slate-900">{formatCompact(plan.revenue)}</p>
-                            <p className={cn("text-[9px] font-semibold", plan.trendUp ? "text-emerald-600" : "text-rose-600")}>{plan.trend}</p>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
 
                   <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
                     <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-5">Plan Popularity</h3>
                     <div className="space-y-4">
-                      {[...plans].sort((a, b) => b.activeMembers - a.activeMembers).map(plan => {
-                        const max = plans.length > 0 ? Math.max(...plans.map(p => p.activeMembers)) : 1;
-                        const pct = (plan.activeMembers / max) * 100;
-                        return (
-                          <div key={plan.id}>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[11px] font-medium text-slate-700">{plan.name}</span>
-                              <span className="text-[11px] font-bold text-slate-900">{plan.activeMembers}</span>
+                      {plans.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-6">No membership plans created yet.</p>
+                      ) : (
+                        [...plans].sort((a, b) => b.activeMembers - a.activeMembers).map(plan => {
+                          const max = plans.length > 0 ? Math.max(...plans.map(p => p.activeMembers)) : 1;
+                          const pct = (plan.activeMembers / max) * 100;
+                          return (
+                            <div key={plan.id}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[11px] font-medium text-slate-700">{plan.name}</span>
+                                <span className="text-[11px] font-bold text-slate-900">{plan.activeMembers}</span>
+                              </div>
+                              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${pct}%` }}
+                                  transition={{ duration: 0.6, delay: 0.1 }}
+                                  className={cn(
+                                    "h-full rounded-full",
+                                    plan.trendUp ? "bg-emerald-500" : "bg-rose-500"
+                                  )}
+                                />
+                              </div>
                             </div>
-                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${pct}%` }}
-                                transition={{ duration: 0.6, delay: 0.1 }}
-                                className={cn(
-                                  "h-full rounded-full",
-                                  plan.trendUp ? "bg-emerald-500" : "bg-rose-500"
-                                )}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2569,10 +2439,10 @@ export default function MembershipPortfolioDashboard() {
                   </div>
                   <div className="grid grid-cols-4 gap-6">
                     {[
-                      { label: "Expected Renewals", value: "34", pct: 71, color: "emerald" },
-                      { label: "At Risk of Churn", value: "10", pct: 21, color: "amber" },
-                      { label: "Likely to Expire", value: "4", pct: 8, color: "rose" },
-                      { label: "Forecast Revenue", value: formatCompact(PORTFOLIO_STATS.forecastedRenewal), pct: 100, color: "indigo" },
+                      { label: "Expected Renewals", value: "0", pct: 0, color: "emerald" },
+                      { label: "At Risk of Churn", value: "0", pct: 0, color: "amber" },
+                      { label: "Likely to Expire", value: "0", pct: 0, color: "rose" },
+                      { label: "Forecast Revenue", value: formatCompact(PORTFOLIO_STATS.forecastedRenewal), pct: 0, color: "indigo" },
                     ].map((item, i) => (
                       <div key={i} className="text-center p-4 rounded-xl bg-slate-50 border border-slate-100">
                         <p className="text-xl font-extrabold text-slate-900 mb-1">{item.value}</p>

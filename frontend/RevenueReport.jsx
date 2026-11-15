@@ -68,81 +68,9 @@ const REVENUE_SOURCES = [
 ];
 
 
-const MOCK_TRANSACTIONS = [
-  {
-    id: "TXN-8842",
-    source: "Membership Fees",
-    member: "Arjun Mehta",
-    branch: "Main Branch",
-    method: "UPI",
-    amount: 18000,
-    status: "paid",
-    date: "2026-05-20 10:45 AM",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Arjun"
-  },
-  {
-    id: "TXN-8843",
-    source: "PT Packages",
-    member: "Sneha Patel",
-    branch: "Downtown",
-    method: "Card",
-    amount: 12500,
-    status: "paid",
-    date: "2026-05-20 11:20 AM",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sneha"
-  },
-  {
-    id: "TXN-8844",
-    source: "Supplement Sales",
-    member: "Rohan Verma",
-    branch: "Main Branch",
-    method: "Cash",
-    amount: 3200,
-    status: "paid",
-    date: "2026-05-20 12:05 PM",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rohan"
-  },
-  {
-    id: "TXN-8845",
-    source: "Membership Fees",
-    member: "Priya Sharma",
-    branch: "North Gym",
-    method: "Online Gateway",
-    amount: 2499,
-    status: "pending",
-    date: "2026-05-20 01:15 PM",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Priya"
-  },
-  {
-    id: "TXN-8846",
-    source: "PT Packages",
-    member: "Vikram Shah",
-    branch: "Main Branch",
-    method: "Bank Transfer",
-    amount: 45000,
-    status: "paid",
-    date: "2026-05-19 04:30 PM",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Vikram"
-  },
-  {
-    id: "TXN-8847",
-    source: "Locker Rentals",
-    member: "Ananya Iyer",
-    branch: "East Side",
-    method: "UPI",
-    amount: 1500,
-    status: "paid",
-    date: "2026-05-19 05:45 PM",
-    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ananya"
-  }
-];
+const MOCK_TRANSACTIONS = [];
 
-const TOP_SOURCES = [
-  { label: "Elite Annual Plan", amount: "₹8.4L", trend: "+12%", color: "bg-indigo-600" },
-  { label: "Personal Training (Master)", amount: "₹4.2L", trend: "+18%", color: "bg-emerald-500" },
-  { label: "Whey Protein Isolate", amount: "₹1.8L", trend: "+5%", color: "bg-amber-500" },
-  { label: "Pro Quarterly Plan", amount: "₹1.2L", trend: "-2%", color: "bg-rose-500" }
-];
+const TOP_SOURCES = [];
 
 // ─────────────────────────────────────────
 // UTILS
@@ -265,14 +193,14 @@ const RevenueReport = () => {
 
       {/* 7. KPI ANALYTICS STRIP */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-2 relative z-10">
-        <KPICard title="Total Revenue" value="₹42.8L" trend="+14.2%" isUp={true} icon={DollarSign} color="bg-indigo-600" delay={0.05} />
-        <KPICard title="This Month" value="₹8.12L" trend="+8.1%" isUp={true} icon={Calendar} color="bg-emerald-500" delay={0.1} />
-        <KPICard title="Membership" value="₹24.5L" trend="+5.2%" isUp={true} icon={Users} color="bg-blue-500" delay={0.15} />
-        <KPICard title="PT Revenue" value="₹12.4L" trend="+18.4%" isUp={true} icon={Target} color="bg-purple-500" delay={0.2} />
-        <KPICard title="Pending Dues" value="₹1.84L" trend="-4.2%" isUp={false} icon={Clock} color="bg-rose-500" delay={0.25} />
-        <KPICard title="Avg Per Member" value="₹4,200" trend="+2.1%" isUp={true} icon={Award} color="bg-amber-500" delay={0.3} />
-        <KPICard title="Branch Profit" value="78%" trend="Stable" isUp={true} icon={TrendingUp} delay={0.35} color="bg-cyan-500" />
-        <KPICard title="Growth %" value="14.8%" trend="+1.2%" isUp={true} icon={Activity} color="bg-orange-500" delay={0.4} />
+        <KPICard title="Total Revenue" value="₹0" trend="0%" isUp={true} icon={DollarSign} color="bg-indigo-600" delay={0.05} />
+        <KPICard title="This Month" value="₹0" trend="0%" isUp={true} icon={Calendar} color="bg-emerald-500" delay={0.1} />
+        <KPICard title="Membership" value="₹0" trend="0%" isUp={true} icon={Users} color="bg-blue-500" delay={0.15} />
+        <KPICard title="PT Revenue" value="₹0" trend="0%" isUp={true} icon={Target} color="bg-purple-500" delay={0.2} />
+        <KPICard title="Pending Dues" value="₹0" trend="0%" isUp={true} icon={Clock} color="bg-rose-500" delay={0.25} />
+        <KPICard title="Avg Per Member" value="₹0" trend="0%" isUp={true} icon={Award} color="bg-amber-500" delay={0.3} />
+        <KPICard title="Branch Profit" value="0%" trend="0%" isUp={true} icon={TrendingUp} delay={0.35} color="bg-cyan-500" />
+        <KPICard title="Growth %" value="0%" trend="0%" isUp={true} icon={Activity} color="bg-orange-500" delay={0.4} />
       </div>
 
       <div className="revenue-reports-workspace">
@@ -328,10 +256,10 @@ const RevenueReport = () => {
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-4">Quick Insights</span>
                 <div className="space-y-2">
                   {[
-                    { label: "Revenue Growth", color: "bg-emerald-500", count: "8.2%" },
-                    { label: "Pending Dues", color: "bg-rose-500", count: "₹1.8L" },
-                    { label: "PT Revenue Spike", color: "bg-indigo-500", count: "18%" },
-                    { label: "Profit Clusters", color: "bg-amber-500", count: "4 Br" }
+                    { label: "Revenue Growth", color: "bg-emerald-500", count: "0%" },
+                    { label: "Pending Dues", color: "bg-rose-500", count: "₹0" },
+                    { label: "PT Revenue Spike", color: "bg-indigo-500", count: "0%" },
+                    { label: "Profit Clusters", color: "bg-amber-500", count: "0 Br" }
                   ].map((filter, i) => (
                     <button key={i} className="w-full flex items-center gap-3 px-4 py-3 rounded-[16px] border border-slate-200 bg-white hover:border-indigo-500 hover:bg-indigo-50/20 transition-all group">
                       <span className={`w-2 h-2 rounded-full ${filter.color}`} />
@@ -395,7 +323,7 @@ const RevenueReport = () => {
 
                {/* Simulated Chart Rendering Area */}
                <div className="h-[380px] flex items-end justify-between gap-2.5 px-4 mb-12 group/chart">
-                  {[65, 42, 85, 54, 72, 38, 92, 58, 44, 76, 88, 62, 95, 48, 70, 82, 55, 68, 90, 42, 75, 88, 60, 45, 78, 92, 58, 85, 98, 100].map((h, i) => (
+                  {[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map((h, i) => (
                     <div key={i} className="flex-1 relative group/bar h-full flex flex-col justify-end">
                        <motion.div 
                         initial={{ height: 0 }}
@@ -434,21 +362,21 @@ const RevenueReport = () => {
                      <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]" />
                      <div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none">Total Collections</span>
-                        <strong className="text-sm font-black text-slate-900 uppercase">₹42,85,000</strong>
+                        <strong className="text-sm font-black text-slate-900 uppercase">₹0</strong>
                      </div>
                   </div>
                   <div className="flex items-center gap-3">
                      <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" />
                      <div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none">PT Revenue</span>
-                        <strong className="text-sm font-black text-slate-900 uppercase">₹12,42,000</strong>
+                        <strong className="text-sm font-black text-slate-900 uppercase">₹0</strong>
                      </div>
                   </div>
                   <div className="flex items-center gap-3">
                      <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]" />
                      <div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-none">Products & Sales</span>
-                        <strong className="text-sm font-black text-slate-900 uppercase">₹5,92,000</strong>
+                        <strong className="text-sm font-black text-slate-900 uppercase">₹0</strong>
                      </div>
                   </div>
                </div>
@@ -469,25 +397,25 @@ const RevenueReport = () => {
                            <circle cx="72" cy="72" r="64" fill="none" stroke="#f1f5f9" strokeWidth="16" />
                            <motion.circle 
                               cx="72" cy="72" r="64" fill="none" stroke="#6366f1" strokeWidth="16" 
-                              strokeDasharray="402" initial={{ strokeDashoffset: 402 }} animate={{ strokeDashoffset: 402 * 0.45 }}
+                              strokeDasharray="402" initial={{ strokeDashoffset: 402 }} animate={{ strokeDashoffset: 402 }}
                               strokeLinecap="round"
                            />
                            <motion.circle 
                               cx="72" cy="72" r="64" fill="none" stroke="#10b981" strokeWidth="16" 
-                              strokeDasharray="402" initial={{ strokeDashoffset: 402 }} animate={{ strokeDashoffset: 402 * 0.75 }}
+                              strokeDasharray="402" initial={{ strokeDashoffset: 402 }} animate={{ strokeDashoffset: 402 }}
                               strokeLinecap="round" className="rotate-[162deg] origin-center"
                            />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                           <strong className="text-xl font-black text-slate-900">100%</strong>
+                           <strong className="text-xl font-black text-slate-900">0%</strong>
                            <span className="text-[8px] font-black text-slate-400 uppercase">Market</span>
                         </div>
                      </div>
                      <div className="flex-1 space-y-4">
                         {[
-                           { label: "Memberships", val: "58%", color: "bg-indigo-500" },
-                           { label: "Personal Training", val: "28%", color: "bg-emerald-500" },
-                           { label: "Retail & Cafe", val: "14%", color: "bg-amber-500" }
+                           { label: "Memberships", val: "0%", color: "bg-indigo-500" },
+                           { label: "Personal Training", val: "0%", color: "bg-emerald-500" },
+                           { label: "Retail & Cafe", val: "0%", color: "bg-amber-500" }
                         ].map(item => (
                            <div key={item.label}>
                               <div className="flex justify-between text-[9px] font-black uppercase mb-1.5">
@@ -509,7 +437,12 @@ const RevenueReport = () => {
                      <button className="text-[9px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1">View All <ChevronRight size={10} /></button>
                   </div>
                   <div className="space-y-3">
-                     {TOP_SOURCES.map(source => (
+                     {TOP_SOURCES.length === 0 ? (
+                        <div className="py-8 text-center text-xs font-semibold text-slate-400">
+                           No revenue asset records available.
+                        </div>
+                     ) : (
+                        TOP_SOURCES.map(source => (
                         <div key={source.label} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group hover:bg-white hover:border-indigo-100 hover:shadow-lg transition-all cursor-default">
                            <div className="flex items-center gap-4">
                               <div className={`w-2 h-8 rounded-full ${source.color} opacity-20 group-hover:opacity-100 transition-opacity`} />
@@ -520,7 +453,7 @@ const RevenueReport = () => {
                            </div>
                            <strong className="text-sm font-black text-slate-900">{source.amount}</strong>
                         </div>
-                     ))}
+                     )))}
                   </div>
                </div>
             </div>
@@ -555,7 +488,14 @@ const RevenueReport = () => {
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-50">
-                        {MOCK_TRANSACTIONS.map((txn, idx) => (
+                        {MOCK_TRANSACTIONS.length === 0 ? (
+                           <tr>
+                              <td colSpan="6" className="px-8 py-12 text-center text-xs font-semibold text-slate-400">
+                                 No transactions recorded yet.
+                              </td>
+                           </tr>
+                        ) : (
+                           MOCK_TRANSACTIONS.map((txn, idx) => (
                            <motion.tr 
                               key={txn.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
                               className="hover:bg-slate-50/80 transition-all group cursor-pointer"
@@ -598,13 +538,13 @@ const RevenueReport = () => {
                                  </span>
                               </td>
                            </motion.tr>
-                        ))}
+                        )))}
                      </tbody>
                   </table>
                </div>
                
                <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Showing 1-12 of 842 Transactions</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Showing 0 of 0 Transactions</span>
                   <div className="flex gap-2">
                      <button className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-all">Prev</button>
                      <button className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-all">Next</button>
@@ -634,17 +574,9 @@ const RevenueReport = () => {
                   <div className="space-y-4">
                      <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 hover:border-indigo-500/50 transition-all cursor-default group/item">
                         <div className="flex gap-4">
-                           <TrendingUp size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                           <TrendingUp size={18} className="text-indigo-400 shrink-0 mt-0.5" />
                            <p className="text-[13px] font-medium text-slate-300 leading-relaxed">
-                              PT revenue increased <span className="font-black text-white">18%</span> compared to last month. Consider scaling Elite tiers.
-                           </p>
-                        </div>
-                     </div>
-                     <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 hover:border-indigo-500/50 transition-all cursor-default group/item">
-                        <div className="flex gap-4">
-                           <Shield size={18} className="text-rose-400 shrink-0 mt-0.5" />
-                           <p className="text-[13px] font-medium text-slate-300 leading-relaxed">
-                              Revenue leak detected: <span className="font-black text-white">₹1.2L pending dues</span> crossed this week limit.
+                              Financial intelligence engine active. Real-time revenue insights will synthesize as payments are recorded.
                            </p>
                         </div>
                      </div>
@@ -671,7 +603,7 @@ const RevenueReport = () => {
                          </div>
                          <div>
                             <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Today's Cashflow</span>
-                            <strong className="text-sm font-black text-slate-900 uppercase tracking-tighter">₹48,200</strong>
+                            <strong className="text-sm font-black text-slate-900 uppercase tracking-tighter">₹0</strong>
                          </div>
                       </div>
                       <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -684,7 +616,7 @@ const RevenueReport = () => {
                          </div>
                          <div>
                             <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Failed Payments</span>
-                            <strong className="text-sm font-black text-slate-900 uppercase tracking-tighter">12 Txns</strong>
+                            <strong className="text-sm font-black text-slate-900 uppercase tracking-tighter">0 Txns</strong>
                          </div>
                       </div>
                       <AlertCircle size={14} className="text-rose-500" />
@@ -700,17 +632,17 @@ const RevenueReport = () => {
                    </div>
                 </div>
                 <div className="h-32 flex items-end gap-1.5 px-2">
-                   {[30, 45, 60, 55, 75, 90, 85, 100].map((h, i) => (
+                   {[0, 0, 0, 0, 0, 0, 0, 0].map((h, i) => (
                       <div key={i} className={`flex-1 rounded-t-lg transition-all duration-700 ${i > 4 ? "bg-indigo-600 border-2 border-dashed border-white/20" : "bg-slate-100"}`} style={{ height: `${h}%` }} />
                    ))}
                 </div>
                 <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
                    <div>
                       <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Projected Total</span>
-                      <strong className="text-lg font-black text-indigo-600 uppercase">₹14.8L</strong>
+                      <strong className="text-lg font-black text-indigo-600 uppercase">₹0</strong>
                    </div>
                    <div className="text-right">
-                      <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg inline-block">+18.2%</span>
+                      <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg inline-block">0%</span>
                    </div>
                 </div>
              </section>

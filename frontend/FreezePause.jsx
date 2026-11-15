@@ -65,100 +65,8 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 // ─────────────────────────────────────────
-// MOCK DATA
-// ─────────────────────────────────────────
-const INITIAL_FREEZES = [
-  {
-    id: "FRZ-8892",
-    memberId: "MBR-0142",
-    name: "Aarav Sharma",
-    initials: "AS",
-    plan: "Premium Annual Elite",
-    reason: "Medical Recovery",
-    startDate: "2026-05-18",
-    endDate: "2026-06-18",
-    daysRequested: 30,
-    daysRemaining: 30,
-    status: "Pending Review",
-    revenuePaused: 4500,
-    riskScore: "Low",
-    pendingDues: 0,
-    assignedStaff: "Pending",
-    color: "#3b82f6",
-  },
-  {
-    id: "FRZ-8711",
-    memberId: "MBR-0521",
-    name: "Meera Nair",
-    initials: "MN",
-    plan: "Quarterly Transformation",
-    reason: "International Travel",
-    startDate: "2026-05-01",
-    endDate: "2026-05-20",
-    daysRequested: 20,
-    daysRemaining: 4,
-    status: "Active Freeze",
-    revenuePaused: 2100,
-    riskScore: "Medium",
-    pendingDues: 0,
-    assignedStaff: "Sneha Patel",
-    color: "#f59e0b",
-  },
-  {
-    id: "FRZ-8604",
-    memberId: "MBR-0319",
-    name: "Kabir Singh",
-    initials: "KS",
-    plan: "Monthly Starter",
-    reason: "Financial Issue",
-    startDate: "2026-04-15",
-    endDate: "2026-05-15",
-    daysRequested: 30,
-    daysRemaining: 0,
-    status: "Reactivation Pending",
-    revenuePaused: 2499,
-    riskScore: "High",
-    pendingDues: 2499,
-    assignedStaff: "Ankit Kumar",
-    color: "#10b981",
-  },
-  {
-    id: "FRZ-8910",
-    memberId: "MBR-0899",
-    name: "Priya Desai",
-    initials: "PD",
-    plan: "Corporate Wellness",
-    reason: "Work Relocation",
-    startDate: "2026-05-20",
-    endDate: "2026-08-20",
-    daysRequested: 90,
-    daysRemaining: 90,
-    status: "Pending Review",
-    revenuePaused: 18000,
-    riskScore: "High",
-    pendingDues: 0,
-    assignedStaff: "Pending",
-    color: "#8b5cf6",
-  },
-  {
-    id: "FRZ-8544",
-    memberId: "MBR-0211",
-    name: "Rahul Verma",
-    initials: "RV",
-    plan: "Student Basic",
-    reason: "Exams",
-    startDate: "2026-04-01",
-    endDate: "2026-05-01",
-    daysRequested: 30,
-    daysRemaining: 0,
-    status: "Reactivated",
-    revenuePaused: 1499,
-    riskScore: "Low",
-    pendingDues: 0,
-    assignedStaff: "System Auto",
-    color: "#64748b",
-  },
-];
+// 0% Mock Data: Clean Freeze State
+const INITIAL_FREEZES = [];
 
 const getFreezePriority = (freeze) => {
   if (freeze.status === "Pending Review") return "pending";
@@ -474,7 +382,14 @@ function TableView({ freezes, onAction }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {freezes.map((f) => (
+          {freezes.length === 0 ? (
+            <tr>
+              <td colSpan="6" className="p-12 text-center text-xs font-semibold text-slate-400">
+                No membership freeze records found.
+              </td>
+            </tr>
+          ) : (
+            freezes.map((f) => (
             <tr key={f.id} className="hover:bg-slate-50 transition-colors group">
               <td className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-slate-950" /></td>
               <td className="p-4">
@@ -497,7 +412,7 @@ function TableView({ freezes, onAction }) {
                 </div>
               </td>
             </tr>
-          ))}
+          )))}
         </tbody>
       </table>
     </div>
@@ -863,12 +778,12 @@ const FreezeRequestModal = ({ isOpen, onClose }) => {
 // ─────────────────────────────────────────
 function FreezePipeline() {
   const stages = [
-    { label: "Requested", value: 12, color: "bg-slate-100 text-slate-700" },
-    { label: "Under Review", value: 5, color: "bg-blue-50 text-blue-700" },
-    { label: "Approved", value: 8, color: "bg-emerald-50 text-emerald-700" },
-    { label: "Active Freeze", value: 34, color: "bg-indigo-50 text-indigo-700" },
-    { label: "Reactivation Pending", value: 6, color: "bg-amber-50 text-amber-700" },
-    { label: "Reactivated", value: 142, color: "bg-emerald-100 text-emerald-900" },
+    { label: "Requested", value: 0, color: "bg-slate-100 text-slate-700" },
+    { label: "Under Review", value: 0, color: "bg-blue-50 text-blue-700" },
+    { label: "Approved", value: 0, color: "bg-emerald-50 text-emerald-700" },
+    { label: "Active Freeze", value: 0, color: "bg-indigo-50 text-indigo-700" },
+    { label: "Reactivation Pending", value: 0, color: "bg-amber-50 text-amber-700" },
+    { label: "Reactivated", value: 0, color: "bg-emerald-100 text-emerald-900" },
   ];
 
   return (
@@ -1033,9 +948,15 @@ const FreezePausePage = () => {
         <section className="pt-2">
           {viewMode === "grid" && (
             <div className="grid gap-4">
-              {Object.entries(laneConfig).map(([p, config]) => groupedFreezes[p]?.length > 0 && (
-                <PriorityLane key={p} config={config} freezes={groupedFreezes[p]} onProfile={openProfile} onAction={handleAction} />
-              ))}
+              {filteredFreezes.length === 0 ? (
+                <div className="p-12 text-center bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-400">
+                  No active or pending freeze records found.
+                </div>
+              ) : (
+                Object.entries(laneConfig).map(([p, config]) => groupedFreezes[p]?.length > 0 && (
+                  <PriorityLane key={p} config={config} freezes={groupedFreezes[p]} onProfile={openProfile} onAction={handleAction} />
+                ))
+              )}
             </div>
           )}
           {viewMode === "table" && (<TableView freezes={filteredFreezes} onAction={handleAction} />)}

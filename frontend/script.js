@@ -200,80 +200,14 @@ const photoViewButtons = Array.from(document.querySelectorAll("[data-photo-view]
 // Re-register documentViewButtons since I deleted it in previous turn
 const getDocumentViewButtons = () => Array.from(document.querySelectorAll(".doc-view-btn"));
 
-// Mock Document Data Generator
+// Clean Document Resolver (0% mock dummy data)
 const getMockDocuments = (memberName, memberId = "", docsLabel = "") => {
-  // 1. Check Global Registry for real session documents first
+  // Check Global Registry for real session documents first
   const key = memberId || memberName;
   if (memberDocsRegistry.has(key)) {
     return memberDocsRegistry.get(key);
   }
-
-  // Clean the docsLabel by removing "Joining Fee: ..." prefix if present
-  let cleanLabel = docsLabel;
-  if (docsLabel.includes("Joining Fee: ₹")) {
-    const parts = docsLabel.split("|");
-    if (parts.length > 1) {
-      cleanLabel = parts.slice(1).join("|").trim();
-    } else {
-      cleanLabel = "No Documents";
-    }
-  }
-
-  // 2. Fallback to intelligent placeholders for professional look
-  if (memberName === "Unnamed Member" || cleanLabel === "No Documents" || !cleanLabel) return [];
-  
-  const docs = [];
-  // Use consistent keys for same member
-  const salt = (memberId || memberName).substring(0, 5);
-
-  if (cleanLabel.toLowerCase().includes("aadhaar")) {
-    docs.push({ 
-        id: `aadhaar_${salt}`, 
-        name: "Aadhaar Card", 
-        status: "verified", 
-        date: "May 12, 2026", 
-        size: "1.4 MB", 
-        url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-        mimeType: "application/pdf"
-    });
-  }
-
-  // Generic Fallback for "3 Documents" or comma-separated lists like "1,1,1"
-  const docCountMatch = cleanLabel.match(/(\d+)\s+Documents/i);
-  const commaSeparatedList = cleanLabel.split(',').map(s => s.trim()).filter(Boolean);
-  
-  if (docs.length === 0 && (docCountMatch || commaSeparatedList.length > 0 || cleanLabel !== "No Documents")) {
-      const count = docCountMatch ? parseInt(docCountMatch[1]) : (commaSeparatedList.length > 0 ? commaSeparatedList.length : 1);
-      const safeCount = Math.min(Math.max(count, 1), 3); // Ensure at least 1, max 3
-      
-      for (let i = 1; i <= safeCount; i++) {
-          const customName = (commaSeparatedList.length >= i && commaSeparatedList[i-1] !== "1") ? commaSeparatedList[i-1] : (i === 1 ? "Identity Proof" : i === 2 ? "Registration Form" : "Compliance Document");
-          docs.push({
-              id: `generic_${salt}_${i}`,
-              name: customName,
-              status: "verified",
-              date: "June 08, 2026",
-              size: "0.8 MB",
-              // Use a reliable image placeholder since the PDF URL might be blocked by CSP or CORS
-              url: `https://api.dicebear.com/7.x/shapes/svg?seed=${salt}_doc${i}&backgroundColor=f8f9fa`,
-              mimeType: "image/svg+xml"
-          });
-      }
-  }
-
-  if (cleanLabel.toLowerCase().includes("residential") || cleanLabel.toLowerCase().includes("address") || cleanLabel.toLowerCase().includes("proof")) {
-    docs.push({ 
-        id: `address_${salt}`, 
-        name: "Residential Proof", 
-        status: "verified", 
-        date: "May 12, 2026", 
-        size: "1.1 MB", 
-        url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-        mimeType: "application/pdf"
-    });
-  }
-
-  return docs;
+  return [];
 };
 
 const setVerificationModalState = (isOpen, triggerButton = null) => {
@@ -611,13 +545,22 @@ let allPlans = [];
  * Enterprise Utility: Converts a Data URL (Base64) to a Byte Array for Rust consumption.
  */
 const dataUrlToBytes = (dataUrl) => {
-  const base64 = dataUrl.split(',')[1];
-  const binaryString = window.atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+  if (!dataUrl || typeof dataUrl !== "string") return [];
+  const parts = dataUrl.split(',');
+  const base64 = parts.length > 1 ? parts[1] : parts[0];
+  if (!base64) return [];
+  try {
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return Array.from(bytes); // Rust Vec<u8> expects a JSON array of numbers
+  } catch (err) {
+    console.error("GymDeck: Failed to decode base64 document:", err);
+    return [];
   }
-  return Array.from(bytes); // Rust Vec<u8> expects a JSON array of numbers
 };
 
 /**
@@ -1126,11 +1069,15 @@ const closeDatePicker = () => {
   addMemberDatePickerPanel.hidden = true;
   addMemberDatePicker?.classList.remove("is-open");
   datePickerMode = "day";
+  if (!document.querySelector(".custom-select-wrapper.is-open")) {
+    document.querySelector(".member-form-modal")?.classList.remove("has-open-dropdown");
+  }
 };
 
 const openDatePicker = () => {
   addMemberDatePickerPanel.hidden = false;
   addMemberDatePicker?.classList.add("is-open");
+  document.querySelector(".member-form-modal")?.classList.add("has-open-dropdown");
 };
 
 const setFieldErrorState = (field, message = "") => {
@@ -1465,6 +1412,159 @@ const resetCustomWeightUI = () => {
   }
 };
 
+const getPlansEmptyStateHtml = () => `
+  <div class="plans-empty-state-card">
+    <div class="plans-empty-grid-pattern"></div>
+    <div class="plans-empty-content-wrap">
+      <!-- Top Bar: Status Pill & Capabilities Chips -->
+      <div class="plans-empty-topbar">
+        <div class="plans-status-pill">
+          <span class="plans-status-dot"></span>
+          <span class="plans-status-kicker">MEMBERSHIP ENGINE READY</span>
+          <span class="plans-status-divider">•</span>
+          <span class="plans-status-sub">Awaiting First Plan</span>
+        </div>
+
+        <div class="plans-tags-group">
+          <span class="plans-tag-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
+              <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
+              <circle cx="12" cy="12" r="2"/>
+              <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
+              <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/>
+            </svg>
+            Multi-Tier &amp; Flexible Durations
+          </span>
+          <span class="plans-tag-divider">•</span>
+          <span class="plans-tag-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Automated Dues &amp; Access Control
+          </span>
+        </div>
+      </div>
+
+      <!-- Main Grid: Left Onboarding Content + Right Capability Cards -->
+      <div class="plans-empty-main-grid">
+        <!-- Left Section: Plan Badge Icon, Headline, Description & CTAs -->
+        <div class="plans-empty-left">
+          <div class="plans-icon-wrapper">
+            <div class="plans-icon-box">
+              <div class="plans-icon-inner">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="3"/>
+                  <line x1="2" y1="10" x2="22" y2="10"/>
+                  <line x1="6" y1="15" x2="10" y2="15"/>
+                </svg>
+              </div>
+            </div>
+            <div class="plans-icon-plus-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="plans-empty-info">
+            <h3 class="plans-empty-title">No Membership Plans Configured</h3>
+            <p class="plans-empty-desc">
+              Create standard, tiered, or custom duration membership packages to assign automated billing cycles, gym floor privileges, and renewal tracking.
+            </p>
+
+            <div class="plans-empty-actions">
+              <button type="button" class="btn-plan-create" id="btn-empty-create-plan">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Create Plan</span>
+              </button>
+
+              <button type="button" class="btn-plan-skip" id="btn-empty-skip-plan">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                <span>Proceed Without Plan</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Section: 3 Capability Micro-Cards -->
+        <div class="plans-empty-specs">
+          <div class="plans-spec-card">
+            <div class="plans-spec-icon-wrap is-emerald">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </div>
+            <div class="plans-spec-text">
+              <span class="plans-spec-title">Flexible Billing Cycles</span>
+              <span class="plans-spec-sub">Monthly, quarterly, annual or customized terms</span>
+            </div>
+          </div>
+
+          <div class="plans-spec-card">
+            <div class="plans-spec-icon-wrap is-indigo">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10"/>
+              </svg>
+            </div>
+            <div class="plans-spec-text">
+              <span class="plans-spec-title">Automated Renewal &amp; Expiry</span>
+              <span class="plans-spec-sub">Live grace period alerts &amp; member reminders</span>
+            </div>
+          </div>
+
+          <div class="plans-spec-card">
+            <div class="plans-spec-icon-wrap is-blue">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                <polyline points="2 17 12 22 22 17"/>
+                <polyline points="2 12 12 17 22 12"/>
+              </svg>
+            </div>
+            <div class="plans-spec-text">
+              <span class="plans-spec-title">Tier &amp; Facility Privileges</span>
+              <span class="plans-spec-sub">Gym floor, PT inclusive or general facility access</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+const bindPlansEmptyStateEvents = () => {
+  const createPlanBtn = document.getElementById("btn-empty-create-plan");
+  const skipPlanBtn = document.getElementById("btn-empty-skip-plan");
+
+  if (createPlanBtn) {
+    createPlanBtn.onclick = (e) => {
+      e.preventDefault();
+      setAddMemberModalState(false);
+      if (typeof setActiveView === "function") {
+        setActiveView("membership-plans");
+      }
+    };
+  }
+
+  if (skipPlanBtn) {
+    skipPlanBtn.onclick = (e) => {
+      e.preventDefault();
+      selectedPlanId = null;
+      if (planningNextButton && !planningNextButton.disabled) {
+        planningNextButton.click();
+      }
+    };
+  }
+};
+
 const loadPlansForSelection = async () => {
   const gridContainer = document.getElementById("add-member-planning-grid");
   if (!gridContainer) return;
@@ -1475,14 +1575,14 @@ const loadPlansForSelection = async () => {
     allPlans = activePlans;
     
     if (activePlans.length === 0) {
-      gridContainer.innerHTML = `
-        <div class="planning-placeholder">
-          <p>Membership plans will be listed here.</p>
-        </div>
-      `;
+      gridContainer.classList.add("has-empty-state");
+      gridContainer.innerHTML = getPlansEmptyStateHtml();
+      bindPlansEmptyStateEvents();
       selectedPlanId = null;
       return;
     }
+
+    gridContainer.classList.remove("has-empty-state");
 
     let html = "";
     activePlans.forEach(plan => {
@@ -1621,11 +1721,9 @@ const loadPlansForSelection = async () => {
 
   } catch (err) {
     console.error("GymDeck: Failed to load plans for selection:", err);
-    gridContainer.innerHTML = `
-      <div class="planning-placeholder">
-        <p>Error loading plans: ${err}</p>
-      </div>
-    `;
+    gridContainer.classList.add("has-empty-state");
+    gridContainer.innerHTML = getPlansEmptyStateHtml();
+    bindPlansEmptyStateEvents();
   }
 };
 
@@ -1847,15 +1945,10 @@ const resetDashboardScroll = () => {
     const originalScrollBehavior = scrollArea.style.scrollBehavior;
     const originalScrollSnapType = scrollArea.style.scrollSnapType;
     
-    // Disable smooth scroll and snap behaviors to force instant reset
+    // Disable smooth scroll and snap behaviors to force instant reset without layout thrashing
     scrollArea.style.scrollBehavior = "auto";
     scrollArea.style.scrollSnapType = "none";
-    
-    // Reset scroll position
     scrollArea.scrollTop = 0;
-    
-    // Force reflow
-    void scrollArea.offsetHeight;
     
     // Restore original styles
     scrollArea.style.scrollBehavior = originalScrollBehavior;
@@ -2206,6 +2299,8 @@ const setPlanDetailsModalState = (isOpen) => {
       console.error("GymDeck: Failed to calculate plan stats in background:", err);
     });
   } else {
+    modal?.setAttribute("aria-hidden", "true");
+    backdrop?.setAttribute("aria-hidden", "true");
     backdrop?.classList.remove("is-active");
     modal?.classList.remove("is-active");
   }
@@ -2571,31 +2666,47 @@ const setMoreOptionsModalState = (isOpen, triggerButton = null) => {
       }
     }
 
+    // Reset scroll position cleanly prior to opening
+    resetDashboardScroll();
+
+    // Set accessibility attributes
+    modal?.setAttribute("aria-hidden", "false");
+    backdrop?.setAttribute("aria-hidden", "false");
+
+    // Smooth fluid entry
     backdrop?.classList.add("is-active");
     modal?.classList.add("is-active");
     document.body.style.overflow = "hidden";
     
-    resetDashboardScroll();
-    
-    const scrollArea = document.querySelector(".dashboard-scroll-area");
-    if (scrollArea) {
-      const indicator = document.getElementById("dashboardScrollIndicator");
-      if (indicator) {
-        indicator.style.opacity = "1";
-        setTimeout(() => {
-          const maxScroll = scrollArea.scrollHeight - scrollArea.clientHeight;
-          if (maxScroll <= 0) {
-            indicator.style.opacity = "0";
-          }
-        }, 120);
+    requestAnimationFrame(() => {
+      adjustScrollPadding();
+      const scrollArea = document.querySelector(".dashboard-scroll-area");
+      if (scrollArea) {
+        const indicator = document.getElementById("dashboardScrollIndicator");
+        if (indicator) {
+          indicator.style.opacity = "1";
+          setTimeout(() => {
+            const maxScroll = scrollArea.scrollHeight - scrollArea.clientHeight;
+            if (maxScroll <= 0) {
+              indicator.style.opacity = "0";
+            }
+          }, 150);
+        }
       }
-    }
-    adjustScrollPadding();
+    });
   } else {
+    modal?.setAttribute("aria-hidden", "true");
+    backdrop?.setAttribute("aria-hidden", "true");
     backdrop?.classList.remove("is-active");
     modal?.classList.remove("is-active");
-    document.body.style.overflow = "";
-    resetDashboardScroll();
+
+    setTimeout(() => {
+      const otherModalActive = document.querySelector(".modal-window.is-active, .verification-modal.is-active, .member-form-modal.is-active");
+      if (!otherModalActive) {
+        document.body.style.overflow = "";
+      }
+      resetDashboardScroll();
+    }, 240);
   }
 };
 
@@ -4235,6 +4346,7 @@ addMemberSaveButton?.addEventListener("click", async () => {
   addMemberModal?.classList.add("is-page-2");
   addMemberModal?.classList.remove("is-page-3");
   addMemberModal?.classList.remove("is-page-4");
+  addMemberModal?.classList.remove("is-page-5");
 });
 
 // Auto-select Next/Save & Finish action when user presses Enter key in the form modal
@@ -4249,12 +4361,17 @@ addMemberModal?.addEventListener("keydown", (e) => {
     const isPage2 = addMemberModal.classList.contains("is-page-2");
     const isPage3 = addMemberModal.classList.contains("is-page-3");
     const isPage4 = addMemberModal.classList.contains("is-page-4");
+    const isPage5 = addMemberModal.classList.contains("is-page-5");
     
     e.preventDefault();
     
-    if (isPage4) {
-      if (docUploadSaveButton && !docUploadSaveButton.disabled) {
-        docUploadSaveButton.click();
+    if (isPage5) {
+      if (paymentSaveFinishButton && !paymentSaveFinishButton.disabled) {
+        paymentSaveFinishButton.click();
+      }
+    } else if (isPage4) {
+      if (planningNextButton && !planningNextButton.disabled) {
+        planningNextButton.click();
       }
     } else if (isPage3) {
       if (docUploadNextButton && !docUploadNextButton.disabled) {
@@ -4445,11 +4562,13 @@ const saveUploadedDocuments = async (submitButton) => {
       if (activeVerificationMemberId) {
         // --- 1. Existing Member Flow ---
         const gymId = "00000000-0000-0000-0000-000000000000";
+        const targetMemberId = activeVerificationMemberId;
+        const targetMemberName = activeVerificationMemberName;
         const rustDocs = uploadedDocs.map(d => {
           const fileBytes = dataUrlToBytes(d.base64);
           return {
             id: crypto.randomUUID(),
-            member_id: activeVerificationMemberId,
+            member_id: targetMemberId,
             gym_id: gymId,
             doc_name: d.label,
             doc_type: d.label.toLowerCase().includes("aadhaar") ? "id" : 
@@ -4462,14 +4581,7 @@ const saveUploadedDocuments = async (submitButton) => {
           };
         });
 
-        await window.__TAURI__.core.invoke("save_member_documents_command", {
-          memberId: activeVerificationMemberId,
-          documents: rustDocs
-        });
-        
-        console.log(`GymDeck: Appended ${rustDocs.length} documents for member: ${activeVerificationMemberId}`);
-
-        // Update local session registry
+        // 1. Instantly update local session registry
         if (rustDocs.length > 0) {
           const sessionDocs = rustDocs.map((d, idx) => {
             const mType = detectMimeType(d.file_content);
@@ -4484,21 +4596,37 @@ const saveUploadedDocuments = async (submitButton) => {
             };
           });
           
-          const existingDocs = memberDocsRegistry.get(activeVerificationMemberId) || [];
+          const existingDocs = memberDocsRegistry.get(targetMemberId) || [];
           const mergedDocs = [...existingDocs, ...sessionDocs];
-          memberDocsRegistry.set(activeVerificationMemberId, mergedDocs);
-          memberDocsRegistry.set(activeVerificationMemberName, mergedDocs);
+          memberDocsRegistry.set(targetMemberId, mergedDocs);
+          memberDocsRegistry.set(targetMemberName, mergedDocs);
         }
 
-        await loadMembersFromBackend(false);
+        // 2. Instantly close modal and refresh verification center
         resetUploadFields();
         setAddMemberModalState(false);
 
-        // Reopen verification modal directly with the updated documents!
-        const row = document.querySelector(`[data-member-card][data-member-id="${activeVerificationMemberId}"]`);
+        const row = document.querySelector(`[data-member-card][data-member-id="${targetMemberId}"]`);
         if (row) {
           initVerificationCenter(row, lastDocumentTrigger);
         }
+        showToast("Documents uploaded successfully!");
+
+        // 3. Persist to SQLite in background (non-blocking)
+        (async () => {
+          try {
+            await window.__TAURI__.core.invoke("save_member_documents_command", {
+              memberId: targetMemberId,
+              documents: rustDocs
+            });
+            console.log(`GymDeck: Appended ${rustDocs.length} documents for member: ${targetMemberId}`);
+            await loadMembersFromBackend(false);
+          } catch (err) {
+            console.error("GymDeck: Failed to save documents:", err);
+            showToast("Failed to save documents: " + err);
+          }
+        })();
+
       } else {
         // --- 2. New Member Registration Flow ---
         const memberCode = `GD-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -4511,14 +4639,14 @@ const saveUploadedDocuments = async (submitButton) => {
           member_code: memberCode,
           full_name: pendingMemberData.name || "Unnamed Member",
           phone: pendingMemberData.contactNumber || "0000000000",
-          alternate_phone: pendingMemberData.alternateContact,
-          email: pendingMemberData.email,
+          alternate_phone: pendingMemberData.alternateContact || null,
+          email: pendingMemberData.email || null,
           gender: pendingMemberData.gender || "OTHER",
           blood_group: pendingMemberData.bloodGroup || null,
           dob: pendingMemberData.dobValue || new Date().toISOString().split('T')[0],
-          address: pendingMemberData.address,
-          height: pendingMemberData.height,
-          weight: pendingMemberData.weight,
+          address: pendingMemberData.address || null,
+          height: pendingMemberData.height || null,
+          weight: pendingMemberData.weight || null,
           membership_plan_id: selectedPlanId || null,
           membership_status: "ACTIVE",
           joined_at: new Date().toISOString(),
@@ -4562,13 +4690,7 @@ const saveUploadedDocuments = async (submitButton) => {
           };
         });
 
-        await window.__TAURI__.core.invoke("create_member_command", { 
-          member: rustMember,
-          documents: rustDocs
-        });
-        
-        console.log(`GymDeck: Member & ${rustDocs.length} Documents successfully persisted to SQLite.`);
-
+        // 1. Immediately register documents in local session registry
         if (rustDocs.length > 0) {
             const sessionDocs = rustDocs.map((d, idx) => {
                 const mType = detectMimeType(d.file_content);
@@ -4586,13 +4708,36 @@ const saveUploadedDocuments = async (submitButton) => {
             memberDocsRegistry.set(rustMember.full_name, sessionDocs);
         }
 
-        await loadMembersFromBackend();
-        
+        // 2. OPTIMISTIC INSTANT UI UPDATE:
+        // Prepend new member to in-memory cachedMembers immediately
+        cachedMembers.unshift(rustMember);
+        window.cachedMembers = cachedMembers;
+        currentMembersPage = 1;
+        renderCurrentMemberPage();
+
+        // 3. Immediately close modal, clean up form fields, and return to directory
         resetMemberForm();
         resetUploadFields();
         pendingMemberData = null;
         setAddMemberModalState(false);
         setActiveView("members");
+        showToast("Member registered successfully!");
+
+        // 4. Asynchronously persist to SQLite in background (non-blocking)
+        (async () => {
+          try {
+            await window.__TAURI__.core.invoke("create_member_command", { 
+              member: rustMember,
+              documents: rustDocs
+            });
+            console.log(`GymDeck: Member & ${rustDocs.length} Documents successfully persisted to SQLite.`);
+            // Silently refresh backend members to sync any server-computed fields
+            await loadMembersFromBackend(false);
+          } catch (err) {
+            console.error("GymDeck: Failed to save member to SQLite:", err);
+            showToast("Error saving to database: " + err);
+          }
+        })();
       }
     } catch (err) {
       console.error("GymDeck: Failed to save:", err);
@@ -5222,11 +5367,17 @@ const initCustomSelects = () => {
   // Close custom dropdown menus when clicking outside
   document.addEventListener("click", (e) => {
     const activeWrappers = document.querySelectorAll(".custom-select-wrapper.is-open");
+    let anyOpen = false;
     activeWrappers.forEach(wrapper => {
       if (!wrapper.contains(e.target)) {
         wrapper.classList.remove("is-open");
+      } else {
+        anyOpen = true;
       }
     });
+    if (!anyOpen && (!addMemberDatePickerPanel || addMemberDatePickerPanel.hidden)) {
+      document.querySelector(".member-form-modal")?.classList.remove("has-open-dropdown");
+    }
   });
 
   const selectWrappers = document.querySelectorAll(".custom-select-wrapper");
@@ -5253,7 +5404,13 @@ const initCustomSelects = () => {
         }
       });
 
-      wrapper.classList.toggle("is-open");
+      const willOpen = !wrapper.classList.contains("is-open");
+      wrapper.classList.toggle("is-open", willOpen);
+      if (willOpen) {
+        document.querySelector(".member-form-modal")?.classList.add("has-open-dropdown");
+      } else {
+        document.querySelector(".member-form-modal")?.classList.remove("has-open-dropdown");
+      }
     });
 
     // Handle custom option click
@@ -5276,6 +5433,7 @@ const initCustomSelects = () => {
 
         // Close dropdown
         wrapper.classList.remove("is-open");
+        document.querySelector(".member-form-modal")?.classList.remove("has-open-dropdown");
 
         // Dispatch change event on native select to trigger validation & checks
         selectEl.dispatchEvent(new Event("change", { bubbles: true }));
@@ -5518,30 +5676,34 @@ const updateBillingSummary = () => {
 
   const feeInput = document.getElementById("member-joining-fee");
   const joiningFeeVal = feeInput ? parseFloat(feeInput.value) || 0 : 0;
+  let totalAmount = joiningFeeVal;
 
   if (!selectedPlanId) {
     if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
     if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
     if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
     if (billingTotalAmount) billingTotalAmount.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-    return;
+  } else {
+    const selectedPlan = allPlans.find(p => p.id === selectedPlanId);
+    if (selectedPlan) {
+      if (billingPlanName) billingPlanName.textContent = selectedPlan.plan_name;
+      const planPrice = selectedPlan.price || 0;
+      totalAmount = planPrice + joiningFeeVal;
+      if (billingPlanPrice) billingPlanPrice.textContent = `₹${planPrice.toLocaleString()}`;
+      if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+      if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
+    } else {
+      if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
+      if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
+      if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+      if (billingTotalAmount) billingTotalAmount.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+    }
   }
 
-  const selectedPlan = allPlans.find(p => p.id === selectedPlanId);
-  if (selectedPlan) {
-    if (billingPlanName) billingPlanName.textContent = selectedPlan.plan_name;
-    const planPrice = selectedPlan.price || 0;
-    if (billingPlanPrice) billingPlanPrice.textContent = `₹${planPrice.toLocaleString()}`;
-    if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-    
-    const totalAmount = planPrice + joiningFeeVal;
-    if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
-  } else {
-    if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
-    if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
-    if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-    if (billingTotalAmount) billingTotalAmount.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-  }
+  const formattedTotal = `₹${totalAmount.toLocaleString()}`;
+  document.querySelectorAll(".pay-expected-amount").forEach(el => {
+    el.textContent = formattedTotal;
+  });
 };
 
 planningNextButton?.addEventListener("click", () => {
@@ -5561,7 +5723,12 @@ paymentSaveFinishButton?.addEventListener("click", () => {
 
 // Payment Mode Selector Action
 document.querySelectorAll(".payment-mode-option").forEach(card => {
-  card.addEventListener("click", () => {
+  card.addEventListener("click", (e) => {
+    if (card.classList.contains("is-disabled") || card.dataset.payMode === "Card") {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
     card.classList.add("active");
     const radio = card.querySelector("input[type='radio']");
@@ -5571,5 +5738,39 @@ document.querySelectorAll(".payment-mode-option").forEach(card => {
     }
   });
 });
+
+// Initialize empty state bindings
+bindPlansEmptyStateEvents();
+
+// Initialize Joining Fee quick presets & waive controls
+const initJoiningFeeControls = () => {
+  const feeInput = document.getElementById("member-joining-fee");
+  if (!feeInput) return;
+
+  const waiveBtn = document.getElementById("btn-waive-joining-fee");
+  if (waiveBtn) {
+    waiveBtn.onclick = (e) => {
+      e.preventDefault();
+      feeInput.value = "0";
+      feeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      feeInput.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+  }
+
+  const presetChips = document.querySelectorAll(".joining-fee-preset-chip");
+  presetChips.forEach(chip => {
+    chip.onclick = (e) => {
+      e.preventDefault();
+      const amount = chip.dataset.amount || "0";
+      feeInput.value = amount;
+      feeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      feeInput.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+  });
+};
+
+initJoiningFeeControls();
+
+
 
 

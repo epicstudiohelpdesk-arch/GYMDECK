@@ -142,117 +142,10 @@ const resolveMemberPhoto = (member) => {
 };
 
 // ─────────────────────────────────────────
-// DEFAULT EXPIRED MEMBERS (Fallback if DB empty)
-// Strictly members whose memberships have expired already
-// ─────────────────────────────────────────
+// Clean Defaults: Zero Mock Data
+const DEFAULT_EXPIRED_MEMBERS = [];
 
-const DEFAULT_EXPIRED_MEMBERS = [
-  {
-    id: "GD-1105",
-    rawId: 1105,
-    name: "Rohan Varma",
-    gender: "male",
-    phone: "+91 97110 33490",
-    status: "EXPIRED",
-    plan: "Monthly Pass",
-    planPrice: 2200,
-    expiry: "20 Oct 2026",
-    daysRemaining: -23,
-    daysExpiredAgo: 23,
-    pendingDues: 1800,
-    wallet: 450,
-    tags: ["Expired", "Pending Dues", "Recently Expired"]
-  },
-  {
-    id: "GD-1204",
-    rawId: 1204,
-    name: "Dev Patel",
-    gender: "male",
-    phone: "+91 91234 56789",
-    status: "EXPIRED",
-    plan: "Quarterly Cardio & Strength",
-    planPrice: 5500,
-    expiry: "02 Nov 2026",
-    daysRemaining: -10,
-    daysExpiredAgo: 10,
-    pendingDues: 2500,
-    wallet: 0,
-    tags: ["Expired", "Pending Dues", "Recently Expired"]
-  },
-  {
-    id: "GD-1088",
-    rawId: 1088,
-    name: "Pooja Sharma",
-    gender: "female",
-    phone: "+91 98221 55678",
-    status: "EXPIRED",
-    plan: "Quarterly Strength & Cardio",
-    planPrice: 6500,
-    expiry: "28 Oct 2026",
-    daysRemaining: -15,
-    daysExpiredAgo: 15,
-    pendingDues: 3200,
-    wallet: 0,
-    tags: ["Expired", "Pending Dues", "Recently Expired"]
-  },
-  {
-    id: "GD-1152",
-    rawId: 1152,
-    name: "Ananya Deshmukh",
-    gender: "female",
-    phone: "+91 98450 33211",
-    status: "EXPIRED",
-    plan: "Annual Pro Elite",
-    planPrice: 18000,
-    expiry: "14 Sep 2026",
-    daysRemaining: -59,
-    daysExpiredAgo: 59,
-    pendingDues: 0,
-    wallet: 500,
-    tags: ["Expired", "Long Expired"]
-  },
-  {
-    id: "GD-1033",
-    rawId: 1033,
-    name: "Karan Johar",
-    gender: "male",
-    phone: "+91 99882 44332",
-    status: "EXPIRED",
-    plan: "Half-Yearly Fitness",
-    planPrice: 9500,
-    expiry: "05 Oct 2026",
-    daysRemaining: -38,
-    daysExpiredAgo: 38,
-    pendingDues: 1200,
-    wallet: 0,
-    tags: ["Expired", "Pending Dues", "Long Expired"]
-  },
-  {
-    id: "GD-1095",
-    rawId: 1095,
-    name: "Meera Nair",
-    gender: "female",
-    phone: "+91 97441 22880",
-    status: "EXPIRED",
-    plan: "Monthly Yoga & Pilates",
-    planPrice: 2800,
-    expiry: "08 Nov 2026",
-    daysRemaining: -4,
-    daysExpiredAgo: 4,
-    pendingDues: 0,
-    wallet: 200,
-    tags: ["Expired", "Recently Expired"]
-  }
-];
-
-const DEFAULT_DB_PLANS = [
-  { id: "db-1", name: "Monthly Standard Fitness", price: 2500, duration_days: 30, description: "Cardio & strength floor access with locker" },
-  { id: "db-2", name: "Quarterly Strength & Cardio", price: 6500, duration_days: 90, description: "Strength + Cardio + steam bath & shower" },
-  { id: "db-3", name: "Half-Yearly Fitness Pro", price: 9500, duration_days: 180, description: "All-access floor + 2 complimentary guest passes" },
-  { id: "db-4", name: "Annual Pro Elite", price: 18000, duration_days: 365, description: "Full 365-day access + quarterly nutrition consultation" },
-  { id: "db-5", name: "Personal Training (10 Sessions)", price: 8000, duration_days: 60, description: "1-on-1 certified trainer posture & workout guidance" },
-  { id: "db-6", name: "Weekend Warrior Pass", price: 1800, duration_days: 30, description: "Saturday & Sunday full facility & spa access" }
-];
+const DEFAULT_DB_PLANS = [];
 
 const SEGMENT_CHIPS = [
   { id: "all", label: "All Expired" },
@@ -270,9 +163,9 @@ const CollectFeesPage = () => {
   const photoInputRef = useRef(null);
   const [isHeaderStuck, setIsHeaderStuck] = useState(false);
 
-  // Members & DB state
-  const [membersList, setMembersList] = useState(DEFAULT_EXPIRED_MEMBERS);
-  const [dbPlans, setDbPlans] = useState(DEFAULT_DB_PLANS);
+  // Members & DB state (clean zero mock defaults)
+  const [membersList, setMembersList] = useState([]);
+  const [dbPlans, setDbPlans] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [memberSearch, setMemberSearch] = useState("");
   const [activeSegment, setActiveSegment] = useState("all");
@@ -363,7 +256,7 @@ const CollectFeesPage = () => {
         window.__TAURI__.core.invoke("get_members_command", { limit: 10000, offset: 0 }).catch(() => []),
         window.__TAURI__.core.invoke("get_plans_command").catch(() => [])
       ]).then(([rawMembers, rawPlans]) => {
-        if (Array.isArray(rawPlans) && rawPlans.length > 0) {
+        if (Array.isArray(rawPlans)) {
           setDbPlans(rawPlans);
         }
 
@@ -372,7 +265,7 @@ const CollectFeesPage = () => {
           rawPlans.forEach(p => { plansMap[p.id] = p; });
         }
 
-        if (Array.isArray(rawMembers) && rawMembers.length > 0) {
+        if (Array.isArray(rawMembers)) {
           const now = new Date();
           const expiredMapped = rawMembers
             .filter(m => m && m.membership_status !== "CANCELLED" && m.membership_status !== "DELETED")
@@ -438,9 +331,7 @@ const CollectFeesPage = () => {
             .filter(Boolean)
             .sort((a, b) => a.daysRemaining - b.daysRemaining);
 
-          if (expiredMapped.length > 0) {
-            setMembersList(expiredMapped);
-          }
+          setMembersList(expiredMapped);
         }
       }).catch(err => {
         console.warn("Could not fetch Tauri SQLite members:", err);
