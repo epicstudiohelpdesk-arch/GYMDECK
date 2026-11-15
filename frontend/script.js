@@ -5718,6 +5718,15 @@ paymentBackButton?.addEventListener("click", () => {
 });
 
 paymentSaveFinishButton?.addEventListener("click", () => {
+  const upiActive = document.querySelector('.payment-mode-option[data-pay-mode="UPI"]')?.classList.contains("active");
+  const upiCard = document.querySelector('.payment-mode-option[data-pay-mode="UPI"]');
+  const subMode = upiCard?.dataset?.subMode || "qr";
+  if (upiActive && subMode === "qr") {
+    if (typeof window.hasSettlementAccount === "function" && !window.hasSettlementAccount()) {
+      showToast("Please add an account in Banking & Settlement first, or choose Cash Settlement.");
+      return;
+    }
+  }
   saveUploadedDocuments(paymentSaveFinishButton);
 });
 

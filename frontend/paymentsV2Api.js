@@ -64,4 +64,8 @@ export const paymentsV2Api = {
   updateSettings: (payload) => request('PUT', '/v1/owner/payment-accounts/settings/current', payload),
 };
 
+if (typeof window !== 'undefined') {
+  window.paymentsV2Api = paymentsV2Api;
+}
+
 export default paymentsV2Api;

@@ -567,7 +567,16 @@ const POPULAR_WEST_BENGAL_LOCATIONS = [
  */
 
 const GymProfile = () => {
-  const [activeTab, setActiveTab] = useState("General");
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("gymdeck_gym_profile_active_tab");
+      if (saved) {
+        sessionStorage.removeItem("gymdeck_gym_profile_active_tab");
+        return saved;
+      }
+    } catch (e) {}
+    return "General";
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -577,6 +586,17 @@ const GymProfile = () => {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
+
+  // Sync external tab switch requests (e.g. from member registration modal)
+  useEffect(() => {
+    const handleSwitchTab = (e) => {
+      if (e.detail?.tab) {
+        setActiveTab(e.detail.tab);
+      }
+    };
+    window.addEventListener("gymdeck:switch_gym_profile_tab", handleSwitchTab);
+    return () => window.removeEventListener("gymdeck:switch_gym_profile_tab", handleSwitchTab);
+  }, []);
 
   // Map & Location State
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -788,7 +808,16 @@ const GymProfile = () => {
     customDomain: "",
 
     // Banking, Settlement & Payout Accounts
-    bankAccounts: [],
+    bankAccounts: (() => {
+      try {
+        const saved = localStorage.getItem("gymdeck_bank_accounts");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {}
+      return [];
+    })(),
 
     // Social Media
     socials: {
@@ -868,24 +897,29 @@ const GymProfile = () => {
         if (cancelled || !res?.data?.accounts) return;
         const apiAccounts = res.data.accounts;
         if (apiAccounts.length > 0) {
+          const mappedAccounts = apiAccounts.map((a) => ({
+            id: a.id,
+            accountHolderName: a.beneficiaryName,
+            bankName: a.bankName || "Bank",
+            accountNumber: a.accountNumberMasked || "",
+            ifscCode: a.ifscCode || "",
+            branchName: a.branchName || "",
+            accountType: a.accountType || "Current Account",
+            upiId: a.upiVpa || "",
+            role: a.isPrimary ? "both" : "inflow",
+            isPrimaryInflow: !!a.isPrimary,
+            isPrimaryOutflow: !!a.isPrimary,
+            verificationStatus: a.status || "UNVERIFIED",
+            addedAt: a.createdAt ? new Date(a.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+          }));
           setGymData((prev) => ({
             ...prev,
-            bankAccounts: apiAccounts.map((a) => ({
-              id: a.id,
-              accountHolderName: a.beneficiaryName,
-              bankName: a.bankName || "Bank",
-              accountNumber: a.accountNumberMasked || "",
-              ifscCode: a.ifscCode || "",
-              branchName: a.branchName || "",
-              accountType: a.accountType || "Current Account",
-              upiId: a.upiVpa || "",
-              role: a.isPrimary ? "both" : "inflow",
-              isPrimaryInflow: !!a.isPrimary,
-              isPrimaryOutflow: !!a.isPrimary,
-              verificationStatus: a.status || "UNVERIFIED",
-              addedAt: a.createdAt ? new Date(a.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
-            })),
+            bankAccounts: mappedAccounts,
           }));
+          try {
+            localStorage.setItem("gymdeck_bank_accounts", JSON.stringify(mappedAccounts));
+            window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: mappedAccounts } }));
+          } catch (e) {}
         }
       })
       .catch(() => { /* Offline / unenrolled: keep local defaults. */ });
@@ -1186,6 +1220,16 @@ const GymProfile = () => {
         })
       }));
 
+      setTimeout(() => {
+        setGymData(curr => {
+          try {
+            localStorage.setItem("gymdeck_bank_accounts", JSON.stringify(curr.bankAccounts || []));
+            window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: curr.bankAccounts || [] } }));
+          } catch (e) {}
+          return curr;
+        });
+      }, 0);
+
       // Asynchronously update in cloud backend
       if (!editingAccountId.startsWith("acc_")) {
         const updatePayload = {
@@ -1241,17 +1285,24 @@ const GymProfile = () => {
         addedAt: new Date().toISOString().split("T")[0]
       };
 
+      const updatedWithNew = [
+        ...(gymData.bankAccounts || []).map(acc => ({
+          ...acc,
+          isPrimaryInflow: isPrimaryInflow ? false : acc.isPrimaryInflow,
+          isPrimaryOutflow: isPrimaryOutflow ? false : acc.isPrimaryOutflow
+        })),
+        newAcc
+      ];
+
       setGymData(prev => ({
         ...prev,
-        bankAccounts: [
-          ...(prev.bankAccounts || []).map(acc => ({
-            ...acc,
-            isPrimaryInflow: isPrimaryInflow ? false : acc.isPrimaryInflow,
-            isPrimaryOutflow: isPrimaryOutflow ? false : acc.isPrimaryOutflow
-          })),
-          newAcc
-        ]
+        bankAccounts: updatedWithNew
       }));
+
+      try {
+        localStorage.setItem("gymdeck_bank_accounts", JSON.stringify(updatedWithNew));
+        window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: updatedWithNew } }));
+      } catch (e) {}
 
       // Asynchronously persist to backend database
       paymentsV2Api.createAccount({
@@ -1294,6 +1345,10 @@ const GymProfile = () => {
     const remaining = (gymData.bankAccounts || []).filter(a => a.id !== id);
     if (remaining.length === 0) {
       setGymData(prev => ({ ...prev, bankAccounts: [] }));
+      try {
+        localStorage.setItem("gymdeck_bank_accounts", JSON.stringify([]));
+        window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: [] } }));
+      } catch (e) {}
       setHasChanges(true);
       setAccountToDelete(null);
       showToast("Financial account disconnected.");
@@ -1311,6 +1366,10 @@ const GymProfile = () => {
     }
 
     setGymData(prev => ({ ...prev, bankAccounts: updated }));
+    try {
+      localStorage.setItem("gymdeck_bank_accounts", JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: updated } }));
+    } catch (e) {}
     setHasChanges(true);
     setAccountToDelete(null);
     showToast("Financial account disconnected.");

@@ -1602,7 +1602,7 @@
 
                     <div class="payment-modes-stack">
                       <!-- Cash -->
-                      <label class="payment-mode-option active" data-pay-mode="Cash">
+                      <label class="payment-mode-option active" data-pay-mode="Cash" role="button" tabindex="0" aria-label="Cash Settlement">
                         <input type="radio" name="paymentMode" value="Cash" checked style="display: none;" />
                         <div class="payment-mode-left">
                           <div class="plans-spec-icon-wrap is-emerald">
@@ -1624,7 +1624,7 @@
                       </label>
 
                       <!-- UPI -->
-                      <label class="payment-mode-option" data-pay-mode="UPI">
+                      <label class="payment-mode-option" data-pay-mode="UPI" role="button" tabindex="0" aria-label="UPI Payment">
                         <input type="radio" name="paymentMode" value="UPI" style="display: none;" />
                         <div class="payment-mode-left">
                           <div class="plans-spec-icon-wrap is-indigo">
@@ -1666,19 +1666,14 @@
                       </div>
                     </div>
 
-                    <!-- Dynamic Helper Box based on selection -->
-                    <div class="payment-helper-box">
-                      <!-- Cash helper -->
-                      <div class="helper-message helper-cash">
-                        <div class="helper-icon-wrap is-cash">
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /></svg>
-                        </div>
-                        <div class="helper-content">
-                          <strong class="helper-title">Cash Settlement Verification</strong>
-                          <span class="helper-desc">Collect exact cash of <strong class="pay-expected-amount" style="color: #059669; font-family: monospace;">₹0</strong> and store it in the cash drawer before saving.</span>
-                        </div>
-                      </div>
+                    <!-- Cash Settlement Verification (Purely textual, near bottom of dotted card) -->
+                    <div class="cash-settlement-textual" id="cashSettlementTextual">
+                      <strong class="cash-settlement-title">Cash Settlement Verification</strong>
+                      <span class="cash-settlement-desc">Collect exact cash of <strong class="pay-expected-amount" style="color: #059669; font-weight: 700; font-family: monospace;">₹0</strong> and store it in the cash drawer before saving.</span>
+                    </div>
 
+                    <!-- Dynamic Helper Box based on selection (for UPI) -->
+                    <div class="payment-helper-box" id="paymentHelperBox">
                       <!-- UPI ID helper -->
                       <div class="helper-message helper-upi-id">
                         <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
@@ -1700,7 +1695,8 @@
 
                       <!-- UPI QR helper -->
                       <div class="helper-message helper-upi-qr">
-                        <div class="upi-qr-display-container">
+                        <!-- Ready State: Active dynamic QR code scanner -->
+                        <div class="upi-qr-display-container" id="upiQrReadyBox">
                           <div class="upi-qr-frame">
                             <div class="qr-scanner-line"></div>
                             <svg viewBox="0 0 24 24" width="56" height="56" fill="currentColor" class="mock-qr-svg">
@@ -1787,7 +1783,76 @@
                   const upiSubmodal = document.getElementById('upiSubmodal');
                   let previousActiveMode = 'Cash';
 
+                  const checkSettlementAccounts = () => {
+                    let hasAccount = false;
+                    try {
+                      const raw = localStorage.getItem("gymdeck_bank_accounts");
+                      if (raw) {
+                        const accounts = JSON.parse(raw);
+                        if (Array.isArray(accounts)) {
+                          const active = accounts.filter(a => a && a.verificationStatus !== "DISABLED" && (a.accountNumber || a.upiId));
+                          if (active.length > 0) hasAccount = true;
+                        }
+                      }
+                    } catch (e) {
+                      hasAccount = false;
+                    }
+                    return hasAccount;
+                  };
+
+                  const updateUpiQrState = (hasAccount) => {
+                    const submodalUnconfiguredBox = document.getElementById("upiSubmodalUnconfiguredBox");
+                    const qrOptionBtn = document.getElementById("upiOptionQrBtn");
+
+                    if (hasAccount) {
+                      submodalUnconfiguredBox?.setAttribute("hidden", "true");
+                      qrOptionBtn?.classList.remove("is-active-warning");
+                    }
+                  };
+
+                  const refreshAccountsStatus = async () => {
+                    let has = checkSettlementAccounts();
+                    updateUpiQrState(has);
+
+                    if (window.paymentsV2Api && typeof window.paymentsV2Api.listAccounts === "function") {
+                      try {
+                        const res = await window.paymentsV2Api.listAccounts();
+                        if (Array.isArray(res?.data?.accounts)) {
+                          const valid = res.data.accounts.filter(a => a.status !== "DISABLED");
+                          has = valid.length > 0;
+                          updateUpiQrState(has);
+                        }
+                      } catch (e) {
+                        // Offline or local fallback
+                      }
+                    }
+                    return has;
+                  };
+
+                  window.hasSettlementAccount = checkSettlementAccounts;
+                  window.refreshSettlementAccountStatus = refreshAccountsStatus;
+
+                  window.addEventListener("gymdeck:banking_accounts_updated", () => {
+                    refreshAccountsStatus();
+                  });
+
                   const updateHelper = (mode, subMode) => {
+                    const cashTextual = document.getElementById("cashSettlementTextual");
+                    const helperBox = document.querySelector(".payment-helper-box");
+
+                    if (mode === "Cash") {
+                      if (cashTextual) cashTextual.style.setProperty('display', 'flex', 'important');
+                      if (helperBox) helperBox.style.setProperty('display', 'none', 'important');
+                      document.querySelectorAll(".payment-helper-box .helper-message").forEach(msg => {
+                        msg.style.setProperty('display', 'none', 'important');
+                      });
+                      return;
+                    }
+
+                    // Mode is not Cash (e.g. UPI)
+                    if (cashTextual) cashTextual.style.setProperty('display', 'none', 'important');
+                    if (helperBox) helperBox.style.setProperty('display', 'flex', 'important');
+
                     document.querySelectorAll(".payment-helper-box .helper-message").forEach(msg => {
                       msg.style.setProperty('display', 'none', 'important');
                     });
@@ -1801,13 +1866,23 @@
                     if (activeMsg) {
                       activeMsg.style.setProperty('display', 'flex', 'important');
                     }
+
+                    if (targetClass === 'upi-qr') {
+                      refreshAccountsStatus();
+                    }
                   };
 
                   setDate();
+                  refreshAccountsStatus();
+                  const initialOpt = document.querySelector(".payment-mode-option.active");
+                  if (initialOpt) {
+                    updateHelper(initialOpt.dataset.payMode, upiCard?.dataset?.subMode);
+                  }
                   
-                  // Hook to set dynamic date when entering the page
+                  // Hook to set dynamic date and refresh payment state when entering Page 5
                   document.querySelector("[data-planning-next]")?.addEventListener("click", () => {
                     setDate();
+                    refreshAccountsStatus();
                     const activeOpt = document.querySelector(".payment-mode-option.active");
                     if (activeOpt) {
                       updateHelper(activeOpt.dataset.payMode, upiCard?.dataset?.subMode);
@@ -1816,6 +1891,12 @@
 
                   // Monitor previous mode selection changes
                   document.querySelectorAll(".payment-mode-option").forEach(card => {
+                    card.addEventListener("keydown", (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        card.click();
+                      }
+                    });
                     card.addEventListener("click", (e) => {
                       if (card.classList.contains("is-disabled") || card.dataset.payMode === 'Card') {
                         e.preventDefault();
@@ -1824,13 +1905,22 @@
                       }
                       const mode = card.dataset.payMode;
                       if (mode !== 'UPI') {
+                        document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
+                        card.classList.add("active");
+                        const radio = card.querySelector("input[type='radio']");
+                        if (radio) radio.checked = true;
                         previousActiveMode = mode;
                         updateHelper(mode);
                       } else {
-                        // Trigger sub-modal swiftly
+                        // Always open Select UPI Method submodal in clean state
+                        const submodalBox = document.getElementById('upiSubmodalUnconfiguredBox');
+                        const qrOptionBtn = document.getElementById('upiOptionQrBtn');
+                        submodalBox?.setAttribute('hidden', 'true');
+                        qrOptionBtn?.classList.remove('is-active-warning');
+
+                        // Trigger sub-modal
                         if (upiSubmodal) {
                           upiSubmodal.removeAttribute('hidden');
-                          // Enforce reflow
                           upiSubmodal.getBoundingClientRect();
                           upiSubmodal.classList.add('active');
                         }
@@ -1839,16 +1929,18 @@
                   });
 
                   // Close submodal logic
-                  const closeUpiSubmodalFunc = () => {
+                  const closeUpiSubmodalFunc = (isCancelled = false) => {
                     if (upiSubmodal) {
                       upiSubmodal.classList.remove('active');
                       setTimeout(() => {
                         upiSubmodal.setAttribute('hidden', 'true');
+                        document.getElementById('upiSubmodalUnconfiguredBox')?.setAttribute('hidden', 'true');
+                        document.getElementById('upiOptionQrBtn')?.classList.remove('is-active-warning');
                       }, 200);
                     }
 
-                    // If UPI has no submode selected yet, revert active selection to previous mode
-                    if (upiCard && !upiCard.dataset.subMode) {
+                    // If cancelled or no submode selected yet, revert active selection to previous mode
+                    if (isCancelled || (upiCard && !upiCard.dataset.subMode)) {
                       document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
                       const prevCard = document.querySelector(`.payment-mode-option[data-pay-mode="${previousActiveMode}"]`);
                       if (prevCard) {
@@ -1860,33 +1952,106 @@
                     }
                   };
 
-                  document.getElementById('closeUpiSubmodal')?.addEventListener('click', closeUpiSubmodalFunc);
+                  document.getElementById('closeUpiSubmodal')?.addEventListener('click', () => closeUpiSubmodalFunc(true));
                   upiSubmodal?.addEventListener('click', (e) => {
                     if (e.target === upiSubmodal) {
-                      closeUpiSubmodalFunc();
+                      closeUpiSubmodalFunc(true);
                     }
                   });
 
                   // Select UPI ID option
                   document.getElementById('upiOptionIdBtn')?.addEventListener('click', () => {
-                    if (upiCard) upiCard.dataset.subMode = 'id';
+                    const upiCardEl = document.querySelector('.payment-mode-option[data-pay-mode="UPI"]');
+                    if (upiCardEl) {
+                      document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
+                      upiCardEl.classList.add("active");
+                      upiCardEl.dataset.subMode = 'id';
+                      const radio = upiCardEl.querySelector("input[type='radio']");
+                      if (radio) radio.checked = true;
+                    }
                     const nameTxt = document.getElementById('upiCardNameText');
                     const descTxt = document.getElementById('upiCardDescText');
                     if (nameTxt) nameTxt.textContent = 'UPI / Push VPA';
                     if (descTxt) descTxt.textContent = 'Selected: Enter UPI address';
-                    closeUpiSubmodalFunc();
+
+                    document.getElementById('upiSubmodalUnconfiguredBox')?.setAttribute('hidden', 'true');
+                    document.getElementById('upiOptionQrBtn')?.classList.remove('is-active-warning');
+
+                    closeUpiSubmodalFunc(false);
                     updateHelper('UPI', 'id');
                   });
 
                   // Select UPI QR option
-                  document.getElementById('upiOptionQrBtn')?.addEventListener('click', () => {
-                    if (upiCard) upiCard.dataset.subMode = 'qr';
+                  document.getElementById('upiOptionQrBtn')?.addEventListener('click', async () => {
+                    const hasAccount = await refreshAccountsStatus();
+                    const submodalBox = document.getElementById('upiSubmodalUnconfiguredBox');
+                    const qrOptionBtn = document.getElementById('upiOptionQrBtn');
+
+                    if (!hasAccount) {
+                      // Reveal SETTLEMENT ACCOUNT REQUIRED card smoothly inside the SELECT UPI METHOD modal only
+                      if (submodalBox) {
+                        if (submodalBox.hasAttribute('hidden')) {
+                          submodalBox.removeAttribute('hidden');
+                        } else {
+                          submodalBox.classList.remove('shake-attention');
+                          void submodalBox.offsetWidth;
+                          submodalBox.classList.add('shake-attention');
+                        }
+                      }
+                      if (qrOptionBtn) {
+                        qrOptionBtn.classList.add('is-active-warning');
+                      }
+                      // Keep modal open, DO NOT switch Page 5 mode or update Page 5 helper
+                      return;
+                    }
+
+                    // Has connected settlement account: select QR mode
+                    const upiCardEl = document.querySelector('.payment-mode-option[data-pay-mode="UPI"]');
+                    if (upiCardEl) {
+                      document.querySelectorAll(".payment-mode-option").forEach(c => c.classList.remove("active"));
+                      upiCardEl.classList.add("active");
+                      upiCardEl.dataset.subMode = 'qr';
+                      const radio = upiCardEl.querySelector("input[type='radio']");
+                      if (radio) radio.checked = true;
+                    }
                     const nameTxt = document.getElementById('upiCardNameText');
                     const descTxt = document.getElementById('upiCardDescText');
                     if (nameTxt) nameTxt.textContent = 'UPI / Scan QR';
                     if (descTxt) descTxt.textContent = 'Selected: Display scan code';
-                    closeUpiSubmodalFunc();
+
+                    submodalBox?.setAttribute('hidden', 'true');
+                    qrOptionBtn?.classList.remove('is-active-warning');
+
+                    closeUpiSubmodalFunc(false);
                     updateHelper('UPI', 'qr');
+                  });
+
+                  // Action for "Configure Banking & Settlement" button inside the Select UPI Method submodal
+                  document.getElementById('submodalGoToBankingBtn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // 1. Prepare tab destination
+                    sessionStorage.setItem("gymdeck_gym_profile_active_tab", "Banking & Settlement");
+                    window.dispatchEvent(new CustomEvent("gymdeck:switch_gym_profile_tab", { detail: { tab: "Banking & Settlement" } }));
+
+                    // 2. Close submodal
+                    closeUpiSubmodalFunc();
+
+                    // 3. Close Add Member modal
+                    const closeBtn = document.querySelector("[data-add-member-close]");
+                    if (closeBtn) {
+                      closeBtn.click();
+                    } else {
+                      document.querySelector("[data-member-modal]")?.classList.remove("is-open");
+                      document.querySelector(".member-modal-backdrop")?.classList.remove("is-active");
+                    }
+
+                    // 4. Switch to Gym Profile view
+                    const gymProfileNav = document.querySelector('[data-view="gym-profile"]');
+                    if (gymProfileNav) {
+                      gymProfileNav.click();
+                    } else if (window.setActiveView) {
+                      window.setActiveView("gym-profile");
+                    }
                   });
 
                   // Poland action details for send request button
@@ -2778,12 +2943,55 @@
             </div>
             <div class="upi-option-info">
               <span class="upi-option-title">Dynamic QR Code</span>
-              <span class="upi-option-desc">Display a QR code on screen for the member to scan</span>
+              <span class="upi-option-desc" id="upiSubmodalQrDesc">Display a QR code on screen for the member to scan</span>
             </div>
             <div class="upi-option-arrow">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>
             </div>
           </button>
+
+          <!-- Dotted Box Format for Unconfigured Settlement Account (Inside Select UPI Method Modal) -->
+          <div class="upi-submodal-unconfigured-card" id="upiSubmodalUnconfiguredBox" hidden>
+            <div class="upi-unconfigured-header">
+              <div class="upi-unconfigured-title-group">
+                <div class="upi-unconfigured-icon-wrap" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 21h18"/>
+                    <path d="M3 10h18"/>
+                    <path d="M5 6l7-3 7 3"/>
+                    <path d="M4 10v11"/>
+                    <path d="M20 10v11"/>
+                    <path d="M8 14v4"/>
+                    <path d="M12 14v4"/>
+                    <path d="M16 14v4"/>
+                  </svg>
+                </div>
+                <div class="upi-unconfigured-titles">
+                  <span class="upi-unconfigured-kicker">SETTLEMENT ACCOUNT REQUIRED</span>
+                  <h4 class="upi-unconfigured-headline">No Account Connected</h4>
+                </div>
+              </div>
+              <span class="upi-unconfigured-status-pill">ACTION REQUIRED</span>
+            </div>
+
+            <div class="upi-unconfigured-card-content">
+              <p class="upi-unconfigured-desc">
+                To generate dynamic QR codes and collect UPI payments directly into your gym's account, please add an account in <strong>Settings &rarr; Gym Profile &rarr; Banking &amp; Settlement</strong> first.
+              </p>
+            </div>
+
+            <div class="upi-unconfigured-actions-row">
+              <button type="button" class="btn-configure-settlement" id="submodalGoToBankingBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                <span>Configure Banking &amp; Settlement</span>
+              </button>
+              <span class="upi-unconfigured-alt-hint">Or choose UPI ID / VPA above</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

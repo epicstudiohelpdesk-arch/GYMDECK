@@ -14184,17 +14184,62 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   line-height: 1.25 !important;
 }
 
+/* Cash Settlement Verification - Purely Textual (No card design, near bottom of dotted card) */
+.cash-settlement-textual {
+  display: none !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  margin-top: auto !important;
+  padding: 6px 2px 2px 2px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  text-align: left !important;
+  animation: fade-in-subtle 0.18s ease-out !important;
+}
+
+.cash-settlement-title {
+  font-size: 11.5px !important;
+  font-weight: 750 !important;
+  color: #1e293b !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+  display: block !important;
+}
+
+.cash-settlement-desc {
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  line-height: 1.35 !important;
+  display: block !important;
+}
+
 /* Connect CSS selectors to toggle messages */
-.payment-modes-stack:has([data-pay-mode="Cash"].active) + .payment-helper-box .helper-cash {
+.payment-modes-stack:has([data-pay-mode="Cash"].active) ~ .cash-settlement-textual {
   display: flex !important;
 }
 
-.payment-modes-stack:has([data-pay-mode="UPI"].active[data-sub-mode="id"]) + .payment-helper-box .helper-upi-id {
+.payment-modes-stack:has([data-pay-mode="Cash"].active) ~ .payment-helper-box {
+  display: none !important;
+}
+
+.payment-modes-stack:has([data-pay-mode="UPI"].active) ~ .cash-settlement-textual {
+  display: none !important;
+}
+
+.payment-modes-stack:has([data-pay-mode="UPI"].active) ~ .payment-helper-box {
+  display: flex !important;
+  margin-top: auto !important;
+}
+
+.payment-modes-stack:has([data-pay-mode="UPI"].active[data-sub-mode="id"]) ~ .payment-helper-box .helper-upi-id {
   display: flex !important;
 }
 
-.payment-modes-stack:has([data-pay-mode="UPI"].active:not([data-sub-mode="id"])) + .payment-helper-box .helper-upi-qr,
-.payment-modes-stack:has([data-pay-mode="UPI"].active[data-sub-mode="qr"]) + .payment-helper-box .helper-upi-qr {
+.payment-modes-stack:has([data-pay-mode="UPI"].active:not([data-sub-mode="id"])) ~ .payment-helper-box .helper-upi-qr,
+.payment-modes-stack:has([data-pay-mode="UPI"].active[data-sub-mode="qr"]) ~ .payment-helper-box .helper-upi-qr {
   display: flex !important;
 }
 
@@ -14616,6 +14661,260 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   font-size: 10.5px !important;
   color: #64748b !important;
   line-height: 1.35 !important;
+}
+
+
+/* Strict display control for ready vs unconfigured state */
+#upiQrReadyBox[hidden],
+.upi-qr-display-container[hidden] {
+  display: none !important;
+}
+
+#upiUnconfiguredAccountBox[hidden],
+.upi-unconfigured-dotted-box[hidden] {
+  display: none !important;
+}
+
+/* Dotted Box Format for Unconfigured Settlement Account */
+.upi-unconfigured-dotted-box {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  position: relative !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+}
+
+.upi-unconfigured-dotted-box:hover {
+  border-color: #94a3b8 !important;
+  background: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04) !important;
+}
+
+.upi-unconfigured-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.upi-unconfigured-title-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.upi-unconfigured-icon-wrap {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+  color: #d97706 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.upi-unconfigured-icon-wrap svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.upi-unconfigured-titles {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px !important;
+}
+
+.upi-unconfigured-kicker {
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  color: #b45309 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  line-height: 1 !important;
+}
+
+.upi-unconfigured-headline {
+  margin: 0 !important;
+  font-size: 11.5px !important;
+  font-weight: 750 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.15 !important;
+}
+
+.upi-unconfigured-status-pill {
+  font-size: 8.5px !important;
+  font-weight: 800 !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  padding: 2px 6px !important;
+  border-radius: 5px !important;
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.upi-unconfigured-card-content {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.upi-unconfigured-desc {
+  margin: 0 !important;
+  font-size: 10px !important;
+  color: #475569 !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+}
+
+.upi-unconfigured-desc strong {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.upi-unconfigured-actions-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.btn-configure-settlement {
+  height: 27px !important;
+  padding: 0 10px !important;
+  border-radius: 7px !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  border: 1px solid #0f172a !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1) !important;
+}
+
+.btn-configure-settlement:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+  transform: translateY(-0.5px) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
+}
+
+.btn-configure-settlement:active {
+  transform: translateY(0) !important;
+}
+
+.upi-unconfigured-alt-hint {
+  font-size: 9.5px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+}
+
+.upi-option-badge-warning {
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+}
+
+@keyframes upi-submodal-card-smooth-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    max-height: 0;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    max-height: 320px;
+    margin-top: 8px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    overflow: visible;
+  }
+}
+
+@keyframes upi-card-attention-pulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.02); }
+  70% { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+
+/* Unconfigured Settlement Account Card inside Select UPI Method Modal */
+.upi-submodal-unconfigured-card {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  position: relative !important;
+  margin-top: 8px !important;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease !important;
+  animation: upi-submodal-card-smooth-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.upi-submodal-unconfigured-card.shake-attention {
+  animation: upi-card-attention-pulse 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.upi-submodal-unconfigured-card[hidden] {
+  display: none !important;
+}
+
+.upi-submodal-unconfigured-card:hover {
+  border-color: #94a3b8 !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+}
+
+.upi-option-card.is-active-warning {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.03) !important;
+  box-shadow: 0 0 0 1px #f59e0b !important;
+}
+
+.upi-submodal-card {
+  max-width: 480px !important;
+  padding: 28px !important;
 }
 
 /* ==========================================================================
@@ -15146,11 +15445,14 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   min-height: 0 !important;
 }
 .member-form-page[data-member-form-page="5"] .billing-engine-grid {
-  align-items: start !important;
+  align-items: stretch !important;
 }
 .member-form-page[data-member-form-page="5"] .billing-engine-pane {
+  display: flex !important;
+  flex-direction: column !important;
   justify-content: flex-start !important;
   gap: 6px !important;
+  height: 100% !important;
 }
 @media (max-height: 820px) {
   .member-form-page[data-member-form-page="5"] .billing-engine-card {
