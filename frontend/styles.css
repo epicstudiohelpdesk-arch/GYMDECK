@@ -1099,6 +1099,7 @@ body.document-modal-open .document-modal.luxury-modal {
 /* Add-On Services & Fees Control Card UI */
 .addons-service-card {
   margin-top: 16px !important;
+  margin-bottom: 56px !important;
   background: #ffffff !important;
   border: 1.5px solid #e2e8f0 !important;
   border-radius: 20px !important;
@@ -1283,17 +1284,35 @@ body.document-modal-open .document-modal.luxury-modal {
   transition: all 0.18s ease !important;
 }
 
-.addon-preset-item.is-checked .addon-checkbox-label {
+.addon-preset-item.is-checked .addon-checkbox-label,
+.addon-preset-checkbox:checked + .addon-checkbox-label {
   background: #4f46e5 !important;
   border-color: #4f46e5 !important;
+  color: #ffffff !important;
 }
 
 .addon-check-svg {
   display: none !important;
+  stroke: #ffffff !important;
+  color: #ffffff !important;
 }
 
-.addon-preset-item.is-checked .addon-check-svg {
+.addon-preset-item.is-checked .addon-check-svg,
+.addon-preset-checkbox:checked + .addon-checkbox-label .addon-check-svg {
   display: block !important;
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.addon-check-svg polyline,
+.addon-check-svg path,
+.addon-check-svg line {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+
+.member-form-modal input[type="checkbox"]:checked {
+  accent-color: #4f46e5 !important;
 }
 
 .addon-preset-icon {
@@ -1530,6 +1549,305 @@ body.document-modal-open .document-modal.luxury-modal {
   font-size: 10.5px !important;
   color: #94a3b8 !important;
   font-weight: 500 !important;
+}
+
+/* Page 4: Sticky Fixed Heading with Faded Scroll-behind Effect */
+.member-form-page[data-member-form-page="4"] {
+  position: relative !important;
+  padding-top: 0 !important;
+  padding-bottom: 140px !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 transparent !important;
+}
+
+.member-form-page[data-member-form-page="4"]::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.member-form-page[data-member-form-page="4"]::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 4px !important;
+}
+
+.plan-selection-sticky-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  background: #ffffff !important;
+  padding: 26px 40px 14px 40px !important;
+  margin: 0 -40px 16px -40px !important;
+  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.04) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7) !important;
+}
+
+.plan-selection-sticky-header::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: -22px !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 22px !important;
+  background: linear-gradient(to bottom, #ffffff 0%, rgba(255, 255, 255, 0.75) 50%, rgba(255, 255, 255, 0) 100%) !important;
+  pointer-events: none !important;
+}
+
+.plan-selection-sticky-header .member-form-top {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+}
+
+.plan-selection-sticky-header .member-form-kicker {
+  margin: 0 0 6px 0 !important;
+  color: #3182ce !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+}
+
+.plan-selection-sticky-header #plan-selection-title {
+  margin: 0 !important;
+  font-size: 1.8rem !important;
+  font-weight: 900 !important;
+  color: #1a202c !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+}
+
+.plan-selection-sticky-header .member-form-copy {
+  margin: 6px 0 0 0 !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  color: #596176 !important;
+  line-height: 1.5 !important;
+  max-width: 600px !important;
+}
+
+/* Outer spacing below ADD-ON AMENITIES & SERVICES */
+.member-form-page[data-member-form-page="4"] .addons-service-card {
+  margin-bottom: 56px !important;
+}
+
+/* Compact GST Taxing Control Card on Plan Selection (Page 4) */
+.gst-tax-card {
+  margin-top: 14px !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 20px !important;
+  padding: 14px 20px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  text-align: left !important;
+}
+
+.gst-tax-card:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+}
+
+.gst-tax-card.is-active {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 1.5px rgba(59, 130, 246, 0.15), 0 3px 10px rgba(59, 130, 246, 0.06) !important;
+}
+
+.gst-tax-controls-side {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-shrink: 0 !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+}
+
+.gst-checkbox-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+.gst-check-input {
+  position: absolute !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+.gst-checkbox-custom {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 5px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.18s ease !important;
+}
+
+.gst-check-input:checked + .gst-checkbox-custom {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.gst-check-svg {
+  display: none !important;
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.gst-check-input:checked + .gst-checkbox-custom .gst-check-svg {
+  display: block !important;
+  stroke: #ffffff !important;
+}
+
+.gst-check-svg polyline,
+.gst-check-svg path {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+
+.gst-checkbox-text {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+}
+
+.gst-input-wrapper {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  padding: 0 8px !important;
+  height: 34px !important;
+  width: 78px !important;
+  box-sizing: border-box !important;
+  transition: all 0.18s ease !important;
+}
+
+.gst-input-wrapper.is-enabled {
+  background: #ffffff !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+}
+
+.gst-input-wrapper input {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  text-align: right !important;
+  padding: 0 2px 0 0 !important;
+  outline: none !important;
+}
+
+.gst-input-wrapper input:disabled {
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+}
+
+.gst-rate-suffix {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: #64748b !important;
+  margin-left: 2px !important;
+}
+
+.gst-preset-row {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.gst-preset-chip {
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+.gst-preset-chip:not(:disabled):hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.gst-preset-chip.active:not(:disabled) {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #bfdbfe !important;
+}
+
+.gst-preset-chip:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.gst-amount-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+}
+
+.gst-pill-label {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+}
+
+.gst-pill-value {
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* Page 5: Paired Side-by-Side Spec Row (Base Plan Fee beside MEMBERSHIP PLAN) */
+.billing-spec-paired-row {
+  display: grid !important;
+  grid-template-columns: 1.15fr 0.85fr !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.billing-spec-paired-row .billing-spec-row {
+  margin: 0 !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 6px 10px !important;
+}
+
+@media (max-width: 720px) {
+  .billing-spec-paired-row {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 .planning-placeholder {
@@ -5903,32 +6221,48 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   font-weight: 800;
 }
 
+.members-table td[data-label="Documents"] {
+  overflow: hidden;
+}
+
 .doc-cell {
   position: relative;
-  min-height: 100%;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  box-sizing: border-box;
 }
 
 .doc-cell span {
   display: block;
+  flex: 1 1 auto;
   min-width: 0;
-  padding-right: 110px;
-  padding-top: 4px;
+  max-width: calc(100% - 116px);
+  padding-right: 8px;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  line-height: 28px;
+  font-size: 0.82rem;
+  color: #1f2937;
 }
 
 .doc-item {
-  display: block;
+  display: inline;
   line-height: 1.4;
+  white-space: nowrap;
 }
 
 .doc-view-btn {
   position: absolute;
   right: 0;
   top: 50%;
-  transform: translateY(-50%) translateY(-6px);
+  transform: translateY(-50%);
   flex-shrink: 0;
   min-height: 28px;
   padding: 0 10px;
@@ -5942,7 +6276,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 }
 
 .doc-view-btn:hover {
-  transform: translateY(-50%) translateY(-7px);
+  transform: translateY(-50%) translateY(-1px);
   background: #1f2937;
   box-shadow: 0 6px 12px rgba(31, 41, 55, 0.12);
 }

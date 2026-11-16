@@ -148,11 +148,13 @@ const Profile = () => {
 
         <div className="flex-1 max-w-xl mx-8">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" size={18} />
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#9CA3AF]">
+              <Search size={17} />
+            </div>
             <input 
               type="text" 
               placeholder="Search profile settings, security, devices, activity..."
-              className="w-full h-10 pl-10 pr-4 bg-[#F3F4F6] border-none rounded-full text-sm focus:ring-2 focus:ring-[#111827] transition-all"
+              className="w-full h-10 pl-11 pr-4 bg-[#F3F4F6] border-none rounded-full text-sm focus:ring-2 focus:ring-[#111827] transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -160,14 +162,6 @@ const Profile = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="h-10 px-4 rounded-lg border border-[#E5E7EB] text-sm font-bold flex items-center gap-2 hover:bg-[#F9FAFB] transition-colors text-[#4B5563]">
-            <History size={18} />
-            Activity Logs
-          </button>
-          <button className="h-10 px-4 rounded-lg border border-[#E5E7EB] text-sm font-bold flex items-center gap-2 hover:bg-[#F9FAFB] transition-colors text-[#4B5563]">
-            <Shield size={18} />
-            Security Center
-          </button>
           <button 
             onClick={handleSave}
             disabled={!hasChanges || isSaving}
@@ -180,26 +174,30 @@ const Profile = () => {
         </div>
       </header>
 
-      {/* 6. PROFILE HERO SECTION */}
-      <section className="relative h-[280px] w-full overflow-hidden bg-white border-b border-[#E5E7EB]">
-        <div className="absolute inset-0 opacity-50">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-white to-blue-50/50" />
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/4" />
-        </div>
-        
-        <div className="relative z-10 max-w-[1600px] mx-auto h-full px-8 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            {/* PROFILE IMAGE */}
-            <div className="relative group">
-              <div className="w-44 h-44 rounded-[32px] bg-[#111827] flex items-center justify-center text-5xl font-black text-white overflow-hidden shadow-2xl border-4 border-white">
+      {/* 6. PROFILE HERO CARD */}
+      <div className="max-w-[1600px] mx-auto px-8 pt-6">
+        <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden mb-5">
+          {/* 6A. COVER BANNER */}
+          <div className="relative h-[200px] sm:h-[225px] lg:h-[240px] w-full overflow-hidden bg-[#111827]">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/15 via-transparent to-blue-500/10" />
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/15 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/4" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/10 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/4" />
+          </div>
+
+          {/* 6B. PROFILE HEADER ROW */}
+          <div className="px-8 pb-8 flex flex-col sm:flex-row sm:items-start gap-6">
+            {/* OVERLAPPING PROFILE PHOTO */}
+            <div className="relative -mt-14 sm:-mt-16 lg:-mt-20 flex-shrink-0 z-20">
+              <div className="w-32 h-32 lg:w-36 lg:h-36 rounded-full bg-[#111827] flex items-center justify-center text-4xl lg:text-5xl font-black text-white overflow-hidden shadow-xl border-4 border-white">
                 {userData.fullName.split(' ').map(n => n[0]).join('')}
               </div>
-              <button className="absolute -bottom-2 -right-2 w-12 h-12 rounded-2xl bg-white shadow-xl border border-[#E5E7EB] flex items-center justify-center text-[#111827] hover:bg-[#F3F4F6] transition-all">
-                <Camera size={20} />
+              <button className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-white shadow-md border border-[#E5E7EB] flex items-center justify-center text-[#111827] hover:bg-[#F3F4F6] transition-all">
+                <Camera size={18} />
               </button>
             </div>
 
-            <div>
+            {/* NAME & IDENTITY */}
+            <div className="flex-1 min-w-0 pt-2">
               <div className="flex items-center gap-3 mb-3">
                 <div className="px-3 py-1 bg-[#111827] rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-white">
                   Super Admin
@@ -209,14 +207,14 @@ const Profile = () => {
                   Verified Account
                 </div>
               </div>
-              <h1 className="text-[52px] font-black text-[#111827] leading-none tracking-tight mb-2">
+              <h1 className="text-3xl sm:text-[40px] font-black text-[#111827] leading-none tracking-tight mb-2">
                 {userData.fullName}
               </h1>
-              <p className="text-[#6B7280] text-lg font-semibold flex items-center gap-3">
+              <p className="text-[#6B7280] text-base font-semibold flex items-center gap-3 mb-5">
                 {userData.role} <span className="w-1.5 h-1.5 rounded-full bg-[#D1D5DB]" /> {userData.branch}
               </p>
-              
-              <div className="mt-6 flex items-center gap-6">
+
+              <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2 text-[#9CA3AF]">
                   <Calendar size={16} />
                   <span className="text-[11px] font-bold uppercase tracking-widest">Joined {userData.joinedDate}</span>
@@ -227,29 +225,30 @@ const Profile = () => {
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex gap-4">
-            <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 min-w-[180px] shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
-                <Zap size={20} />
+            {/* STAT CARDS */}
+            <div className="flex gap-4 pt-2 flex-shrink-0">
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 min-w-[160px] shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-3">
+                  <Zap size={20} />
+                </div>
+                <div className="text-2xl font-black text-[#111827]">0</div>
+                <div className="text-[9px] font-bold uppercase tracking-widest text-[#9CA3AF]">Tasks Handled</div>
               </div>
-              <div className="text-2xl font-black text-[#111827]">0</div>
-              <div className="text-[9px] font-bold uppercase tracking-widest text-[#9CA3AF]">Tasks Handled</div>
-            </div>
-            <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 min-w-[180px] shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-4">
-                <ShieldCheck size={20} />
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 min-w-[160px] shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-3">
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="text-2xl font-black text-[#111827]">98%</div>
+                <div className="text-[9px] font-bold uppercase tracking-widest text-[#9CA3AF]">Security Score</div>
               </div>
-              <div className="text-2xl font-black text-[#111827]">98%</div>
-              <div className="text-[9px] font-bold uppercase tracking-widest text-[#9CA3AF]">Security Score</div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* 7. PROFILE NAVIGATION TABS */}
-      <div className="max-w-[1600px] mx-auto px-8 -mt-7 relative z-20">
+      <div className="max-w-[1600px] mx-auto px-8 mb-8">
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-2 shadow-sm flex items-center gap-1 overflow-x-auto no-scrollbar">
           {tabs.map(tab => (
             <button 
@@ -264,30 +263,10 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto p-8 pt-10 grid grid-cols-12 gap-8 items-start">
+      <div className="max-w-[1100px] mx-auto px-8 pb-12">
         
-        {/* 8. LEFT SIDEBAR → CATEGORIES */}
-        <aside className="col-span-2 sticky top-24 space-y-8">
-          {sidebarCategories.map(cat => (
-            <section key={cat.label}>
-              <div className="flex items-center gap-2 mb-4">
-                <cat.icon size={14} className="text-[#9CA3AF]" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9CA3AF]">{cat.label}</h3>
-              </div>
-              <div className="space-y-1">
-                {cat.items.map(item => (
-                  <button key={item} className="w-full text-left px-3 py-2.5 rounded-xl text-[13px] font-bold text-[#4B5563] hover:bg-white hover:text-[#111827] hover:shadow-sm transition-all group flex items-center justify-between">
-                    {item}
-                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </aside>
-
         {/* 9. MAIN PROFILE WORKSPACE */}
-        <main className="col-span-7 space-y-8">
+        <main className="space-y-8">
           
           <AnimatePresence mode="wait">
             {activeTab === "General" && (
@@ -621,95 +600,6 @@ const Profile = () => {
             )}
           </AnimatePresence>
         </main>
-
-        {/* 17. RIGHT SIDE FLOATING INSIGHT PANEL */}
-        <aside className="col-span-3 sticky top-24 space-y-8">
-          <section className="bg-white rounded-3xl border border-[#E5E7EB] p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xs font-black uppercase tracking-widest text-[#9CA3AF]">Account Health</h3>
-              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <Sparkles size={16} />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="p-4 rounded-2xl bg-[#F8FAF8] border border-[#F3F4F6]">
-                <div className="flex gap-3 mb-2">
-                  <BarChart3 size={16} className="text-[#10B981]" />
-                  <p className="text-[11px] font-black text-[#111827]">Profile Completeness</p>
-                </div>
-                <div className="flex items-end gap-2 mb-3">
-                  <span className="text-3xl font-black text-[#111827]">85</span>
-                  <span className="text-xs font-bold text-[#10B981] mb-1">%</span>
-                </div>
-                <div className="h-1.5 w-full bg-[#E5E7EB] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#10B981] rounded-full" style={{ width: '85%' }} />
-                </div>
-                <p className="text-[10px] font-bold text-[#6B7280] leading-relaxed mt-3">
-                  Complete your professional experience to reach 100%.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#F5F3FF] border border-[#EDE9FE]">
-                <div className="flex gap-3 mb-2">
-                  <ShieldCheck size={16} className="text-[#6366F1]" />
-                  <p className="text-[11px] font-black text-[#111827]">Security Grade</p>
-                </div>
-                <div className="flex items-end gap-2 mb-3">
-                  <span className="text-3xl font-black text-[#111827]">A+</span>
-                  <span className="text-xs font-bold text-[#6366F1] mb-1">Enterprise</span>
-                </div>
-                <p className="text-[10px] font-bold text-[#6B7280] leading-relaxed">
-                  2FA is currently active. Your account is fully protected.
-                </p>
-              </div>
-
-              <div className="p-5 rounded-3xl bg-[#111827] text-white">
-                <div className="flex items-center gap-2 mb-4">
-                  <Zap size={14} className="text-[#6366F1]" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">AI Insight</span>
-                </div>
-                <p className="text-[11px] font-bold leading-relaxed text-white/80">
-                  "Profiles with completed professional info improve operational accountability by 32%."
-                </p>
-                <button className="mt-4 text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-all underline underline-offset-4">Complete Profile</button>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white rounded-3xl border border-[#E5E7EB] p-8 shadow-sm">
-            <h3 className="text-xs font-black uppercase tracking-widest text-[#9CA3AF] mb-6">Recent Edits</h3>
-            <div className="space-y-6">
-              {[
-                { field: 'Professional Bio', time: '2 hours ago' },
-                { field: 'Email Address', time: '3 days ago' },
-                { field: 'Profile Picture', time: '12 days ago' }
-              ].map((edit, i) => (
-                <div key={i} className="flex gap-4 group">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#E5E7EB] mt-1.5 group-hover:bg-[#111827] transition-all" />
-                  <div>
-                    <div className="text-[11px] font-black text-[#111827] mb-0.5">{edit.field}</div>
-                    <div className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-widest">{edit.time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <div className="p-6 rounded-3xl bg-gradient-to-br from-[#111827] to-[#1F2937] text-white relative overflow-hidden shadow-xl shadow-black/10">
-            <div className="relative z-10">
-              <HelpCircle className="mb-4 text-[#6366F1]" size={28} />
-              <h4 className="text-sm font-black mb-2 uppercase tracking-tight">Need Assistance?</h4>
-              <p className="text-[11px] font-semibold opacity-60 leading-relaxed mb-6">
-                Our support team can help with account recovery and identity verification.
-              </p>
-              <button className="h-10 px-6 rounded-xl bg-white text-[#111827] text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">
-                Contact Support
-              </button>
-            </div>
-            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-3xl" />
-          </div>
-        </aside>
       </div>
 
       {/* BRAND SIGNATURE FOOTER */}

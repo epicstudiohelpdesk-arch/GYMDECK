@@ -22,7 +22,11 @@ import {
   Bell,
   X,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Wifi,
+  WifiOff,
+  LayoutDashboard,
+  Plug
 } from "lucide-react";
 import BrandFooter from "./BrandFooter.jsx";
 
@@ -33,6 +37,62 @@ import BrandFooter from "./BrandFooter.jsx";
  * Zero mock data: all metrics, rosters, plans, and feeds are loaded directly
  * from Tauri SQLite DB and real localStorage application state.
  */
+
+// ─────────────────────────────────────────────────────────────
+// SYSTEM INDICATORS · CONNECTIVITY & POWER
+// ─────────────────────────────────────────────────────────────
+
+// WiFi signal indicator — reflects live internet connectivity (navigator.onLine)
+const WifiIndicator = ({ online }) => (
+  <div
+    className={`h-[38px] px-3 rounded-xl border flex items-center gap-2 text-xs font-extrabold transition-colors ${
+      online
+        ? "bg-emerald-50/80 border-emerald-200/90 text-emerald-700"
+        : "bg-rose-50/80 border-rose-200/90 text-rose-700"
+    }`}
+    title={online ? "Internet connection active" : "No internet connection"}
+  >
+    {online ? <Wifi size={15} strokeWidth={2.4} /> : <WifiOff size={15} strokeWidth={2.4} />}
+    <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
+    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${online ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+  </div>
+);
+
+// Battery level indicator — uses the Battery API; degrades to "Plugged In" for AC mains
+const BatteryIndicator = ({ level, charging, supported }) => {
+  if (!supported) {
+    return (
+      <div
+        className="h-[38px] px-3 rounded-xl border border-slate-200/90 bg-slate-50 flex items-center gap-2 text-xs font-extrabold text-slate-600"
+        title="Plugged in to mains power"
+      >
+        <Plug size={15} strokeWidth={2.4} className="text-emerald-600" />
+        <span className="hidden sm:inline">Plugged In</span>
+      </div>
+    );
+  }
+  const pct = Math.max(0, Math.min(100, Math.round((level || 0) * 100)));
+  const color = charging || pct > 50 ? "#10b981" : pct > 20 ? "#f59e0b" : "#ef4444";
+  const fillWidth = Math.max(0, (pct / 100) * 18);
+  return (
+    <div
+      className="h-[38px] px-3 rounded-xl border border-slate-200/90 bg-slate-50 flex items-center gap-2 text-xs font-extrabold text-slate-700"
+      title={`Battery ${pct}%${charging ? " • Charging" : ""}`}
+    >
+      <svg width="26" height="14" viewBox="0 0 26 14" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="21" height="12" rx="3.2" fill="white" stroke="#cbd5e1" strokeWidth="1" />
+        <rect x="23" y="4.5" width="2.2" height="5" rx="1" fill="#cbd5e1" />
+        {fillWidth > 0 && (
+          <rect x="2.5" y="2.5" width={fillWidth} height="9" rx="1.6" fill={color} />
+        )}
+        {charging && (
+          <path d="M12 2 L8 7.5 H11 L10 12 L15.5 6.5 H12.5 Z" fill="#ffffff" stroke={color} strokeWidth="0.5" strokeLinejoin="round" />
+        )}
+      </svg>
+      <span className="tabular-nums" style={{ color }}>{pct}%</span>
+    </div>
+  );
+};
 
 export const Dashboard = () => {
   // Genuine Data States
@@ -50,6 +110,10 @@ export const Dashboard = () => {
 
   // Live Date & Time
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // System Connectivity & Power Indicators
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [battery, setBattery] = useState({ level: 1, charging: false, supported: false });
 
   // Toast System
   const [toastMessage, setToastMessage] = useState(null);
@@ -69,6 +133,76 @@ export const Dashboard = () => {
   useEffect(() => {
     const timer = setInterval(() => setCurrentDate(new Date()), 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Real-time system indicators: REAL connectivity + REAL battery level.
+  // In the Tauri desktop app we poll the Rust backend (`get_system_status`) which
+  // performs a true TCP reachability probe and reads macOS battery telemetry via
+  // `pmset`. In a plain browser we fall back to navigator.onLine + the Battery API
+  // (genuinely real in Chromium-based browsers).
+  useEffect(() => {
+    const tauriInvoke =
+      typeof window !== "undefined" &&
+      window.__TAURI__ &&
+      window.__TAURI__.core &&
+      typeof window.__TAURI__.core.invoke === "function"
+        ? window.__TAURI__.core.invoke
+        : null;
+
+    if (tauriInvoke) {
+      let active = true;
+      const poll = async () => {
+        try {
+          const s = await tauriInvoke("get_system_status");
+          if (!active) return;
+          setIsOnline(!!s.online);
+          setBattery({
+            level: typeof s.battery_level === "number" ? s.battery_level : 1,
+            charging: !!s.charging,
+            supported: !!s.has_battery
+          });
+        } catch (e) {
+          if (!active) return;
+          // Backend unreachable — keep last known state, conservatively mark online/AC.
+          setIsOnline(true);
+          setBattery((prev) => (prev.supported ? prev : { level: 1, charging: true, supported: false }));
+        }
+      };
+      poll();
+      const id = setInterval(poll, 5000);
+      return () => { active = false; clearInterval(id); };
+    }
+
+    // Browser fallback (dev): real navigator.onLine + Battery API
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    let bat = null;
+    const updateBattery = () => {
+      if (bat) setBattery({ level: bat.level, charging: bat.charging, supported: true });
+    };
+    let cancelled = false;
+    if (typeof navigator !== "undefined" && typeof navigator.getBattery === "function") {
+      navigator.getBattery().then((b) => {
+        if (cancelled) return;
+        bat = b;
+        updateBattery();
+        b.addEventListener("levelchange", updateBattery);
+        b.addEventListener("chargingchange", updateBattery);
+      }).catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if (bat) {
+        bat.removeEventListener("levelchange", updateBattery);
+        bat.removeEventListener("chargingchange", updateBattery);
+      }
+    };
   }, []);
 
   // Keyboard shortcut '/' to focus search
@@ -259,7 +393,7 @@ export const Dashboard = () => {
         const dateB = new Date(b.joined_at || b.created_at || 0).getTime();
         return dateB - dateA;
       })
-      .slice(0, 6);
+      .slice(0, 4);
   }, [members]);
 
   // Plan Distribution Breakdown
@@ -519,31 +653,10 @@ export const Dashboard = () => {
           </AnimatePresence>
         </div>
 
-        {/* Right: Date, Status, Refresh & Add Member Action */}
-        <div className="flex items-center gap-3 shrink-0">
-          
-          {/* Live Date Pill */}
-          <div className="hidden sm:flex h-[38px] px-3.5 rounded-xl bg-slate-50 border border-slate-200/90 items-center gap-2 text-xs font-bold text-slate-700">
-            <Calendar size={14} className="text-blue-600 shrink-0" />
-            <span>
-              {currentDate.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
-            </span>
-            <span className="text-slate-300">|</span>
-            <span className="font-mono text-slate-500 text-[11px]">
-              {currentDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          </div>
-
-          {/* SQLite & Cloud Sync Status Badge */}
-          <div 
-            onClick={() => loadDashboardData(true)}
-            className="h-[38px] px-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200/90 hover:bg-emerald-100/80 cursor-pointer flex items-center gap-2 text-xs font-extrabold text-emerald-800 transition-all shadow-2xs active:scale-[0.98]"
-            title="Click to refresh local SQLite database state"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20 shrink-0" />
-            <span className="hidden md:inline">SQLite Local Sync</span>
-            <span className="md:hidden">Synced</span>
-          </div>
+        {/* Right: System Connectivity, Power & Refresh */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <WifiIndicator online={isOnline} />
+          <BatteryIndicator level={battery.level} charging={battery.charging} supported={battery.supported} />
 
           {/* Refresh Action Button */}
           <button
@@ -555,17 +668,6 @@ export const Dashboard = () => {
           >
             <RefreshCw size={14} strokeWidth={2.4} className={refreshing ? "animate-spin text-blue-600" : ""} />
           </button>
-
-          {/* Primary Quick Add Member Button */}
-          <button
-            type="button"
-            onClick={handleOpenAddMember}
-            className="h-[38px] px-4 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
-          >
-            <UserPlus size={14} strokeWidth={2.4} />
-            <span className="hidden sm:inline">Add Member</span>
-          </button>
-
         </div>
       </header>
 
@@ -573,6 +675,43 @@ export const Dashboard = () => {
           MAIN EXECUTIVE DASHBOARD WORKSPACE
       ───────────────────────────────────────────────────────────── */}
       <main className="flex-1 p-5 sm:p-6 lg:p-8 max-w-[1560px] w-full mx-auto space-y-6">
+
+        {/* ══════════════════════════════════════════════════════════
+            COMMAND CENTER PAGE HEADER
+        ══════════════════════════════════════════════════════════ */}
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <LayoutDashboard size={16} className="text-indigo-600" />
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.25em] leading-none">
+                Live Operational Command Center
+              </span>
+            </div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+              Operations Dashboard
+            </h1>
+            <p className="mt-2.5 text-xs font-semibold text-slate-500 max-w-2xl leading-relaxed">
+              Real-time intelligence across members, certified trainers, PT allocations, and membership plans across your fitness ecosystem.
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-2 h-11 px-3.5 rounded-xl border border-slate-200/90 bg-white shadow-xs">
+              <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">
+                {isOnline ? "System Live" : "Offline"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenAddMember}
+              className="h-11 px-5 bg-slate-950 hover:bg-slate-850 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors flex items-center gap-2 shadow-md shadow-slate-950/10 active:scale-[0.98] cursor-pointer"
+            >
+              <UserPlus size={14} strokeWidth={2.4} />
+              Add Member
+            </button>
+          </div>
+        </div>
+
 
         {/* ══════════════════════════════════════════════════════════
             HERO STATS KPI STRIP (4 Modern Executive Metric Cards)
@@ -804,17 +943,20 @@ export const Dashboard = () => {
                             {/* Member Name & Code */}
                             <td className="py-3 pl-6 sm:pl-2">
                               <div className="flex items-center gap-3">
-                                {m.profile_photo_path && !m.profile_photo_path.includes("dicebear.com") ? (
-                                  <img 
-                                    src={m.profile_photo_path} 
-                                    alt={m.full_name} 
-                                    className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0" 
-                                  />
-                                ) : (
-                                  <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${grad} text-white font-black text-[11px] flex items-center justify-center shrink-0 shadow-xs`}>
-                                    {getInitials(m.full_name)}
-                                  </div>
-                                )}
+                                {(() => {
+                                  const memberPhoto = m.profile_photo_path || (window.getDefaultAvatar ? window.getDefaultAvatar(m.gender, m.full_name) : "");
+                                  return memberPhoto ? (
+                                    <img 
+                                      src={memberPhoto} 
+                                      alt={m.full_name} 
+                                      className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0" 
+                                    />
+                                  ) : (
+                                    <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${grad} text-white font-black text-[11px] flex items-center justify-center shrink-0 shadow-xs`}>
+                                      {getInitials(m.full_name)}
+                                    </div>
+                                  );
+                                })()}
                                 <div>
                                   <h4 className="font-extrabold text-slate-900 leading-tight">
                                     {m.full_name || "Unnamed Member"}

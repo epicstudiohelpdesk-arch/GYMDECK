@@ -1290,15 +1290,17 @@
 
           <!-- Page 4: Membership Planning -->
           <div class="member-form-page" data-member-form-page="4">
-            <div class="member-form-top">
-              <div>
-                <p class="member-form-kicker">Plan Selection</p>
-                <h2 id="plan-selection-title">Membership Planning</h2>
+            <div class="plan-selection-sticky-header">
+              <div class="member-form-top">
+                <div>
+                  <p class="member-form-kicker">Plan Selection</p>
+                  <h2 id="plan-selection-title">Membership Planning</h2>
+                </div>
               </div>
+              <p class="member-form-copy">
+                Select a membership plan and payment schedule for the new member.
+              </p>
             </div>
-            <p class="member-form-copy">
-              Select a membership plan and payment schedule for the new member.
-            </p>
 
             <!-- Membership Planning Content -->
             <div class="planning-grid has-empty-state" id="add-member-planning-grid">
@@ -1476,6 +1478,69 @@
                   <button type="button" class="joining-fee-preset-chip" data-amount="500">₹500</button>
                   <button type="button" class="joining-fee-preset-chip" data-amount="1000">₹1,000</button>
                   <button type="button" class="joining-fee-preset-chip" data-amount="1500">₹1,500</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- GST Taxing Control Card (Optional & Editable) -->
+            <div class="joining-fee-card gst-tax-card" id="gst-tax-card">
+              <div class="joining-fee-info-side">
+                <div class="joining-fee-title-row">
+                  <div class="joining-fee-icon-badge" style="background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                  </div>
+                  <div class="joining-fee-title-group" style="display: flex; align-items: center; gap: 8px;">
+                    <label for="apply-gst-check" class="joining-fee-label" style="cursor: pointer; margin: 0;">GST Taxing</label>
+                    <span class="addons-optional-badge">Optional</span>
+                  </div>
+                </div>
+                
+                <p class="joining-fee-disclaimer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="joining-fee-disclaimer-icon">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  <span>Apply Goods &amp; Services Tax on membership subtotal. Rate is fully customizable and editable.</span>
+                </p>
+              </div>
+
+              <div class="gst-tax-controls-side">
+                <label class="gst-checkbox-toggle" for="apply-gst-check">
+                  <input type="checkbox" id="apply-gst-check" class="gst-check-input" />
+                  <span class="gst-checkbox-custom">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="gst-check-svg">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                  <span class="gst-checkbox-text">Enable GST</span>
+                </label>
+
+                <div class="gst-input-wrapper" id="gst-input-wrapper">
+                  <input 
+                    type="number" 
+                    id="gst-rate-input" 
+                    value="18" 
+                    min="0" 
+                    max="100" 
+                    step="0.5" 
+                    placeholder="18" 
+                    disabled 
+                  />
+                  <span class="gst-rate-suffix">%</span>
+                </div>
+
+                <div class="gst-preset-row">
+                  <button type="button" class="gst-preset-chip" data-gst="5" disabled>5%</button>
+                  <button type="button" class="gst-preset-chip" data-gst="12" disabled>12%</button>
+                  <button type="button" class="gst-preset-chip active" data-gst="18" disabled>18%</button>
+                </div>
+
+                <div class="gst-amount-pill">
+                  <span class="gst-pill-label">Tax:</span>
+                  <span class="gst-pill-value" id="gst-calculated-amount">₹0</span>
                 </div>
               </div>
             </div>
@@ -1693,40 +1758,43 @@
                     </div>
 
                     <div class="billing-spec-list">
-                      <!-- Item 1: Selected Plan -->
-                      <div class="billing-spec-row">
-                        <div class="billing-spec-left">
-                          <div class="plans-spec-icon-wrap is-indigo">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                              <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-                              <polyline points="2 17 12 22 22 17"/>
-                              <polyline points="2 12 12 17 22 12"/>
-                            </svg>
+                      <!-- Paired Row: Membership Plan & Base Plan Fee side-by-side -->
+                      <div class="billing-spec-paired-row">
+                        <!-- Item 1: Selected Plan -->
+                        <div class="billing-spec-row">
+                          <div class="billing-spec-left">
+                            <div class="plans-spec-icon-wrap is-indigo">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                                <polyline points="2 17 12 22 22 17"/>
+                                <polyline points="2 12 12 17 22 12"/>
+                              </svg>
+                            </div>
+                            <div class="billing-spec-info">
+                              <span class="billing-spec-name">Membership Plan</span>
+                              <span class="billing-spec-desc">Selected package</span>
+                            </div>
                           </div>
-                          <div class="billing-spec-info">
-                            <span class="billing-spec-name">Membership Plan</span>
-                            <span class="billing-spec-desc">Selected tier package</span>
-                          </div>
+                          <span id="billingPlanName" class="badge-plan-premium">No Plan Selected</span>
                         </div>
-                        <span id="billingPlanName" class="badge-plan-premium">No Plan Selected</span>
-                      </div>
 
-                      <!-- Item 2: Plan Base Fee -->
-                      <div class="billing-spec-row">
-                        <div class="billing-spec-left">
-                          <div class="plans-spec-icon-wrap is-emerald">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                              <rect x="2" y="6" width="20" height="12" rx="2" />
-                              <circle cx="12" cy="12" r="2" />
-                              <path d="M6 12h.01M18 12h.01"/>
-                            </svg>
+                        <!-- Item 2: Plan Base Fee -->
+                        <div class="billing-spec-row">
+                          <div class="billing-spec-left">
+                            <div class="plans-spec-icon-wrap is-emerald">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="6" width="20" height="12" rx="2" />
+                                <circle cx="12" cy="12" r="2" />
+                                <path d="M6 12h.01M18 12h.01"/>
+                              </svg>
+                            </div>
+                            <div class="billing-spec-info">
+                              <span class="billing-spec-name">Base Plan Fee</span>
+                              <span class="billing-spec-desc">Membership rate</span>
+                            </div>
                           </div>
-                          <div class="billing-spec-info">
-                            <span class="billing-spec-name">Base Plan Fee</span>
-                            <span class="billing-spec-desc">Membership rate</span>
-                          </div>
+                          <span id="billingPlanPrice" class="billing-price-val">₹0</span>
                         </div>
-                        <span id="billingPlanPrice" class="billing-price-val">₹0</span>
                       </div>
 
                       <!-- Item 3: One-Time Joining Fee -->
@@ -1781,7 +1849,7 @@
                             <span class="billing-spec-desc">Inclusive of all taxes</span>
                           </div>
                         </div>
-                        <span class="billing-tax-val">Included (₹0)</span>
+                        <span class="billing-tax-val" id="billingTaxVal">Included (₹0)</span>
                       </div>
                     </div>
 

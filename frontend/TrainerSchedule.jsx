@@ -40,7 +40,11 @@ import {
   Trash2,
   Check,
   UserCheck,
-  UserPlus
+  UserPlus,
+  Dumbbell,
+  ShieldCheck,
+  Percent,
+  CalendarClock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -61,14 +65,14 @@ const DAYS = [
 ];
 
 const KPIS = [
-  { id: 1, label: "Active Trainers Today", value: "0", trend: "0", isUp: true, subtext: "On duty" },
-  { id: 2, label: "PT Sessions Scheduled", value: "0", trend: "0%", isUp: true, subtext: "0% capacity" },
-  { id: 3, label: "Trainers Available", value: "0", trend: "0", isUp: false, subtext: "Available" },
-  { id: 4, label: "Schedule Conflicts", value: "0", trend: "Clean", isUp: true, subtext: "Conflict-free" },
-  { id: 5, label: "Shift Coverage %", value: "0%", trend: "0%", isUp: true, subtext: "Shift coverage" },
-  { id: 6, label: "Avg Trainer Utilization", value: "0%", trend: "0%", isUp: false, subtext: "Utilization rate" },
-  { id: 7, label: "Upcoming Sessions", value: "0", trend: "Next 2h", isUp: true, subtext: "Sessions" },
-  { id: 8, label: "Trainers On Leave", value: "0", trend: "0", isUp: true, subtext: "On leave" }
+  { id: 1, label: "Active Trainers Today", value: "0", trend: "0", isUp: true, subtext: "On duty", icon: UserCheck, tone: "indigo" },
+  { id: 2, label: "PT Sessions Scheduled", value: "0", trend: "0%", isUp: true, subtext: "0% capacity", icon: Dumbbell, tone: "emerald" },
+  { id: 3, label: "Trainers Available", value: "0", trend: "0", isUp: false, subtext: "Available", icon: Users, tone: "blue" },
+  { id: 4, label: "Schedule Conflicts", value: "0", trend: "Clean", isUp: true, subtext: "Conflict-free", icon: ShieldCheck, tone: "amber" },
+  { id: 5, label: "Shift Coverage %", value: "0%", trend: "0%", isUp: true, subtext: "Shift coverage", icon: Percent, tone: "rose" },
+  { id: 6, label: "Avg Trainer Utilization", value: "0%", trend: "0%", isUp: false, subtext: "Utilization rate", icon: Activity, tone: "indigo" },
+  { id: 7, label: "Upcoming Sessions", value: "0", trend: "Next 2h", isUp: true, subtext: "Sessions", icon: Clock, tone: "emerald" },
+  { id: 8, label: "Trainers On Leave", value: "0", trend: "0", isUp: true, subtext: "On leave", icon: CalendarClock, tone: "blue" }
 ];
 
 const MOCK_TRAINERS = [];
@@ -79,25 +83,49 @@ const MOCK_SESSIONS = [];
 // COMPONENTS
 // ─────────────────────────────────────────
 
-const StatCard = ({ kpi }) => (
-  <article className="bg-white p-3 lg:p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all min-w-0">
-    <div className="flex justify-between items-start mb-1.5 gap-1 min-w-0">
-      <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-wider text-slate-400 truncate">{kpi.label}</span>
-      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${kpi.isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-        {kpi.trend}
-      </span>
-    </div>
-    <div className="flex items-baseline gap-1.5">
-      <strong className="text-xl lg:text-2xl font-black text-slate-900 leading-none">{kpi.value}</strong>
-    </div>
-    <p className="text-[10px] font-medium text-slate-500 mt-1 truncate">{kpi.subtext}</p>
-  </article>
-);
+const KPI_TONES = {
+  indigo: { icon: "text-indigo-600 bg-indigo-50 border-indigo-100", trend: "text-emerald-700 bg-emerald-50 border-emerald-100/80" },
+  emerald: { icon: "text-emerald-600 bg-emerald-50 border-emerald-100", trend: "text-emerald-700 bg-emerald-50 border-emerald-100/80" },
+  blue: { icon: "text-blue-600 bg-blue-50 border-blue-100", trend: "text-blue-700 bg-blue-50 border-blue-100/80" },
+  amber: { icon: "text-amber-600 bg-amber-50 border-amber-100", trend: "text-amber-700 bg-amber-50 border-amber-100/80" },
+  rose: { icon: "text-rose-600 bg-rose-50 border-rose-100", trend: "text-rose-700 bg-rose-50 border-rose-100/80" }
+};
+
+const StatCard = ({ kpi }) => {
+  const tone = KPI_TONES[kpi.tone] || KPI_TONES.indigo;
+  const Icon = kpi.icon;
+  return (
+    <article className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-xl p-2.5 sm:p-3 xl:p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-sm transition-all duration-200 flex flex-col justify-between gap-2 min-w-0">
+      <div className="flex items-center justify-between gap-1.5 min-w-0">
+        <span className="text-[9px] sm:text-[9.5px] xl:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate min-w-0" title={kpi.label}>
+          {kpi.label}
+        </span>
+        {Icon && (
+          <div className={`w-7 h-7 xl:w-8 xl:h-8 rounded-lg border flex items-center justify-center shrink-0 ${tone.icon}`}>
+            <Icon size={14} strokeWidth={2.2} />
+          </div>
+        )}
+      </div>
+      <div className="flex items-baseline justify-between gap-1.5 pt-0.5 min-w-0">
+        <h3 className="text-xl sm:text-[22px] xl:text-2xl font-black text-slate-900 tracking-tight leading-none shrink-0">
+          {kpi.value}
+        </h3>
+        {kpi.trend && (
+          <span className={`text-[8.5px] sm:text-[9px] xl:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-md border shrink-0 whitespace-nowrap ${tone.trend}`}>
+            {kpi.trend}
+          </span>
+        )}
+      </div>
+      <p className="text-[10px] font-medium text-slate-500 truncate">{kpi.subtext}</p>
+    </article>
+  );
+};
 
 const TrainerSchedule = () => {
   const [viewMode, setViewMode] = useState("week"); // day | week | month | timeline
   const [selectedSession, setSelectedSession] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSessionClick = (session) => {
     setSelectedSession(session);
@@ -108,29 +136,36 @@ const TrainerSchedule = () => {
     <div className="trainer-schedule-shell font-sans text-slate-900 selection:bg-indigo-100">
       {/* 5. TOP UTILITY HEADER */}
       <header className="relative z-50 flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-          <span className="hover:text-slate-900 cursor-pointer">Trainers & Staff</span>
-          <ChevronRight size={14} className="opacity-40" />
-          <span className="text-slate-900 font-bold font-sans">Trainer Schedule</span>
-        </div>
-
-        <div className="flex-1 max-w-2xl px-12 relative">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search trainer, PT session, shift, branch..."
-              className="w-full h-11 pl-12 pr-4 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
-            />
-          </div>
+        <div className="flex items-center gap-4">
+          <nav className="flex items-center text-sm font-medium text-slate-500">
+            <span>Trainers &amp; Staff</span>
+            <ChevronRight size={16} className="text-slate-300 mx-2" />
+            <span className="text-slate-900 font-bold">Trainer Schedule</span>
+          </nav>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-2">
+          <div className="relative flex items-center w-80 lg:w-96 group">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+              <Search size={16} strokeWidth={2.2} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search trainer, PT session, shift, branch..."
+              className="w-full pl-10 pr-14 h-10 bg-slate-100/90 hover:bg-slate-100 border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all outline-none leading-normal shadow-2xs"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none gap-0.5">
+              <kbd className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs leading-none">⌘</kbd>
+              <kbd className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs leading-none">K</kbd>
+            </div>
+          </div>
+          <button className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-2xs">
             <Layers size={16} />
             Shift Planner
           </button>
-          <button className="h-10 px-6 rounded-xl bg-slate-950 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 flex items-center gap-2">
+          <button className="h-10 px-5 rounded-xl bg-slate-950 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 flex items-center gap-2">
             <Plus size={16} />
             Create Schedule
           </button>
@@ -138,75 +173,30 @@ const TrainerSchedule = () => {
       </header>
 
       {/* 6. PAGE TITLE SECTION */}
-      <div className="flex justify-between items-end mb-2 relative z-10">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 relative z-10">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Trainer Schedule</h1>
-          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-[720px]">
+          <p className="text-slate-500 text-xs font-semibold mt-2 max-w-2xl">
             Manage trainer shifts, PT schedules, recurring sessions, and workforce allocation across your fitness ecosystem.
           </p>
         </div>
-        <div className="flex gap-2">
-          {['Shift Management', 'PT Sessions', 'Availability Engine', 'Workload Insights'].map(pill => (
-            <span key={pill} className="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              {pill}
-            </span>
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs flex items-center gap-2">
+            <CalendarDays size={13} className="text-indigo-600" />
+            Week: <strong className="text-indigo-600 font-bold">20 – 26 May 2026</strong>
+          </span>
         </div>
       </div>
 
       {/* 7. KPI ANALYTICS STRIP */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 lg:gap-3 mb-2 relative z-10 w-full min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5 lg:gap-3 xl:gap-3.5 mb-2 relative z-10 w-full min-w-0">
         {KPIS.map(kpi => <StatCard key={kpi.id} kpi={kpi} />)}
       </div>
 
       <div className="trainer-schedule-workspace">
 
-        {/* 8. MAIN WORKSPACE */}
-        <div className="grid grid-cols-12 gap-6 items-start">
-          
-          {/* 9. LEFT PANEL → STAFF LIST */}
-          <aside className="col-span-2 space-y-6 sticky top-24">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Staff List</h4>
-              <div className="space-y-4">
-                {MOCK_TRAINERS.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-4 text-center">No trainers registered.</p>
-                ) : (
-                  MOCK_TRAINERS.map(trainer => (
-                    <div key={trainer.id} className="flex items-center gap-3 group cursor-pointer">
-                      <div className="relative">
-                        <img src={trainer.image} alt="" className="w-10 h-10 rounded-xl bg-slate-50 grayscale group-hover:grayscale-0 transition-all" />
-                        <span className={`absolute -right-1 -bottom-1 w-3 h-3 rounded-full border-2 border-white ${
-                          trainer.status === 'available' ? 'bg-emerald-500' : 
-                          trainer.status === 'busy' ? 'bg-amber-500' :
-                          trainer.status === 'booked' ? 'bg-rose-500' : 'bg-slate-300'
-                        }`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-black text-slate-900 truncate">{trainer.name}</p>
-                        <p className="text-[9px] font-bold text-slate-400 truncate tracking-tight">{trainer.specialization}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Quick Filters</h4>
-              <div className="space-y-2">
-                {['Available Now', 'PT Running', 'On Leave', 'Senior Trainers'].map(filter => (
-                  <label key={filter} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group">
-                    <div className="w-4 h-4 rounded border-2 border-slate-200 group-hover:border-indigo-500 transition-colors" />
-                    <span className="text-[11px] font-bold text-slate-600">{filter}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          {/* 10. CENTER WORKSPACE → MAIN SCHEDULER */}
-          <section className="col-span-7 space-y-6">
+        {/* 8. MAIN WORKSPACE → FULL WIDTH SCHEDULER */}
+        <section className="w-full space-y-6">
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-50 flex justify-between items-center">
                 <div className="flex items-center gap-4">
@@ -300,138 +290,7 @@ const TrainerSchedule = () => {
                 </div>
               </div>
             </div>
-
-            {/* 20. BOTTOM ANALYTICS SECTION */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-900">Trainer Utilization</h4>
-                  <ArrowUpRight size={16} className="text-slate-400" />
-                </div>
-                <div className="space-y-4">
-                  {MOCK_TRAINERS.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-4 text-center">No trainer utilization data.</p>
-                  ) : (
-                    MOCK_TRAINERS.map(trainer => (
-                      <div key={trainer.id} className="space-y-1.5">
-                        <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                          <span>{trainer.name}</span>
-                          <span>0%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-indigo-500" style={{ width: '0%' }} />
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-900">Session Breakdown</h4>
-                  <TrendingUp size={16} className="text-emerald-500" />
-                </div>
-                <div className="flex items-center gap-8 h-full pb-8">
-                  <div className="relative w-32 h-32">
-                    <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                      <circle cx="18" cy="18" r="16" fill="none" className="stroke-slate-50" strokeWidth="4" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <strong className="text-lg font-black text-slate-900">0</strong>
-                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Total</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Strength (0%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Yoga (0%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-slate-300" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Others (0%)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </section>
-
-          {/* 13. RIGHT PANEL → AI & AVAILABILITY INTELLIGENCE */}
-          <aside className="col-span-3 space-y-6 sticky top-24">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Brain size={120} className="text-indigo-900" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                    <Zap size={16} fill="white" />
-                  </div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-900">AI Schedule Insights</h4>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Activity size={14} className="text-indigo-600" />
-                      <strong className="text-[10px] font-black text-slate-900 uppercase">Schedule Status</strong>
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed">
-                      Schedules are synchronized. Active slot recommendations will appear once sessions are booked.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Coverage</h4>
-                <div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Real-time
-                </div>
-              </div>
-              <div className="space-y-4">
-                {[
-                  { label: "Floor Trainers", value: "0", color: "text-indigo-600", bg: "bg-indigo-50" },
-                  { label: "Ongoing PTs", value: "0", color: "text-amber-600", bg: "bg-amber-50" },
-                  { label: "Uncovered Shifts", value: "0", color: "text-emerald-600", bg: "bg-emerald-50" }
-                ].map(stat => (
-                  <div key={stat.label} className="flex items-center justify-between p-3 rounded-2xl border border-slate-50 hover:bg-slate-50 transition-colors">
-                    <span className="text-[11px] font-bold text-slate-500">{stat.label}</span>
-                    <strong className={`text-xs font-black ${stat.color} ${stat.bg} px-2 py-0.5 rounded-lg`}>{stat.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-slate-900 rounded-[32px] p-6 text-white shadow-2xl relative overflow-hidden group">
-              <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-all duration-700" />
-              <div className="relative z-10">
-                <h4 className="text-xs font-black uppercase tracking-widest mb-4">Conflict Resolution</h4>
-                <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-                  System automatically scans for overlaps during drag-and-drop operations.
-                </p>
-                <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Status</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Active</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Shield size={14} className="text-emerald-400" />
-                    <span className="text-xs font-black text-white">Smart Shield™ Enabled</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
-        </div>
       </div>
 
       {/* 11. SESSION DETAILS DRAWER */}

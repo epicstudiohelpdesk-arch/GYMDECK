@@ -48,6 +48,7 @@ use commands::cloud_enroll_commands::{
 use commands::backup_commands::{
     create_backup_command, list_backups_command, verify_backup_command, verify_restore_command
 };
+use commands::system_commands::get_system_status;
 use auth::rate_limit::default_auth_limiter;
 use sessions::manager::SessionManager;
 use sessions::cloud_session::CloudSessionManager;
@@ -223,7 +224,8 @@ pub fn run() {
         get_cloud_enrollment_status_command,
         cloud_sync_now_command,
         cloud_unenroll_command,
-        cloud_communications_request_command
+        cloud_communications_request_command,
+        get_system_status
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

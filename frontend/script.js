@@ -3295,32 +3295,47 @@ const isNewRegistration = (member) => {
   return diffHours >= 0 && diffHours <= 24;
 };
 
-const renderDocsLabel = (label) => {
-  if (!label || label === "No Documents") {
-    return "No Documents";
-  }
-
-  // Clean the label by removing "Joining Fee: ..." prefix if present
-  let cleanLabel = label;
-  if (label.includes("Joining Fee: ₹")) {
-    const parts = label.split("|");
-    if (parts.length > 1) {
-      cleanLabel = parts.slice(1).join("|").trim();
-    } else {
-      cleanLabel = "No Documents";
+const extractDocumentNames = (label) => {
+  if (!label || label === "No Documents") return "";
+  const parts = label.split("|");
+  const docNames = [];
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    if (
+      lower.startsWith("joining fee:") ||
+      lower.includes("joining fee: ₹") ||
+      lower.startsWith("add-on") ||
+      lower.startsWith("addon") ||
+      lower.startsWith("gst:") ||
+      lower.startsWith("tax:") ||
+      lower.startsWith("base plan fee:") ||
+      trimmed.includes("(₹") ||
+      trimmed.includes("₹")
+    ) {
+      continue;
+    }
+    const subDocs = trimmed.split(",").map(d => d.trim()).filter(Boolean);
+    for (const sub of subDocs) {
+      const subLower = sub.toLowerCase();
+      if (
+        !subLower.startsWith("joining fee") &&
+        !subLower.startsWith("add-on") &&
+        !subLower.startsWith("addon") &&
+        !sub.includes("₹") &&
+        subLower !== "no documents"
+      ) {
+        docNames.push(sub);
+      }
     }
   }
+  return Array.from(new Set(docNames)).join(", ");
+};
 
-  if (!cleanLabel || cleanLabel === "No Documents") {
-    return "No Documents";
-  }
-
-  const escaped = escapeHtml(cleanLabel);
-  return escaped.replace(/aadhaar card/gi, (match) => {
-    const aadhaarPart = match.substring(0, match.length - 4).trim();
-    const cardPart = match.substring(match.length - 4);
-    return `${aadhaarPart}<br>${cardPart}`;
-  });
+const renderDocsLabel = (label) => {
+  const docs = extractDocumentNames(label);
+  return docs ? escapeHtml(docs) : "No Documents";
 };
 
 const createMemberRow = (member) => {
@@ -3389,7 +3404,7 @@ const createMemberRow = (member) => {
     <td data-label="Address">${escapeHtml(member.address)}</td>
     <td data-label="Documents">
       <div class="doc-cell">
-        <span>${renderDocsLabel(member.docsLabel)}</span>
+        <span title="${renderDocsLabel(member.docsLabel)}">${renderDocsLabel(member.docsLabel)}</span>
         <button class="doc-view-btn" type="button">View Document</button>
       </div>
     </td>
@@ -3482,7 +3497,7 @@ const updateMemberRowInPlace = (row, updatedMember) => {
     <td data-label="Address">${escapeHtml(updatedMember.address)}</td>
     <td data-label="Documents">
       <div class="doc-cell">
-        <span>${renderDocsLabel(updatedMember.docsLabel)}</span>
+        <span title="${renderDocsLabel(updatedMember.docsLabel)}">${renderDocsLabel(updatedMember.docsLabel)}</span>
         <button class="doc-view-btn" type="button">View Document</button>
       </div>
     </td>
@@ -4760,12 +4775,7 @@ const saveUploadedDocuments = async (submitButton) => {
     // --- Edit Member Saving Flow ---
     const feeInput = document.getElementById("member-joining-fee");
     const joiningFeeVal = feeInput ? feeInput.value : 0;
-    let docsOnly = activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberDocsLabel || "") : "";
-    if (docsOnly.includes("|")) {
-      docsOnly = docsOnly.split("|").slice(1).join("|").trim();
-    } else if (docsOnly.includes("Joining Fee: ₹")) {
-      docsOnly = "";
-    }
+    let docsOnly = activeMoreOptionsRow ? extractDocumentNames(activeMoreOptionsRow.dataset.memberDocsLabel || "") : "";
     const finalDocs = uploadedDocs.length > 0 ? uploadedDocs.map(d => d.label).join(", ") : docsOnly;
     const addonsList = typeof getSelectedAddons === "function" ? getSelectedAddons() : [];
     const addonsSummary = addonsList.length > 0 ? `Add-ons: ${addonsList.map(a => `${a.name} (₹${a.fee})`).join(", ")}` : "";
@@ -6042,6 +6052,7 @@ function updateBillingSummary() {
   const billingAddonsPrice = document.getElementById("billingAddonsPrice");
   const billingAddonsDesc = document.getElementById("billingAddonsDesc");
   const billingTotalAmount = document.getElementById("billingTotalAmount");
+  const billingTaxVal = document.getElementById("billingTaxVal") || document.querySelector(".billing-tax-val");
 
   const feeInput = document.getElementById("member-joining-fee");
   const joiningFeeVal = feeInput ? parseFloat(feeInput.value) || 0 : 0;
@@ -6060,28 +6071,49 @@ function updateBillingSummary() {
     }
   }
 
-  let totalAmount = joiningFeeVal + addonsTotalVal;
+  // GST calculation
+  const gstCheck = document.getElementById("apply-gst-check");
+  const gstRateInput = document.getElementById("gst-rate-input");
+  const isGstEnabled = gstCheck ? gstCheck.checked : false;
+  const gstRate = isGstEnabled && gstRateInput ? parseFloat(gstRateInput.value) || 0 : 0;
 
-  if (!selectedPlanId) {
-    if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
-    if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
-    if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-    if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
-  } else {
+  let planPrice = 0;
+  let planName = "No Plan Selected";
+
+  if (selectedPlanId) {
     const selectedPlan = allPlans.find(p => p.id === selectedPlanId);
     if (selectedPlan) {
-      if (billingPlanName) billingPlanName.textContent = selectedPlan.plan_name;
-      const planPrice = selectedPlan.price || 0;
-      totalAmount = planPrice + joiningFeeVal + addonsTotalVal;
-      if (billingPlanPrice) billingPlanPrice.textContent = `₹${planPrice.toLocaleString()}`;
-      if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-      if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
-    } else {
-      if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
-      if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
-      if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-      if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
+      planName = selectedPlan.plan_name;
+      planPrice = selectedPlan.price || 0;
     }
+  }
+
+  const subtotal = planPrice + joiningFeeVal + addonsTotalVal;
+  const gstAmount = isGstEnabled ? Math.round(subtotal * (gstRate / 100)) : 0;
+  const totalAmount = subtotal + gstAmount;
+
+  if (billingPlanName) billingPlanName.textContent = planName;
+  if (billingPlanPrice) billingPlanPrice.textContent = `₹${planPrice.toLocaleString()}`;
+  if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+  if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
+
+  // Update Taxes display on Page 5
+  if (billingTaxVal) {
+    if (isGstEnabled && gstAmount > 0) {
+      billingTaxVal.textContent = `+₹${gstAmount.toLocaleString()} (${gstRate}% GST)`;
+      billingTaxVal.style.color = "#2563eb";
+      billingTaxVal.style.fontWeight = "700";
+    } else {
+      billingTaxVal.textContent = "Included (₹0)";
+      billingTaxVal.style.color = "";
+      billingTaxVal.style.fontWeight = "";
+    }
+  }
+
+  // Update GST preview on Page 4
+  const gstDisplay = document.getElementById("gst-calculated-amount");
+  if (gstDisplay) {
+    gstDisplay.textContent = isGstEnabled ? `₹${gstAmount.toLocaleString()}` : "₹0";
   }
 
   const formattedTotal = `₹${totalAmount.toLocaleString()}`;
@@ -6093,7 +6125,7 @@ function updateBillingSummary() {
       window.renderBillingDynamicQr();
     } catch (e) {}
   }
-};
+}
 
 planningNextButton?.addEventListener("click", () => {
   updateBillingSummary();
@@ -6267,6 +6299,53 @@ const initAddonServicesControls = () => {
 };
 
 initAddonServicesControls();
+
+// Initialize GST Taxing Controls on Plan Selection (Page 4)
+const initGstControls = () => {
+  const gstCheck = document.getElementById("apply-gst-check");
+  const gstRateInput = document.getElementById("gst-rate-input");
+  const gstWrapper = document.getElementById("gst-input-wrapper");
+  const gstCard = document.getElementById("gst-tax-card");
+  const presetChips = document.querySelectorAll(".gst-preset-chip");
+
+  if (!gstCheck || !gstRateInput) return;
+
+  const updateGstState = () => {
+    const isChecked = gstCheck.checked;
+    gstRateInput.disabled = !isChecked;
+    gstWrapper?.classList.toggle("is-enabled", isChecked);
+    gstCard?.classList.toggle("is-active", isChecked);
+    presetChips.forEach(chip => {
+      chip.disabled = !isChecked;
+    });
+
+    if (typeof updateBillingSummary === "function") {
+      updateBillingSummary();
+    }
+  };
+
+  gstCheck.addEventListener("change", updateGstState);
+  gstRateInput.addEventListener("input", updateGstState);
+  gstRateInput.addEventListener("change", updateGstState);
+
+  presetChips.forEach(chip => {
+    chip.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (chip.disabled) return;
+      presetChips.forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      gstRateInput.value = chip.dataset.gst || "18";
+      updateGstState();
+    });
+  });
+
+  // Re-calculate when joining fee changes
+  document.getElementById("member-joining-fee")?.addEventListener("input", () => {
+    if (typeof updateBillingSummary === "function") updateBillingSummary();
+  });
+};
+
+initGstControls();
 
 
 

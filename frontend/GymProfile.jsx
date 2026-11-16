@@ -676,6 +676,10 @@ const GymProfile = () => {
   const [copiedUpiId, setCopiedUpiId] = useState(null);
   const [copiedAccNum, setCopiedAccNum] = useState(null);
   const [accountToDelete, setAccountToDelete] = useState(null);
+  // Cloud-DB sync state for Banking & Settlement. The cloud gym_payment_accounts table
+  // (scoped to the signed-in gym tenant) is the single source of truth; localStorage is
+  // only a read-through cache so the UI can render instantly before the cloud hydrates.
+  const [bankingCloudSync, setBankingCloudSync] = useState({ loading: true, online: false, error: null });
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const toggleFaq = (id) => setExpandedFaqId(prev => (prev === id ? null : prev === "all" ? null : id));
   const [communicationFaqId, setCommunicationFaqId] = useState(null);
@@ -856,6 +860,52 @@ const GymProfile = () => {
     autoBackups: true
   });
 
+  // Banking & Settlement accounts are persisted in the cloud gym_payment_accounts table,
+  // which is scoped to the signed-in gym tenant (gym_id = JWT gymId). These helpers make
+  // the cloud DB the single source of truth; localStorage is only a read-through cache.
+  const mapApiAccountsToUi = (apiAccounts) =>
+    (Array.isArray(apiAccounts) ? apiAccounts : []).map((a) => ({
+      id: a.id,
+      accountHolderName: a.beneficiaryName,
+      bankName: a.bankName || "Bank",
+      accountNumber: a.accountNumberMasked || "",
+      ifscCode: a.ifscCode || "",
+      branchName: a.branchName || "",
+      accountType: a.accountType || "Current Account",
+      upiId: a.upiVpa || "",
+      role: a.isPrimary ? "both" : "inflow",
+      isPrimaryInflow: !!a.isPrimary,
+      isPrimaryOutflow: !!a.isPrimary,
+      verificationStatus: a.status || "UNVERIFIED",
+      addedAt: a.createdAt ? new Date(a.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+    }));
+
+  const writeBankAccountsCache = (accounts) => {
+    try {
+      const safe = Array.isArray(accounts) ? accounts : [];
+      localStorage.setItem("gymdeck_bank_accounts", JSON.stringify(safe));
+      window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: safe } }));
+    } catch (e) {}
+  };
+
+  const syncBankAccountsFromCloud = () => {
+    setBankingCloudSync((s) => ({ ...s, loading: true }));
+    return paymentsV2Api.listAccounts()
+      .then((res) => {
+        const mappedAccounts = mapApiAccountsToUi(res?.data?.accounts);
+        setGymData((prev) => ({ ...prev, bankAccounts: mappedAccounts }));
+        writeBankAccountsCache(mappedAccounts);
+        setBankingCloudSync({ loading: false, online: true, error: null });
+        return mappedAccounts;
+      })
+      .catch((err) => {
+        // Cloud unreachable / device unenrolled. The localStorage cache stays on screen
+        // as an offline view; it is NOT treated as persisted data.
+        setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
+        throw err;
+      });
+  };
+
   // Hydrate persisted communication settings from the cloud tenant record.
   useEffect(() => {
     let cancelled = false;
@@ -889,41 +939,12 @@ const GymProfile = () => {
     return () => { cancelled = true; };
   }, []);
 
-  // Hydrate persisted receiving accounts from cloud database
+  // Hydrate persisted receiving accounts from the cloud database (single source of truth).
+  // gym_payment_accounts rows are scoped to gym_id (= the signed-in gym tenant), so the
+  // returned accounts always belong to the account that logged in. On failure the
+  // localStorage cache stays on screen as an offline view only, never as "saved" data.
   useEffect(() => {
-    let cancelled = false;
-    paymentsV2Api.listAccounts()
-      .then((res) => {
-        if (cancelled || !res?.data?.accounts) return;
-        const apiAccounts = res.data.accounts;
-        if (apiAccounts.length > 0) {
-          const mappedAccounts = apiAccounts.map((a) => ({
-            id: a.id,
-            accountHolderName: a.beneficiaryName,
-            bankName: a.bankName || "Bank",
-            accountNumber: a.accountNumberMasked || "",
-            ifscCode: a.ifscCode || "",
-            branchName: a.branchName || "",
-            accountType: a.accountType || "Current Account",
-            upiId: a.upiVpa || "",
-            role: a.isPrimary ? "both" : "inflow",
-            isPrimaryInflow: !!a.isPrimary,
-            isPrimaryOutflow: !!a.isPrimary,
-            verificationStatus: a.status || "UNVERIFIED",
-            addedAt: a.createdAt ? new Date(a.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
-          }));
-          setGymData((prev) => ({
-            ...prev,
-            bankAccounts: mappedAccounts,
-          }));
-          try {
-            localStorage.setItem("gymdeck_bank_accounts", JSON.stringify(mappedAccounts));
-            window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: mappedAccounts } }));
-          } catch (e) {}
-        }
-      })
-      .catch(() => { /* Offline / unenrolled: keep local defaults. */ });
-    return () => { cancelled = true; };
+    syncBankAccountsFromCloud().catch(() => {});
   }, []);
 
   // Focused List of Tabs in the Horizontal Navigation Row
@@ -1230,7 +1251,7 @@ const GymProfile = () => {
         });
       }, 0);
 
-      // Asynchronously update in cloud backend
+      // Asynchronously update the cloud record (scoped to the signed-in gym).
       if (!editingAccountId.startsWith("acc_")) {
         const updatePayload = {
           beneficiaryName: accountFormData.accountHolderName.trim(),
@@ -1247,26 +1268,39 @@ const GymProfile = () => {
         paymentsV2Api.updateAccount(editingAccountId, updatePayload)
           .then((res) => {
             if (res?.data?.account) {
-              setGymData(prev => ({
-                ...prev,
-                bankAccounts: (prev.bankAccounts || []).map(acc =>
+              setGymData(prev => {
+                const merged = (prev.bankAccounts || []).map(acc =>
                   acc.id === editingAccountId ? {
                     ...acc,
                     accountNumber: res.data.account.accountNumberMasked || acc.accountNumber,
                     verificationStatus: res.data.account.status || acc.verificationStatus
                   } : acc
-                )
-              }));
+                );
+                writeBankAccountsCache(merged);
+                return { ...prev, bankAccounts: merged };
+              });
             }
+            setBankingCloudSync({ loading: false, online: true, error: null });
+            showToast("Payment destination updated successfully.");
           })
-          .catch((err) => console.warn("Failed to persist account update to cloud:", err));
+          .catch((err) => {
+            // Re-sync from the cloud so the UI reflects what is actually persisted.
+            setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
+            syncBankAccountsFromCloud().catch(() => {});
+            showToast("Could not save account update to the cloud. Reconnect and try again.");
+          });
 
         if (isPrimaryInflow) {
-          paymentsV2Api.setPrimary(editingAccountId).catch(console.warn);
+          paymentsV2Api.setPrimary(editingAccountId)
+            .then(() => setBankingCloudSync({ loading: false, online: true, error: null }))
+            .catch((err) => {
+              setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
+              syncBankAccountsFromCloud().catch(() => {});
+            });
         }
+      } else {
+        showToast("Payment destination updated successfully.");
       }
-
-      showToast("Payment destination updated successfully.");
     } else {
       const newAcc = {
         id: `acc_${Date.now()}`,
@@ -1304,7 +1338,8 @@ const GymProfile = () => {
         window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: updatedWithNew } }));
       } catch (e) {}
 
-      // Asynchronously persist to backend database
+      // Persist to the cloud database (gym_payment_accounts, scoped to the signed-in gym).
+      const methodLabel = method === "UPI" ? "UPI destination" : method === "BANK_TRANSFER" ? "Bank account" : "Dual-rail account";
       paymentsV2Api.createAccount({
         method: method === "UPI" ? "UPI" : "BANK_TRANSFER",
         label: method === "UPI" ? "Countertop Merchant UPI" : `${accountFormData.bankName} Account`,
@@ -1318,20 +1353,33 @@ const GymProfile = () => {
         branchName: isBankActive ? (accountFormData.branchName.trim() || `${accountFormData.bankName} Main Branch`) : undefined,
         isPrimary: isPrimaryInflow
       }).then((res) => {
-        if (res?.data?.account?.id) {
-          setGymData(prev => ({
-            ...prev,
-            bankAccounts: (prev.bankAccounts || []).map(acc => 
-              acc.id === newAcc.id ? { ...acc, id: res.data.account.id, verificationStatus: res.data.account.status || "UNVERIFIED" } : acc
-            )
-          }));
+        const cloudAccount = res?.data?.account;
+        if (cloudAccount?.id) {
+          // Reconcile the provisional local id with the authoritative cloud record id and
+          // mirror the reconciled list back into the local cache.
+          setGymData(prev => {
+            const reconciled = (prev.bankAccounts || []).map(acc =>
+              acc.id === newAcc.id
+                ? { ...acc, id: cloudAccount.id, verificationStatus: cloudAccount.status || "UNVERIFIED" }
+                : acc
+            );
+            writeBankAccountsCache(reconciled);
+            return { ...prev, bankAccounts: reconciled };
+          });
+          setBankingCloudSync({ loading: false, online: true, error: null });
+          showToast(`New ${methodLabel} connected (Status: ${cloudAccount.status || "UNVERIFIED"}).`);
         }
       }).catch((err) => {
-        console.warn("Failed to persist receiving account to cloud:", err);
+        // Cloud persist failed: roll back the optimistic row so the UI never claims an
+        // unsaved account is connected to the account.
+        setGymData(prev => {
+          const rolled = (prev.bankAccounts || []).filter(acc => acc.id !== newAcc.id);
+          writeBankAccountsCache(rolled);
+          return { ...prev, bankAccounts: rolled };
+        });
+        setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
+        showToast("Could not save account to the cloud. Reconnect and try again.");
       });
-
-      const methodLabel = method === "UPI" ? "UPI destination" : method === "BANK_TRANSFER" ? "Bank account" : "Dual-rail account";
-      showToast(`New ${methodLabel} connected (Status: UNVERIFIED).`);
     }
 
     setHasChanges(true);
@@ -1340,7 +1388,14 @@ const GymProfile = () => {
 
   const handleDeleteAccount = (id) => {
     if (id && !id.startsWith("acc_")) {
-      paymentsV2Api.deactivateAccount(id).catch(console.warn);
+      paymentsV2Api.deactivateAccount(id)
+        .then(() => setBankingCloudSync({ loading: false, online: true, error: null }))
+        .catch((err) => {
+          // Cloud delete failed: re-sync so the row reappears (it is still in the DB).
+          setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
+          syncBankAccountsFromCloud().catch(() => {});
+          showToast("Could not disconnect account from the cloud. Reconnect and try again.");
+        });
     }
     const remaining = (gymData.bankAccounts || []).filter(a => a.id !== id);
     if (remaining.length === 0) {
@@ -3746,6 +3801,32 @@ const GymProfile = () => {
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="space-y-6 pb-12"
               >
+                {/* Cloud-DB sync status: confirms banking data is bound to the signed-in account */}
+                {(() => {
+                  const { loading, online, error } = bankingCloudSync;
+                  if (loading && !online) {
+                    return (
+                      <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-800">
+                        <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+                        <span className="font-medium">Syncing banking accounts with your account…</span>
+                      </div>
+                    );
+                  }
+                  if (online) {
+                    return (
+                      <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="font-medium">Banking accounts are saved to your account and remain connected when you log in again.</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 mt-0.5 shrink-0" />
+                      <span className="font-medium">Cloud not connected — banking changes are not being saved to your account. {error ? `(${error})` : ""} Enrol this device or reconnect to persist.</span>
+                    </div>
+                  );
+                })()}
                 {/* 1. SECTION 1: RECEIVE MONEY (MEMBER INFLOW RAILS) */}
                 {bankingFilter === "inflow" && (
                   <div className="space-y-4">
