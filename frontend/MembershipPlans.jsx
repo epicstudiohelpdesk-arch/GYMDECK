@@ -589,16 +589,59 @@ function PlanDetailsModal({ plan, onClose, onEdit, onDelete, isSubModalOpen }) {
 // ─────────────────────────────────────────
 // CUSTOM SELECT COMPONENT
 // ─────────────────────────────────────────
-function CustomSelect({ label, value, onChange, options }) {
+function CustomSelect({
+  label,
+  value,
+  onChange,
+  options = [],
+  allowCustom = false,
+  customLabel,
+  customPlaceholder,
+  onAddCustom
+}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isAdding) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isAdding]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setIsAdding(false);
+    setCustomInput("");
+  };
+
+  const handleSaveCustom = () => {
+    const trimmed = customInput.trim();
+    if (!trimmed) return;
+    if (onAddCustom) {
+      onAddCustom(trimmed);
+    }
+    onChange(trimmed);
+    handleClose();
+  };
 
   return (
-    <div className="space-y-1.5 relative">
+    <div className={cn("space-y-1.5 relative", isOpen && "z-30")}>
       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>
       <div className="relative">
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (isOpen) {
+              handleClose();
+            } else {
+              setIsOpen(true);
+            }
+          }}
           className={cn(
             "w-full h-11 px-4 bg-white border rounded-xl text-xs font-semibold flex items-center justify-between outline-none transition-all duration-200 shadow-sm",
             isOpen
@@ -606,7 +649,7 @@ function CustomSelect({ label, value, onChange, options }) {
               : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
           )}
         >
-          <span className={value ? "text-slate-700" : "text-slate-400"}>
+          <span className={cn("truncate mr-2", value ? "text-slate-800" : "text-slate-400")}>
             {value || `Select ${label}`}
           </span>
           <motion.div
@@ -620,40 +663,115 @@ function CustomSelect({ label, value, onChange, options }) {
 
         {isOpen && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <div className="fixed inset-0 z-40" onClick={handleClose} />
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: -4 }}
               transition={{ duration: 0.12, ease: "easeOut" }}
-              className="absolute left-0 right-0 top-[48px] bg-white rounded-xl border border-slate-200 shadow-xl py-1 z-50 overflow-hidden"
+              className="absolute left-0 right-0 top-[48px] bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden flex flex-col min-w-[220px]"
             >
-              {options.map((option) => {
-                const isSelected = value === option;
-                return (
-                  <motion.button
-                    key={option}
-                    type="button"
-                    whileHover={{ x: 2 }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => {
-                      onChange(option);
-                      setIsOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-left transition-colors duration-150 rounded-lg",
-                      isSelected
-                        ? "text-indigo-600 bg-indigo-50/60"
-                        : "text-slate-650 bg-transparent hover:text-slate-900 hover:bg-slate-50"
-                    )}
-                  >
-                    <span>{option}</span>
-                    {isSelected && (
-                      <CheckCircle2 size={13} className="text-indigo-600 stroke-[2.5] shrink-0" />
-                    )}
-                  </motion.button>
-                );
-              })}
+              <div className="max-h-[160px] overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+                {options.map((option) => {
+                  const isSelected = value === option;
+                  return (
+                    <motion.button
+                      key={option}
+                      type="button"
+                      whileHover={{ x: 2 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => {
+                        onChange(option);
+                        handleClose();
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-left transition-colors duration-150 rounded-xl",
+                        isSelected
+                          ? "text-indigo-600 bg-indigo-50/70"
+                          : "text-slate-650 bg-transparent hover:text-slate-900 hover:bg-slate-50"
+                      )}
+                    >
+                      <span className="truncate pr-2">{option}</span>
+                      {isSelected && (
+                        <CheckCircle2 size={13} className="text-indigo-600 stroke-[2.5] shrink-0" />
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {allowCustom && (
+                <div className="border-t border-slate-100 bg-slate-50/70 p-1.5">
+                  {!isAdding ? (
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsAdding(true);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 transition-all duration-150 rounded-xl text-left border border-dashed border-indigo-200/80 hover:border-indigo-300"
+                    >
+                      <div className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                        <Plus size={11} className="stroke-[3]" />
+                      </div>
+                      <span className="tracking-tight">{customLabel || `+ Custom ${label}`}</span>
+                    </motion.button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 3 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-2.5 bg-white border border-indigo-200/90 rounded-xl space-y-2 shadow-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">
+                          {customLabel ? customLabel.replace(/^\+\s*/, "Add ") : `Add Custom ${label}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAdding(false);
+                            setCustomInput("");
+                          }}
+                          className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        >
+                          <X size={12} className="stroke-[2.5]" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={customInput}
+                          onChange={(e) => setCustomInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleSaveCustom();
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              setIsAdding(false);
+                              setCustomInput("");
+                            }
+                          }}
+                          placeholder={customPlaceholder || `Enter custom ${label.toLowerCase()}...`}
+                          className="flex-1 h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveCustom}
+                          disabled={!customInput.trim()}
+                          className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-black disabled:opacity-40 disabled:hover:bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider transition-all shrink-0 flex items-center gap-1 shadow-sm"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </>
         )}
@@ -757,7 +875,18 @@ function DeleteConfirmationModal({ isOpen, plan, onClose, onConfirm }) {
 // ─────────────────────────────────────────
 // TRAINERS LIST CONSTANT
 // ─────────────────────────────────────────
-function CreatePlanModal({ isOpen, onClose, onPublish, editPlan }) {
+function CreatePlanModal({
+  isOpen,
+  onClose,
+  onPublish,
+  editPlan,
+  customCategories = [],
+  onAddCategory,
+  customAudiences = [],
+  onAddAudience,
+  customGoals = [],
+  onAddGoal
+}) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: "",
@@ -770,6 +899,58 @@ function CreatePlanModal({ isOpen, onClose, onPublish, editPlan }) {
     duration: "Monthly",
     durationDays: 30
   });
+
+  const [internalCustomCategories, setInternalCustomCategories] = useState([]);
+  const [internalCustomAudiences, setInternalCustomAudiences] = useState([]);
+  const [internalCustomGoals, setInternalCustomGoals] = useState([]);
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set([
+      "Transformation", "Weight Loss", "Bodybuilding", "General Fitness",
+      ...customCategories,
+      ...internalCustomCategories
+    ]);
+    if (editPlan?.category) set.add(editPlan.category);
+    if (form.category) set.add(form.category);
+    return Array.from(set);
+  }, [customCategories, internalCustomCategories, editPlan, form.category]);
+
+  const audienceOptions = useMemo(() => {
+    const set = new Set([
+      "Professionals", "Students", "Senior Citizens", "Athletes",
+      ...customAudiences,
+      ...internalCustomAudiences
+    ]);
+    if (editPlan?.audience) set.add(editPlan.audience);
+    if (form.audience) set.add(form.audience);
+    return Array.from(set);
+  }, [customAudiences, internalCustomAudiences, editPlan, form.audience]);
+
+  const goalOptions = useMemo(() => {
+    const set = new Set([
+      "Revenue Generation", "Member Acquisition", "Retention Focus", "High-Margin Upsell",
+      ...customGoals,
+      ...internalCustomGoals
+    ]);
+    if (editPlan?.goal) set.add(editPlan.goal);
+    if (form.goal) set.add(form.goal);
+    return Array.from(set);
+  }, [customGoals, internalCustomGoals, editPlan, form.goal]);
+
+  const handleAddCategory = (cat) => {
+    setInternalCustomCategories(prev => prev.includes(cat) ? prev : [...prev, cat]);
+    if (onAddCategory) onAddCategory(cat);
+  };
+
+  const handleAddAudience = (aud) => {
+    setInternalCustomAudiences(prev => prev.includes(aud) ? prev : [...prev, aud]);
+    if (onAddAudience) onAddAudience(aud);
+  };
+
+  const handleAddGoal = (gol) => {
+    setInternalCustomGoals(prev => prev.includes(gol) ? prev : [...prev, gol]);
+    if (onAddGoal) onAddGoal(gol);
+  };
 
   const [access, setAccess] = useState(["Freeze Support"]);
   const [areas, setAreas] = useState(["Gym Floor", "Cardio Zone"]);
@@ -935,7 +1116,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish, editPlan }) {
               damping: 32,
               mass: 0.85
             }}
-            className="relative w-full max-w-4xl bg-[#f4f6fa] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[600px] z-50"
+            className="relative w-full max-w-5xl bg-white rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col h-[86vh] max-h-[760px] min-h-[620px] z-50"
             style={{ willChange: "transform" }}
           >
             {/* Top Handle Bar */}
@@ -965,318 +1146,552 @@ function CreatePlanModal({ isOpen, onClose, onPublish, editPlan }) {
             </motion.button>
 
             {/* Header Kicker/Title/Desc */}
-            <header className="px-10 pt-6 pb-2 shrink-0">
-              <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{kicker}</p>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-1">{title}</h2>
-              <p className="text-xs font-semibold text-slate-500 max-w-2xl leading-relaxed mt-1.5">{description}</p>
+            <header className="px-10 pt-5 pb-3 shrink-0">
+              <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest leading-none">{kicker}</p>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-1.5">{title}</h2>
+              <p className="text-xs font-semibold text-slate-500 max-w-2xl leading-relaxed mt-1">{description}</p>
             </header>
 
-            {/* Content Body */}
-            <div className={cn("flex-1 px-10 py-6", (step === 1 || step === 4) ? "overflow-hidden" : "overflow-y-auto")}>
+            {/* Content Body with Blueprint Dotted Card Engine */}
+            <div className={cn("flex-1 px-10 py-2", step === 1 ? "overflow-visible" : "overflow-y-auto")}>
+              <div className={cn("plans-empty-state-card !p-6 !m-0 mb-4 transition-all duration-300", step === 1 ? "!overflow-visible" : "!overflow-hidden")}>
+                <div className="plans-empty-grid-pattern" />
+                <div className="plans-empty-content-wrap relative z-10 space-y-5">
+                  {/* Dynamic Blueprint Topbar per Step */}
+                  <div className="plans-empty-topbar mb-1">
+                    <div className="plans-status-pill">
+                      <span className="plans-status-dot" />
+                      <span className="plans-status-kicker font-mono">{`STEP 0${step} OF 04`}</span>
+                      <span className="plans-status-divider">•</span>
+                      <span className="plans-status-sub font-semibold">
+                        {step === 1 ? "Configuration Protocol" :
+                         step === 2 ? "Pricing & Yield Ledger" :
+                         step === 3 ? "Access Rules & Matrix" :
+                         "Strategic Deployment"}
+                      </span>
+                    </div>
+
+                    <div className="plans-tags-group">
+                      {step === 1 && (
+                        <>
+                          <span className="plans-tag-item">
+                            <CheckCircle2 size={13} className="text-indigo-600 stroke-[2.5]" />
+                            Taxonomy &amp; Audience Targeting
+                          </span>
+                          <span className="plans-tag-divider">•</span>
+                          <span className="plans-tag-item">
+                            <Shield size={13} className="text-emerald-500 stroke-[2.5]" />
+                            Enterprise Tier Spec
+                          </span>
+                        </>
+                      )}
+                      {step === 2 && (
+                        <>
+                          <span className="plans-tag-item">
+                            <Clock size={13} className="text-indigo-600 stroke-[2.5]" />
+                            Flexible Duration Intervals
+                          </span>
+                          <span className="plans-tag-divider">•</span>
+                          <span className="plans-tag-item">
+                            <TrendingUp size={13} className="text-emerald-500 stroke-[2.5]" />
+                            Automated ARPU Yield Normalization
+                          </span>
+                        </>
+                      )}
+                      {step === 3 && (
+                        <>
+                          <span className="plans-tag-item">
+                            <Shield size={13} className="text-indigo-600 stroke-[2.5]" />
+                            Automated RFID &amp; Turnstile Permissions
+                          </span>
+                          <span className="plans-tag-divider">•</span>
+                          <span className="plans-tag-item">
+                            <Sparkles size={13} className="text-emerald-500 stroke-[2.5]" />
+                            Multi-Zone Boundary Sync
+                          </span>
+                        </>
+                      )}
+                      {step === 4 && (
+                        <>
+                          <span className="plans-tag-item">
+                            <Zap size={13} className="text-indigo-600 stroke-[2.5]" />
+                            Instant Live Portfolio Propagation
+                          </span>
+                          <span className="plans-tag-divider">•</span>
+                          <span className="plans-tag-item">
+                            <CheckCircle2 size={13} className="text-emerald-500 stroke-[2.5]" />
+                            256-Bit Ledger Verification
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
               <AnimatePresence mode="wait">
                 {step === 1 && (
-                  <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
+                  <motion.div
+                    key="s1"
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    className="space-y-4"
+                  >
+                    <div className="grid grid-cols-2 gap-5 relative z-30">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Plan Name *</label>
-                        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Annual Elite Performance" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Plan Name *
+                        </label>
+                        <input
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          placeholder="e.g. Annual Elite Performance"
+                          className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-indigo-50/60 shadow-sm transition-all outline-none"
+                        />
                       </div>
                       <CustomSelect
                         label="Category"
                         value={form.category}
                         onChange={(val) => setForm({ ...form, category: val })}
-                        options={["Transformation", "Weight Loss", "Bodybuilding", "General Fitness"]}
+                        options={categoryOptions}
+                        allowCustom={true}
+                        customLabel="+ Custom Category"
+                        customPlaceholder="Enter custom category..."
+                        onAddCustom={handleAddCategory}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
+
+                    <div className="grid grid-cols-2 gap-5 relative z-20">
                       <CustomSelect
                         label="Target Audience"
                         value={form.audience}
                         onChange={(val) => setForm({ ...form, audience: val })}
-                        options={["Professionals", "Students", "Senior Citizens", "Athletes"]}
+                        options={audienceOptions}
+                        allowCustom={true}
+                        customLabel="+ Custom Audience"
+                        customPlaceholder="Enter custom audience..."
+                        onAddCustom={handleAddAudience}
                       />
                       <CustomSelect
                         label="Strategic Goal"
                         value={form.goal}
                         onChange={(val) => setForm({ ...form, goal: val })}
-                        options={["Revenue Generation", "Member Acquisition", "Retention Focus", "High-Margin Upsell"]}
+                        options={goalOptions}
+                        allowCustom={true}
+                        customLabel="+ Custom Goal"
+                        customPlaceholder="Enter custom goal..."
+                        onAddCustom={handleAddGoal}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Description</label>
-                      <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Value proposition and key features..." className="w-full h-24 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none resize-none" />
+
+                    <div className="space-y-2 relative z-10">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Description
+                      </label>
+                      <textarea
+                        value={form.description}
+                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                        placeholder="Value proposition, key features, and membership inclusions..."
+                        rows={3}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-indigo-50/60 shadow-sm transition-all outline-none resize-none"
+                      />
                     </div>
                   </motion.div>
                 )}
+
                 {step === 2 && (
-                  <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Duration</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          {durationsList.map(d => {
-                            let daysLabel = "";
-                            if (d === "Monthly") daysLabel = "30 Days";
-                            else if (d === "Quarterly") daysLabel = "90 Days";
-                            else if (d === "Half-Yearly") daysLabel = "180 Days";
-                            else if (d === "Annual") daysLabel = "365 Days";
-                            else daysLabel = `${customDurationsMap[d] || 30} Days`;
+                  <motion.div
+                    key="s2"
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    className="grid grid-cols-2 gap-6 items-start"
+                  >
+                    {/* Duration Micro-cards Grid */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Duration Period
+                        </label>
+                        <span className="text-[10px] font-mono text-indigo-600 font-bold">
+                          {form.durationDays ? `${form.durationDays} Days Active` : "30 Days"}
+                        </span>
+                      </div>
 
-                            const daysCount = d === "Monthly" ? 30 :
-                                              d === "Quarterly" ? 90 :
-                                              d === "Half-Yearly" ? 180 :
-                                              d === "Annual" ? 365 :
-                                              (customDurationsMap[d] || 30);
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {durationsList.map(d => {
+                          let daysLabel = "";
+                          if (d === "Monthly") daysLabel = "30 Days";
+                          else if (d === "Quarterly") daysLabel = "90 Days";
+                          else if (d === "Half-Yearly") daysLabel = "180 Days";
+                          else if (d === "Annual") daysLabel = "365 Days";
+                          else daysLabel = `${customDurationsMap[d] || 30} Days`;
 
-                            return (
-                              <motion.button
-                                key={d}
-                                type="button"
-                                whileHover={{ scale: 1.02, y: -0.5 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => setForm({ ...form, duration: d, durationDays: daysCount })}
-                                className={cn(
-                                  "h-14 rounded-xl border flex flex-col items-center justify-center transition-all duration-200 shadow-sm p-2",
-                                  form.duration === d
-                                    ? "border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10"
-                                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-350 hover:bg-slate-50/50"
-                                )}
-                              >
-                                <span className="text-[10px] font-black uppercase tracking-wider leading-none truncate max-w-full px-1">{d}</span>
-                                <span className={cn(
-                                  "text-[9px] font-bold font-mono mt-1.5 leading-none",
-                                  form.duration === d ? "text-slate-300" : "text-slate-400"
-                                )}>
-                                  {daysLabel}
-                                </span>
-                              </motion.button>
-                            );
-                          })}
+                          const daysCount = d === "Monthly" ? 30 :
+                                            d === "Quarterly" ? 90 :
+                                            d === "Half-Yearly" ? 180 :
+                                            d === "Annual" ? 365 :
+                                            (customDurationsMap[d] || 30);
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCustomDurationName("");
-                              setCustomDurationDays("");
-                              setIsCustomDurationModalOpen(true);
-                            }}
-                            className="h-14 rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-350 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-2 p-2 col-span-2"
-                          >
-                            <Plus size={11} className="stroke-[3]" />
-                            <span>Custom Duration</span>
-                          </button>
+                          const isSelected = form.duration === d;
+
+                          return (
+                            <motion.button
+                              key={d}
+                              type="button"
+                              whileHover={{ scale: 1.02, y: -0.5 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => setForm({ ...form, duration: d, durationDays: daysCount })}
+                              className={cn(
+                                "h-14 rounded-xl border flex flex-col items-center justify-center transition-all duration-200 shadow-sm p-2",
+                                isSelected
+                                  ? "border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
+                              )}
+                            >
+                              <span className="text-[10px] font-black uppercase tracking-wider leading-none truncate max-w-full px-1">
+                                {d}
+                              </span>
+                              <span className={cn(
+                                "text-[9px] font-bold font-mono mt-1.5 leading-none",
+                                isSelected ? "text-slate-300" : "text-slate-400"
+                              )}>
+                                {daysLabel}
+                              </span>
+                            </motion.button>
+                          );
+                        })}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomDurationName("");
+                            setCustomDurationDays("");
+                            setIsCustomDurationModalOpen(true);
+                          }}
+                          className="h-14 rounded-xl border-2 border-dashed border-indigo-200 hover:border-indigo-400 text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:text-indigo-800 bg-indigo-50/30 hover:bg-indigo-50/60 transition-all duration-200 flex items-center justify-center gap-2 p-2 col-span-2 shadow-sm"
+                        >
+                          <Plus size={12} className="stroke-[3]" />
+                          <span>Custom Duration Period</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Pricing & ARPU Calculations */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Total Plan Price *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                            <input
+                              type="number"
+                              value={form.price}
+                              onChange={(e) => setForm({ ...form, price: e.target.value })}
+                              placeholder="24,999"
+                              className="w-full h-11 pl-8 pr-4 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-indigo-50/60 shadow-sm transition-all outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Joining Fee (One-Time)
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                            <input
+                              type="number"
+                              value={form.joiningFee}
+                              onChange={(e) => setForm({ ...form, joiningFee: e.target.value })}
+                              placeholder="1,500"
+                              className="w-full h-11 pl-8 pr-4 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-indigo-50/60 shadow-sm transition-all outline-none"
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Plan Price *</label>
-                            <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="₹24,999" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
+
+                      {/* Projected ARPU Metric Card */}
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">
+                            Projected Monthly ARPU
+                          </p>
+                          <div className="flex items-baseline gap-1 mt-1.5">
+                            <span className="text-2xl font-black text-slate-900 leading-none">
+                              ₹{form.price ? formatCompact((Number(form.price) * 30) / (form.durationDays || 30)) : "0"}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-400">/mo</span>
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Joining Fee (One time)</label>
-                            <input type="number" value={form.joiningFee} onChange={(e) => setForm({ ...form, joiningFee: e.target.value })} placeholder="₹1,500" className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-slate-450 focus:ring-4 focus:ring-slate-100 transition-all outline-none" />
-                          </div>
+                          <p className="text-[9px] text-slate-400 mt-1.5 leading-tight">
+                            Normalized yield based on a 30-day billing cycle.
+                          </p>
                         </div>
-                        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center h-[90px]">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projected ARPU</p>
-                          <p className="text-xl font-black text-slate-900">₹{form.price ? formatCompact((Number(form.price) * 30) / (form.durationDays || 30)) : "0"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
+                        <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                          <TrendingUp size={20} className="stroke-[2.5]" />
                         </div>
                       </div>
                     </div>
                   </motion.div>
                 )}
+
                 {step === 3 && (
-                  <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Facility Access</h4>
-                        <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
-                          {accessCards.map(card => {
-                            const Icon = card.icon;
-                            const isChecked = access.includes(card.label);
-                            return (
-                              <div
-                                key={card.id}
-                                onClick={() => {
-                                  setAccess(prev =>
-                                    prev.includes(card.label)
-                                      ? prev.filter(r => r !== card.label)
-                                      : [...prev, card.label]
-                                  );
-                                }}
-                                className={cn(
-                                  "p-3 bg-white border rounded-2xl flex items-start gap-4 cursor-pointer hover:border-slate-350 shadow-sm transition-all duration-200",
-                                  isChecked ? "ring-2 ring-indigo-500/5 border-indigo-400" : "border-slate-200"
-                                )}
-                              >
-                                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", card.color)}>
-                                  <Icon size={16} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <h4 className="text-xs font-bold text-slate-900 leading-tight break-all break-words">{card.label}</h4>
-                                    <div className={cn(
-                                      "w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 mt-0.5",
-                                      isChecked ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white"
-                                    )}>
-                                      {isChecked && <CheckCircle2 size={10} className="stroke-[3]" />}
-                                    </div>
-                                  </div>
-                                  <p className="text-[9px] text-slate-400 mt-1 leading-normal break-all break-words">{card.description}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
+                  <motion.div
+                    key="s3"
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    className="grid grid-cols-2 gap-6 items-start"
+                  >
+                    {/* Facility Access Rules */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Facility Access Rules
+                        </h4>
+                        <span className="text-[10px] font-mono text-indigo-600 font-bold">
+                          {access.length} Rules Active
+                        </span>
+                      </div>
 
-                          {/* Dotted custom access creator card */}
-                          <div
-                            onClick={() => {
-                              setCustomAccessName("");
-                              setCustomAccessDesc("");
-                              setIsCustomAccessModalOpen(true);
-                            }}
-                            className="p-3 bg-white border-2 border-dashed border-slate-200 hover:border-slate-350 rounded-2xl flex items-center gap-4 cursor-pointer transition-all duration-200 hover:bg-slate-50/50 min-h-[62px]"
-                          >
-                            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                              <Plus size={16} className="stroke-[2.5]" />
+                      <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
+                        {accessCards.map(card => {
+                          const Icon = card.icon;
+                          const isChecked = access.includes(card.label);
+                          return (
+                            <div
+                              key={card.id}
+                              onClick={() => {
+                                setAccess(prev =>
+                                  prev.includes(card.label)
+                                    ? prev.filter(r => r !== card.label)
+                                    : [...prev, card.label]
+                                );
+                              }}
+                              className={cn(
+                                "p-3 bg-white border rounded-xl flex items-start gap-3.5 cursor-pointer hover:border-slate-350 shadow-sm transition-all duration-200",
+                                isChecked ? "ring-2 ring-indigo-500/10 border-indigo-400 bg-indigo-50/20" : "border-slate-200"
+                              )}
+                            >
+                              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", card.color)}>
+                                <Icon size={16} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <h4 className="text-xs font-bold text-slate-900 leading-tight">
+                                    {card.label}
+                                  </h4>
+                                  <div className={cn(
+                                    "w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 mt-0.5",
+                                    isChecked ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-300 bg-white"
+                                  )}>
+                                    {isChecked && <CheckCircle2 size={10} className="stroke-[3]" />}
+                                  </div>
+                                </div>
+                                <p className="text-[9px] text-slate-400 mt-0.5 leading-normal">
+                                  {card.description}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-xs font-bold text-slate-500">Create Custom Access</h4>
-                              <p className="text-[9px] text-slate-400 mt-0.5">Click to define a new access rule.</p>
-                            </div>
+                          );
+                        })}
+
+                        {/* Create Custom Access Rule */}
+                        <div
+                          onClick={() => {
+                            setCustomAccessName("");
+                            setCustomAccessDesc("");
+                            setIsCustomAccessModalOpen(true);
+                          }}
+                          className="p-3 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl flex items-center gap-3.5 cursor-pointer transition-all duration-200 hover:bg-indigo-50/30 min-h-[58px]"
+                        >
+                          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+                            <Plus size={16} className="stroke-[2.5]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-bold text-indigo-700">Create Custom Access Rule</h4>
+                            <p className="text-[9px] text-slate-400 mt-0.5">Define custom facility permissions or hours.</p>
                           </div>
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Area Permissions</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {areaOptions.map(area => {
-                            const isActive = areas.includes(area);
-                            return (
-                              <motion.button
-                                key={area}
-                                type="button"
-                                whileHover={{ scale: 1.02, y: -0.5 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => {
-                                  setAreas(prev =>
-                                    prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
-                                  );
-                                }}
-                                className={cn(
-                                  "p-3 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all duration-200 shadow-sm flex items-center justify-between",
-                                  isActive
-                                    ? "border-slate-900 bg-slate-900 text-white"
-                                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-800"
-                                )}
-                              >
-                                <span>{area}</span>
-                                <div className={cn("w-1.5 h-1.5 rounded-full", isActive ? "bg-emerald-400" : "bg-slate-300")} />
-                              </motion.button>
-                            );
-                          })}
+                    </div>
 
-                          {/* Dotted custom area creator button */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCustomAreaName("");
-                              setIsCustomAreaModalOpen(true);
-                            }}
-                            className="p-3 rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-350 text-[9px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-50 transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[38px]"
-                          >
-                            <Plus size={10} className="stroke-[3]" />
-                            <span>Create</span>
-                          </button>
-                        </div>
+                    {/* Area Permissions & Zones */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Area Permissions &amp; Zones
+                        </h4>
+                        <span className="text-[10px] font-mono text-emerald-600 font-bold">
+                          {areas.length} Zones Assigned
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {areaOptions.map(area => {
+                          const isActive = areas.includes(area);
+                          return (
+                            <motion.button
+                              key={area}
+                              type="button"
+                              whileHover={{ scale: 1.02, y: -0.5 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => {
+                                setAreas(prev =>
+                                  prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
+                                );
+                              }}
+                              className={cn(
+                                "p-3 rounded-xl border text-[9px] font-bold uppercase tracking-wider transition-all duration-200 shadow-sm flex items-center justify-between",
+                                isActive
+                                  ? "border-slate-900 bg-slate-900 text-white"
+                                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-350 hover:text-slate-900"
+                              )}
+                            >
+                              <span className="truncate pr-1">{area}</span>
+                              <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isActive ? "bg-emerald-400" : "bg-slate-300")} />
+                            </motion.button>
+                          );
+                        })}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomAreaName("");
+                            setIsCustomAreaModalOpen(true);
+                          }}
+                          className="p-3 rounded-xl border-2 border-dashed border-indigo-200 hover:border-indigo-400 text-[9px] font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-800 bg-indigo-50/30 hover:bg-indigo-50/60 transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[38px] shadow-sm"
+                        >
+                          <Plus size={11} className="stroke-[3]" />
+                          <span>Create Area</span>
+                        </button>
                       </div>
                     </div>
                   </motion.div>
                 )}
+
                 {step === 4 && (
-                  <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="grid grid-cols-2 gap-6 items-stretch h-[280px]">
-                    {/* Left Column: Plan Details Summary Card */}
-                    <div className="bg-white border border-slate-200 rounded-[20px] p-5 flex flex-col justify-between shadow-sm text-left">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2.5">
-                          <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded-lg text-[9px] font-black text-indigo-700 uppercase tracking-wider leading-none">
+                  <motion.div
+                    key="s4"
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    className="grid grid-cols-2 gap-6 items-stretch"
+                  >
+                    {/* Left Column: Plan Portfolio Preview Card (matching Page 4 .plan-select-card) */}
+                    <div className="plan-select-card is-selected !m-0 !cursor-default flex flex-col justify-between">
+                      <div className="plan-card-header">
+                        <div className="plan-card-badges">
+                          <span className="plan-select-badge">
                             {form.category || "Transformation"}
                           </span>
-                          <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold text-slate-500 uppercase tracking-wider leading-none">
-                            {form.audience || "Athletes"}
+                          <span className="plan-duration-badge">
+                            <Clock size={11} className="stroke-[2.5]" />
+                            {form.duration || "Monthly"} ({form.durationDays ? `${form.durationDays} Days` : "30 Days"})
                           </span>
                         </div>
-                        <h4 className="text-sm font-black text-slate-900 tracking-tight leading-snug truncate">
-                          {form.name || "Untitled Membership Plan"}
-                        </h4>
-                        <div className="mt-4 flex items-baseline gap-1.5 flex-wrap">
-                          <span className="text-2xl font-black text-slate-900">
-                            ₹{form.price || "0"}
+                        <div className="plan-select-radio">
+                          <CheckCircle2 size={12} className="plan-check-icon text-white stroke-[3]" />
+                        </div>
+                      </div>
+
+                      <div className="plan-card-body">
+                        <div className="plan-name-wrap">
+                          <h4 className="plan-select-name">
+                            {form.name || "Untitled Membership Plan"}
+                          </h4>
+                          <span className="plan-selected-indicator">CONFIGURED</span>
+                        </div>
+
+                        <p className="plan-card-desc">
+                          {form.description || "Comprehensive membership access with priority facility privileges."}
+                        </p>
+
+                        <div className="plan-meta-pills">
+                          <span className="plan-meta-pill">
+                            <Users size={11} className="text-slate-500" />
+                            {form.audience || "General Fitness"}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                            / {form.duration || "Monthly"}
+                          <span className="plan-meta-pill">
+                            <Target size={11} className="text-emerald-500" />
+                            {form.goal || "Growth"}
                           </span>
-                          <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded-md leading-none">
-                            {form.durationDays ? `${form.durationDays} Days` : "30 Days"}
+                          <span className="plan-meta-pill">
+                            <Shield size={11} className="text-indigo-500" />
+                            {access.length} Rules Active
+                          </span>
+                          <span className="plan-meta-pill">
+                            <Sparkles size={11} className="text-amber-500" />
+                            {areas.length} Zones Assigned
                           </span>
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-slate-100 space-y-2.5">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Joining Fee</span>
-                          <span className="text-slate-800 font-black font-mono">₹{form.joiningFee || "0"}</span>
+                      <div className="plan-select-footer">
+                        <div className="plan-select-price-group">
+                          <span className="plan-select-price-label">Plan Fee</span>
+                          <div className="plan-price-row">
+                            <span className="plan-select-price">₹{form.price || "0"}</span>
+                            <span className="plan-price-period">/ {form.duration || "Monthly"}</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Selected Zones</span>
-                          <span className="text-slate-800 font-black font-mono">{areas.length} Areas</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider">Access Controls</span>
-                          <span className="text-slate-800 font-black font-mono">{access.length} Rules</span>
+
+                        <div className="plan-select-joining">
+                          <span className="plan-joining-label">Joining Charge</span>
+                          <span className="text-xs font-black font-mono text-slate-800">₹{form.joiningFee || "0"}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Right Column: Strategic Analytics Tiles */}
                     <div className="flex flex-col gap-3 justify-between">
-                      <div className="p-4 rounded-[16px] bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                          <CheckCircle2 size={18} className="stroke-[2.5]" />
-                        </div>
-                        <div className="text-left min-w-0">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Revenue Potential</p>
-                          <p className="text-base font-black text-slate-900 mt-1.5 leading-none">
-                            ₹{form.price ? formatCompact(Number(form.price) * 100 * (form.duration === "Annual" ? 1 : form.duration === "Half-Yearly" ? 2 : form.duration === "Quarterly" ? 4 : 12)) : "0"}
-                            <span className="text-[10px] font-medium text-slate-400">/yr</span>
-                          </p>
-                        </div>
-                      </div>
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                              <TrendingUp size={18} className="stroke-[2.5]" />
+                            </div>
+                            <div className="text-left min-w-0">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">
+                                Revenue Potential (100 Active)
+                              </p>
+                              <p className="text-base font-black text-slate-900 mt-1.5 leading-none font-mono">
+                                ₹{form.price ? formatCompact(Number(form.price) * 100 * (form.duration === "Annual" ? 1 : form.duration === "Half-Yearly" ? 2 : form.duration === "Quarterly" ? 4 : 12)) : "0"}
+                                <span className="text-[10px] font-medium text-slate-400 font-sans">/yr</span>
+                              </p>
+                            </div>
+                          </div>
 
-                      <div className="p-4 rounded-[16px] bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                          <Zap size={18} className="stroke-[2.5]" />
-                        </div>
-                        <div className="text-left min-w-0">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Retention Forecast</p>
-                          <p className="text-base font-black text-emerald-600 mt-1.5 leading-none">76%</p>
-                        </div>
-                      </div>
+                          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+                              <Zap size={18} className="stroke-[2.5]" />
+                            </div>
+                            <div className="text-left min-w-0">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">
+                                Retention Benchmark
+                              </p>
+                              <p className="text-base font-black text-emerald-600 mt-1.5 leading-none font-mono">
+                                76%
+                              </p>
+                            </div>
+                          </div>
 
-                      <div className="p-4 rounded-[16px] bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center shrink-0">
-                          <Globe size={18} className="stroke-[2.5]" />
+                          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-4 flex-1">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200">
+                              <Globe size={18} className="stroke-[2.5]" />
+                            </div>
+                            <div className="text-left min-w-0">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">
+                                Portfolio Classification
+                              </p>
+                              <p className="text-base font-black text-indigo-600 mt-1.5 leading-none font-mono">
+                                Strategic Tier
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-left min-w-0">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Market Position</p>
-                          <p className="text-base font-black text-indigo-600 mt-1.5 leading-none">Strategic</p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
             </div>
 
             {/* Footer buttons centered with a gap */}
@@ -1285,7 +1700,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish, editPlan }) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={step === 1 ? onClose : () => setStep(s => s - 1)}
-                className="h-11 max-w-[360px] flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
+                className="h-11 max-w-[340px] flex-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
               >
                 {step === 1 ? "Cancel" : "← Back"}
               </motion.button>
@@ -1300,7 +1715,7 @@ function CreatePlanModal({ isOpen, onClose, onPublish, editPlan }) {
                     setStep(s => s + 1);
                   }
                 }}
-                className="h-11 max-w-[360px] flex-1 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
+                className="h-11 max-w-[340px] flex-1 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
               >
                 {isLast ? (editPlan ? "Save Changes" : "Publish Plan") : "Continue →"}
               </motion.button>
@@ -1618,6 +2033,9 @@ export default function MembershipPortfolioDashboard() {
 
   const [plans, setPlans] = useState([]);
   const [editingPlan, setEditingPlan] = useState(null);
+  const [customCategories, setCustomCategories] = useState([]);
+  const [customAudiences, setCustomAudiences] = useState([]);
+  const [customGoals, setCustomGoals] = useState([]);
 
   const loadPlans = async () => {
     try {
@@ -1774,6 +2192,18 @@ export default function MembershipPortfolioDashboard() {
       if (dbPlans && dbPlans.length > 0) {
         const mapped = dbPlans.map(mapPlanData);
         setPlans(mapped);
+
+        const standardCats = ["Transformation", "Weight Loss", "Bodybuilding", "General Fitness"];
+        const standardAuds = ["Professionals", "Students", "Senior Citizens", "Athletes"];
+        const standardGoals = ["Revenue Generation", "Member Acquisition", "Retention Focus", "High-Margin Upsell"];
+
+        const discoveredCats = mapped.map(p => p.category).filter(c => c && !standardCats.includes(c));
+        const discoveredAuds = mapped.map(p => p.audience).filter(a => a && !standardAuds.includes(a));
+        const discoveredGoals = mapped.map(p => p.goal).filter(g => g && !standardGoals.includes(g));
+
+        if (discoveredCats.length > 0) setCustomCategories(prev => Array.from(new Set([...prev, ...discoveredCats])));
+        if (discoveredAuds.length > 0) setCustomAudiences(prev => Array.from(new Set([...prev, ...discoveredAuds])));
+        if (discoveredGoals.length > 0) setCustomGoals(prev => Array.from(new Set([...prev, ...discoveredGoals])));
       } else {
         setPlans([]);
       }
@@ -2493,6 +2923,12 @@ export default function MembershipPortfolioDashboard() {
         }}
         onPublish={handlePublishPlan}
         editPlan={editingPlan}
+        customCategories={customCategories}
+        onAddCategory={(cat) => setCustomCategories(prev => prev.includes(cat) ? prev : [...prev, cat])}
+        customAudiences={customAudiences}
+        onAddAudience={(aud) => setCustomAudiences(prev => prev.includes(aud) ? prev : [...prev, aud])}
+        customGoals={customGoals}
+        onAddGoal={(gol) => setCustomGoals(prev => prev.includes(gol) ? prev : [...prev, gol])}
       />
 
       {/* PLAN DETAILS MODAL */}

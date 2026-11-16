@@ -1622,7 +1622,7 @@ const loadPlansForSelection = async () => {
 
     gridContainer.classList.remove("has-empty-state");
 
-    let html = "";
+    let cardsHtml = "";
     activePlans.forEach(plan => {
       let category = "General";
       let joiningFee = 0;
@@ -1673,61 +1673,137 @@ const loadPlansForSelection = async () => {
 
       const isSelected = selectedPlanId === plan.id;
 
-      html += `
+      cardsHtml += `
         <div class="plan-select-card ${isSelected ? 'is-selected' : ''}" data-plan-id="${plan.id}" data-duration-days="${plan.duration_days}" data-joining-fee="${joiningFee}">
-          <span class="plan-select-badge">${category}</span>
-          <div>
-            <h3 class="plan-select-name">${plan.plan_name}</h3>
-            <p class="plan-select-duration">${durationName} (${plan.duration_days} Days)</p>
+          <div class="plan-card-header">
+            <div class="plan-card-badges">
+              <span class="plan-select-badge">${category}</span>
+              <span class="plan-duration-badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                ${durationName} (${plan.duration_days}D)
+              </span>
+            </div>
+            <div class="plan-select-radio">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="plan-check-icon">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
           </div>
-          
-          <div class="plan-select-details">
-            <div class="plan-details-row"><strong>Audience:</strong> ${audience}</div>
-            <div class="plan-details-row"><strong>Goal:</strong> ${goal}</div>
-            ${areas.length > 0 ? `<div class="plan-details-row"><strong>Areas:</strong> ${areas.join(", ")}</div>` : ''}
-            ${access.length > 0 ? `<div class="plan-details-row"><strong>Access:</strong> ${access.join(", ")}</div>` : ''}
-            ${descText ? `<div class="plan-details-desc">"${descText}"</div>` : ''}
+
+          <div class="plan-card-body">
+            <div class="plan-name-wrap">
+              <h3 class="plan-select-name">${plan.plan_name}</h3>
+              <span class="plan-selected-indicator">SELECTED</span>
+            </div>
+
+            <div class="plan-meta-pills">
+              <span class="plan-meta-pill" title="Target Audience">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+                ${audience}
+              </span>
+              <span class="plan-meta-pill" title="Strategic Goal">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <circle cx="12" cy="12" r="6"></circle>
+                  <circle cx="12" cy="12" r="2"></circle>
+                </svg>
+                ${goal}
+              </span>
+              ${areas.length > 0 ? `
+                <span class="plan-meta-pill" title="Zone Access">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                  </svg>
+                  ${areas.length} Areas
+                </span>
+              ` : ''}
+            </div>
+
+            ${descText ? `<p class="plan-card-desc" title="${descText.replace(/"/g, '&quot;')}">"${descText}"</p>` : ''}
           </div>
 
           <div class="plan-select-footer">
             <div class="plan-select-price-group">
-              <span class="plan-select-price-label">Price</span>
-              <strong class="plan-select-price">${formattedPrice}</strong>
+              <span class="plan-select-price-label">SUBSCRIPTION FEE</span>
+              <div class="plan-price-row">
+                <strong class="plan-select-price">${formattedPrice}</strong>
+                <span class="plan-price-period">/ ${plan.duration_days} Days</span>
+              </div>
             </div>
             <div class="plan-select-joining">
-              Joining: <span>${formattedJoining}</span>
+              <span class="plan-joining-label">JOINING FEE</span>
+              <span class="plan-joining-value">${formattedJoining}</span>
             </div>
           </div>
-
-          <button class="plan-select-pull-btn" type="button" aria-label="Toggle details">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
         </div>
       `;
     });
 
-    gridContainer.innerHTML = html;
+    gridContainer.innerHTML = `
+      <div class="plans-empty-state-card plans-catalog-container">
+        <div class="plans-empty-grid-pattern"></div>
+        <div class="plans-empty-content-wrap">
+          <!-- Top Bar: Status Pill & Capabilities Chips -->
+          <div class="plans-empty-topbar">
+            <div class="plans-status-pill">
+              <span class="plans-status-dot"></span>
+              <span class="plans-status-kicker">MEMBERSHIP CATALOG</span>
+              <span class="plans-status-divider">•</span>
+              <span class="plans-status-sub">${activePlans.length} Available Package${activePlans.length > 1 ? 's' : ''}</span>
+            </div>
+
+            <div class="plans-tags-group">
+              <span class="plans-tag-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Select Plan To Enroll
+              </span>
+              <span class="plans-tag-divider">•</span>
+              <span class="plans-tag-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Automated Dues &amp; Access
+              </span>
+            </div>
+          </div>
+
+          <!-- Main Grid: Available Plans Grid -->
+          <div class="plans-available-grid">
+            ${cardsHtml}
+          </div>
+        </div>
+      </div>
+    `;
 
     const cards = gridContainer.querySelectorAll(".plan-select-card");
     cards.forEach(card => {
       card.addEventListener("click", () => {
+        const wasSelected = card.classList.contains("is-selected");
         cards.forEach(c => c.classList.remove("is-selected"));
-        card.classList.add("is-selected");
-        selectedPlanId = card.dataset.planId;
         
-        const feeInput = document.getElementById("member-joining-fee");
-        if (feeInput) {
-          feeInput.value = card.dataset.joiningFee || 0;
+        if (wasSelected) {
+          selectedPlanId = null;
+          const feeInput = document.getElementById("member-joining-fee");
+          if (feeInput) feeInput.value = 0;
+        } else {
+          card.classList.add("is-selected");
+          selectedPlanId = card.dataset.planId;
+          const feeInput = document.getElementById("member-joining-fee");
+          if (feeInput) {
+            feeInput.value = card.dataset.joiningFee || 0;
+          }
         }
         console.log("GymDeck: Selected Plan ID:", selectedPlanId);
-      });
-
-      const pullBtn = card.querySelector(".plan-select-pull-btn");
-      pullBtn?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        card.classList.toggle("is-expanded");
       });
     });
 
@@ -1765,12 +1841,79 @@ const loadPlansForSelection = async () => {
   }
 };
 
+// --- Add-On Services & Amenities Helpers ---
+const getSelectedAddons = () => {
+  const addons = [];
+  
+  // 1. Presets
+  document.querySelectorAll(".addon-preset-item").forEach(item => {
+    const cb = item.querySelector(".addon-preset-checkbox");
+    if (cb && cb.checked) {
+      const feeInp = item.querySelector(".addon-fee-input");
+      const fee = feeInp ? (parseFloat(feeInp.value) || 0) : (parseFloat(item.dataset.defaultFee) || 0);
+      addons.push({
+        id: item.dataset.addonId || "preset",
+        name: item.dataset.addonName || "Amenity",
+        fee: fee
+      });
+    }
+  });
+
+  // 2. Custom Addons
+  document.querySelectorAll("#custom-addons-list .custom-addon-row").forEach((row, idx) => {
+    const nameInp = row.querySelector(".custom-addon-name-input");
+    const feeInp = row.querySelector(".custom-addon-fee-input");
+    const name = nameInp && nameInp.value.trim() ? nameInp.value.trim() : `Custom Service ${idx + 1}`;
+    const fee = feeInp ? (parseFloat(feeInp.value) || 0) : 0;
+    addons.push({
+      id: `custom-${idx + 1}`,
+      name: name,
+      fee: fee
+    });
+  });
+
+  return addons;
+};
+
+const getAddonsTotal = () => {
+  const addons = getSelectedAddons();
+  return addons.reduce((sum, item) => sum + item.fee, 0);
+};
+
+const updateAddonsSubtotal = () => {
+  const totalDisplay = document.getElementById("addons-total-display");
+  const total = getAddonsTotal();
+  if (totalDisplay) {
+    totalDisplay.textContent = `₹${total.toLocaleString()}`;
+  }
+};
+
+const resetAddonServices = () => {
+  document.querySelectorAll(".addon-preset-item").forEach(item => {
+    item.classList.remove("is-checked");
+    const cb = item.querySelector(".addon-preset-checkbox");
+    if (cb) cb.checked = false;
+    const feeInp = item.querySelector(".addon-fee-input");
+    if (feeInp) {
+      feeInp.value = item.dataset.defaultFee || "500";
+      feeInp.disabled = true;
+    }
+  });
+
+  const customList = document.getElementById("custom-addons-list");
+  if (customList) customList.innerHTML = "";
+
+  const totalDisplay = document.getElementById("addons-total-display");
+  if (totalDisplay) totalDisplay.textContent = "₹0";
+};
+
 const resetMemberForm = () => {
   selectedPlanId = null;
   const feeInput = document.getElementById("member-joining-fee");
   if (feeInput) {
     feeInput.value = "0";
   }
+  resetAddonServices();
   addMemberForm?.reset();
 
   if (addMemberDobInput) {
@@ -1906,6 +2049,11 @@ const isAddMemberModalDirty = () => {
 
   // If plan is selected
   if (selectedPlanId) {
+    return true;
+  }
+
+  // If any add-on service is selected or custom add-on added
+  if (typeof getSelectedAddons === "function" && getSelectedAddons().length > 0) {
     return true;
   }
 
@@ -4619,7 +4767,11 @@ const saveUploadedDocuments = async (submitButton) => {
       docsOnly = "";
     }
     const finalDocs = uploadedDocs.length > 0 ? uploadedDocs.map(d => d.label).join(", ") : docsOnly;
-    const finalNotes = finalDocs ? `Joining Fee: ₹${joiningFeeVal} | ${finalDocs}` : `Joining Fee: ₹${joiningFeeVal}`;
+    const addonsList = typeof getSelectedAddons === "function" ? getSelectedAddons() : [];
+    const addonsSummary = addonsList.length > 0 ? `Add-ons: ${addonsList.map(a => `${a.name} (₹${a.fee})`).join(", ")}` : "";
+    let finalNotes = `Joining Fee: ₹${joiningFeeVal}`;
+    if (addonsSummary) finalNotes += ` | ${addonsSummary}`;
+    if (finalDocs) finalNotes += ` | ${finalDocs}`;
 
     const updatedMember = {
       code: activeMoreOptionsRow ? (activeMoreOptionsRow.dataset.memberCode || "") : "",
@@ -4875,7 +5027,12 @@ const saveUploadedDocuments = async (submitButton) => {
             const feeInput = document.getElementById("member-joining-fee");
             const joiningFeeVal = feeInput ? feeInput.value : 0;
             const docList = uploadedDocs.map(d => d.label).join(", ");
-            return docList ? `Joining Fee: ₹${joiningFeeVal} | ${docList}` : `Joining Fee: ₹${joiningFeeVal}`;
+            const addonsList = typeof getSelectedAddons === "function" ? getSelectedAddons() : [];
+            const addonsSummary = addonsList.length > 0 ? `Add-ons: ${addonsList.map(a => `${a.name} (₹${a.fee})`).join(", ")}` : "";
+            let parts = [`Joining Fee: ₹${joiningFeeVal}`];
+            if (addonsSummary) parts.push(addonsSummary);
+            if (docList) parts.push(docList);
+            return parts.join(" | ");
           })(),
           created_by_user_id: "00000000-0000-0000-0000-000000000000",
           updated_by_user_id: "00000000-0000-0000-0000-000000000000",
@@ -5882,23 +6039,40 @@ function updateBillingSummary() {
   const billingPlanName = document.getElementById("billingPlanName");
   const billingPlanPrice = document.getElementById("billingPlanPrice");
   const billingJoiningFee = document.getElementById("billingJoiningFee");
+  const billingAddonsPrice = document.getElementById("billingAddonsPrice");
+  const billingAddonsDesc = document.getElementById("billingAddonsDesc");
   const billingTotalAmount = document.getElementById("billingTotalAmount");
 
   const feeInput = document.getElementById("member-joining-fee");
   const joiningFeeVal = feeInput ? parseFloat(feeInput.value) || 0 : 0;
-  let totalAmount = joiningFeeVal;
+
+  const addonsList = typeof getSelectedAddons === "function" ? getSelectedAddons() : [];
+  const addonsTotalVal = typeof getAddonsTotal === "function" ? getAddonsTotal() : 0;
+
+  if (billingAddonsPrice) {
+    billingAddonsPrice.textContent = addonsTotalVal > 0 ? `+₹${addonsTotalVal.toLocaleString()}` : "₹0";
+  }
+  if (billingAddonsDesc) {
+    if (addonsList.length > 0) {
+      billingAddonsDesc.textContent = addonsList.map(a => `${a.name} (₹${a.fee.toLocaleString()})`).join(", ");
+    } else {
+      billingAddonsDesc.textContent = "Optional amenities & custom charges";
+    }
+  }
+
+  let totalAmount = joiningFeeVal + addonsTotalVal;
 
   if (!selectedPlanId) {
     if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
     if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
     if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-    if (billingTotalAmount) billingTotalAmount.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+    if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
   } else {
     const selectedPlan = allPlans.find(p => p.id === selectedPlanId);
     if (selectedPlan) {
       if (billingPlanName) billingPlanName.textContent = selectedPlan.plan_name;
       const planPrice = selectedPlan.price || 0;
-      totalAmount = planPrice + joiningFeeVal;
+      totalAmount = planPrice + joiningFeeVal + addonsTotalVal;
       if (billingPlanPrice) billingPlanPrice.textContent = `₹${planPrice.toLocaleString()}`;
       if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
       if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
@@ -5906,7 +6080,7 @@ function updateBillingSummary() {
       if (billingPlanName) billingPlanName.textContent = "No Plan Selected";
       if (billingPlanPrice) billingPlanPrice.textContent = "₹0";
       if (billingJoiningFee) billingJoiningFee.textContent = `₹${joiningFeeVal.toLocaleString()}`;
-      if (billingTotalAmount) billingTotalAmount.textContent = `₹${joiningFeeVal.toLocaleString()}`;
+      if (billingTotalAmount) billingTotalAmount.textContent = `₹${totalAmount.toLocaleString()}`;
     }
   }
 
@@ -5994,6 +6168,105 @@ const initJoiningFeeControls = () => {
 };
 
 initJoiningFeeControls();
+
+// Initialize Add-On Services & Amenities Controls
+const initAddonServicesControls = () => {
+  // Preset item toggle & input
+  document.querySelectorAll(".addon-preset-item").forEach(item => {
+    const cb = item.querySelector(".addon-preset-checkbox");
+    const feeInp = item.querySelector(".addon-fee-input");
+
+    item.addEventListener("click", (e) => {
+      // Don't toggle if user is typing directly inside the fee input
+      if (e.target === feeInp || feeInp?.contains(e.target)) {
+        return;
+      }
+      
+      const newChecked = !cb.checked;
+      cb.checked = newChecked;
+      item.classList.toggle("is-checked", newChecked);
+      if (feeInp) {
+        feeInp.disabled = !newChecked;
+        if (newChecked) {
+          feeInp.focus();
+          feeInp.select();
+        }
+      }
+      updateAddonsSubtotal();
+    });
+
+    if (feeInp) {
+      feeInp.addEventListener("input", () => {
+        updateAddonsSubtotal();
+      });
+      feeInp.addEventListener("change", () => {
+        updateAddonsSubtotal();
+      });
+      feeInp.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    if (cb) {
+      cb.addEventListener("change", () => {
+        item.classList.toggle("is-checked", cb.checked);
+        if (feeInp) feeInp.disabled = !cb.checked;
+        updateAddonsSubtotal();
+      });
+    }
+  });
+
+  // Add Custom Service / Fee button
+  const addBtn = document.getElementById("btn-add-custom-addon");
+  const customList = document.getElementById("custom-addons-list");
+
+  if (addBtn && customList) {
+    addBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const row = document.createElement("div");
+      row.className = "custom-addon-row";
+      row.innerHTML = `
+        <div class="custom-addon-name-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          <input type="text" class="custom-addon-name-input" placeholder="Service Name (e.g. Laundry, MMA Pass, Kit)" />
+        </div>
+        <div class="custom-addon-fee-wrap">
+          <span class="custom-addon-currency">₹</span>
+          <input type="number" class="custom-addon-fee-input" placeholder="0" min="0" value="0" />
+        </div>
+        <button type="button" class="custom-addon-remove-btn" title="Remove custom service" aria-label="Remove">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      `;
+
+      const nameInp = row.querySelector(".custom-addon-name-input");
+      const feeInp = row.querySelector(".custom-addon-fee-input");
+      const removeBtn = row.querySelector(".custom-addon-remove-btn");
+
+      feeInp.addEventListener("input", updateAddonsSubtotal);
+      feeInp.addEventListener("change", updateAddonsSubtotal);
+      nameInp.addEventListener("input", () => {
+        // Keeps state reactive
+      });
+
+      removeBtn.addEventListener("click", () => {
+        row.remove();
+        updateAddonsSubtotal();
+      });
+
+      customList.appendChild(row);
+      nameInp.focus();
+      updateAddonsSubtotal();
+    });
+  }
+};
+
+initAddonServicesControls();
 
 
 

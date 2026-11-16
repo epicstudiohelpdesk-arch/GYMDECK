@@ -1480,6 +1480,164 @@
               </div>
             </div>
 
+            <!-- Optional Add-On Services & Custom Fees Card -->
+            <div class="addons-service-card" id="addons-service-card">
+              <div class="addons-card-header">
+                <div class="addons-title-group">
+                  <div class="addons-icon-badge">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="14" width="7" height="7"></rect>
+                      <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                  </div>
+                  <div class="addons-title-text-wrap">
+                    <div class="addons-title-row">
+                      <span class="addons-card-label">ADD-ON AMENITIES &amp; SERVICES</span>
+                      <span class="addons-optional-badge">Optional</span>
+                    </div>
+                    <p class="addons-card-subtext">
+                      Attach locker rentals, personal training starter sessions, diet guidance, or custom service charges.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="addons-header-summary">
+                  <div class="addons-total-badge-wrap">
+                    <span class="addons-total-kicker">ADD-ONS SUBTOTAL</span>
+                    <span class="addons-total-val" id="addons-total-display">₹0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Popular Service Presets Grid -->
+              <div class="addons-preset-grid">
+                <!-- Preset 1: Personal Locker -->
+                <div class="addon-preset-item" data-addon-id="locker" data-addon-name="Personal Locker" data-default-fee="500">
+                  <div class="addon-preset-checkbox-wrap">
+                    <input type="checkbox" class="addon-preset-checkbox" id="addon-check-locker" />
+                    <label for="addon-check-locker" class="addon-checkbox-label">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="addon-check-svg">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </label>
+                  </div>
+                  <div class="addon-preset-icon is-indigo">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                  </div>
+                  <div class="addon-preset-details">
+                    <span class="addon-preset-title">Personal Locker</span>
+                    <span class="addon-preset-sub">Secure Key Locker</span>
+                  </div>
+                  <div class="addon-fee-box">
+                    <span class="addon-fee-prefix">₹</span>
+                    <input type="number" class="addon-fee-input" value="500" min="0" placeholder="500" disabled />
+                  </div>
+                </div>
+
+                <!-- Preset 2: PT Starter Pack -->
+                <div class="addon-preset-item" data-addon-id="pt" data-addon-name="PT Starter Pack" data-default-fee="1500">
+                  <div class="addon-preset-checkbox-wrap">
+                    <input type="checkbox" class="addon-preset-checkbox" id="addon-check-pt" />
+                    <label for="addon-check-pt" class="addon-checkbox-label">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="addon-check-svg">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </label>
+                  </div>
+                  <div class="addon-preset-icon is-emerald">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 18h12"></path>
+                      <path d="M6 6h12"></path>
+                      <rect x="2" y="8" width="4" height="8" rx="1"></rect>
+                      <rect x="18" y="8" width="4" height="8" rx="1"></rect>
+                      <line x1="6" y1="12" x2="18" y2="12"></line>
+                    </svg>
+                  </div>
+                  <div class="addon-preset-details">
+                    <span class="addon-preset-title">PT Starter Pack</span>
+                    <span class="addon-preset-sub">1-on-1 Coaching</span>
+                  </div>
+                  <div class="addon-fee-box">
+                    <span class="addon-fee-prefix">₹</span>
+                    <input type="number" class="addon-fee-input" value="1500" min="0" placeholder="1500" disabled />
+                  </div>
+                </div>
+
+                <!-- Preset 3: Diet & Nutrition -->
+                <div class="addon-preset-item" data-addon-id="diet" data-addon-name="Diet Consultation" data-default-fee="800">
+                  <div class="addon-preset-checkbox-wrap">
+                    <input type="checkbox" class="addon-preset-checkbox" id="addon-check-diet" />
+                    <label for="addon-check-diet" class="addon-checkbox-label">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="addon-check-svg">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </label>
+                  </div>
+                  <div class="addon-preset-icon is-amber">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    </svg>
+                  </div>
+                  <div class="addon-preset-details">
+                    <span class="addon-preset-title">Diet &amp; Nutrition</span>
+                    <span class="addon-preset-sub">Custom Meal Chart</span>
+                  </div>
+                  <div class="addon-fee-box">
+                    <span class="addon-fee-prefix">₹</span>
+                    <input type="number" class="addon-fee-input" value="800" min="0" placeholder="800" disabled />
+                  </div>
+                </div>
+
+                <!-- Preset 4: Steam & Sauna -->
+                <div class="addon-preset-item" data-addon-id="sauna" data-addon-name="Steam & Sauna" data-default-fee="600">
+                  <div class="addon-preset-checkbox-wrap">
+                    <input type="checkbox" class="addon-preset-checkbox" id="addon-check-sauna" />
+                    <label for="addon-check-sauna" class="addon-checkbox-label">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="addon-check-svg">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </label>
+                  </div>
+                  <div class="addon-preset-icon is-blue">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                    </svg>
+                  </div>
+                  <div class="addon-preset-details">
+                    <span class="addon-preset-title">Steam &amp; Sauna</span>
+                    <span class="addon-preset-sub">Spa Area Access</span>
+                  </div>
+                  <div class="addon-fee-box">
+                    <span class="addon-fee-prefix">₹</span>
+                    <input type="number" class="addon-fee-input" value="600" min="0" placeholder="600" disabled />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Custom Add-On Section -->
+              <div class="custom-addons-container">
+                <div class="custom-addons-list" id="custom-addons-list">
+                  <!-- Dynamically added custom fee rows will be appended here -->
+                </div>
+
+                <div class="custom-addons-action-bar">
+                  <button type="button" class="btn-add-custom-addon" id="btn-add-custom-addon">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add Custom Service / Fee</span>
+                  </button>
+                  <span class="custom-addons-hint">Need to bill a custom charge, security deposit, or kit? Add it here.</span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- Page 5: Collect Initial Payment / Redesigned Checkout Page -->
@@ -1590,7 +1748,26 @@
                         <span id="billingJoiningFee" class="billing-price-val">₹0</span>
                       </div>
 
-                      <!-- Item 4: Taxes & Surcharges -->
+                      <!-- Item 4: Add-On Amenities & Services -->
+                      <div class="billing-spec-row" id="billingAddonsRow">
+                        <div class="billing-spec-left">
+                          <div class="plans-spec-icon-wrap is-purple">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="3" y="3" width="7" height="7"></rect>
+                              <rect x="14" y="3" width="7" height="7"></rect>
+                              <rect x="14" y="14" width="7" height="7"></rect>
+                              <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                          </div>
+                          <div class="billing-spec-info">
+                            <span class="billing-spec-name">Add-On Amenities &amp; Services</span>
+                            <span class="billing-spec-desc" id="billingAddonsDesc">Optional amenities &amp; custom charges</span>
+                          </div>
+                        </div>
+                        <span id="billingAddonsPrice" class="billing-price-val">₹0</span>
+                      </div>
+
+                      <!-- Item 5: Taxes & Surcharges -->
                       <div class="billing-spec-row">
                         <div class="billing-spec-left">
                           <div class="plans-spec-icon-wrap is-blue">
