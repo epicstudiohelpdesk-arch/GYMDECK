@@ -3,22 +3,6 @@ import { mountIntroScreen } from "./IntroScreen.jsx";
 
 let authErrorTimeout = null;
 
-// Helper to check for 3 consecutive ascending or descending digits (e.g. 123, 321)
-const hasSequentialDigits = (str) => {
-  for (let i = 0; i <= str.length - 3; i++) {
-    const c1 = str.charCodeAt(i);
-    const c2 = str.charCodeAt(i + 1);
-    const c3 = str.charCodeAt(i + 2);
-    
-    // Check if all three characters are digits (0-9)
-    if (c1 >= 48 && c1 <= 57 && c2 >= 48 && c2 <= 57 && c3 >= 48 && c3 <= 57) {
-      if (c2 === c1 + 1 && c3 === c2 + 1) return true; // ascending (123)
-      if (c2 === c1 - 1 && c3 === c2 - 1) return true; // descending (321)
-    }
-  }
-  return false;
-};
-
 // Fix macOS NSSpellServer timeout spam by disabling spellcheck globally
 const disableSpellcheck = (el) => {
   if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
@@ -297,7 +281,8 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
       // Robust selection: find password input even if toggled to type="text"
       const passwordInput = form.querySelector('input[type="password"]') || 
                            form.querySelector('input[placeholder*="password"]');
-      const nameInput = form.querySelector('input[type="text"][placeholder*="Full Name"]');
+      const nameInput = form.querySelector('input[type="text"][placeholder*="Your Name"]') || 
+                        form.querySelector('input[type="text"][placeholder*="Full Name"]');
       const gymNameInput = form.querySelector('input[type="text"][placeholder*="Gym Name"]'); // may be null
       const phoneInput = form.querySelector('input[type="tel"]');
       
@@ -404,35 +389,39 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
 
         // --- Frontend Validation ---
         if (isSignup) {
-          if (!nameInput?.value.trim()) {
-            showError(nameInput, "Full name required");
+          if (!gymNameInput || !gymNameInput.value.trim()) {
+            if (gymNameInput) showError(gymNameInput, "Gym name required");
             hasErrors = true;
           }
-          if (!emailInput.value.trim()) {
-            showError(emailInput, "Valid email required");
+          if (!nameInput || !nameInput.value.trim()) {
+            if (nameInput) showError(nameInput, "Your name required");
             hasErrors = true;
           }
-          if (phoneInput && !phoneInput.value.trim()) {
-            showError(phoneInput, "Phone number required");
+          if (emailInput && emailInput.value.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(emailInput.value.trim())) {
+              showError(emailInput, "Valid email required");
+              hasErrors = true;
+            }
+          }
+          if (!phoneInput || !phoneInput.value.trim()) {
+            if (phoneInput) showError(phoneInput, "Phone number required");
             hasErrors = true;
           }
-          if (!passwordInput.value.trim()) {
-            showError(passwordInput, "Password required");
+          if (!passwordInput || !passwordInput.value.trim()) {
+            if (passwordInput) showError(passwordInput, "Password required");
             hasErrors = true;
           } else if (passwordInput.value.length < 6) {
             showError(passwordInput, "Password must be at least 6 characters");
             hasErrors = true;
-          } else if (hasSequentialDigits(passwordInput.value)) {
-            showError(passwordInput, "Sequential numbers (e.g. 123) not allowed");
-            hasErrors = true;
           }
         } else {
-          if (!emailInput.value.trim()) {
-            showError(emailInput, "Email required");
+          if (!emailInput || !emailInput.value.trim()) {
+            if (emailInput) showError(emailInput, "Email required");
             hasErrors = true;
           }
-          if (!passwordInput.value.trim()) {
-            showError(passwordInput, "Password required");
+          if (!passwordInput || !passwordInput.value.trim()) {
+            if (passwordInput) showError(passwordInput, "Password required");
             hasErrors = true;
           }
         }
@@ -467,15 +456,21 @@ document.querySelectorAll("form[data-redirect]").forEach((form) => {
 
           let response;
           if (isSignup && nameInput) {
-            // Generate a default gym name based on the user's name
+            const enteredGymName = gymNameInput?.value?.trim();
             const defaultGymName = nameInput.value ? `${nameInput.value.trim()}'s Gym` : "My Gym";
+            const finalGymName = enteredGymName || defaultGymName;
+
+            // Generate fallback email from phone or name if user left email blank
+            const cleanPhone = phoneInput?.value?.trim() || "";
+            const cleanName = nameInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+            const finalEmail = emailInput.value.trim() || `${cleanName || "user"}.${cleanPhone || Date.now()}@gymdeck.local`;
 
             // Invoke the native Rust Signup engine
             response = await window.__TAURI__.core.invoke("signup_command", {
               payload: {
-                gym_name: defaultGymName,
-                name: nameInput.value,
-                email: emailInput.value,
+                gym_name: finalGymName,
+                name: nameInput.value.trim(),
+                email: finalEmail,
                 password: passwordInput.value
               }
             });
@@ -839,13 +834,31 @@ const autofillRememberedCredentials = () => {
   }
 };
 
+// Dynamic Year Calculation for Copyright
+export const updateCopyrightYear = () => {
+  const currentYear = new Date().getFullYear().toString();
+  document.querySelectorAll(".current-year").forEach((el) => {
+    el.textContent = currentYear;
+  });
+  document.querySelectorAll(".app-footer span").forEach((el) => {
+    if (el.textContent && el.textContent.includes("GymDeck. All rights reserved")) {
+      el.innerHTML = el.innerHTML.replace(/©\s*(?:<span class="current-year">.*?<\/span>|\d{4})/, `© <span class="current-year">${currentYear}</span>`);
+    }
+  });
+};
+
+// Immediate year update pass
+updateCopyrightYear();
+
 // Initialize on page load
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
+    updateCopyrightYear();
     autofillRememberedCredentials();
     initRememberMeFeature();
   });
 } else {
+  updateCopyrightYear();
   autofillRememberedCredentials();
   initRememberMeFeature();
 }

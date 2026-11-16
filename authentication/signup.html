@@ -162,16 +162,34 @@
 
           <form class="auth-form" action="./otp.html" data-redirect="./otp.html">
 
-            <div class="field">
-              <span class="field-label">Full Name</span>
-              <div class="input-wrap">
-                <span class="input-prefix-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </span>
-                <input type="text" placeholder="Full Name" required />
+            <div class="field-row">
+              <div class="field">
+                <span class="field-label">Gym Name <span class="required-star">*</span></span>
+                <div class="input-wrap">
+                  <span class="input-prefix-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14.4 14.4 9.6 9.6"/>
+                      <path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/>
+                      <path d="m21.5 21.5-1.4-1.4"/>
+                      <path d="M3.9 3.9 2.5 2.5"/>
+                      <path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z"/>
+                    </svg>
+                  </span>
+                  <input type="text" placeholder="Gym Name" required />
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="field-label">Your Name <span class="required-star">*</span></span>
+                <div class="input-wrap">
+                  <span class="input-prefix-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </span>
+                  <input type="text" placeholder="Your Name" required />
+                </div>
               </div>
             </div>
 
@@ -185,12 +203,12 @@
                       <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                     </svg>
                   </span>
-                  <input type="email" placeholder="Email Address" required />
+                  <input type="email" placeholder="Email Address" />
                 </div>
               </div>
 
               <div class="field">
-                <span class="field-label">Phone Number</span>
+                <span class="field-label">Phone Number <span class="required-star">*</span></span>
                 <div class="input-wrap">
                   <span class="input-prefix-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -203,7 +221,7 @@
             </div>
 
             <div class="field">
-              <span class="field-label">Password <span class="field-hint">(Min. 6 chars, no sequential numbers like 123)</span></span>
+              <span class="field-label">Password <span class="required-star">*</span> <span class="field-hint">(Min. 6 characters)</span></span>
               <div class="input-wrap">
                 <span class="input-prefix-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -235,7 +253,7 @@
         </article>
 
         <footer class="app-footer">
-          <span>© 2025 GymDeck. All rights reserved.</span>
+          <span>© <span class="current-year"></span><script>document.currentScript.previousElementSibling.textContent = new Date().getFullYear();</script> GymDeck. All rights reserved.</span>
           <span class="footer-separator">|</span>
           <span>Version 1.0.0</span>
         </footer>

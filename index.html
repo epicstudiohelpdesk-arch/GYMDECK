@@ -167,7 +167,7 @@
 
           <form class="auth-form" action="./frontend/index.html" data-redirect="./frontend/index.html" data-enter-state="dashboard" autocomplete="off">
             <div class="field">
-              <span class="field-label">Email address</span>
+              <span class="field-label">Email address <span class="required-star">*</span></span>
               <div class="input-wrap">
                 <span class="input-prefix-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -180,7 +180,7 @@
             </div>
 
             <div class="field">
-              <span class="field-label">Password</span>
+              <span class="field-label">Password <span class="required-star">*</span></span>
               <div class="input-wrap">
                 <span class="input-prefix-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -230,7 +230,7 @@
         </article>
 
         <footer class="app-footer">
-          <span>© 2025 GymDeck. All rights reserved.</span>
+          <span>© <span class="current-year"></span><script>document.currentScript.previousElementSibling.textContent = new Date().getFullYear();</script> GymDeck. All rights reserved.</span>
           <span class="footer-separator">|</span>
           <span>Version 1.0.0</span>
         </footer>
