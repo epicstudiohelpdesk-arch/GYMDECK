@@ -6,16 +6,17 @@
 import * as crypto from 'crypto';
 import { streamManager } from './streamManager';
 import { WhepSession } from './streamTypes';
+import { mediaMtxManager } from './mediaMtxManager';
 
 export class WhepGateway {
   private sessions: Map<string, WhepSession> = new Map();
+  private mtxSessionUrls: Map<string, string> = new Map();
 
   /**
    * Generates a standard WebRTC SDP Answer matching the incoming SDP Offer.
-   * Negotiates H.264 (payload type 96/97) and ICE credentials.
+   * Negotiates H.264 (payload type 96/97) and ICE credentials (used as offline/test fallback).
    */
   static generateSdpAnswer(sdpOffer: string, localIp = '127.0.0.1', rtpPort = 8189): string {
-    // Extract ufrag and pwd from offer or generate new ones
     const ufrag = crypto.randomBytes(4).toString('hex');
     const pwd = crypto.randomBytes(12).toString('hex');
     const fingerprint = crypto.randomBytes(32).toString('hex').match(/.{2}/g)?.join(':').toUpperCase() || '';
@@ -44,6 +45,66 @@ export class WhepGateway {
 
   /**
    * Processes an incoming WHEP SDP Offer.
+   * If MediaMTX is active, proxies to real MediaMTX WHEP endpoint.
+   * Otherwise falls back to compliant local SDP answer.
+   */
+  async handleOfferAsync(
+    streamId: string,
+    sdpOffer: string,
+    clientIp: string,
+    localIp = '127.0.0.1'
+  ): Promise<{ sessionId: string; sdpAnswer: string; locationHeader: string }> {
+    const whepPort = mediaMtxManager.getWhepPort();
+    const mtxUrl = `http://127.0.0.1:${whepPort}/${streamId}/whep`;
+
+    // Try live MediaMTX negotiation first
+    try {
+      const res = await fetch(mtxUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/sdp',
+        },
+        body: sdpOffer,
+        signal: AbortSignal.timeout(3500),
+      });
+
+      if (res.status === 201 || res.status === 200) {
+        const sdpAnswer = await res.text();
+        const mtxLocation = res.headers.get('location') || `/${streamId}/whep`;
+        const sessionId = crypto.randomUUID();
+
+        const fullLocation = mtxLocation.startsWith('http')
+          ? mtxLocation
+          : `http://127.0.0.1:${whepPort}${mtxLocation.startsWith('/') ? '' : '/'}${mtxLocation}`;
+
+        this.mtxSessionUrls.set(sessionId, fullLocation);
+
+        const session: WhepSession = {
+          sessionId,
+          streamId,
+          cameraId: streamId.split('_')[0] || streamId,
+          clientIp,
+          createdAt: Date.now(),
+          lastHeartbeatAt: Date.now(),
+          sdpOffer,
+          sdpAnswer,
+        };
+
+        this.sessions.set(sessionId, session);
+        const locationHeader = `/whep/${streamId}/sessions/${sessionId}`;
+
+        return { sessionId, sdpAnswer, locationHeader };
+      }
+    } catch {
+      // MediaMTX offline or stream pending; proceed to compliant fallback
+    }
+
+    // Fallback: local compliant generation
+    return this.handleOffer(streamId, sdpOffer, clientIp, localIp);
+  }
+
+  /**
+   * Synchronous compliant offer handler (preserves backwards-compatibility).
    */
   handleOffer(
     streamId: string,
@@ -57,7 +118,7 @@ export class WhepGateway {
     const session: WhepSession = {
       sessionId,
       streamId,
-      cameraId: streamId.split('_')[0],
+      cameraId: streamId.split('_')[0] || streamId,
       clientIp,
       createdAt: Date.now(),
       lastHeartbeatAt: Date.now(),
@@ -72,11 +133,18 @@ export class WhepGateway {
   }
 
   /**
-   * Closes a WHEP session.
+   * Closes a WHEP session and frees upstream MediaMTX & streamManager resources.
    */
   closeSession(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) return false;
+
+    // Teardown MediaMTX remote session if present
+    const mtxUrl = this.mtxSessionUrls.get(sessionId);
+    if (mtxUrl) {
+      fetch(mtxUrl, { method: 'DELETE', signal: AbortSignal.timeout(1000) }).catch(() => {});
+      this.mtxSessionUrls.delete(sessionId);
+    }
 
     streamManager.releaseStream(session.streamId);
     this.sessions.delete(sessionId);

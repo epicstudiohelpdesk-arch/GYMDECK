@@ -40,3 +40,10 @@ Pods/
 **/ios/Pods/
 **/ios/build/
 **/ios/*.xcworkspace
+
+# CCTV Edge Gateway local artifacts & certs
+auto.crt
+auto.key
+*.crt
+*.key
+apps/cctv-edge-gateway/bin/mediamtx

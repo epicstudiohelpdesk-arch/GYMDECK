@@ -113,6 +113,83 @@ export class SecureStore {
       fs.unlinkSync(this.configPath);
     }
   }
+
+  /**
+   * Retrieves or provisions an authenticated local IPC secret token for loopback API calls.
+   * Stored with 0600 permissions in ~/.gymdeck/gateway-ipc.token.
+   */
+  getOrGenerateIpcSecret(): string {
+    const configDir = path.dirname(this.configPath);
+    const tokenPath = path.join(configDir, 'gateway-ipc.token');
+
+    if (fs.existsSync(tokenPath)) {
+      try {
+        const existing = fs.readFileSync(tokenPath, 'utf8').trim();
+        if (existing.length >= 32) {
+          return existing;
+        }
+      } catch {
+        // Fallback to regenerate if corrupt
+      }
+    }
+
+    const newToken = crypto.randomBytes(32).toString('hex');
+    fs.writeFileSync(tokenPath, newToken, { encoding: 'utf8', mode: 0o600 });
+    return newToken;
+  }
+
+  /**
+   * Revokes the current IPC secret, invalidating all outstanding sessions.
+   */
+  revokeIpcSecret(): void {
+    const configDir = path.dirname(this.configPath);
+    const tokenPath = path.join(configDir, 'gateway-ipc.token');
+    if (fs.existsSync(tokenPath)) {
+      fs.unlinkSync(tokenPath);
+    }
+  }
+
+  /**
+   * Rotates the IPC secret immediately by generating and persisting a new 32-byte secret.
+   */
+  rotateIpcSecret(): string {
+    const configDir = path.dirname(this.configPath);
+    const tokenPath = path.join(configDir, 'gateway-ipc.token');
+    const newToken = crypto.randomBytes(32).toString('hex');
+    fs.writeFileSync(tokenPath, newToken, { encoding: 'utf8', mode: 0o600 });
+    return newToken;
+  }
+
+  /**
+   * Retrieves security metadata regarding the IPC secret.
+   */
+  getIpcTokenMetadata(): { active: boolean; path: string; permissions: string } {
+    const configDir = path.dirname(this.configPath);
+    const tokenPath = path.join(configDir, 'gateway-ipc.token');
+    const exists = fs.existsSync(tokenPath);
+    let permissions = 'unknown';
+    if (exists) {
+      try {
+        const stats = fs.statSync(tokenPath);
+        permissions = (stats.mode & 0o777).toString(8);
+      } catch (_) {}
+    }
+    return {
+      active: exists,
+      path: tokenPath,
+      permissions,
+    };
+  }
+
+  /**
+   * Validates provided IPC token using constant-time comparison against the stored secret.
+   */
+  verifyIpcSecret(candidateToken: string | undefined | null): boolean {
+    if (!candidateToken || typeof candidateToken !== 'string') return false;
+    const actual = this.getOrGenerateIpcSecret();
+    if (candidateToken.length !== actual.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(candidateToken), Buffer.from(actual));
+  }
 }
 
 export const secureStore = new SecureStore();

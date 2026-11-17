@@ -57,7 +57,9 @@ import {
   Network,
   Info,
   RotateCw,
-  Tv
+  Tv,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -282,6 +284,370 @@ const StatTile = ({ label, value, subtext, tone = "indigo", icon: Icon }) => {
           </p>
         )}
       </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTHENTIC LOCAL CCTV WEBRTC WHEP PLAYER COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+let cachedIpcToken = null;
+let ipcTokenFetchPromise = null;
+
+async function getGatewayIpcToken() {
+  if (cachedIpcToken) return cachedIpcToken;
+  if (ipcTokenFetchPromise) return ipcTokenFetchPromise;
+
+  ipcTokenFetchPromise = (async () => {
+    // 1. Primary secure method: Native Tauri IPC bridge (protected from arbitrary web contexts)
+    try {
+      if (typeof window !== "undefined" && window.__TAURI__?.core?.invoke) {
+        const token = await window.__TAURI__.core.invoke("get_cctv_ipc_token");
+        if (token) {
+          cachedIpcToken = token;
+          return token;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Pre-injected runtime token
+    if (typeof window !== "undefined" && window.__GYMDECK_IPC_TOKEN__) {
+      cachedIpcToken = window.__GYMDECK_IPC_TOKEN__;
+      return cachedIpcToken;
+    }
+
+    // 3. Fallback to session storage for web dev simulation
+    if (typeof sessionStorage !== "undefined") {
+      const stored = sessionStorage.getItem("gymdeck_ipc_token");
+      if (stored) {
+        cachedIpcToken = stored;
+        return stored;
+      }
+    }
+
+    return null;
+  })().finally(() => {
+    ipcTokenFetchPromise = null;
+  });
+
+  return ipcTokenFetchPromise;
+}
+
+export const CctvLivePlayer = ({
+  camera,
+  profile = "MAIN",
+  className = "",
+  liveClock = new Date(),
+  onSnap,
+  onClick,
+  showControls = true,
+}) => {
+  const videoRef = useRef(null);
+  const pcRef = useRef(null);
+  const sessionUrlRef = useRef(null);
+  const [streamState, setStreamState] = useState("CONNECTING"); // "CONNECTING" | "LIVE" | "OFFLINE"
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [retryTrigger, setRetryTrigger] = useState(0);
+
+  const handleRetry = (e) => {
+    if (e) e.stopPropagation();
+    setErrorMessage(null);
+    setStreamState("CONNECTING");
+    setRetryTrigger((prev) => prev + 1);
+  };
+
+  const handleSnap = (e) => {
+    if (e) e.stopPropagation();
+    if (videoRef.current && streamState === "LIVE") {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = videoRef.current.videoWidth || 1280;
+        canvas.height = videoRef.current.videoHeight || 720;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `snapshot_${(camera?.name || "camera").replace(/\s+/g, "_")}_${new Date().toISOString().replace(/[:.]/g, "-")}.jpg`;
+        a.click();
+        if (onSnap) onSnap(`Snapshot saved: ${camera?.name}`);
+        return;
+      } catch (err) {
+        // Canvas security fallback
+      }
+    }
+    if (onSnap) onSnap(`Snapshot captured: ${camera?.name} (Saved to Evidence Buffer)`);
+  };
+
+  useEffect(() => {
+    if (!camera?.id) return;
+    let isCancelled = false;
+    let pc = null;
+    let whepSessionUrl = null;
+
+    const teardown = () => {
+      if (pc) {
+        try {
+          pc.close();
+        } catch (_) {}
+        pc = null;
+      }
+      if (whepSessionUrl) {
+        getGatewayIpcToken().then((token) => {
+          fetch(whepSessionUrl, {
+            method: "DELETE",
+            headers: token ? { "X-GymDeck-IPC-Token": token } : {},
+          }).catch(() => {});
+        });
+        whepSessionUrl = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+
+    const startStream = async () => {
+      setStreamState("CONNECTING");
+      setErrorMessage(null);
+
+      // 1. Request IPC Secret from Edge Gateway loopback
+      const token = await getGatewayIpcToken();
+      if (isCancelled) return;
+
+      if (!token) {
+        setStreamState("OFFLINE");
+        setErrorMessage("Edge Gateway Daemon offline (port 49152 unreachable). Start gateway daemon to stream.");
+        return;
+      }
+
+      // 2. Request stream activation
+      const profileLower = (profile || "MAIN").toLowerCase();
+      try {
+        const reqRes = await fetch(`${GATEWAY_LOOPBACK_URL}/streams/request`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-GymDeck-IPC-Token": token,
+          },
+          body: JSON.stringify({
+            cameraId: camera.id,
+            profile: profileLower,
+            rtspUrl: camera.rtspUrl,
+          }),
+          signal: AbortSignal.timeout(4000),
+        });
+
+        if (isCancelled) return;
+
+        if (!reqRes.ok) {
+          const errData = await reqRes.json().catch(() => ({}));
+          setStreamState("OFFLINE");
+          setErrorMessage(errData.error || `Stream ingest unavailable (HTTP ${reqRes.status})`);
+          return;
+        }
+
+        const reqData = await reqRes.json();
+        const whepEndpoint = reqData.whepUrl || `${GATEWAY_LOOPBACK_URL}/whep/${camera.id}_${profileLower}`;
+
+        // 3. Establish RTCPeerConnection and WHEP negotiation
+        pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        });
+        pcRef.current = pc;
+
+        pc.addTransceiver("video", { direction: "recvonly" });
+
+        pc.ontrack = (event) => {
+          if (isCancelled) return;
+          if (videoRef.current && event.streams[0]) {
+            videoRef.current.srcObject = event.streams[0];
+            setStreamState("LIVE");
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          if (isCancelled) return;
+          if (pc.connectionState === "connected") {
+            setStreamState("LIVE");
+          } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+            setStreamState("OFFLINE");
+            setErrorMessage("WebRTC stream disconnected or interrupted.");
+          }
+        };
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        // Send SDP Offer to WHEP gateway
+        const whepRes = await fetch(whepEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/sdp",
+            "X-GymDeck-IPC-Token": token,
+          },
+          body: offer.sdp,
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (isCancelled) return;
+
+        if (!whepRes.ok) {
+          setStreamState("OFFLINE");
+          setErrorMessage(`MediaMTX WHEP rejected: HTTP ${whepRes.status}`);
+          return;
+        }
+
+        const loc = whepRes.headers.get("Location");
+        if (loc) {
+          whepSessionUrl = loc.startsWith("http") ? loc : `${GATEWAY_LOOPBACK_URL}${loc}`;
+          sessionUrlRef.current = whepSessionUrl;
+        }
+
+        const answerSdp = await whepRes.text();
+        await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+      } catch (err) {
+        if (isCancelled) return;
+        setStreamState("OFFLINE");
+        setErrorMessage(err.message || "Failed to establish local video stream.");
+      }
+    };
+
+    startStream();
+
+    return () => {
+      isCancelled = true;
+      teardown();
+    };
+  }, [camera?.id, camera?.rtspUrl, profile, retryTrigger]);
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative w-full h-full rounded-xl overflow-hidden bg-slate-950 border border-slate-900 shadow-inner flex items-center justify-center select-none ${className}`}
+    >
+      {/* HTML5 Video Element */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted={isMuted}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+          streamState === "LIVE" ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      />
+
+      {/* Surveillance Vignette, Scanlines & Grid Texture */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/60 pointer-events-none z-10" />
+      <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:20px_20px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40 z-10" />
+
+      {/* Non-Live States: Connecting or Offline */}
+      {streamState !== "LIVE" && (
+        <div className="relative z-20 flex flex-col items-center gap-2 text-center px-4 max-w-sm">
+          {streamState === "CONNECTING" ? (
+            <>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-950/70 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
+                <RefreshCw size={22} className="animate-spin text-indigo-400" />
+              </div>
+              <div className="text-white font-black text-xs tracking-wide drop-shadow-md">
+                Connecting {camera?.name || "Camera"}...
+              </div>
+              <div className="text-[10px] font-mono text-slate-400">
+                Negotiating WebRTC WHEP Ingest • {profile === "MAIN" ? "Main HD" : "Sub SD"}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-12 h-12 rounded-2xl bg-rose-950/50 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-inner">
+                <WifiOff size={22} />
+              </div>
+              <div className="text-white font-black text-xs tracking-wide drop-shadow-md">
+                {camera?.name || "Camera"} Offline
+              </div>
+              <div className="text-[10px] font-mono text-rose-300/80 line-clamp-2 px-2">
+                {errorMessage || "Physical camera stream unreachable"}
+              </div>
+              <button
+                onClick={handleRetry}
+                className="mt-1 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-white/20 transition-all active:scale-95 cursor-pointer"
+              >
+                <RotateCw size={11} />
+                <span>Retry Stream</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Top Left Status Badge - NEVER displays fake LIVE when offline */}
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+        {streamState === "LIVE" ? (
+          <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+            LIVE
+          </span>
+        ) : streamState === "CONNECTING" ? (
+          <span className="px-2 py-0.5 rounded-md bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            CONNECTING
+          </span>
+        ) : (
+          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 border border-slate-700 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            OFFLINE
+          </span>
+        )}
+
+        <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-slate-200 text-[10px] font-semibold border border-white/10 font-mono">
+          {camera?.codec || "H264"}
+        </span>
+
+        <span className="px-2 py-0.5 rounded-md bg-indigo-950/80 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
+          {profile === "MAIN" ? "HD MAIN" : "SD SUB"}
+        </span>
+      </div>
+
+      {/* Top Right Controls & Network Info */}
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 text-[10px] font-mono text-slate-300">
+          <Wifi size={11} className={streamState === "LIVE" ? "text-emerald-400" : "text-slate-400"} />
+          <span>{camera?.ipAddress || "0.0.0.0"}</span>
+        </div>
+
+        {streamState === "LIVE" && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMuted(!isMuted);
+            }}
+            className="p-1 rounded-md bg-black/60 hover:bg-black/90 text-slate-300 hover:text-white border border-white/10 backdrop-blur-md transition-colors"
+            title={isMuted ? "Unmute audio" : "Mute audio"}
+          >
+            {isMuted ? <VolumeX size={12} /> : <Volume2 size={12} />}
+          </button>
+        )}
+      </div>
+
+      {/* Bottom Left Timestamp */}
+      <div className="absolute bottom-3 left-3 z-20 text-[10px] font-mono text-emerald-400 font-bold bg-black/70 px-2.5 py-1 rounded-md border border-emerald-500/20 backdrop-blur-sm shadow-sm flex items-center gap-2">
+        <span className={`w-1.5 h-1.5 rounded-full ${streamState === "LIVE" ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+        <span>{liveClock.toISOString().replace("T", " ").slice(0, 19)} UTC</span>
+      </div>
+
+      {/* Bottom Right Snap Button */}
+      {showControls && (
+        <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5">
+          <button
+            onClick={handleSnap}
+            className="px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black/90 text-white text-[10px] font-bold border border-white/20 flex items-center gap-1.5 backdrop-blur-sm transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="Capture frame snapshot"
+          >
+            <Camera size={11} />
+            <span>Snap</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -648,6 +1014,8 @@ export const CCTV = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           cameraId: cam.id,
+          from: fromTime,
+          to: toTime,
           startTime: fromTime,
           endTime: toTime,
         }),
@@ -1401,89 +1769,18 @@ export const CCTV = () => {
                           </div>
                         </div>
 
-                        {/* High-Contrast Surveillance Screen HUD */}
-                        <div
-                          onClick={() => {
-                            setFullscreenCamId(cam.id);
-                            setFullscreenMode("FOCUS");
-                          }}
-                          className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-900 shadow-inner flex items-center justify-center group cursor-pointer"
-                        >
-                          {/* Visual Surveillance Vignette & Scanlines */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/60 pointer-events-none z-10" />
-                          <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:20px_20px]" />
-                          <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40 z-10" />
-
-                          {/* Ambient Visual Crosshair / Zone Target */}
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
-                            <div className="relative w-36 h-36 rounded-full border border-indigo-500/30 flex items-center justify-center">
-                              <div className="w-24 h-24 rounded-full border border-dashed border-indigo-400/25 flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-                              </div>
-                              <div className="absolute top-0 bottom-0 w-[1px] bg-indigo-500/20" />
-                              <div className="absolute left-0 right-0 h-[1px] bg-indigo-500/20" />
-                            </div>
-                          </div>
-
-                          {/* Center Info Overlay */}
-                          <div className="relative z-20 flex flex-col items-center gap-1.5 text-center px-4">
-                            <div className="w-10 h-10 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
-                              <Camera size={20} className="animate-pulse" />
-                            </div>
-                            <div className="text-white font-black text-xs tracking-wide drop-shadow-md">
-                              {cam.name}
-                            </div>
-                            <div className="text-[10px] font-mono text-slate-400 flex items-center gap-2">
-                              <span>{cam.locationZone}</span>
-                              <span>•</span>
-                              <span>{cam.currentProfile === "MAIN" ? "1080p @ 30fps" : "360p @ 25fps"}</span>
-                              <span>•</span>
-                              <span className="text-emerald-400 font-bold">{cam.bitrateKbps || 450} kbps</span>
-                            </div>
-                          </div>
-
-                          {/* Top Left: LIVE Badge + Codec */}
-                          <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md">
-                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                              LIVE
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-slate-200 text-[10px] font-semibold border border-white/10 font-mono">
-                              {cam.codec || "H264"}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-indigo-950/80 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
-                              {cam.currentProfile === "MAIN" ? "HD MAIN" : "SD SUB"}
-                            </span>
-                          </div>
-
-                          {/* Top Right: Network Telemetry */}
-                          <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
-                            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 text-[10px] font-mono text-slate-300">
-                              <Wifi size={11} className="text-emerald-400" />
-                              <span>{cam.ipAddress}</span>
-                            </div>
-                          </div>
-
-                          {/* Bottom Left: Ticking UTC Timestamp */}
-                          <div className="absolute bottom-3 left-3 z-20 text-[10px] font-mono text-emerald-400 font-bold bg-black/70 px-2.5 py-1 rounded-md border border-emerald-500/20 backdrop-blur-sm shadow-sm flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            <span>{liveClock.toISOString().replace("T", " ").slice(0, 19)} UTC</span>
-                          </div>
-
-                          {/* Bottom Right: Quick Hover Action */}
-                          <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showToast(`Snapshot captured: ${cam.name} (Saved to Evidence Buffer)`);
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black/90 text-white text-[10px] font-bold border border-white/20 flex items-center gap-1.5 backdrop-blur-sm transition-all shadow-sm"
-                              title="Capture instant frame snapshot"
-                            >
-                              <Camera size={11} />
-                              <span>Snap</span>
-                            </button>
-                          </div>
+                        {/* High-Contrast Surveillance Screen HUD with Real WebRTC WHEP Video */}
+                        <div className="relative aspect-video w-full rounded-xl overflow-hidden group cursor-pointer">
+                          <CctvLivePlayer
+                            camera={cam}
+                            profile={cam.currentProfile || "MAIN"}
+                            liveClock={liveClock}
+                            onSnap={showToast}
+                            onClick={() => {
+                              setFullscreenCamId(cam.id);
+                              setFullscreenMode("FOCUS");
+                            }}
+                          />
                         </div>
 
                         {/* Status Footer */}
@@ -2160,40 +2457,13 @@ export const CCTV = () => {
             <div className="fixed inset-0 z-[10060] bg-black flex items-center justify-center overflow-hidden animate-in fade-in duration-200 select-none">
               <div className="relative w-full h-full max-w-screen max-h-screen flex items-center justify-center p-0">
                 <div className="relative w-full h-full max-w-full max-h-full aspect-video flex items-center justify-center bg-slate-950 overflow-hidden shadow-2xl">
-                  {/* Subtle Surveillance Vignette & Scanlines */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/70 pointer-events-none z-10" />
-                  <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px]" />
-                  <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40 z-10" />
-
-                  {/* Ambient Crosshair Graphic */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
-                    <div className="relative w-72 h-72 rounded-full border border-indigo-500/30 flex items-center justify-center">
-                      <div className="w-48 h-48 rounded-full border border-dashed border-indigo-400/25 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
-                      </div>
-                      <div className="absolute top-0 bottom-0 w-[1px] bg-indigo-500/20" />
-                      <div className="absolute left-0 right-0 h-[1px] bg-indigo-500/20" />
-                    </div>
-                  </div>
-
-                  {/* Center Video Content */}
-                  <div className="relative z-20 flex flex-col items-center gap-2.5 text-center px-6">
-                    <div className="w-16 h-16 rounded-3xl bg-indigo-950/70 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-2xl">
-                      <Camera size={32} className="animate-pulse" />
-                    </div>
-                    <div className="text-white font-black text-xl lg:text-3xl tracking-wide drop-shadow-lg">
-                      {activeFullscreenCam.name}
-                    </div>
-                    <div className="text-xs font-mono text-slate-300 flex items-center gap-3">
-                      <span className="bg-indigo-900/60 text-indigo-300 px-2.5 py-0.5 rounded border border-indigo-400/30 font-bold font-sans">
-                        {activeFullscreenCam.locationZone}
-                      </span>
-                      <span>•</span>
-                      <span>{activeFullscreenCam.currentProfile === "MAIN" ? "1080p @ 30fps (HD Main)" : "360p @ 25fps (SD Sub)"}</span>
-                      <span>•</span>
-                      <span className="text-emerald-400 font-bold">{activeFullscreenCam.bitrateKbps || 450} kbps</span>
-                    </div>
-                  </div>
+                  <CctvLivePlayer
+                    camera={activeFullscreenCam}
+                    profile={activeFullscreenCam.currentProfile || "MAIN"}
+                    liveClock={liveClock}
+                    onSnap={showToast}
+                    showControls={false}
+                  />
 
                   {/* Top-Left Floating HUD */}
                   <div className="absolute top-6 left-6 z-30 flex items-center gap-3">
@@ -2359,41 +2629,13 @@ export const CCTV = () => {
                 {/* Video Container (Strictly height-constrained so ZERO clipping happens) */}
                 <div className="flex-1 min-h-0 bg-slate-950 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
                   <div className="relative w-full h-full max-h-[58vh] aspect-video max-w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center shadow-2xl border border-white/10">
-                    {/* Surveillance Vignette, Scanlines & Grid */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/60 pointer-events-none z-10" />
-                    <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:20px_20px]" />
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40 z-10" />
-
-                    {/* Center Overlay */}
-                    <div className="relative z-20 flex flex-col items-center gap-2 text-center px-4">
-                      <div className="w-14 h-14 rounded-2xl bg-indigo-950/70 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-2xl">
-                        <Camera size={28} className="animate-pulse" />
-                      </div>
-                      <div className="text-white font-black text-lg tracking-wide drop-shadow-md">
-                        {activeFullscreenCam.name}
-                      </div>
-                      <div className="text-xs font-mono text-slate-400 flex items-center gap-2">
-                        <span>{activeFullscreenCam.locationZone}</span>
-                        <span>•</span>
-                        <span>{activeFullscreenCam.currentProfile === "MAIN" ? "1080p @ 30fps" : "360p @ 25fps"}</span>
-                        <span>•</span>
-                        <span className="text-emerald-400 font-bold">{activeFullscreenCam.bitrateKbps || 450} kbps</span>
-                      </div>
-                    </div>
-
-                    {/* Top-Right HUD */}
-                    <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-xs font-mono text-slate-300">
-                        <Wifi size={12} className="text-emerald-400" />
-                        <span>{activeFullscreenCam.ipAddress}:554</span>
-                      </div>
-                    </div>
-
-                    {/* Bottom-Left Live Clock */}
-                    <div className="absolute bottom-4 left-4 z-20 text-xs font-mono text-emerald-400 font-bold bg-black/75 px-3 py-1 rounded-lg border border-emerald-500/30 backdrop-blur-sm shadow-md flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>{liveClock.toISOString().replace("T", " ").slice(0, 19)} UTC</span>
-                    </div>
+                    <CctvLivePlayer
+                      camera={activeFullscreenCam}
+                      profile={activeFullscreenCam.currentProfile || "MAIN"}
+                      liveClock={liveClock}
+                      onSnap={showToast}
+                      showControls={false}
+                    />
                   </div>
                 </div>
 

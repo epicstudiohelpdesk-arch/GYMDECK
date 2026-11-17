@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test:cctv-validation": "pnpm --filter @gymdeck/cctv-edge-gateway test:cctv-validation"
   },
   "dependencies": {
     "framer-motion": "^12.38.0",

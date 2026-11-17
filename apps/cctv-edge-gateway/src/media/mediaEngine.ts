@@ -22,8 +22,10 @@ export class MediaEngine {
   static generateConfig(
     routes: CameraStreamRoute[],
     whepPort = 8889,
-    rtspPort = 8554
+    rtspPort = 8554,
+    bindHost = ''
   ): string {
+    const hostPrefix = bindHost ? `${bindHost}:` : ':';
     const lines: string[] = [
       '# GymDeck CCTV Edge Gateway - Media Engine Configuration',
       '# Generated dynamically based on enrolled CCTV cameras',
@@ -31,18 +33,27 @@ export class MediaEngine {
       'logLevel: info',
       'logDestinations: [stdout]',
       '',
-      `rtspAddress: :${rtspPort}`,
+      `rtspAddress: ${hostPrefix}${rtspPort}`,
       'rtspTransports: [tcp]',
       '',
+      '# Disable unused protocols to optimize CPU & memory footprint',
+      'rtmp: no',
+      'hls: no',
+      'srt: no',
+      '',
+      '# WebRTC / WHEP Engine',
       'webrtc: yes',
-      `webrtcAddress: :${whepPort}`,
-      'webrtcAllowCrossOrigin: yes',
-      'webrtcLocalUDPAddress: :8189',
-      'webrtcLocalTCPAddress: :8189',
+      `webrtcAddress: ${hostPrefix}${whepPort}`,
+      `webrtcLocalUDPAddress: ${hostPrefix}8189`,
+      `webrtcLocalTCPAddress: ${hostPrefix}8189`,
       'webrtcHandshakeTimeout: 10s',
       '',
       'paths:',
     ];
+
+    if (routes.length === 0) {
+      lines.push('  all_others:');
+    }
 
     for (const r of routes) {
       lines.push(`  ${r.streamId}:`);
@@ -60,12 +71,17 @@ export class MediaEngine {
   /**
    * Writes the generated configuration to disk.
    */
-  static writeConfigFile(targetPath: string, routes: CameraStreamRoute[]): void {
+  static writeConfigFile(
+    targetPath: string,
+    routes: CameraStreamRoute[],
+    whepPort = 8889,
+    rtspPort = 8554
+  ): void {
     const dir = path.dirname(targetPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    const yaml = MediaEngine.generateConfig(routes);
+    const yaml = MediaEngine.generateConfig(routes, whepPort, rtspPort);
     fs.writeFileSync(targetPath, yaml, 'utf8');
   }
 }

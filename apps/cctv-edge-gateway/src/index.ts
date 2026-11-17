@@ -7,6 +7,7 @@ import { gatewayIdentity } from './identity/gatewayIdentity';
 import { enrollmentClient } from './enrollment/enrollmentClient';
 import { heartbeatAgent } from './telemetry/heartbeatAgent';
 import { localApiServer, GATEWAY_LOOPBACK_PORT } from './server/localApi';
+import { mediaMtxManager } from './media/mediaMtxManager';
 
 export async function bootstrapGateway(): Promise<void> {
   const args = process.argv.slice(2);
@@ -18,6 +19,22 @@ export async function bootstrapGateway(): Promise<void> {
   console.log(`   Local LAN IP: ${fingerprint.localIp}`);
   console.log(`   Machine ID: ${fingerprint.machineId.substring(0, 12)}...`);
   console.log('====================================================');
+
+  // Provision authenticated localhost IPC shared secret
+  const ipcSecret = secureStore.getOrGenerateIpcSecret();
+  console.log(`[Security] Local IPC Shared Secret active (${ipcSecret.substring(0, 8)}...)`);
+
+  // Start MediaMTX streaming supervisor
+  try {
+    const started = await mediaMtxManager.start();
+    if (started) {
+      console.log(`[MediaMTX] Streaming supervisor active on WHEP port :${mediaMtxManager.getWhepPort()}`);
+    } else {
+      console.warn('[MediaMTX] Binary not found or startup delayed. On-demand launch enabled.');
+    }
+  } catch (err: any) {
+    console.warn(`[MediaMTX] Startup warning: ${err.message}`);
+  }
 
   // Check for command line enrollment: --enroll <token> [--cloud <url>]
   const enrollIndex = args.indexOf('--enroll');
@@ -59,6 +76,7 @@ export async function bootstrapGateway(): Promise<void> {
   const shutdown = async (signal: string) => {
     console.log(`\n[Lifecycle] Received ${signal}. Commencing graceful gateway shutdown...`);
     heartbeatAgent.stop();
+    await mediaMtxManager.stop();
     await localApiServer.stop();
     console.log('[Lifecycle] Gateway terminated cleanly.');
     process.exit(0);

@@ -14,6 +14,8 @@ import { AdapterFactory } from '../adapters/adapterFactory';
 import { AutoConfigEngine } from '../engine/autoConfigEngine';
 import { streamManager } from '../media/streamManager';
 import { whepGateway } from '../media/whepGateway';
+import { mediaMtxManager } from '../media/mediaMtxManager';
+import { sanitizeRtspUrl } from '../security/sanitizer';
 import { playbackEngine } from '../recordings/playbackEngine';
 import { clipExporter } from '../recordings/clipExporter';
 import * as fs from 'fs';
@@ -27,7 +29,7 @@ export class LocalApiServer {
   start(port = GATEWAY_LOOPBACK_PORT): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server = http.createServer((req, res) => {
-        // Enforce strict loopback origin
+        // Enforce strict loopback interface
         const remoteIp = req.socket.remoteAddress;
         if (remoteIp !== '127.0.0.1' && remoteIp !== '::1' && remoteIp !== '::ffff:127.0.0.1') {
           res.writeHead(403, { 'Content-Type': 'application/json' });
@@ -35,17 +37,85 @@ export class LocalApiServer {
           return;
         }
 
+        // Host header validation (must target loopback)
+        const hostHeader = req.headers.host || '';
+        const hostName = hostHeader.split(':')[0];
+        if (hostName && hostName !== '127.0.0.1' && hostName !== 'localhost' && hostName !== '[::1]') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid Host header' }));
+          return;
+        }
+
+        // Origin validation (prevent arbitrary website hijacking)
+        const origin = req.headers.origin;
+        if (origin) {
+          const isAllowedOrigin =
+            origin.startsWith('http://127.0.0.1') ||
+            origin.startsWith('http://localhost') ||
+            origin.startsWith('tauri://') ||
+            origin.startsWith('https://tauri.localhost');
+
+          if (!isAllowedOrigin) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized origin' }));
+            return;
+          }
+        }
+
         const url = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`);
 
-        // Set permissive CORS for local desktop UI
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        // Set secure CORS for local desktop UI
+        res.setHeader('Access-Control-Allow-Origin', origin || '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-GymDeck-IPC-Token');
 
         if (req.method === 'OPTIONS') {
           res.writeHead(204);
           res.end();
           return;
+        }
+
+        // Extract Candidate IPC Token
+        const candidateIpcToken = (req.headers['x-gymdeck-ipc-token'] ||
+          (typeof req.headers.authorization === 'string' && req.headers.authorization.startsWith('Bearer ')
+            ? req.headers.authorization.slice(7)
+            : null)) as string | null;
+
+        // Disallow unauthenticated direct HTTP exposure of IPC shared secret
+        if (url.pathname === '/ipc/token' || url.pathname === '/ipc/token/rotate') {
+          if (req.method === 'POST' && url.pathname === '/ipc/token/rotate') {
+            if (!candidateIpcToken || !secureStore.verifyIpcSecret(candidateIpcToken)) {
+              res.writeHead(401, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Authentication required to rotate IPC secret' }));
+              return;
+            }
+            const newToken = secureStore.rotateIpcSecret();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, token: newToken }));
+            return;
+          }
+
+          // Unauthenticated direct token extraction over HTTP is disabled
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: 'Direct HTTP token extraction disabled for security.',
+              hint: 'Retrieve via Tauri native IPC (get_cctv_ipc_token) or read ~/.gymdeck/gateway-ipc.token with owner permissions.',
+              metadata: secureStore.getIpcTokenMetadata(),
+            })
+          );
+          return;
+        }
+
+        // IPC Token Authentication Check on all private routes
+        const isPublicEndpoint = url.pathname === '/health' || url.pathname === '/status';
+
+        if (!isPublicEndpoint) {
+          if (!candidateIpcToken || !secureStore.verifyIpcSecret(candidateIpcToken)) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'IPC authentication required. Missing or invalid token.' }));
+            return;
+          }
         }
 
         if (req.method === 'GET' && url.pathname === '/health') {
@@ -159,8 +229,17 @@ export class LocalApiServer {
           return;
         }
 
+        if (req.method === 'GET' && url.pathname === '/mediamtx/status') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, ...mediaMtxManager.getStatus() }));
+          return;
+        }
+
         if (req.method === 'GET' && url.pathname === '/streams/active') {
-          const streams = streamManager.getAllActiveStreams();
+          const streams = streamManager.getAllActiveStreams().map((s) => ({
+            ...s,
+            rtspSourceUrl: sanitizeRtspUrl(s.rtspSourceUrl),
+          }));
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true, count: streams.length, streams }));
           return;
@@ -185,8 +264,27 @@ export class LocalApiServer {
                 resolution,
                 fps
               );
+
+              // Register route in MediaMTX and ensure daemon is running
+              mediaMtxManager.registerRoute({
+                streamId: stream.id,
+                cameraId,
+                channelNumber: channelNumber || 1,
+                profile: profile || 'SUB',
+                rtspUrl,
+              });
+              mediaMtxManager.start().catch(() => {});
+
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ success: true, stream }));
+              res.end(
+                JSON.stringify({
+                  success: true,
+                  stream: {
+                    ...stream,
+                    rtspSourceUrl: sanitizeRtspUrl(stream.rtspSourceUrl),
+                  },
+                })
+              );
             } catch (err: any) {
               res.writeHead(500, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: err.message }));
@@ -252,7 +350,15 @@ export class LocalApiServer {
                 speed || 1
               );
               res.writeHead(201, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ success: true, session }));
+              res.end(
+                JSON.stringify({
+                  success: true,
+                  session: {
+                    ...session,
+                    playbackRtspUrl: sanitizeRtspUrl(session.playbackRtspUrl),
+                  },
+                })
+              );
             } catch (err: any) {
               res.writeHead(500, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: err.message }));
@@ -380,7 +486,7 @@ export class LocalApiServer {
           const streamId = url.pathname.replace('/whep/', '').split('/')[0];
           let body = '';
           req.on('data', (chunk) => (body += chunk));
-          req.on('end', () => {
+          req.on('end', async () => {
             try {
               const sdpOffer = body.trim();
               if (!sdpOffer.startsWith('v=0')) {
@@ -390,7 +496,7 @@ export class LocalApiServer {
               }
 
               const localIp = gatewayIdentity.getFingerprint().localIp;
-              const result = whepGateway.handleOffer(streamId, sdpOffer, remoteIp || '127.0.0.1', localIp);
+              const result = await whepGateway.handleOfferAsync(streamId, sdpOffer, remoteIp || '127.0.0.1', localIp);
 
               res.writeHead(201, {
                 'Content-Type': 'application/sdp',
@@ -437,7 +543,8 @@ export class LocalApiServer {
     return 0;
   }
 
-  stop(): Promise<void> {
+  async stop(): Promise<void> {
+    await mediaMtxManager.stop().catch(() => {});
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => resolve());

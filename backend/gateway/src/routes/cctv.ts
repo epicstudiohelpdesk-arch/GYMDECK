@@ -78,11 +78,22 @@ const RequestStreamSchema = z.object({
   clientType: z.enum(['DESKTOP', 'OWNER_MOBILE']).optional().default('DESKTOP'),
 });
 
-const SearchRecordingsSchema = z.object({
-  cameraId: z.string().uuid(),
-  from: z.string().min(10),
-  to: z.string().min(10),
-});
+const SearchRecordingsSchema = z
+  .object({
+    cameraId: z.string(),
+    from: z.string().min(10).optional(),
+    to: z.string().min(10).optional(),
+    startTime: z.string().min(10).optional(),
+    endTime: z.string().min(10).optional(),
+  })
+  .transform((data) => ({
+    cameraId: data.cameraId,
+    from: data.from || data.startTime || '',
+    to: data.to || data.endTime || '',
+  }))
+  .refine((data) => Boolean(data.from && data.to), {
+    message: 'Both search start time (from/startTime) and end time (to/endTime) must be provided.',
+  });
 
 const CreatePlaybackSessionSchema = z.object({
   cameraId: z.string().uuid(),

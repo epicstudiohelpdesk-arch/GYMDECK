@@ -115,3 +115,40 @@ fn read_battery() -> (bool, f32, bool) {
 fn read_battery() -> (bool, f32, bool) {
     (false, 1.0, true)
 }
+
+/// Returns the authenticated local CCTV IPC token from ~/.gymdeck/gateway-ipc.token.
+/// This protects the token behind native Tauri IPC so arbitrary third-party
+/// processes or untrusted browser tabs cannot retrieve it over loopback HTTP.
+#[tauri::command]
+pub fn get_cctv_ipc_token() -> Result<String, String> {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map_err(|e| format!("Failed to resolve home directory: {}", e))?;
+    let token_path = std::path::Path::new(&home).join(".gymdeck").join("gateway-ipc.token");
+    if !token_path.exists() {
+        return Err("CCTV IPC token file not initialized. Start CCTV Gateway daemon.".into());
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = std::fs::metadata(&token_path) {
+            let mode = metadata.permissions().mode();
+            // Validate that permissions are strictly owner-only (mode 0600 or 0400)
+            if mode & 0o077 != 0 {
+                return Err("Security violation: ~/.gymdeck/gateway-ipc.token has insecure permissions".into());
+            }
+        }
+    }
+
+    let token = std::fs::read_to_string(&token_path)
+        .map_err(|e| format!("Failed to read IPC token: {}", e))?
+        .trim()
+        .to_string();
+
+    if token.len() < 32 {
+        return Err("Invalid IPC token length".into());
+    }
+
+    Ok(token)
+}

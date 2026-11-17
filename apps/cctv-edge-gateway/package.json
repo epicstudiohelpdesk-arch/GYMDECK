@@ -12,7 +12,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "enroll": "tsx src/index.ts --enroll",
-    "test": "tsx test/gatewayGate2.test.ts"
+    "test": "tsx test/gatewayGate2.test.ts",
+    "test:cctv-validation": "tsx test/runPhase15Validation.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
