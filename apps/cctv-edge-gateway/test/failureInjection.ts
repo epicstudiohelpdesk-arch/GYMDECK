@@ -126,17 +126,17 @@ export async function runFailureInjectionTests(): Promise<FailureInjectionResult
     }),
   });
   const badUrlData = await badUrlRes.json() as any;
-  const badUrlHandled = badUrlRes.status === 200 || badUrlRes.status === 400 || badUrlRes.status === 500;
+  const badUrlRejectedStrictly = badUrlRes.status === 400;
 
   results.push({
     scenario: 'Malformed RTSP URL',
     injectedFault: 'Non-RTSP protocol URI passed to stream manager',
-    expectedBehavior: 'Handled cleanly with error feedback without unhandled exception',
+    expectedBehavior: 'Rejection with HTTP 400 Bad Request',
     observedBehavior: `HTTP ${badUrlRes.status}: ${JSON.stringify(badUrlData).slice(0, 50)}`,
-    recoveredSuccessfully: badUrlHandled,
-    status: badUrlHandled ? 'SIMULATED PASS' : 'FAIL',
+    recoveredSuccessfully: badUrlRejectedStrictly,
+    status: badUrlRejectedStrictly ? 'SIMULATED PASS' : 'FAIL',
   });
-  console.log(`  ✅ Malformed URL handled cleanly with HTTP ${badUrlRes.status}.`);
+  console.log(`  ✅ Malformed URL rejected strictly with HTTP ${badUrlRes.status}.`);
 
   // Test 4: Malformed SDP Offer
   console.log('\n▶ Fault 4: Malformed SDP Offer to WHEP Gateway...');

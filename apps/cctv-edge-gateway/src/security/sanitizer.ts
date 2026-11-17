@@ -27,3 +27,17 @@ export function sanitizeLog(input: any): string {
     .replace(/"token"\s*:\s*"[^"]*"/gi, '"token":"[REDACTED]"')
     .replace(/"deviceToken"\s*:\s*"[^"]*"/gi, '"deviceToken":"[REDACTED]"');
 }
+
+/**
+ * Validates that an RTSP URL has a valid RTSP or RTSPS scheme and parsable structure.
+ */
+export function isValidRtspUrl(rawUrl: string | undefined | null): boolean {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  try {
+    const parsed = new URL(rawUrl);
+    return (parsed.protocol === 'rtsp:' || parsed.protocol === 'rtsps:') && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+

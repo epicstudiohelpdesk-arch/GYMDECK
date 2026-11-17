@@ -132,12 +132,18 @@ pub fn get_cctv_ipc_token() -> Result<String, String> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Ok(metadata) = std::fs::metadata(&token_path) {
-            let mode = metadata.permissions().mode();
-            // Validate that permissions are strictly owner-only (mode 0600 or 0400)
-            if mode & 0o077 != 0 {
-                return Err("Security violation: ~/.gymdeck/gateway-ipc.token has insecure permissions".into());
-            }
+        // Strict security: use symlink_metadata to reject symbolic links
+        let symlink_meta = std::fs::symlink_metadata(&token_path)
+            .map_err(|e| format!("Failed to inspect IPC token file metadata: {}", e))?;
+        
+        if symlink_meta.file_type().is_symlink() {
+            return Err("Security violation: ~/.gymdeck/gateway-ipc.token cannot be a symbolic link".into());
+        }
+
+        let mode = symlink_meta.permissions().mode();
+        // Validate that permissions are strictly owner-only (mode 0600 or 0400)
+        if mode & 0o077 != 0 {
+            return Err("Security violation: ~/.gymdeck/gateway-ipc.token has insecure permissions".into());
         }
     }
 

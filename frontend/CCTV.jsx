@@ -462,15 +462,22 @@ export const CctvLivePlayer = ({
           if (isCancelled) return;
           if (videoRef.current && event.streams[0]) {
             videoRef.current.srcObject = event.streams[0];
-            setStreamState("LIVE");
+            // Enforce honest LIVE status: only declare LIVE once video metadata/frames are actually ready
+            if (typeof videoRef.current.requestVideoFrameCallback === "function") {
+              videoRef.current.requestVideoFrameCallback(() => {
+                if (!isCancelled) setStreamState("LIVE");
+              });
+            } else {
+              videoRef.current.onloadeddata = () => {
+                if (!isCancelled) setStreamState("LIVE");
+              };
+            }
           }
         };
 
         pc.onconnectionstatechange = () => {
           if (isCancelled) return;
-          if (pc.connectionState === "connected") {
-            setStreamState("LIVE");
-          } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+          if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
             setStreamState("OFFLINE");
             setErrorMessage("WebRTC stream disconnected or interrupted.");
           }

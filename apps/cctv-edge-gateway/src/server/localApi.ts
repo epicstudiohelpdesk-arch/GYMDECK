@@ -15,7 +15,7 @@ import { AutoConfigEngine } from '../engine/autoConfigEngine';
 import { streamManager } from '../media/streamManager';
 import { whepGateway } from '../media/whepGateway';
 import { mediaMtxManager } from '../media/mediaMtxManager';
-import { sanitizeRtspUrl } from '../security/sanitizer';
+import { sanitizeRtspUrl, isValidRtspUrl } from '../security/sanitizer';
 import { playbackEngine } from '../recordings/playbackEngine';
 import { clipExporter } from '../recordings/clipExporter';
 import * as fs from 'fs';
@@ -254,6 +254,16 @@ export class LocalApiServer {
               if (!cameraId || !rtspUrl) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Missing cameraId or rtspUrl' }));
+                return;
+              }
+              if (!isValidRtspUrl(rtspUrl)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(
+                  JSON.stringify({
+                    error: 'Invalid RTSP URL format. Expected rtsp:// or rtsps:// scheme.',
+                    received: sanitizeRtspUrl(rtspUrl),
+                  })
+                );
                 return;
               }
               const stream = streamManager.requestStream(

@@ -25,6 +25,8 @@ pub mod sync_tests;
 pub mod backup_tests;
 #[cfg(test)]
 pub mod sync_adversarial_tests;
+#[cfg(test)]
+pub mod payment_account_tests;
 
 use tauri::Manager;
 use commands::auth_commands::{
@@ -44,6 +46,10 @@ use commands::sync_commands::{
 use commands::cloud_enroll_commands::{
     cloud_enroll_command, get_cloud_enrollment_status_command, cloud_sync_now_command, cloud_unenroll_command,
     cloud_communications_request_command
+};
+use commands::payment_account_commands::{
+    payment_accounts_list_command, payment_accounts_create_command, payment_accounts_update_command,
+    payment_accounts_set_primary_command, payment_accounts_deactivate_command
 };
 use commands::backup_commands::{
     create_backup_command, list_backups_command, verify_backup_command, verify_restore_command
@@ -225,6 +231,11 @@ pub fn run() {
         cloud_sync_now_command,
         cloud_unenroll_command,
         cloud_communications_request_command,
+        payment_accounts_list_command,
+        payment_accounts_create_command,
+        payment_accounts_update_command,
+        payment_accounts_set_primary_command,
+        payment_accounts_deactivate_command,
         get_system_status,
         get_cctv_ipc_token
     ])

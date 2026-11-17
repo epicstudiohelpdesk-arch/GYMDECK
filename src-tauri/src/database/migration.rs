@@ -149,6 +149,36 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         );
         CREATE INDEX IF NOT EXISTS idx_local_cctv_cameras_gym ON local_cctv_cameras(gym_id);",
     ),
+    (
+        8,
+        "Add per-gym local payment accounts for Banking & Settlement persistence",
+        "CREATE TABLE IF NOT EXISTS gym_payment_accounts (
+            id TEXT PRIMARY KEY,
+            gym_id TEXT NOT NULL,
+            method TEXT NOT NULL CHECK (method IN ('UPI','BANK_TRANSFER')),
+            label TEXT,
+            status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+            is_active INTEGER NOT NULL DEFAULT 1,
+            is_primary INTEGER NOT NULL DEFAULT 0,
+            beneficiary_name TEXT NOT NULL,
+            upi_vpa TEXT,
+            bank_name TEXT,
+            account_type TEXT,
+            account_number TEXT,
+            account_number_last4 TEXT,
+            ifsc_code TEXT,
+            branch_name TEXT,
+            branch_city TEXT,
+            qr_image_url TEXT,
+            instructions TEXT,
+            created_by TEXT,
+            updated_by TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_gym_payment_accounts_gym ON gym_payment_accounts(gym_id, is_active);",
+    ),
 ];
 
 fn validate_legacy_monetary_records(conn: &Connection) -> Result<(), crate::errors::AppError> {

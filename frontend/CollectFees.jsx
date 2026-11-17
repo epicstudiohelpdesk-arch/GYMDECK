@@ -223,9 +223,9 @@ const CollectFeesPage = () => {
     };
   });
 
-  // Fetch Authoritative Payment Account from Cloud & Expired Members from Tauri SQLite
+  // Fetch authoritative Payment Account from the per-gym local DB & Expired Members from Tauri SQLite
   useEffect(() => {
-    // 1. Fetch cloud accounts
+    // 1. Fetch accounts persisted to this gym's secure local database
     paymentsV2Api.listAccounts()
       .then((res) => {
         if (res?.data?.accounts && res.data.accounts.length > 0) {

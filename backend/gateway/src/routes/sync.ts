@@ -25,6 +25,7 @@ const SyncPushEventSchema = z.object({
     'attendance',
     'attendance_log',
     'trainer',
+    'payment_account',
   ]),
   entityId: z.string().uuid('Valid UUIDv4 entity ID is required'),
   operation: z.enum(['CREATE', 'UPDATE', 'DELETE', 'VOID']),

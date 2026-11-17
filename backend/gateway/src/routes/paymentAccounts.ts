@@ -7,6 +7,7 @@ import { getGymPaymentSettings } from '../../../services/payments/invoiceService
 import { getDatabasePool } from '../../../shared/database';
 import { requirePermission } from '../middleware/rbacMiddleware';
 import { AppError } from '../../../shared/errors';
+import { syncService } from '../../../services/sync/syncService';
 import { validateBody } from '../../../shared/validation';
 
 const router: Router = Router();
@@ -48,6 +49,7 @@ router.post('/', requirePermission('settings.write'), validateBody(AccountBody),
   try {
     const { gymId, actorUserId } = ctx(req);
     const account = await paymentAccountService.createAccount(gymId, actorUserId, req.body);
+    await syncService.recordServerChange(gymId, 'payment_account', account.id, 'CREATE', account, actorUserId);
     res.status(201).json({ success: true, data: { account } });
   } catch (err) {
     next(err);
@@ -58,6 +60,7 @@ router.patch('/:id', requirePermission('settings.write'), async (req, res, next)
   try {
     const { gymId, actorUserId } = ctx(req);
     const account = await paymentAccountService.updateAccount(gymId, req.params.id!, actorUserId, req.body);
+    await syncService.recordServerChange(gymId, 'payment_account', account.id, 'UPDATE', account, actorUserId);
     res.status(200).json({ success: true, data: { account } });
   } catch (err) {
     next(err);
@@ -68,6 +71,7 @@ router.post('/:id/primary', requirePermission('settings.write'), async (req, res
   try {
     const { gymId, actorUserId } = ctx(req);
     const account = await paymentAccountService.setPrimary(gymId, req.params.id!, actorUserId);
+    await syncService.recordServerChange(gymId, 'payment_account', account.id, 'UPDATE', account, actorUserId);
     res.status(200).json({ success: true, data: { account } });
   } catch (err) {
     next(err);
@@ -78,6 +82,7 @@ router.delete('/:id', requirePermission('settings.write'), async (req, res, next
   try {
     const { gymId, actorUserId } = ctx(req);
     const account = await paymentAccountService.deactivate(gymId, req.params.id!, actorUserId);
+    await syncService.recordServerChange(gymId, 'payment_account', account.id, 'DELETE', account, actorUserId);
     res.status(200).json({ success: true, data: { account } });
   } catch (err) {
     next(err);

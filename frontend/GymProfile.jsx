@@ -676,10 +676,10 @@ const GymProfile = () => {
   const [copiedUpiId, setCopiedUpiId] = useState(null);
   const [copiedAccNum, setCopiedAccNum] = useState(null);
   const [accountToDelete, setAccountToDelete] = useState(null);
-  // Cloud-DB sync state for Banking & Settlement. The cloud gym_payment_accounts table
-  // (scoped to the signed-in gym tenant) is the single source of truth; localStorage is
-  // only a read-through cache so the UI can render instantly before the cloud hydrates.
-  const [bankingCloudSync, setBankingCloudSync] = useState({ loading: true, online: false, error: null });
+  // Banking & Settlement sync state. The local gym_payment_accounts table in the
+  // SQLCipher vault (scoped to the signed-in gym) is the source of truth; localStorage
+  // is only a read-through cache so the UI can render instantly before the DB hydrates.
+  const [bankingDbSync, setBankingDbSync] = useState({ loading: true, online: false, error: null });
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const toggleFaq = (id) => setExpandedFaqId(prev => (prev === id ? null : prev === "all" ? null : id));
   const [communicationFaqId, setCommunicationFaqId] = useState(null);
@@ -860,9 +860,9 @@ const GymProfile = () => {
     autoBackups: true
   });
 
-  // Banking & Settlement accounts are persisted in the cloud gym_payment_accounts table,
-  // which is scoped to the signed-in gym tenant (gym_id = JWT gymId). These helpers make
-  // the cloud DB the single source of truth; localStorage is only a read-through cache.
+  // Banking & Settlement accounts are persisted in the local gym_payment_accounts table,
+  // which is scoped to the signed-in gym (gym_id comes from the native session, never JS).
+  // These helpers make the DB the single source of truth; localStorage is only a cache.
   const mapApiAccountsToUi = (apiAccounts) =>
     (Array.isArray(apiAccounts) ? apiAccounts : []).map((a) => ({
       id: a.id,
@@ -888,20 +888,20 @@ const GymProfile = () => {
     } catch (e) {}
   };
 
-  const syncBankAccountsFromCloud = () => {
-    setBankingCloudSync((s) => ({ ...s, loading: true }));
+  const syncBankAccountsFromDb = () => {
+    setBankingDbSync((s) => ({ ...s, loading: true }));
     return paymentsV2Api.listAccounts()
       .then((res) => {
         const mappedAccounts = mapApiAccountsToUi(res?.data?.accounts);
         setGymData((prev) => ({ ...prev, bankAccounts: mappedAccounts }));
         writeBankAccountsCache(mappedAccounts);
-        setBankingCloudSync({ loading: false, online: true, error: null });
+        setBankingDbSync({ loading: false, online: true, error: null });
         return mappedAccounts;
       })
       .catch((err) => {
-        // Cloud unreachable / device unenrolled. The localStorage cache stays on screen
-        // as an offline view; it is NOT treated as persisted data.
-        setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
+        // Native DB unavailable (e.g. browser preview). The localStorage cache stays on
+        // screen as an offline view; it is NOT treated as account-bound persisted data.
+        setBankingDbSync({ loading: false, online: false, error: err?.message || "Banking database unavailable" });
         throw err;
       });
   };
@@ -939,12 +939,12 @@ const GymProfile = () => {
     return () => { cancelled = true; };
   }, []);
 
-  // Hydrate persisted receiving accounts from the cloud database (single source of truth).
-  // gym_payment_accounts rows are scoped to gym_id (= the signed-in gym tenant), so the
-  // returned accounts always belong to the account that logged in. On failure the
-  // localStorage cache stays on screen as an offline view only, never as "saved" data.
+  // Hydrate persisted receiving accounts from the local database (single source of truth).
+  // gym_payment_accounts rows are scoped to gym_id (= the signed-in gym), so the returned
+  // accounts always belong to the profile that logged in. On failure the localStorage
+  // cache stays on screen as an offline view only, never as "saved" data.
   useEffect(() => {
-    syncBankAccountsFromCloud().catch(() => {});
+    syncBankAccountsFromDb().catch(() => {});
   }, []);
 
   // Focused List of Tabs in the Horizontal Navigation Row
@@ -1251,7 +1251,7 @@ const GymProfile = () => {
         });
       }, 0);
 
-      // Asynchronously update the cloud record (scoped to the signed-in gym).
+      // Persist the edit to the local DB (scoped to the signed-in gym).
       if (!editingAccountId.startsWith("acc_")) {
         const updatePayload = {
           beneficiaryName: accountFormData.accountHolderName.trim(),
@@ -1280,22 +1280,22 @@ const GymProfile = () => {
                 return { ...prev, bankAccounts: merged };
               });
             }
-            setBankingCloudSync({ loading: false, online: true, error: null });
+            setBankingDbSync({ loading: false, online: true, error: null });
             showToast("Payment destination updated successfully.");
           })
           .catch((err) => {
-            // Re-sync from the cloud so the UI reflects what is actually persisted.
-            setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
-            syncBankAccountsFromCloud().catch(() => {});
-            showToast("Could not save account update to the cloud. Reconnect and try again.");
+            // Re-sync from the DB so the UI reflects what is actually persisted.
+            setBankingDbSync({ loading: false, online: false, error: err?.message || "Banking database unavailable" });
+            syncBankAccountsFromDb().catch(() => {});
+            showToast("Could not save account update to your account. Try again.");
           });
 
         if (isPrimaryInflow) {
           paymentsV2Api.setPrimary(editingAccountId)
-            .then(() => setBankingCloudSync({ loading: false, online: true, error: null }))
+            .then(() => setBankingDbSync({ loading: false, online: true, error: null }))
             .catch((err) => {
-              setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
-              syncBankAccountsFromCloud().catch(() => {});
+              setBankingDbSync({ loading: false, online: false, error: err?.message || "Banking database unavailable" });
+              syncBankAccountsFromDb().catch(() => {});
             });
         }
       } else {
@@ -1338,7 +1338,7 @@ const GymProfile = () => {
         window.dispatchEvent(new CustomEvent("gymdeck:banking_accounts_updated", { detail: { accounts: updatedWithNew } }));
       } catch (e) {}
 
-      // Persist to the cloud database (gym_payment_accounts, scoped to the signed-in gym).
+      // Persist to the local database (gym_payment_accounts, scoped to the signed-in gym).
       const methodLabel = method === "UPI" ? "UPI destination" : method === "BANK_TRANSFER" ? "Bank account" : "Dual-rail account";
       paymentsV2Api.createAccount({
         method: method === "UPI" ? "UPI" : "BANK_TRANSFER",
@@ -1353,32 +1353,32 @@ const GymProfile = () => {
         branchName: isBankActive ? (accountFormData.branchName.trim() || `${accountFormData.bankName} Main Branch`) : undefined,
         isPrimary: isPrimaryInflow
       }).then((res) => {
-        const cloudAccount = res?.data?.account;
-        if (cloudAccount?.id) {
-          // Reconcile the provisional local id with the authoritative cloud record id and
+        const savedAccount = res?.data?.account;
+        if (savedAccount?.id) {
+          // Reconcile the provisional UI id with the authoritative database record id and
           // mirror the reconciled list back into the local cache.
           setGymData(prev => {
             const reconciled = (prev.bankAccounts || []).map(acc =>
               acc.id === newAcc.id
-                ? { ...acc, id: cloudAccount.id, verificationStatus: cloudAccount.status || "UNVERIFIED" }
+                ? { ...acc, id: savedAccount.id, verificationStatus: savedAccount.status || "UNVERIFIED" }
                 : acc
             );
             writeBankAccountsCache(reconciled);
             return { ...prev, bankAccounts: reconciled };
           });
-          setBankingCloudSync({ loading: false, online: true, error: null });
-          showToast(`New ${methodLabel} connected (Status: ${cloudAccount.status || "UNVERIFIED"}).`);
+          setBankingDbSync({ loading: false, online: true, error: null });
+          showToast(`New ${methodLabel} connected (Status: ${savedAccount.status || "UNVERIFIED"}).`);
         }
       }).catch((err) => {
-        // Cloud persist failed: roll back the optimistic row so the UI never claims an
+        // DB persist failed: roll back the optimistic row so the UI never claims an
         // unsaved account is connected to the account.
         setGymData(prev => {
           const rolled = (prev.bankAccounts || []).filter(acc => acc.id !== newAcc.id);
           writeBankAccountsCache(rolled);
           return { ...prev, bankAccounts: rolled };
         });
-        setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
-        showToast("Could not save account to the cloud. Reconnect and try again.");
+        setBankingDbSync({ loading: false, online: false, error: err?.message || "Banking database unavailable" });
+        showToast("Could not save account to your account. Try again.");
       });
     }
 
@@ -1389,12 +1389,12 @@ const GymProfile = () => {
   const handleDeleteAccount = (id) => {
     if (id && !id.startsWith("acc_")) {
       paymentsV2Api.deactivateAccount(id)
-        .then(() => setBankingCloudSync({ loading: false, online: true, error: null }))
+        .then(() => setBankingDbSync({ loading: false, online: true, error: null }))
         .catch((err) => {
-          // Cloud delete failed: re-sync so the row reappears (it is still in the DB).
-          setBankingCloudSync({ loading: false, online: false, error: err?.message || "Cloud unavailable" });
-          syncBankAccountsFromCloud().catch(() => {});
-          showToast("Could not disconnect account from the cloud. Reconnect and try again.");
+          // DB delete failed: re-sync so the row reappears (it is still persisted).
+          setBankingDbSync({ loading: false, online: false, error: err?.message || "Banking database unavailable" });
+          syncBankAccountsFromDb().catch(() => {});
+          showToast("Could not disconnect account. Try again.");
         });
     }
     const remaining = (gymData.bankAccounts || []).filter(a => a.id !== id);
@@ -3801,9 +3801,9 @@ const GymProfile = () => {
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="space-y-6 pb-12"
               >
-                {/* Cloud-DB sync status: confirms banking data is bound to the signed-in account */}
+                {/* DB sync status: confirms banking data is bound to the signed-in account */}
                 {(() => {
-                  const { loading, online, error } = bankingCloudSync;
+                  const { loading, online, error } = bankingDbSync;
                   if (loading && !online) {
                     return (
                       <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-800">
@@ -3823,7 +3823,7 @@ const GymProfile = () => {
                   return (
                     <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
                       <span className="w-2 h-2 rounded-full bg-amber-500 mt-0.5 shrink-0" />
-                      <span className="font-medium">Cloud not connected — banking changes are not being saved to your account. {error ? `(${error})` : ""} Enrol this device or reconnect to persist.</span>
+                      <span className="font-medium">Local secure vault unavailable — banking changes are not being saved to your account. {error ? `(${error})` : ""} Open the app in the desktop client to persist.</span>
                     </div>
                   );
                 })()}

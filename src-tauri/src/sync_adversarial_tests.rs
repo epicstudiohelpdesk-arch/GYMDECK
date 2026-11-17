@@ -672,7 +672,7 @@ mod sync_adversarial_tests {
             ensure_schema(&conn).expect("ensure_schema must succeed on encrypted database");
 
             let version = crate::database::migration::current_schema_version(&conn).expect("Should read version");
-            assert_eq!(version, 6, "Encrypted database must be at version 6");
+            assert!(version >= 6, "Encrypted database must be at version 6 or newer");
 
             let gym_id = Uuid::new_v4();
             SyncRepository::set_cursor(&conn, &gym_id, 350).expect("Should set cursor in encrypted DB");
@@ -685,7 +685,7 @@ mod sync_adversarial_tests {
             conn.pragma_update(None, "key", encryption_key).expect("Should set SQLCipher key");
             
             let version = crate::database::migration::current_schema_version(&conn).expect("Should read version");
-            assert_eq!(version, 6, "Re-opened encrypted database must remain at version 6");
+            assert!(version >= 6, "Re-opened encrypted database must remain at version 6 or newer");
         }
 
         // 3. Clean up temp dir
@@ -1496,7 +1496,7 @@ mod sync_adversarial_tests {
 
         // 3. Verify schema_version is at 6
         let version: i64 = conn.query_row("SELECT MAX(version) FROM schema_version", [], |r| r.get(0)).unwrap();
-        assert_eq!(version, 6, "Schema version must be 6 after migration");
+        assert!(version >= 6, "Schema version must be at least 6 after migration");
 
         // 4. Verify membership_plans price_minor_units
         let (p1_minor, p1_real): (i64, f64) = conn.query_row(

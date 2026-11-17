@@ -742,6 +742,11 @@ impl SyncRepository {
                     // PT domain entities are recorded in sync_inbox for sequence and idempotency tracking.
                     tracing::info!("Recorded PT entity in sync_inbox: entity_type={}, id={}", change.entity_type, change.entity_id);
                 }
+                "payment_account" => {
+                    crate::repositories::payment_account_sync::apply_payment_account_pull(
+                        &tx, gym_id, change,
+                    )?;
+                }
                 _ => {
                     return Err(AppError::Database(format!("Unsupported entity type in pull batch: {}", change.entity_type)));
                 }
@@ -1165,6 +1170,28 @@ impl SyncRepository {
                         now,
                     ],
                 ).map_err(|e| AppError::Database(e.to_string()))?;
+                staged_count += 1;
+            }
+        }
+
+        // Banking & Settlement accounts created before enrollment.
+        let accounts = crate::repositories::payment_account_repo::PaymentAccountRepository::list(&tx, &crate::models::user::AuthenticatedContext {
+            session_id: Uuid::new_v4(), user_id: Uuid::default(), gym_id: *gym_id,
+            role: "OWNER".into(), permissions: vec![],
+        })?;
+        for account in accounts {
+            let account_id = account["id"].as_str().unwrap_or("");
+            let already: i64 = tx.query_row(
+                "SELECT COUNT(*) FROM sync_outbox WHERE gym_id = ?1 AND entity_id = ?2 AND entity_type = 'payment_account'",
+                rusqlite::params![gym_id.to_string(), account_id],
+                |r| r.get(0),
+            ).unwrap_or(0);
+            if already == 0 {
+                let payload = serde_json::to_string(&account).unwrap_or_else(|_| "{}".into());
+                Self::enqueue_outbox_event(
+                    &tx, gym_id, "payment_account", &Uuid::parse_str(account_id).unwrap_or_default(),
+                    "CREATE", &payload,
+                )?;
                 staged_count += 1;
             }
         }

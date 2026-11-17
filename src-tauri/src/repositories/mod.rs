@@ -6,4 +6,6 @@ pub mod user_repo;
 pub mod gym_repo;
 pub mod member_repo;
 pub mod plan_repo;
+pub mod payment_account_repo;
+pub mod payment_account_sync;
 pub mod sync_repo;

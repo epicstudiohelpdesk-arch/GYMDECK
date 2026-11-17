@@ -30,6 +30,7 @@ import {
 import { AppError } from '../../shared/errors';
 import { logger } from '../../shared/logging';
 import { toMinorUnits, fromMinorUnits } from '../../shared/utils/money';
+import { applyPaymentAccountSync } from './paymentAccountSync';
 
 export type SyncOperation = 'CREATE' | 'UPDATE' | 'DELETE' | 'VOID';
 
@@ -42,7 +43,8 @@ export interface SyncPushEventDto {
     | 'payment'
     | 'attendance'
     | 'attendance_log'
-    | 'trainer';
+    | 'trainer'
+    | 'payment_account';
   entityId: string; // Target record UUIDv4
   operation: SyncOperation;
   payload: Record<string, any>;
@@ -331,7 +333,7 @@ export class SyncService {
             entityType: event.entityType,
             entityId: event.entityId,
             operation: event.operation,
-            payload: event.payload,
+            payload: this.safeChangeLogPayload(event),
             sourceDevice: deviceId,
             actorUserId: actorUserId || undefined,
           })
@@ -631,9 +633,26 @@ export class SyncService {
         break;
       }
 
+      case 'payment_account': {
+        await applyPaymentAccountSync(tx, gymId, entityId, operation, payload);
+        break;
+      }
+
       default:
         logger.warn('[SyncService] Unhandled entity type for domain mutation', { entityType });
     }
+  }
+
+  /** Never persist raw bank numbers into the replicated change log. */
+  private safeChangeLogPayload(event: SyncPushEventDto): Record<string, any> {
+    if (event.entityType !== 'payment_account') return event.payload;
+    const copy: Record<string, any> = { ...event.payload };
+    delete copy.accountNumber;
+    delete copy.confirmAccountNumber;
+    if (!copy.accountNumberMasked && copy.accountNumberLast4) {
+      copy.accountNumberMasked = `•••• •••• ${copy.accountNumberLast4}`;
+    }
+    return copy;
   }
 
   private async getLatestSequence(gymId: string): Promise<number> {
