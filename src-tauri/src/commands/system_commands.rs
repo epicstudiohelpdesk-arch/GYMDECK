@@ -124,37 +124,82 @@ pub fn get_cctv_ipc_token() -> Result<String, String> {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .map_err(|e| format!("Failed to resolve home directory: {}", e))?;
-    let token_path = std::path::Path::new(&home).join(".gymdeck").join("gateway-ipc.token");
+    let gymdeck_dir = std::path::Path::new(&home).join(".gymdeck");
+    let token_path = gymdeck_dir.join("gateway-ipc.token");
+
     if !token_path.exists() {
         return Err("CCTV IPC token file not initialized. Start CCTV Gateway daemon.".into());
     }
 
     #[cfg(unix)]
     {
+        use std::os::unix::fs::MetadataExt;
+        use std::os::unix::fs::OpenOptionsExt;
         use std::os::unix::fs::PermissionsExt;
-        // Strict security: use symlink_metadata to reject symbolic links
-        let symlink_meta = std::fs::symlink_metadata(&token_path)
-            .map_err(|e| format!("Failed to inspect IPC token file metadata: {}", e))?;
-        
-        if symlink_meta.file_type().is_symlink() {
-            return Err("Security violation: ~/.gymdeck/gateway-ipc.token cannot be a symbolic link".into());
+        use std::io::Read;
+
+        // 1. Validate parent directory (~/.gymdeck) permissions
+        let dir_meta = std::fs::symlink_metadata(&gymdeck_dir)
+            .map_err(|e| format!("Failed to inspect ~/.gymdeck directory metadata: {}", e))?;
+        if dir_meta.file_type().is_symlink() {
+            return Err("Security violation: ~/.gymdeck directory cannot be a symbolic link".into());
+        }
+        if dir_meta.permissions().mode() & 0o077 != 0 {
+            return Err("Security violation: ~/.gymdeck directory has insecure permissions (must be 0700)".into());
         }
 
-        let mode = symlink_meta.permissions().mode();
+        // 2. Race-resistant opening with O_NOFOLLOW (libc::O_NOFOLLOW = 0x0100 on macOS/BSD, 0o400000 on Linux)
+        // std::fs::OpenOptions custom_flags allows setting O_NOFOLLOW atomically at open() syscall time
+        #[cfg(target_os = "macos")]
+        const O_NOFOLLOW: i32 = 0x0100;
+        #[cfg(not(target_os = "macos"))]
+        const O_NOFOLLOW: i32 = 0o400000;
+
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(O_NOFOLLOW)
+            .open(&token_path)
+            .map_err(|e| format!("Failed to open IPC token file securely (O_NOFOLLOW): {}", e))?;
+
+        // 3. fstat() on the opened file descriptor to prevent TOCTOU race
+        let file_meta = file.metadata()
+            .map_err(|e| format!("Failed to inspect opened token file descriptor metadata: {}", e))?;
+
+        if !file_meta.file_type().is_file() {
+            return Err("Security violation: ~/.gymdeck/gateway-ipc.token is not a regular file".into());
+        }
+        if file_meta.uid() != dir_meta.uid() {
+            return Err("Security violation: ~/.gymdeck/gateway-ipc.token owner mismatch with ~/.gymdeck directory".into());
+        }
+
+        let mode = file_meta.permissions().mode();
         // Validate that permissions are strictly owner-only (mode 0600 or 0400)
         if mode & 0o077 != 0 {
             return Err("Security violation: ~/.gymdeck/gateway-ipc.token has insecure permissions".into());
         }
+
+        let mut token_buf = String::new();
+        file.read_to_string(&mut token_buf)
+            .map_err(|e| format!("Failed to read token from safe file descriptor: {}", e))?;
+        
+        let token = token_buf.trim().to_string();
+        if token.len() < 32 {
+            return Err("Invalid IPC token length".into());
+        }
+        return Ok(token);
     }
 
-    let token = std::fs::read_to_string(&token_path)
-        .map_err(|e| format!("Failed to read IPC token: {}", e))?
-        .trim()
-        .to_string();
+    #[cfg(not(unix))]
+    {
+        let token = std::fs::read_to_string(&token_path)
+            .map_err(|e| format!("Failed to read IPC token: {}", e))?
+            .trim()
+            .to_string();
 
-    if token.len() < 32 {
-        return Err("Invalid IPC token length".into());
+        if token.len() < 32 {
+            return Err("Invalid IPC token length".into());
+        }
+
+        Ok(token)
     }
-
-    Ok(token)
 }

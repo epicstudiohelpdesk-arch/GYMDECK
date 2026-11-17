@@ -22,6 +22,7 @@ import {
   payments,
   attendanceLogs,
   trainers,
+  gymCheckInQr,
   syncChangeLog,
   syncIdempotencyLog,
   syncDeviceCursors,
@@ -44,7 +45,8 @@ export interface SyncPushEventDto {
     | 'attendance'
     | 'attendance_log'
     | 'trainer'
-    | 'payment_account';
+    | 'payment_account'
+    | 'gym_checkin_qr';
   entityId: string; // Target record UUIDv4
   operation: SyncOperation;
   payload: Record<string, any>;
@@ -635,6 +637,62 @@ export class SyncService {
 
       case 'payment_account': {
         await applyPaymentAccountSync(tx, gymId, entityId, operation, payload);
+        break;
+      }
+
+      case 'gym_checkin_qr': {
+        // The gym's permanent attendance QR pass. Exactly one row per gym: a
+        // desktop push replaces a pass minted on demand here so the displayed
+        // QR is the same one the cloud resolves for member check-ins.
+        if (operation === 'CREATE' || operation === 'UPDATE') {
+          const checkinCode = payload.checkinCode || payload.checkin_code;
+          const qrToken = payload.qrToken || payload.qr_token;
+          if (!checkinCode || !qrToken) {
+            throw AppError.validation('Gym check-in QR requires checkinCode and qrToken.');
+          }
+
+          const existing = (
+            await tx
+              .select()
+              .from(gymCheckInQr)
+              .where(eq(gymCheckInQr.gymId, gymId))
+              .limit(1)
+          )[0];
+
+          const qrPayload =
+            payload.qrPayload ||
+            payload.qr_payload ||
+            `https://gymdeck.app/checkin?gym_id=${gymId}&code=${checkinCode}&token=${qrToken}`;
+
+          if (existing) {
+            await tx
+              .update(gymCheckInQr)
+              .set({
+                checkinCode,
+                qrToken,
+                qrPayload,
+                version: payload.version || existing.version,
+                isActive: payload.isActive !== false,
+                updatedAt: new Date(),
+              })
+              .where(eq(gymCheckInQr.gymId, gymId));
+          } else {
+            await tx.insert(gymCheckInQr).values({
+              id: entityId,
+              gymId,
+              checkinCode,
+              qrToken,
+              qrPayload,
+              version: payload.version || 1,
+              isActive: payload.isActive !== false,
+            });
+          }
+        } else if (operation === 'DELETE') {
+          await tx
+            .update(gymCheckInQr)
+            .set({ isActive: false, updatedAt: new Date() })
+            .where(eq(gymCheckInQr.gymId, gymId));
+        }
         break;
       }
 

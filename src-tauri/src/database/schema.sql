@@ -285,6 +285,26 @@ CREATE TABLE IF NOT EXISTS sync_inbox (
     UNIQUE (gym_id, event_id)
 );
 
+-- 12. GYM ATTENDANCE QR PASS (one permanent, unique pass per gym)
+-- Generated at gym signup. Members scan this pass with the GymDeck Member App
+-- to record attendance at this facility. The qr_token is the cloud-resolvable
+-- identity embedded in the printed / displayed QR code.
+CREATE TABLE IF NOT EXISTS gym_checkin_qr (
+    id TEXT PRIMARY KEY,               -- UUID v4
+    gym_id TEXT NOT NULL UNIQUE,       -- One pass per gym tenant
+    checkin_code TEXT NOT NULL UNIQUE, -- Human readable facility code (e.g. GD-7K2M9Q)
+    qr_token TEXT NOT NULL UNIQUE,     -- Opaque high-entropy token encoded in the QR
+    qr_payload TEXT NOT NULL,          -- Exact string encoded into the QR image
+    version INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_gym_checkin_qr_gym ON gym_checkin_qr(gym_id);
+CREATE INDEX IF NOT EXISTS idx_gym_checkin_qr_code ON gym_checkin_qr(checkin_code);
+
 -- Banking & Settlement: receiving accounts, scoped to the owning gym.
 CREATE TABLE IF NOT EXISTS gym_payment_accounts (
     id TEXT PRIMARY KEY,

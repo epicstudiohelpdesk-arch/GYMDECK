@@ -1,6 +1,7 @@
 use crate::database::manager::DatabaseManager;
 use crate::repositories::user_repo::UserRepository;
 use crate::repositories::gym_repo::{GymRepository, Gym};
+use crate::repositories::gym_qr_repo::GymCheckInQrRepository;
 use crate::models::user::User;
 use crate::encryption::argon::CryptoEngine;
 use crate::encryption::secrets::SecureString;
@@ -61,6 +62,15 @@ impl AuthService {
 
         GymRepository::create_gym(&tx, &new_gym)?;
         UserRepository::create_user(&tx, &new_user)?;
+
+        // Every gym gets exactly one permanent attendance QR pass at signup.
+        // Created inside the same transaction so a gym can never exist without one.
+        let (pass, _created) = GymCheckInQrRepository::ensure_for_gym(&tx, &gym_id)?;
+        tracing::info!(
+            "Attendance QR pass {} provisioned for new gym {}",
+            pass.checkin_code,
+            gym_id
+        );
 
         tx.commit().map_err(|e| AppError::Database(e.to_string()))?;
 

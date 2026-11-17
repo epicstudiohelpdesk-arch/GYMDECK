@@ -38,6 +38,11 @@ const CheckInBodySchema = z.object({
   deviceMetadata: z.string().optional(),
 });
 
+const ScanGymPassBodySchema = z.object({
+  qrPayload: z.string().min(8, 'Scanned gym QR payload is required'),
+  deviceMetadata: z.string().max(512).optional(),
+});
+
 const StartWorkoutSessionSchema = z.object({
   routineId: z.string().uuid().optional(),
   sessionName: z.string().min(1).max(100).optional(),
@@ -164,6 +169,34 @@ router.post('/check-in', validateBody(CheckInBodySchema), async (req: Request, r
     next(err);
   }
 });
+
+// Scan the gym's permanent attendance QR pass displayed at the facility.
+router.post(
+  '/scan-check-in',
+  validateBody(ScanGymPassBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user!;
+      const idempotencyKey = req.header('Idempotency-Key') || req.header('idempotency-key');
+
+      const result = await attendanceService.submitGymPassCheckIn({
+        memberGymId: user.gymId,
+        memberId: user.memberId!,
+        qrPayload: req.body.qrPayload,
+        idempotencyKey,
+        deviceMetadata: req.body.deviceMetadata,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.get('/attendance', validateQuery(PaginationSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {

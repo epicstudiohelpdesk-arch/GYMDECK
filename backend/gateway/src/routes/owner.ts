@@ -10,6 +10,7 @@ import { ownerAttendanceService } from '../../../services/owner/ownerAttendanceS
 import { ownerMembershipService } from '../../../services/owner/ownerMembershipService';
 import { ownerTrainerService } from '../../../services/owner/ownerTrainerService';
 import { notificationService } from '../../../services/notifications/notificationService';
+import { gymCheckInQrService } from '../../../services/member/gymCheckInQrService';
 import analyticsRouter from './analytics';
 import communicationsRouter from './communications';
 import { backupRouter } from './backup';
@@ -861,6 +862,31 @@ router.get(
 // ==============================================================================
 // 6. Attendance & Check-In Management
 // ==============================================================================
+
+/**
+ * The gym's permanent attendance QR pass. Members scan this facility pass with
+ * the GymDeck Member App to check in.
+ */
+router.get(
+  '/check-in-qr',
+  requirePermission('attendance.read'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const gymId = req.user!.gymId;
+      if (!gymId) throw AppError.forbidden('Tenant gym context missing from token.');
+
+      const pass = await gymCheckInQrService.getOrCreateForGym(gymId);
+
+      res.status(200).json({
+        success: true,
+        data: pass,
+        meta: { requestId: req.id, timestamp: new Date().toISOString() },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.get(
   '/attendance',

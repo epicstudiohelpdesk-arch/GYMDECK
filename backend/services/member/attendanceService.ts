@@ -7,6 +7,7 @@ import { db } from '../../shared/database';
 import { attendanceLogs, gymMembers, gyms, auditLogs } from '../../shared/database/schema';
 import { membershipService } from '../membership';
 import { checkInPassService } from './checkInPassService';
+import { gymCheckInQrService } from './gymCheckInQrService';
 import { AppError } from '../../shared/errors';
 
 export interface CheckInDto {
@@ -14,7 +15,7 @@ export interface CheckInDto {
   memberId: string;
   idempotencyKey?: string;
   passToken?: string;
-  entryMethod?: 'QR_DYNAMIC' | 'MANUAL' | 'RFID' | 'BIOMETRIC';
+  entryMethod?: 'QR_DYNAMIC' | 'GYM_QR_PASS' | 'MANUAL' | 'RFID' | 'BIOMETRIC';
   deviceMetadata?: string;
 }
 
@@ -160,7 +161,44 @@ export class AttendanceService {
   }
 
   /**
-   * 2. Get paginated historical attendance records
+   * 2. Check in by scanning the gym's permanent attendance QR pass.
+   *
+   * The pass identifies a facility, not a member: the caller is already an
+   * authenticated member account, so we prove the pass belongs to their gym
+   * and then run the standard eligibility/duplicate-cooldown check-in path.
+   */
+  public async submitGymPassCheckIn(dto: {
+    memberGymId: string;
+    memberId: string;
+    qrPayload: string;
+    idempotencyKey?: string;
+    deviceMetadata?: string;
+  }): Promise<CheckInResponse> {
+    const qrToken = gymCheckInQrService.extractToken(dto.qrPayload);
+    if (!qrToken) {
+      throw AppError.validation('Scanned code is not a GymDeck gym check-in pass.');
+    }
+
+    const pass = await gymCheckInQrService.resolveByToken(qrToken);
+    if (!pass) {
+      throw AppError.notFound('This gym check-in pass is not recognised or is no longer active.');
+    }
+
+    if (pass.gymId !== dto.memberGymId) {
+      throw AppError.forbidden('This check-in pass belongs to a different gym than your membership.');
+    }
+
+    return this.submitCheckIn({
+      gymId: pass.gymId,
+      memberId: dto.memberId,
+      idempotencyKey: dto.idempotencyKey,
+      entryMethod: 'GYM_QR_PASS',
+      deviceMetadata: dto.deviceMetadata || `GYM_QR_PASS:${pass.checkinCode}`,
+    });
+  }
+
+  /**
+   * 3. Get paginated historical attendance records
    */
   public async getAttendanceHistory(
     gymId: string,

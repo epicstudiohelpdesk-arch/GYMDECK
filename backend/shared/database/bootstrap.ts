@@ -688,6 +688,19 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
     }
   }
 
+  // Gym Attendance QR pass migration (additive; safe to re-run).
+  const gymQrCandidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0004_gym_checkin_qr.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0004_gym_checkin_qr.sql'),
+    path.join(__dirname, 'migrations', '0004_gym_checkin_qr.sql'),
+  ];
+  for (const file of gymQrCandidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
+
   // CCTV Subsystem migration (additive; safe to re-run).
   const cctvCandidates = [
     path.join(process.cwd(), 'shared', 'database', 'migrations', '0003_cctv_subsystem.sql'),

@@ -345,13 +345,18 @@ export const CctvLivePlayer = ({
   const videoRef = useRef(null);
   const pcRef = useRef(null);
   const sessionUrlRef = useRef(null);
-  const [streamState, setStreamState] = useState("CONNECTING"); // "CONNECTING" | "LIVE" | "OFFLINE"
+  const frameWatchdogRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const retryCountRef = useRef(0);
+  const lastDecodedFramesRef = useRef(0);
+  const [streamState, setStreamState] = useState("CONNECTING"); // "CONNECTING" | "LIVE" | "STALLED" | "RECONNECTING" | "OFFLINE"
   const [errorMessage, setErrorMessage] = useState(null);
   const [isMuted, setIsMuted] = useState(true);
   const [retryTrigger, setRetryTrigger] = useState(0);
 
   const handleRetry = (e) => {
     if (e) e.stopPropagation();
+    retryCountRef.current = 0;
     setErrorMessage(null);
     setStreamState("CONNECTING");
     setRetryTrigger((prev) => prev + 1);
@@ -387,6 +392,14 @@ export const CctvLivePlayer = ({
     let whepSessionUrl = null;
 
     const teardown = () => {
+      if (frameWatchdogRef.current) {
+        clearInterval(frameWatchdogRef.current);
+        frameWatchdogRef.current = null;
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       if (pc) {
         try {
           pc.close();
@@ -463,23 +476,67 @@ export const CctvLivePlayer = ({
           if (videoRef.current && event.streams[0]) {
             videoRef.current.srcObject = event.streams[0];
             // Enforce honest LIVE status: only declare LIVE once video metadata/frames are actually ready
+            const onFirstFrame = () => {
+              if (isCancelled) return;
+              setStreamState("LIVE");
+              // Start stream health watchdog (detects frame stalls and network dropouts)
+              if (frameWatchdogRef.current) clearInterval(frameWatchdogRef.current);
+              frameWatchdogRef.current = setInterval(async () => {
+                if (isCancelled || !pcRef.current) return;
+                try {
+                  const stats = await pcRef.current.getStats();
+                  let currentDecoded = 0;
+                  stats.forEach((r) => {
+                    if (r.type === "inbound-rtp" && r.kind === "video") {
+                      currentDecoded = r.framesDecoded || 0;
+                    }
+                  });
+                  if (currentDecoded > 0 && currentDecoded === lastDecodedFramesRef.current) {
+                    // No new frames decoded over watchdog window -> transition to STALLED
+                    setStreamState("STALLED");
+                  } else if (currentDecoded > lastDecodedFramesRef.current) {
+                    setStreamState("LIVE");
+                  }
+                  lastDecodedFramesRef.current = currentDecoded;
+                } catch (_) {}
+              }, 3000);
+            };
+
             if (typeof videoRef.current.requestVideoFrameCallback === "function") {
-              videoRef.current.requestVideoFrameCallback(() => {
-                if (!isCancelled) setStreamState("LIVE");
-              });
+              videoRef.current.requestVideoFrameCallback(onFirstFrame);
             } else {
-              videoRef.current.onloadeddata = () => {
-                if (!isCancelled) setStreamState("LIVE");
-              };
+              videoRef.current.onloadeddata = onFirstFrame;
             }
           }
         };
 
         pc.onconnectionstatechange = () => {
           if (isCancelled) return;
-          if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-            setStreamState("OFFLINE");
-            setErrorMessage("WebRTC stream disconnected or interrupted.");
+          const conn = pc.connectionState;
+
+          if (conn === "disconnected" || conn === "failed") {
+            setStreamState("RECONNECTING");
+            // Automatic bounded recovery for both disconnected AND transient failed states
+            if (retryCountRef.current < 5) {
+              const backoffMs = Math.min(24000, 1500 * Math.pow(2, retryCountRef.current));
+              retryCountRef.current += 1;
+              if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+              reconnectTimeoutRef.current = setTimeout(() => {
+                if (!isCancelled) {
+                  setRetryTrigger((prev) => prev + 1);
+                }
+              }, backoffMs);
+            } else {
+              setStreamState("OFFLINE");
+              setErrorMessage(
+                conn === "failed"
+                  ? "WebRTC connection failed. Camera unreachable."
+                  : "Max reconnection attempts reached. Camera stream interrupted."
+              );
+            }
+          } else if (conn === "connected" && lastDecodedFramesRef.current > 0) {
+            retryCountRef.current = 0;
+            setStreamState("LIVE");
           }
         };
 
@@ -587,7 +644,7 @@ export const CctvLivePlayer = ({
         </div>
       )}
 
-      {/* Top Left Status Badge - NEVER displays fake LIVE when offline */}
+      {/* Top Left Status Badge - Reflects full state machine (LIVE, CONNECTING, STALLED, RECONNECTING, OFFLINE) */}
       <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
         {streamState === "LIVE" ? (
           <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md">
@@ -598,6 +655,16 @@ export const CctvLivePlayer = ({
           <span className="px-2 py-0.5 rounded-md bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
             CONNECTING
+          </span>
+        ) : streamState === "STALLED" ? (
+          <span className="px-2 py-0.5 rounded-md bg-amber-800 text-amber-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 border border-amber-600 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            STALLED
+          </span>
+        ) : streamState === "RECONNECTING" ? (
+          <span className="px-2 py-0.5 rounded-md bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+            RECONNECTING
           </span>
         ) : (
           <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 border border-slate-700 shadow-md">
@@ -1780,7 +1847,7 @@ export const CCTV = () => {
                         <div className="relative aspect-video w-full rounded-xl overflow-hidden group cursor-pointer">
                           <CctvLivePlayer
                             camera={cam}
-                            profile={cam.currentProfile || "MAIN"}
+                            profile={cam.currentProfile || "SUB"}
                             liveClock={liveClock}
                             onSnap={showToast}
                             onClick={() => {

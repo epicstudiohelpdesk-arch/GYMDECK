@@ -179,6 +179,24 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         );
         CREATE INDEX IF NOT EXISTS idx_gym_payment_accounts_gym ON gym_payment_accounts(gym_id, is_active);",
     ),
+    (
+        9,
+        "Add per-gym permanent attendance QR pass",
+        "CREATE TABLE IF NOT EXISTS gym_checkin_qr (
+            id TEXT PRIMARY KEY,
+            gym_id TEXT NOT NULL UNIQUE,
+            checkin_code TEXT NOT NULL UNIQUE,
+            qr_token TEXT NOT NULL UNIQUE,
+            qr_payload TEXT NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1,
+            is_active BOOLEAN NOT NULL DEFAULT 1,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_gym_checkin_qr_gym ON gym_checkin_qr(gym_id);
+        CREATE INDEX IF NOT EXISTS idx_gym_checkin_qr_code ON gym_checkin_qr(checkin_code);",
+    ),
 ];
 
 fn validate_legacy_monetary_records(conn: &Connection) -> Result<(), crate::errors::AppError> {

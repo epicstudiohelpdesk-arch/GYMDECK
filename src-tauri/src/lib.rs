@@ -27,6 +27,8 @@ pub mod backup_tests;
 pub mod sync_adversarial_tests;
 #[cfg(test)]
 pub mod payment_account_tests;
+#[cfg(test)]
+pub mod gym_qr_tests;
 
 use tauri::Manager;
 use commands::auth_commands::{
@@ -47,6 +49,7 @@ use commands::cloud_enroll_commands::{
     cloud_enroll_command, get_cloud_enrollment_status_command, cloud_sync_now_command, cloud_unenroll_command,
     cloud_communications_request_command
 };
+use commands::gym_qr_commands::get_gym_checkin_qr_command;
 use commands::payment_account_commands::{
     payment_accounts_list_command, payment_accounts_create_command, payment_accounts_update_command,
     payment_accounts_set_primary_command, payment_accounts_deactivate_command
@@ -236,6 +239,7 @@ pub fn run() {
         payment_accounts_update_command,
         payment_accounts_set_primary_command,
         payment_accounts_deactivate_command,
+        get_gym_checkin_qr_command,
         get_system_status,
         get_cctv_ipc_token
     ])

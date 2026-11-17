@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ErrorBoundary } from "./ErrorHandlers.jsx";
+import { qrcode } from "./qr-lib.js";
 
 // ─────────────────────────────────────────
 // UTILITIES & AVATAR GENERATOR
@@ -105,64 +106,25 @@ const calculateDuration = (checkInMs, checkOutMs) => {
 };
 
 // ─────────────────────────────────────────
-// DETERMINISTIC 2D QR MATRIX GENERATOR
+// GENUINE ISO/IEC 18004 QR MATRIX (from the facility's stored pass)
 // ─────────────────────────────────────────
 
-function getQRMatrix(code = "GDK-8821") {
-  const size = 25;
-  const matrix = Array.from({ length: size }, () => Array(size).fill(false));
+function getQRMatrix(payload) {
+  if (!payload) return null;
 
-  const fillSquare = (r, c, s, val) => {
-    for (let i = 0; i < s; i++) {
-      for (let j = 0; j < s; j++) {
-        if (r + i < size && c + j < size) {
-          matrix[r + i][c + j] = val;
-        }
-      }
-    }
-  };
+  try {
+    const qr = qrcode(0, "M");
+    qr.addData(payload);
+    qr.make();
 
-  const drawFinder = (r, c) => {
-    fillSquare(r, c, 7, true);
-    fillSquare(r + 1, c + 1, 5, false);
-    fillSquare(r + 2, c + 2, 3, true);
-  };
-
-  drawFinder(0, 0);
-  drawFinder(0, 18);
-  drawFinder(18, 0);
-
-  for (let i = 8; i < 17; i++) {
-    matrix[6][i] = i % 2 === 0;
-    matrix[i][6] = i % 2 === 0;
+    const count = qr.getModuleCount();
+    return Array.from({ length: count }, (_, r) =>
+      Array.from({ length: count }, (_, c) => qr.isDark(r, c))
+    );
+  } catch (err) {
+    console.error("GymDeck: failed to encode attendance QR payload", err);
+    return null;
   }
-
-  fillSquare(16, 16, 5, true);
-  fillSquare(17, 17, 3, false);
-  matrix[18][18] = true;
-
-  let hash = 0;
-  for (let i = 0; i < code.length; i++) {
-    hash = (hash << 5) - hash + code.charCodeAt(i);
-    hash |= 0;
-  }
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      const isTL = r < 8 && c < 8;
-      const isTR = r < 8 && c >= 17;
-      const isBL = r >= 17 && c < 8;
-      const isTiming = (r === 6 && c >= 8 && c < 17) || (c === 6 && r >= 8 && r < 17);
-      const isAlign = r >= 16 && r <= 20 && c >= 16 && c <= 20;
-
-      if (!isTL && !isTR && !isBL && !isTiming && !isAlign) {
-        const pseudo = Math.abs(Math.sin((r * size + c + 1) * (hash || 12345)) * 10000);
-        matrix[r][c] = pseudo - Math.floor(pseudo) > 0.46;
-      }
-    }
-  }
-
-  return matrix;
 }
 
 // ─────────────────────────────────────────
@@ -382,7 +344,7 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
   };
 
   const handleCopyLink = () => {
-    const url = `https://gymdeck.app/checkin?gym_id=${gymInfo.id}&code=${gymInfo.code}`;
+    const url = gymInfo.qrPayload || `https://gymdeck.app/checkin?gym_id=${gymInfo.id}&code=${gymInfo.code}`;
     navigator.clipboard?.writeText(url);
     setCopied(true);
     showNotification("Gym check-in portal link copied to clipboard.");
@@ -394,7 +356,8 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
     const gymCode = gymInfo.code || "GDK-8821";
     const fileName = `${gymName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-attendance-standee.svg`;
 
-    const cellSize = 360 / 25;
+    const modules = qrMatrix.length;
+    const cellSize = 360 / modules;
     let qrRects = "";
     qrMatrix.forEach((row, r) => {
       row.forEach((filled, c) => {
@@ -455,7 +418,8 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
     const gymName = gymInfo.name || "GymDeck Facility";
     const gymCode = gymInfo.code || "GDK-8821";
 
-    const cellSize = 240 / 25;
+    const modules = qrMatrix.length;
+    const cellSize = 240 / modules;
     let qrRects = "";
     qrMatrix.forEach((row, r) => {
       row.forEach((filled, c) => {
@@ -597,7 +561,8 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
     printWindow.document.close();
   };
 
-  const cellSize = 136 / 25;
+  const qrSize = 160;
+  const cellSize = qrSize / qrMatrix.length;
 
   return (
     <div
@@ -666,7 +631,7 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
             <div className="absolute bottom-1.5 left-1.5 w-2 h-2 border-b-2 border-l-2 border-slate-900 rounded-bl" />
             <div className="absolute bottom-1.5 right-1.5 w-2 h-2 border-b-2 border-r-2 border-slate-900 rounded-br" />
 
-            <svg width="136" height="136" viewBox="0 0 136 136" className="shrink-0">
+            <svg width={qrSize} height={qrSize} viewBox={`0 0 ${qrSize} ${qrSize}`} className="shrink-0">
               {qrMatrix.map((row, r) =>
                 row.map((filled, c) =>
                   filled ? (
@@ -1021,30 +986,47 @@ const PAGE_SIZE_OPTIONS = [
 // ─────────────────────────────────────────
 
 const DailyCheckinPage = () => {
-  // Gym Profile Information
-  const [gymInfo, setGymInfo] = useState(() => {
-    let savedName = typeof localStorage !== "undefined"
-      ? localStorage.getItem("gymdeck_gym_name") || localStorage.getItem("gymdeck_gym_brand_name")
-      : null;
-    let savedCode = typeof localStorage !== "undefined" ? localStorage.getItem("gymdeck_gym_code") : null;
-    let savedId = typeof localStorage !== "undefined" ? localStorage.getItem("gymdeck_gym_id") : null;
+  // Facility Attendance QR Pass — provisioned once per gym in the encrypted vault.
+  const [gymQr, setGymQr] = useState({ status: "loading", data: null, error: null });
 
-    if (!savedCode) {
-      savedCode = "GDK-" + Math.floor(1000 + Math.random() * 9000);
-      try { localStorage.setItem("gymdeck_gym_code", savedCode); } catch (e) {}
+  const loadGymQr = useCallback(async () => {
+    setGymQr((prev) => ({ ...prev, status: "loading", error: null }));
+    try {
+      if (!window.__TAURI__?.core?.invoke) {
+        throw new Error("The attendance pass requires the GymDeck desktop runtime.");
+      }
+      const record = await window.__TAURI__.core.invoke("get_gym_checkin_qr_command");
+      if (!record?.qrPayload) {
+        throw new Error("No attendance pass was returned for this gym.");
+      }
+      setGymQr({ status: "ready", data: record, error: null });
+    } catch (e) {
+      setGymQr({
+        status: "error",
+        data: null,
+        error: e?.message || "Unable to load this gym's attendance pass."
+      });
     }
-    if (!savedId) {
-      savedId = "gym_" + Math.random().toString(36).substring(2, 10);
-      try { localStorage.setItem("gymdeck_gym_id", savedId); } catch (e) {}
-    }
-    if (!savedName) {
-      savedName = "GymDeck Facility";
-      try { localStorage.setItem("gymdeck_gym_name", savedName); } catch (e) {}
-    }
-    return { name: savedName, code: savedCode, id: savedId };
-  });
+  }, []);
 
-  const qrMatrix = useMemo(() => getQRMatrix(gymInfo.code), [gymInfo.code]);
+  useEffect(() => {
+    loadGymQr();
+  }, [loadGymQr]);
+
+  const gymInfo = useMemo(() => {
+    if (!gymQr.data) return null;
+    return {
+      id: gymQr.data.gymId,
+      name: gymQr.data.gymName,
+      code: gymQr.data.checkinCode,
+      qrPayload: gymQr.data.qrPayload
+    };
+  }, [gymQr.data]);
+
+  const qrMatrix = useMemo(
+    () => (gymQr.data ? getQRMatrix(gymQr.data.qrPayload) : null),
+    [gymQr.data]
+  );
 
   // Real Registered Members
   const [members, setMembers] = useState([]);
@@ -1311,7 +1293,7 @@ const DailyCheckinPage = () => {
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => exportAttendanceToCSV(todayLogs, gymInfo.name)}
+              onClick={() => exportAttendanceToCSV(todayLogs, gymInfo?.name)}
               disabled={todayLogs.length === 0}
               className="h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
               title="Download CSV report of today's attendance"
@@ -1384,10 +1366,41 @@ const DailyCheckinPage = () => {
         ════════════════════════════════════════════════════════════ */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[310px]">
           <div className="lg:col-span-7 xl:col-span-8 h-full">
-            <InstantCheckIn
-              gymInfo={gymInfo}
-              qrMatrix={qrMatrix}
-            />
+            {gymQr.status === "ready" && gymInfo && qrMatrix ? (
+              <InstantCheckIn gymInfo={gymInfo} qrMatrix={qrMatrix} />
+            ) : (
+              <div
+                className="rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-center h-full border border-slate-800/80"
+                style={{
+                  background: "radial-gradient(circle at 75% 25%, #152747 0%, #0d1b32 38%, #081222 72%, #030712 100%)",
+                  color: "#ffffff"
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <QrCode size={15} className="text-cyan-400" />
+                  <h2 className="text-xs font-black uppercase tracking-widest">
+                    {gymQr.status === "loading"
+                      ? "Provisioning facility attendance pass"
+                      : "Facility attendance pass unavailable"}
+                  </h2>
+                </div>
+                <p className="text-[11px] text-slate-300 max-w-md leading-relaxed">
+                  {gymQr.status === "loading"
+                    ? "Loading this gym's unique, permanent check-in QR pass from the encrypted vault."
+                    : gymQr.error}
+                </p>
+                {gymQr.status === "error" && (
+                  <button
+                    type="button"
+                    onClick={loadGymQr}
+                    className="mt-4 h-8 w-fit px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer bg-indigo-600 hover:bg-indigo-500"
+                  >
+                    <RefreshCw size={12} />
+                    <span>Retry</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div className="lg:col-span-5 xl:col-span-4 h-full">
             <LiveFeed logs={todayLogs} />
@@ -1705,7 +1718,7 @@ const DailyCheckinPage = () => {
                         <td className="py-3 px-4 text-right whitespace-nowrap">
                           <button
                             type="button"
-                            onClick={() => printAttendanceReceipt(row, gymInfo.name)}
+                            onClick={() => printAttendanceReceipt(row, gymInfo?.name)}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 font-bold text-[10px] transition-colors cursor-pointer border border-slate-200/60"
                             title="Print thermal gate pass slip"
                           >

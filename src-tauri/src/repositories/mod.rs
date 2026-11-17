@@ -4,6 +4,8 @@ pub mod device_trust_repo;
 pub mod session_repo;
 pub mod user_repo;
 pub mod gym_repo;
+pub mod gym_qr_repo;
+pub mod gym_qr_sync;
 pub mod member_repo;
 pub mod plan_repo;
 pub mod payment_account_repo;

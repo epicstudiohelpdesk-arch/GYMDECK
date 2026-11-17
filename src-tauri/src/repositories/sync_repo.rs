@@ -747,6 +747,11 @@ impl SyncRepository {
                         &tx, gym_id, change,
                     )?;
                 }
+                "gym_checkin_qr" => {
+                    crate::repositories::gym_qr_sync::apply_gym_checkin_qr_pull(
+                        &tx, gym_id, change,
+                    )?;
+                }
                 _ => {
                     return Err(AppError::Database(format!("Unsupported entity type in pull batch: {}", change.entity_type)));
                 }
@@ -1171,6 +1176,23 @@ impl SyncRepository {
                     ],
                 ).map_err(|e| AppError::Database(e.to_string()))?;
                 staged_count += 1;
+            }
+        }
+
+        // The gym's permanent attendance QR pass (minted at signup, while offline).
+        {
+            if let Some(pass) = crate::repositories::gym_qr_repo::GymCheckInQrRepository::get(&tx, gym_id)? {
+                let already: i64 = tx.query_row(
+                    "SELECT COUNT(*) FROM sync_outbox WHERE gym_id = ?1 AND entity_type = 'gym_checkin_qr' AND entity_id = ?2",
+                    params![gym_id_str, pass.id.to_string()],
+                    |r| r.get(0),
+                ).unwrap_or(0);
+
+                if already == 0 {
+                    let payload = serde_json::to_string(&pass).unwrap_or_else(|_| "{}".into());
+                    Self::enqueue_outbox_event(&tx, gym_id, "gym_checkin_qr", &pass.id, "CREATE", &payload)?;
+                    staged_count += 1;
+                }
             }
         }
 
