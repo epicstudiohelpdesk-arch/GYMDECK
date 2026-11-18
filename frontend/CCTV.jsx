@@ -348,6 +348,7 @@ export const CctvLivePlayer = ({
   const frameWatchdogRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const retryCountRef = useRef(0);
+  const connectionGenRef = useRef(0); // Monotonic connection generation to reject stale callbacks
   const lastDecodedFramesRef = useRef(0);
   const [streamState, setStreamState] = useState("CONNECTING"); // "CONNECTING" | "LIVE" | "STALLED" | "RECONNECTING" | "OFFLINE"
   const [errorMessage, setErrorMessage] = useState(null);
@@ -357,6 +358,7 @@ export const CctvLivePlayer = ({
   const handleRetry = (e) => {
     if (e) e.stopPropagation();
     retryCountRef.current = 0;
+    lastDecodedFramesRef.current = 0;
     setErrorMessage(null);
     setStreamState("CONNECTING");
     setRetryTrigger((prev) => prev + 1);
@@ -421,12 +423,15 @@ export const CctvLivePlayer = ({
     };
 
     const startStream = async () => {
+      // Increment connection generation and reset frame counter for clean isolation
+      const currentGen = ++connectionGenRef.current;
+      lastDecodedFramesRef.current = 0;
       setStreamState("CONNECTING");
       setErrorMessage(null);
 
       // 1. Request IPC Secret from Edge Gateway loopback
       const token = await getGatewayIpcToken();
-      if (isCancelled) return;
+      if (isCancelled || currentGen !== connectionGenRef.current) return;
 
       if (!token) {
         setStreamState("OFFLINE");
@@ -451,7 +456,7 @@ export const CctvLivePlayer = ({
           signal: AbortSignal.timeout(4000),
         });
 
-        if (isCancelled) return;
+        if (isCancelled || currentGen !== connectionGenRef.current) return;
 
         if (!reqRes.ok) {
           const errData = await reqRes.json().catch(() => ({}));
@@ -472,17 +477,17 @@ export const CctvLivePlayer = ({
         pc.addTransceiver("video", { direction: "recvonly" });
 
         pc.ontrack = (event) => {
-          if (isCancelled) return;
+          if (isCancelled || currentGen !== connectionGenRef.current) return;
           if (videoRef.current && event.streams[0]) {
             videoRef.current.srcObject = event.streams[0];
             // Enforce honest LIVE status: only declare LIVE once video metadata/frames are actually ready
             const onFirstFrame = () => {
-              if (isCancelled) return;
+              if (isCancelled || currentGen !== connectionGenRef.current) return;
               setStreamState("LIVE");
               // Start stream health watchdog (detects frame stalls and network dropouts)
               if (frameWatchdogRef.current) clearInterval(frameWatchdogRef.current);
               frameWatchdogRef.current = setInterval(async () => {
-                if (isCancelled || !pcRef.current) return;
+                if (isCancelled || currentGen !== connectionGenRef.current || !pcRef.current) return;
                 try {
                   const stats = await pcRef.current.getStats();
                   let currentDecoded = 0;
@@ -511,22 +516,22 @@ export const CctvLivePlayer = ({
         };
 
         pc.onconnectionstatechange = () => {
-          if (isCancelled) return;
+          if (isCancelled || currentGen !== connectionGenRef.current) return;
           const conn = pc.connectionState;
 
           if (conn === "disconnected" || conn === "failed") {
             setStreamState("RECONNECTING");
-            // Automatic bounded recovery for both disconnected AND transient failed states
-            if (retryCountRef.current < 5) {
+            // Only set a timer if one isn't already active (prevents timer rescheduling storms)
+            if (retryCountRef.current < 5 && !reconnectTimeoutRef.current) {
               const backoffMs = Math.min(24000, 1500 * Math.pow(2, retryCountRef.current));
               retryCountRef.current += 1;
-              if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
               reconnectTimeoutRef.current = setTimeout(() => {
-                if (!isCancelled) {
+                reconnectTimeoutRef.current = null;
+                if (!isCancelled && currentGen === connectionGenRef.current) {
                   setRetryTrigger((prev) => prev + 1);
                 }
               }, backoffMs);
-            } else {
+            } else if (retryCountRef.current >= 5) {
               setStreamState("OFFLINE");
               setErrorMessage(
                 conn === "failed"
@@ -536,6 +541,10 @@ export const CctvLivePlayer = ({
             }
           } else if (conn === "connected" && lastDecodedFramesRef.current > 0) {
             retryCountRef.current = 0;
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+              reconnectTimeoutRef.current = null;
+            }
             setStreamState("LIVE");
           }
         };

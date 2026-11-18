@@ -42,7 +42,13 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ErrorBoundary } from "./ErrorHandlers.jsx";
-import { qrcode } from "./qr-lib.js";
+import {
+  QR_QUIET_ZONE,
+  buildQrArtwork,
+  getQRMatrix,
+  isFinderModule,
+  loadGymCheckinPass
+} from "./gymCheckinQr.js";
 
 // ─────────────────────────────────────────
 // UTILITIES & AVATAR GENERATOR
@@ -106,28 +112,6 @@ const calculateDuration = (checkInMs, checkOutMs) => {
 };
 
 // ─────────────────────────────────────────
-// GENUINE ISO/IEC 18004 QR MATRIX (from the facility's stored pass)
-// ─────────────────────────────────────────
-
-function getQRMatrix(payload) {
-  if (!payload) return null;
-
-  try {
-    const qr = qrcode(0, "M");
-    qr.addData(payload);
-    qr.make();
-
-    const count = qr.getModuleCount();
-    return Array.from({ length: count }, (_, r) =>
-      Array.from({ length: count }, (_, c) => qr.isDark(r, c))
-    );
-  } catch (err) {
-    console.error("GymDeck: failed to encode attendance QR payload", err);
-    return null;
-  }
-}
-
-// ─────────────────────────────────────────
 // CUSTOM DROPDOWN COMPONENT
 // ─────────────────────────────────────────
 
@@ -185,7 +169,7 @@ const CustomDropdown = ({
         id={id}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        className={`h-9 px-3 rounded-xl border text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer select-none group ${
+        className={`h-10 px-3 rounded-xl border text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer select-none group ${
           isOpen
             ? "bg-indigo-50/70 border-indigo-400 text-indigo-950 shadow-xs ring-2 ring-indigo-500/15"
             : "bg-white hover:bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-700 shadow-2xs"
@@ -356,50 +340,53 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
     const gymCode = gymInfo.code || "GDK-8821";
     const fileName = `${gymName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-attendance-standee.svg`;
 
-    const modules = qrMatrix.length;
-    const cellSize = 360 / modules;
-    let qrRects = "";
-    qrMatrix.forEach((row, r) => {
-      row.forEach((filled, c) => {
-        if (filled) {
-          qrRects += `<rect x="${220 + c * cellSize}" y="${270 + r * cellSize}" width="${cellSize + 0.3}" height="${cellSize + 0.3}" fill="#0f172a" rx="1.5" />\n`;
-        }
-      });
-    });
+    const art = buildQrArtwork(qrMatrix);
+    const qrTotal = qrMatrix.length + QR_QUIET_ZONE * 2;
+    const cell = 408 / qrTotal;
+    const qrX = 164 + 32 + QR_QUIET_ZONE * cell;
+    const qrY = 244 + 32 + QR_QUIET_ZONE * cell;
 
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1060" viewBox="0 0 800 1060">
       <defs>
-        <radialGradient id="bgGrad" cx="50%" cy="28%" r="75%">
-          <stop offset="0%" stop-color="#1e293b" />
-          <stop offset="42%" stop-color="#0f172a" />
-          <stop offset="100%" stop-color="#020617" />
+        <radialGradient id="bgGrad" cx="50%" cy="22%" r="80%">
+          <stop offset="0%" stop-color="#1d3055" />
+          <stop offset="46%" stop-color="#0f1e38" />
+          <stop offset="100%" stop-color="#050a14" />
         </radialGradient>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#818cf8" />
+          <stop offset="52%" stop-color="#22d3ee" />
+          <stop offset="100%" stop-color="#34d399" />
+        </linearGradient>
       </defs>
-      
+
       <rect width="800" height="1060" rx="36" fill="url(#bgGrad)" />
-      <rect x="24" y="24" width="752" height="1012" rx="28" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
+      <rect x="26" y="26" width="748" height="1008" rx="28" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2" />
 
-      <rect x="270" y="65" width="260" height="36" rx="18" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.3)" stroke-width="1.5" />
-      <circle cx="295" cy="83" r="5" fill="#38bdf8" />
-      <text x="312" y="88" fill="#38bdf8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="12" font-weight="800" letter-spacing="2">TOUCHLESS ATTENDANCE</text>
+      <rect x="268" y="64" width="264" height="38" rx="19" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.32)" stroke-width="1.5" />
+      <circle cx="296" cy="83" r="5" fill="#34d399" />
+      <text x="314" y="88" fill="#7dd3fc" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="12" font-weight="800" letter-spacing="2">TOUCHLESS ATTENDANCE</text>
 
-      <text x="400" y="150" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="34" font-weight="900" letter-spacing="-0.5">${gymName}</text>
-      <text x="400" y="185" text-anchor="middle" fill="#94a3b8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="15" font-weight="600">DAILY MEMBER CHECK-IN STANDEE</text>
+      <text x="400" y="156" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="34" font-weight="900" letter-spacing="-0.5">${gymName}</text>
+      <text x="400" y="190" text-anchor="middle" fill="#94a3b8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="1.5">DAILY MEMBER CHECK-IN PASS</text>
 
-      <rect x="180" y="230" width="440" height="440" rx="32" fill="#ffffff" />
-      <rect x="180" y="230" width="440" height="440" rx="32" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="3" />
-      
-      ${qrRects}
+      <rect x="158" y="238" width="484" height="484" rx="40" fill="url(#ringGrad)" />
+      <rect x="164" y="244" width="472" height="472" rx="35" fill="#ffffff" />
 
-      <rect x="260" y="700" width="280" height="46" rx="23" fill="#0f172a" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" />
-      <text x="400" y="729" text-anchor="middle" fill="#38bdf8" font-family="monospace" font-size="16" font-weight="800" letter-spacing="3">CODE: ${gymCode}</text>
+      <g transform="translate(${qrX} ${qrY}) scale(${cell})" fill="#0a1020">
+        ${art.eyes}
+        ${art.dots}
+      </g>
 
-      <text x="400" y="795" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="20" font-weight="800">Scan with GymDeck Member App</text>
-      <text x="400" y="828" text-anchor="middle" fill="#94a3b8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="14" font-weight="500">Open Member App &gt; Check-in &gt; Point camera at this pass to verify attendance</text>
-      
-      <line x1="80" y1="880" x2="720" y2="880" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" />
-      <text x="400" y="920" text-anchor="middle" fill="#64748b" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5">GYMDECK CLOUD ATTENDANCE INFRASTRUCTURE</text>
-      <text x="400" y="945" text-anchor="middle" fill="#475569" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="11" font-weight="600">END-TO-END ENCRYPTED • INSTANT LOCAL &amp; CLOUD SYNCHRONIZATION</text>
+      <rect x="286" y="760" width="228" height="44" rx="22" fill="#0a1424" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" />
+      <text x="400" y="788" text-anchor="middle" fill="#7dd3fc" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="800" letter-spacing="3">${gymCode}</text>
+
+      <text x="400" y="852" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="21" font-weight="800">Scan with the GymDeck Member App</text>
+      <text x="400" y="882" text-anchor="middle" fill="#94a3b8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="13" font-weight="500">Open the app at the front desk and point the camera at this pass</text>
+
+      <line x1="90" y1="926" x2="710" y2="926" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" />
+      <text x="400" y="962" text-anchor="middle" fill="#64748b" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="12" font-weight="700" letter-spacing="1.5">GYMDECK CLOUD ATTENDANCE INFRASTRUCTURE</text>
+      <text x="400" y="988" text-anchor="middle" fill="#475569" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="11" font-weight="600">END-TO-END ENCRYPTED • INSTANT LOCAL &amp; CLOUD SYNCHRONIZATION</text>
     </svg>`;
 
     const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
@@ -418,16 +405,8 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
     const gymName = gymInfo.name || "GymDeck Facility";
     const gymCode = gymInfo.code || "GDK-8821";
 
-    const modules = qrMatrix.length;
-    const cellSize = 240 / modules;
-    let qrRects = "";
-    qrMatrix.forEach((row, r) => {
-      row.forEach((filled, c) => {
-        if (filled) {
-          qrRects += `<rect x="${c * cellSize}" y="${r * cellSize}" width="${cellSize + 0.2}" height="${cellSize + 0.2}" fill="#0f172a" rx="1" />\n`;
-        }
-      });
-    });
+    const art = buildQrArtwork(qrMatrix);
+    const qrTotal = qrMatrix.length + QR_QUIET_ZONE * 2;
 
     const printWindow = window.open("", "_blank", "width=850,height=1000");
     if (!printWindow) {
@@ -456,11 +435,18 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
             .standee-card {
               width: 100%;
               max-width: 580px;
-              border: 3px solid #0f172a;
+              border: 2px solid #0f172a;
               border-radius: 28px;
-              padding: 40px 32px;
+              padding: 32px;
               text-align: center;
               box-sizing: border-box;
+            }
+            .accent {
+              width: 62%;
+              height: 6px;
+              margin: 0 auto 24px;
+              border-radius: 9999px;
+              background: linear-gradient(90deg, #818cf8, #22d3ee, #34d399);
             }
             .badge {
               display: inline-block;
@@ -490,11 +476,12 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
             }
             .qr-wrapper {
               display: inline-block;
-              padding: 24px;
+              padding: 18px;
               background: #ffffff;
               border: 2px solid #e2e8f0;
-              border-radius: 24px;
-              margin-bottom: 24px;
+              border-radius: 26px;
+              box-shadow: 0 8px 22px -12px rgba(15, 23, 42, 0.35);
+              margin-bottom: 22px;
             }
             .code-box {
               display: inline-block;
@@ -532,12 +519,17 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
         </head>
         <body>
           <div class="standee-card">
+            <div class="accent"></div>
             <div class="badge">Official Attendance Pass</div>
             <h1 class="title">${gymName}</h1>
             <p class="subtitle">Daily Member Check-In Gateway</p>
             <div class="qr-wrapper">
-              <svg width="240" height="240" viewBox="0 0 240 240">
-                ${qrRects}
+              <svg width="248" height="248" viewBox="${-QR_QUIET_ZONE} ${-QR_QUIET_ZONE} ${qrTotal} ${qrTotal}" shape-rendering="geometricPrecision">
+                <rect x="${-QR_QUIET_ZONE}" y="${-QR_QUIET_ZONE}" width="${qrTotal}" height="${qrTotal}" fill="#ffffff" />
+                <g fill="#0a1020">
+                  ${art.eyes}
+                  ${art.dots}
+                </g>
               </svg>
             </div>
             <div>
@@ -561,12 +553,17 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
     printWindow.document.close();
   };
 
-  const qrSize = 160;
-  const cellSize = qrSize / qrMatrix.length;
+  const modules = qrMatrix.length;
+  const qrTotal = modules + QR_QUIET_ZONE * 2;
+  const finderOrigins = [
+    [0, 0],
+    [modules - 7, 0],
+    [0, modules - 7]
+  ];
 
   return (
     <div
-      className="rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between h-full border border-slate-800/80"
+      className="rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden flex flex-col h-full border border-slate-800/80"
       style={{
         background: "radial-gradient(circle at 75% 25%, #152747 0%, #0d1b32 38%, #081222 72%, #030712 100%)",
         boxShadow: "0 20px 48px -12px rgba(2, 6, 23, 0.7), 0 0 25px -8px rgba(56, 189, 248, 0.2)",
@@ -578,79 +575,96 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
 
       {/* Card Header */}
-      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-4 border-b border-white/10">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-xs" />
-            <h2 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-1.5">
-              <QrCode size={14} className="text-cyan-400" /> Facility Attendance QR Pass
+      <div className="relative z-10 flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-cyan-400/25 bg-cyan-400/10">
+              <QrCode size={13} className="text-cyan-300" />
+            </span>
+            <h2 className="text-[11px] font-black uppercase tracking-[0.16em] text-white">
+              Facility Attendance Pass
             </h2>
-            <span
-              className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                background: "rgba(56, 189, 248, 0.12)",
-                border: "1px solid rgba(56, 189, 248, 0.3)",
-                color: "#7dd3fc"
-              }}
-            >
+            <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[8.5px] font-black uppercase tracking-[0.12em] text-emerald-300">
               Permanent
             </span>
           </div>
-          <p className="text-[11px] font-normal text-slate-300">
-            Official check-in pass. Members scan using the GymDeck Member App to log daily attendance.
+          <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+            One pass per facility. Members scan it to log daily attendance.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div
-            className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-slate-200 flex items-center gap-1.5 shadow-2xs"
-            style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.15)"
-            }}
-          >
-            <ShieldCheck size={12} className="text-emerald-400" />
-            <span>{gymInfo.code}</span>
-          </div>
+        <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[10px] font-mono font-bold tracking-wide text-slate-200">
+          <ShieldCheck size={12} className="text-emerald-400" />
+          <span>{gymInfo.code}</span>
         </div>
       </div>
 
       {/* Main Body */}
-      <div className="relative z-10 my-4 flex flex-col md:flex-row items-center gap-6">
-        {/* Left: High-Definition QR Pass */}
-        <div className="shrink-0 flex flex-col items-center">
+      <div className="relative z-10 my-5 flex flex-1 flex-col items-center gap-5 md:flex-row md:items-stretch">
+        {/* Left: scannable facility pass */}
+        <div className="relative shrink-0 self-center md:self-auto">
           <div
-            className="p-3 bg-white rounded-2xl relative group/qr flex flex-col items-center justify-center transition-transform hover:scale-[1.02]"
+            className="pointer-events-none absolute -inset-3 rounded-[34px] opacity-70 blur-2xl"
             style={{
-              boxShadow: "0 16px 36px -8px rgba(0, 0, 0, 0.6), 0 0 24px rgba(56, 189, 248, 0.25)",
-              border: "2px solid rgba(255, 255, 255, 0.95)"
+              background:
+                "radial-gradient(circle at 28% 18%, rgba(99,102,241,0.55), transparent 62%), radial-gradient(circle at 78% 86%, rgba(34,211,238,0.45), transparent 60%)"
+            }}
+          />
+          <div
+            className="relative rounded-[26px] p-[2px] transition-transform duration-300 hover:scale-[1.02]"
+            style={{
+              background: "linear-gradient(140deg, #818cf8 0%, #22d3ee 52%, #34d399 100%)",
+              boxShadow: "0 20px 40px -16px rgba(2, 6, 23, 0.95)"
             }}
           >
-            <div className="absolute top-1.5 left-1.5 w-2 h-2 border-t-2 border-l-2 border-slate-900 rounded-tl" />
-            <div className="absolute top-1.5 right-1.5 w-2 h-2 border-t-2 border-r-2 border-slate-900 rounded-tr" />
-            <div className="absolute bottom-1.5 left-1.5 w-2 h-2 border-b-2 border-l-2 border-slate-900 rounded-bl" />
-            <div className="absolute bottom-1.5 right-1.5 w-2 h-2 border-b-2 border-r-2 border-slate-900 rounded-br" />
-
-            <svg width={qrSize} height={qrSize} viewBox={`0 0 ${qrSize} ${qrSize}`} className="shrink-0">
-              {qrMatrix.map((row, r) =>
-                row.map((filled, c) =>
-                  filled ? (
-                    <rect
-                      key={`${r}-${c}`}
-                      x={c * cellSize}
-                      y={r * cellSize}
-                      width={cellSize + 0.2}
-                      height={cellSize + 0.2}
-                      fill="#090d16"
-                      rx="0.8"
-                    />
-                  ) : null
-                )
-              )}
-            </svg>
-          </div>
-          <div className="text-[9px] font-mono text-cyan-300 font-bold mt-1.5 tracking-wider truncate max-w-[140px] text-center">
-            {gymInfo.code}
+            <div className="rounded-[24px] bg-white p-2.5 sm:p-3">
+              <svg
+                viewBox={`${-QR_QUIET_ZONE} ${-QR_QUIET_ZONE} ${qrTotal} ${qrTotal}`}
+                className="block h-[176px] w-[176px] sm:h-[200px] sm:w-[200px] xl:h-[224px] xl:w-[224px]"
+                shapeRendering="geometricPrecision"
+                style={{ stroke: "none" }}
+                role="img"
+                aria-label={`Attendance check-in QR code for ${gymInfo.name}`}
+              >
+                <defs>
+                  <linearGradient
+                    id="gymQrInk"
+                    gradientUnits="userSpaceOnUse"
+                    x1="0"
+                    y1="0"
+                    x2={modules}
+                    y2={modules}
+                  >
+                    <stop offset="0%" stopColor="#0b1220" />
+                    <stop offset="52%" stopColor="#101d34" />
+                    <stop offset="100%" stopColor="#0a2b3d" />
+                  </linearGradient>
+                </defs>
+                <rect
+                  x={-QR_QUIET_ZONE}
+                  y={-QR_QUIET_ZONE}
+                  width={qrTotal}
+                  height={qrTotal}
+                  fill="#ffffff"
+                />
+                <g fill="url(#gymQrInk)">
+                  {qrMatrix.map((row, r) =>
+                    row.map((filled, c) =>
+                      filled && !isFinderModule(r, c, modules) ? (
+                        <rect key={`m-${r}-${c}`} x={c} y={r} width="1" height="1" rx="0.22" />
+                      ) : null
+                    )
+                  )}
+                  {finderOrigins.map(([x, y]) => (
+                    <g key={`eye-${x}-${y}`}>
+                      <rect x={x} y={y} width="7" height="7" rx="2" />
+                      <rect x={x + 1} y={y + 1} width="5" height="5" rx="1.35" fill="#ffffff" />
+                      <rect x={x + 2} y={y + 2} width="3" height="3" rx="0.9" />
+                    </g>
+                  ))}
+                </g>
+              </svg>
+            </div>
           </div>
         </div>
 
@@ -663,63 +677,70 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
                 {gymInfo.name}
               </h3>
             </div>
-            <p className="text-[11px] text-slate-300 font-normal leading-relaxed mt-1">
-              Generated automatically and permanently tied to this facility. Print or display at front-desk turnstiles for touchless member check-ins.
+            <p className="mt-1 text-[11px] font-normal leading-relaxed text-slate-400">
+              Generated once and permanently bound to this facility. Members scan it with the GymDeck Member App at the front desk.
             </p>
 
-            <div className="grid grid-cols-2 gap-2 mt-3 text-[10px]">
-              <div
-                className="p-2 rounded-xl text-slate-200"
-                style={{
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)"
-                }}
-              >
-                <span className="text-slate-400 font-medium block">Scanner Engine</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Member App Ready
-                </span>
-              </div>
-              <div
-                className="p-2 rounded-xl text-slate-200"
-                style={{
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)"
-                }}
-              >
-                <span className="text-slate-400 font-medium block">Verification Latency</span>
-                <span className="font-bold text-slate-200 mt-0.5 block">&lt; 0.28ms Instant</span>
-              </div>
-            </div>
+            <dl className="mt-4 grid grid-cols-2 gap-2">
+              {[
+                { key: "code", label: "Facility code", value: gymInfo.code, mono: true },
+                { key: "status", label: "Pass status", value: "Active", live: true },
+                { key: "encoding", label: "Encoding", value: `QR \u00b7 ECC Q \u00b7 ${modules}\u00d7${modules}` },
+                { key: "scope", label: "Check-in scope", value: "All member accounts" }
+              ].map((fact) => (
+                <div
+                  key={fact.key}
+                  className="min-w-0 rounded-xl px-2.5 py-2"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid rgba(255, 255, 255, 0.09)"
+                  }}
+                >
+                  <dt className="text-[8.5px] font-black uppercase tracking-[0.12em] text-slate-500">
+                    {fact.label}
+                  </dt>
+                  <dd
+                    className={cn(
+                      "mt-1 flex min-w-0 items-center gap-1 truncate text-[10px] font-bold text-slate-100",
+                      fact.mono && "font-mono font-semibold tracking-tight"
+                    )}
+                  >
+                    {fact.live && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 animate-pulse" />}
+                    <span className="truncate">{fact.value}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           {/* Action Buttons Row */}
-          <div className="flex flex-wrap items-center gap-2 mt-4">
+          <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
             <button
               type="button"
               onClick={handleDownloadStandee}
-              className="h-8 px-3 rounded-lg text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer bg-indigo-600 hover:bg-indigo-500"
+              className="flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+              style={{ background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)" }}
             >
-              <Download size={12} strokeWidth={2.2} />
-              <span>Download SVG</span>
+              <Download size={13} strokeWidth={2.2} />
+              <span>Download Standee</span>
             </button>
 
             <button
               type="button"
               onClick={handlePrintStandee}
-              className="h-8 px-3 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border border-white/20 hover:border-white/30 bg-white/10"
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.07] px-3.5 text-[10px] font-semibold uppercase tracking-wider text-slate-200 transition-all hover:border-white/25 hover:bg-white/[0.12] hover:text-white cursor-pointer"
             >
-              <Printer size={12} strokeWidth={1.75} />
-              <span>Print Standee</span>
+              <Printer size={13} strokeWidth={1.75} />
+              <span>Print</span>
             </button>
 
             <button
               type="button"
               onClick={handleCopyLink}
-              className="h-8 px-3 rounded-lg text-slate-200 hover:text-white text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border border-white/20 hover:border-white/30 bg-white/10"
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.07] px-3.5 text-[10px] font-semibold uppercase tracking-wider text-slate-200 transition-all hover:border-white/25 hover:bg-white/[0.12] hover:text-white cursor-pointer"
             >
-              {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} strokeWidth={1.75} />}
-              <span>{copied ? "Copied" : "Copy Portal"}</span>
+              {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} strokeWidth={1.75} />}
+              <span>{copied ? "Copied" : "Copy Link"}</span>
             </button>
           </div>
         </div>
@@ -732,7 +753,7 @@ function InstantCheckIn({ gymInfo, qrMatrix }) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-2 inset-x-6 z-30 py-1.5 px-3 rounded-lg bg-slate-900 text-cyan-300 text-[10px] font-semibold border border-cyan-500/30 flex items-center justify-center gap-2 shadow-lg"
+            className="pointer-events-none absolute bottom-4 right-4 z-30 flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-slate-950/95 px-3 py-1.5 text-[10px] font-semibold text-cyan-300 shadow-lg"
           >
             <CheckCircle2 size={12} className="text-cyan-400" />
             <span>{notification}</span>
@@ -764,7 +785,7 @@ function LiveFeed({ logs = [], onCheckOut }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1 mt-3 space-y-3 custom-scrollbar min-h-[220px]">
+      <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
         {recentLogs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 my-auto">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-2">
@@ -992,13 +1013,7 @@ const DailyCheckinPage = () => {
   const loadGymQr = useCallback(async () => {
     setGymQr((prev) => ({ ...prev, status: "loading", error: null }));
     try {
-      if (!window.__TAURI__?.core?.invoke) {
-        throw new Error("The attendance pass requires the GymDeck desktop runtime.");
-      }
-      const record = await window.__TAURI__.core.invoke("get_gym_checkin_qr_command");
-      if (!record?.qrPayload) {
-        throw new Error("No attendance pass was returned for this gym.");
-      }
+      const record = await loadGymCheckinPass();
       setGymQr({ status: "ready", data: record, error: null });
     } catch (e) {
       setGymQr({
@@ -1316,7 +1331,7 @@ const DailyCheckinPage = () => {
         {/* ════════════════════════════════════════════════════════════
             2. REAL FINANCIAL & ATTENDANCE KPI RIBBON
         ════════════════════════════════════════════════════════════ */}
-        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           <StatTile
             label="Today's Visits"
             value={kpis.totalVisits}
@@ -1364,27 +1379,28 @@ const DailyCheckinPage = () => {
         {/* ════════════════════════════════════════════════════════════
             3. OPERATIONAL GATEWAY: STANDEE & LIVE STREAM
         ════════════════════════════════════════════════════════════ */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[310px]">
+        <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
           <div className="lg:col-span-7 xl:col-span-8 h-full">
             {gymQr.status === "ready" && gymInfo && qrMatrix ? (
               <InstantCheckIn gymInfo={gymInfo} qrMatrix={qrMatrix} />
             ) : (
               <div
-                className="rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-center h-full border border-slate-800/80"
+                className="relative flex h-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-slate-800/80 p-6 text-center shadow-xl"
                 style={{
-                  background: "radial-gradient(circle at 75% 25%, #152747 0%, #0d1b32 38%, #081222 72%, #030712 100%)",
+                  background:
+                    "radial-gradient(circle at 50% 0%, #152747 0%, #0d1b32 42%, #081222 74%, #030712 100%)",
                   color: "#ffffff"
                 }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <QrCode size={15} className="text-cyan-400" />
-                  <h2 className="text-xs font-black uppercase tracking-widest">
-                    {gymQr.status === "loading"
-                      ? "Provisioning facility attendance pass"
-                      : "Facility attendance pass unavailable"}
-                  </h2>
-                </div>
-                <p className="text-[11px] text-slate-300 max-w-md leading-relaxed">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-400/10">
+                  <QrCode size={20} className="text-cyan-300" />
+                </span>
+                <h2 className="text-[11px] font-black uppercase tracking-[0.16em] text-white">
+                  {gymQr.status === "loading"
+                    ? "Provisioning facility pass"
+                    : "Facility pass unavailable"}
+                </h2>
+                <p className="max-w-sm text-[11px] leading-relaxed text-slate-400">
                   {gymQr.status === "loading"
                     ? "Loading this gym's unique, permanent check-in QR pass from the encrypted vault."
                     : gymQr.error}
@@ -1393,7 +1409,8 @@ const DailyCheckinPage = () => {
                   <button
                     type="button"
                     onClick={loadGymQr}
-                    className="mt-4 h-8 w-fit px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer bg-indigo-600 hover:bg-indigo-500"
+                    className="mt-1 flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[10px] font-bold uppercase tracking-wider text-white transition-all hover:brightness-110 cursor-pointer"
+                    style={{ background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)" }}
                   >
                     <RefreshCw size={12} />
                     <span>Retry</span>
@@ -1410,8 +1427,8 @@ const DailyCheckinPage = () => {
         {/* ════════════════════════════════════════════════════════════
             4. COMMAND CENTER & CUSTOM FILTER TOOLBAR
         ════════════════════════════════════════════════════════════ */}
-        <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3.5">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+        <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <div className="grid grid-cols-1 items-center gap-3 lg:grid-cols-12">
             {/* Search Bar with Perfect Center Alignment */}
             <div className="lg:col-span-5">
               <div className="group relative flex items-center w-full">
@@ -1449,7 +1466,7 @@ const DailyCheckinPage = () => {
             </div>
 
             {/* Status Pills */}
-            <div className="lg:col-span-7 flex items-center overflow-x-auto gap-1.5 pb-1 lg:pb-0 custom-scrollbar">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar lg:col-span-7 lg:pb-0">
               {[
                 { id: "All", label: "All Logs Today", count: todayLogs.length },
                 {
@@ -1477,7 +1494,7 @@ const DailyCheckinPage = () => {
                       setStatusFilter(tab.id);
                       setCurrentPage(1);
                     }}
-                    className={`h-9 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
+                    className={`h-10 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
                       isActive
                         ? "bg-slate-900 border-slate-900 text-white shadow-2xs"
                         : "bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100"

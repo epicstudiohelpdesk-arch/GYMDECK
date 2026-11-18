@@ -25,6 +25,8 @@ import {
   Layers,
   Maximize2,
   Minus,
+  Pencil,
+  Percent,
   Phone,
   Plus,
   Printer,
@@ -48,7 +50,7 @@ import {
   Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { qrcode } from "./qr-lib.js";
+import { buildMerchantUpiQrSvg, buildMerchantUpiUri } from "./upiQr.js";
 import { paymentsV2Api } from "./paymentsV2Api.js";
 import { ErrorBoundary } from "./ErrorHandlers.jsx";
 
@@ -177,7 +179,12 @@ const CollectFeesPage = () => {
 
   // Invoice & Pricing State
   const [invoiceItems, setInvoiceItems] = useState([]);
-  const [discountValue, setDiscountValue] = useState(0);
+  // Invoice-level discount: the owner chooses a flat amount or a percentage and
+  // types the value here; the rupee figure is derived from the live subtotal.
+  const [discountMode, setDiscountMode] = useState("amount"); // amount | percent
+  const [discountInput, setDiscountInput] = useState("");
+  const [isDiscountEditorOpen, setIsDiscountEditorOpen] = useState(false);
+  const discountEditorRef = useRef(null);
   const [applyGst, setApplyGst] = useState(false); // 18% GST toggle (default unchecked)
   const [includePastDues, setIncludePastDues] = useState(true); // Past dues clearance toggle
   const [paymentMethod, setPaymentMethod] = useState("UPI"); // UPI | Cash | Card | BankTransfer
@@ -200,36 +207,47 @@ const CollectFeesPage = () => {
   const [isFullscreenQr, setIsFullscreenQr] = useState(false);
   const [completedTxn, setCompletedTxn] = useState(null);
 
-  // Receiving Bank Configuration State
+  // Receiving Bank Configuration State — hydrated from the same vault table
+  // (gym_payment_accounts) that Settings → Banking & Settlement writes to, so
+  // the UPI QR here is always the merchant QR the owner saved there.
   const [receivingAccount, setReceivingAccount] = useState(() => {
+    const empty = {
+      bankId: "",
+      bankName: "",
+      accountHolder: "",
+      accountNumberMasked: "",
+      accountType: "",
+      branch: "",
+      ifsc: "",
+      upiVpa: "",
+      phone: "",
+      isVerified: false
+    };
     const saved = localStorage.getItem("gymdeck_active_receiving_account");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed?.upiVpa) return parsed;
+        if (parsed?.upiVpa) return { ...empty, ...parsed };
       } catch (e) {}
     }
-    return {
-      bankId: "hdfc",
-      bankName: "HDFC Bank",
-      accountHolder: "Indians Gym Fitness Studio",
-      accountNumberMasked: "•••• •••• 8492",
-      accountType: "Current Account",
-      branch: "Capital Commercial Complex",
-      ifsc: "HDFC0001042",
-      upiVpa: "indiansgym@okhdfcbank",
-      phone: "+91 98765 43210",
-      isVerified: true
-    };
+    return empty;
   });
+  const [receivingAccountLoaded, setReceivingAccountLoaded] = useState(false);
 
   // Fetch authoritative Payment Account from the per-gym local DB & Expired Members from Tauri SQLite
   useEffect(() => {
     // 1. Fetch accounts persisted to this gym's secure local database
     paymentsV2Api.listAccounts()
       .then((res) => {
-        if (res?.data?.accounts && res.data.accounts.length > 0) {
-          const primary = res.data.accounts.find(a => a.isPrimary && a.upiVpa) || res.data.accounts.find(a => a.upiVpa) || res.data.accounts[0];
+        const accounts = res?.data?.accounts || [];
+        // Only accounts that carry a merchant UPI ID can produce this QR, and a
+        // disabled rail must never be offered to members (matches the UPI list in
+        // Settings → Banking & Settlement).
+        const upiAccounts = accounts.filter(
+          (a) => a?.upiVpa && a.verificationStatus !== "DISABLED" && a.status !== "DISABLED"
+        );
+        const primary = upiAccounts.find((a) => a.isPrimary) || upiAccounts[0];
+        if (primary) {
           const mapped = {
             bankId: (primary.bankName || "bank").toLowerCase().replace(/\s+/g, ""),
             bankName: primary.bankName || "",
@@ -242,13 +260,14 @@ const CollectFeesPage = () => {
             phone: "",
             isVerified: primary.status === "VERIFIED"
           };
-          setReceivingAccount(mapped);
+          setReceivingAccount({ ...mapped });
           localStorage.setItem("gymdeck_active_receiving_account", JSON.stringify(mapped));
         }
       })
       .catch((err) => {
         console.warn("Could not fetch remote payment accounts, using local cache:", err);
-      });
+      })
+      .finally(() => setReceivingAccountLoaded(true));
 
     // 2. Fetch native SQLite members and plans if available
     if (typeof window !== "undefined" && window.__TAURI__?.core?.invoke) {
@@ -363,6 +382,13 @@ const CollectFeesPage = () => {
     return includePastDues ? selectedMember.pendingDues : 0;
   }, [selectedMember, includePastDues]);
 
+  const discountValue = useMemo(() => {
+    const raw = Number(discountInput);
+    if (!Number.isFinite(raw) || raw <= 0 || subtotal <= 0) return 0;
+    const capped = discountMode === "percent" ? (subtotal * Math.min(raw, 100)) / 100 : raw;
+    return Math.max(0, Math.min(Math.round(capped * 100) / 100, subtotal));
+  }, [discountInput, discountMode, subtotal]);
+
   const tax = useMemo(() => {
     if (!applyGst) return 0;
     return Math.max(0, (subtotal - discountValue) * 0.18);
@@ -379,34 +405,15 @@ const CollectFeesPage = () => {
     return rec - totalPayable;
   }, [cashTendered, totalPayable]);
 
-  // NPCI Standard UPI Intent URI
-  const upiUri = useMemo(() => {
-    if (!receivingAccount.upiVpa) return "";
-    const vpa = receivingAccount.upiVpa.trim();
-    const name = encodeURIComponent(receivingAccount.accountHolder || "Gym Beneficiary");
-    const amount = totalPayable.toFixed(2);
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const note = encodeURIComponent(`Renewal ${selectedMember?.name || "Member"}`);
-    return `upi://pay?pa=${vpa}&pn=${name}&am=${amount}&cu=INR&tn=${note}&tr=${invoiceNumber}`;
-  }, [receivingAccount, totalPayable, selectedMember]);
+  // Merchant UPI intent — built by the same helper Settings → Banking & Settlement
+  // uses, so this QR and the one shown there encode exactly the same thing.
+  const upiUri = useMemo(
+    () => buildMerchantUpiUri({ vpa: receivingAccount.upiVpa, name: receivingAccount.accountHolder }),
+    [receivingAccount.upiVpa, receivingAccount.accountHolder]
+  );
 
-  // Pure Vector SVG QR Code Engine
-  const qrSvgString = useMemo(() => {
-    if (!upiUri) return null;
-    try {
-      const qr = qrcode(0, "H");
-      qr.addData(upiUri);
-      qr.make();
-      return qr.createSvgTag({
-        cellSize: 6,
-        margin: 2,
-        scalable: true
-      });
-    } catch (err) {
-      console.error("Failed to generate vector UPI QR code:", err);
-      return null;
-    }
-  }, [upiUri]);
+  // Pure Vector SVG QR Code Engine (shared merchant encoder)
+  const qrSvgString = useMemo(() => buildMerchantUpiQrSvg(upiUri), [upiUri]);
 
   // Filtered Expired Members list for Left Column
   const filteredMembers = useMemo(() => {
@@ -606,6 +613,8 @@ const CollectFeesPage = () => {
     setEnteredUtr("");
     setPosSlipRef("");
     setCashTendered("");
+    setDiscountInput("");
+    setIsDiscountEditorOpen(false);
     if (selectedMember) {
       setInvoiceItems([
         { id: Date.now(), name: `${selectedMember.plan || "Membership"} Renewal`, qty: 1, price: selectedMember.planPrice || 3500, discount: 0 }
@@ -614,6 +623,22 @@ const CollectFeesPage = () => {
       setInvoiceItems([]);
     }
   }, [selectedMember]);
+
+  // Close the discount editor when clicking anywhere outside it.
+  useEffect(() => {
+    if (!isDiscountEditorOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (discountEditorRef.current && !discountEditorRef.current.contains(event.target)) {
+        setIsDiscountEditorOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isDiscountEditorOpen]);
 
   // Handle click outside to close the gym plan dropdown
   useEffect(() => {
@@ -668,10 +693,10 @@ const CollectFeesPage = () => {
     setPlanSearchQuery("");
   }, []);
 
-  // Copy Link
+  // Copy the merchant UPI ID (the VPA, not the intent URI)
   const handleCopyLink = () => {
-    if (!upiUri) return;
-    navigator.clipboard.writeText(upiUri);
+    if (!receivingAccount.upiVpa) return;
+    navigator.clipboard.writeText(receivingAccount.upiVpa);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -692,6 +717,7 @@ const CollectFeesPage = () => {
 
   // Print Desk Standee (Official Acrylic Merchant Standee)
   const handlePrintStandee = () => {
+    if (!qrSvgString) return;
     const printWindow = window.open("", "_blank", "width=600,height=800");
     if (!printWindow) return;
     printWindow.document.write(`
@@ -1751,18 +1777,110 @@ const CollectFeesPage = () => {
                     <span>Discount</span>
                     <button
                       type="button"
-                      onClick={() => setDiscountValue(discountValue ? 0 : 500)}
-                      className="text-[10px] font-black text-indigo-600 hover:underline cursor-pointer"
+                      onClick={() => setIsDiscountEditorOpen((open) => !open)}
+                      aria-expanded={isDiscountEditorOpen}
+                      className="inline-flex items-center gap-1 text-[10px] font-black text-indigo-600 hover:underline cursor-pointer"
                     >
-                      {discountValue ? "Remove Discount" : "Apply ₹500"}
+                      <Pencil size={10} />
+                      {discountValue > 0
+                        ? `Edit (${discountMode === "percent" ? `${Number(discountInput) || 0}%` : "flat"})`
+                        : "Add discount"}
                     </button>
+                    {discountValue > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setDiscountInput("")}
+                        className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-emerald-600 font-bold font-mono">
+                    <span className={`font-bold font-mono ${discountValue > 0 ? "text-emerald-600" : "text-slate-400"}`}>
                       -{currencyFormatter.format(discountValue)}
                     </span>
                   </div>
                 </div>
+
+                {isDiscountEditorOpen && (
+                  <div
+                    ref={discountEditorRef}
+                    className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-2.5 space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-0.5 rounded-lg bg-white p-0.5 border border-slate-200" role="group" aria-label="Discount type">
+                        {[
+                          { id: "amount", label: "₹ Flat" },
+                          { id: "percent", label: "% Percent" }
+                        ].map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            aria-pressed={discountMode === option.id}
+                            onClick={() => setDiscountMode(option.id)}
+                            className={`inline-flex h-6 items-center rounded-md px-2 text-[10px] font-black transition-colors ${
+                              discountMode === option.id ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-900"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsDiscountEditorOpen(false)}
+                        className="inline-flex h-6 items-center gap-1 rounded-md px-2 text-[10px] font-black text-slate-500 hover:text-slate-900"
+                      >
+                        <Check size={11} /> Done
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400">
+                          {discountMode === "percent" ? "%" : "₹"}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={discountMode === "percent" ? 100 : subtotal}
+                          step={discountMode === "percent" ? 1 : 50}
+                          inputMode="decimal"
+                          value={discountInput}
+                          onChange={(event) => setDiscountInput(event.target.value)}
+                          onKeyDown={(event) => { if (event.key === "Enter") setIsDiscountEditorOpen(false); }}
+                          aria-label={discountMode === "percent" ? "Discount percentage" : "Discount amount in rupees"}
+                          placeholder={discountMode === "percent" ? "10" : "500"}
+                          className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-7 pr-2 text-xs font-bold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold font-mono text-emerald-600">
+                        −{currencyFormatter.format(discountValue)}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1">
+                      {(discountMode === "percent" ? [5, 10, 15, 20] : [100, 500, 1000, 2500]).map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setDiscountInput(String(preset))}
+                          className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 hover:border-indigo-200 hover:text-indigo-600"
+                        >
+                          {discountMode === "percent" ? `${preset}%` : `₹${preset}`}
+                        </button>
+                      ))}
+                    </div>
+
+                    <p className="text-[10px] font-medium leading-snug text-slate-400">
+                      {discountMode === "percent"
+                        ? `${Number(discountInput) || 0}% of the ${currencyFormatter.format(subtotal)} subtotal`
+                        : `Taken off the ${currencyFormatter.format(subtotal)} subtotal`}
+                      {" · applies before GST · capped at subtotal"}
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between text-slate-600 font-medium">
                   <div className="flex items-center gap-2">
@@ -1872,24 +1990,19 @@ const CollectFeesPage = () => {
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-center gap-5 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
-                    {/* High-res Vector QR Code */}
+                    {/* Merchant UPI QR — the exact symbol Banking & Settlement renders */}
                     <div className="bg-white p-2.5 rounded-xl shadow-lg flex items-center justify-center relative w-40 h-40 shrink-0">
                       {qrSvgString ? (
-                        <>
-                          <div
-                            className="w-full h-full flex items-center justify-center"
-                            dangerouslySetInnerHTML={{ __html: qrSvgString }}
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="w-7 h-7 bg-slate-900 border-2 border-white rounded-lg flex items-center justify-center text-white font-black text-[9px] shadow-md">
-                              GD
-                            </div>
-                          </div>
-                        </>
+                        <div
+                          className="w-full h-full flex items-center justify-center"
+                          dangerouslySetInnerHTML={{ __html: qrSvgString }}
+                        />
                       ) : (
                         <div className="text-center p-2 text-slate-400">
                           <QrCode size={30} className="mx-auto mb-1 opacity-50" />
-                          <span className="text-[10px] font-bold">QR Unavailable</span>
+                          <span className="text-[10px] font-bold block leading-tight">
+                            {receivingAccountLoaded ? "No UPI ID saved" : "Loading…"}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1901,19 +2014,31 @@ const CollectFeesPage = () => {
                           Settlement Account
                         </span>
                         <span className="text-xs font-black text-white block mt-0.5">
-                          {receivingAccount.accountHolder}
+                          {receivingAccount.accountHolder || (receivingAccountLoaded ? "Not configured" : "Loading…")}
                         </span>
                         <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-1 font-mono text-[11px] text-indigo-300 font-bold">
-                          <span>{receivingAccount.upiVpa}</span>
-                          <button
-                            type="button"
-                            onClick={handleCopyLink}
-                            className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
-                            title="Copy UPI String"
-                          >
-                            {copiedLink ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                          </button>
+                          <span>{receivingAccount.upiVpa || "—"}</span>
+                          {receivingAccount.upiVpa && (
+                            <button
+                              type="button"
+                              onClick={handleCopyLink}
+                              className="text-slate-400 hover:text-white transition-colors cursor-pointer p-0.5"
+                              title="Copy UPI ID"
+                            >
+                              {copiedLink ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                            </button>
+                          )}
                         </div>
+                        {receivingAccountLoaded && !receivingAccount.upiVpa && (
+                          <p className="text-[10px] text-amber-300/90 font-semibold mt-1.5 leading-snug">
+                            Add your UPI ID in Settings → Banking &amp; Settlement and it will appear here automatically.
+                          </p>
+                        )}
+                        {receivingAccount.upiVpa && totalPayable > 0 && (
+                          <p className="text-[10px] text-slate-400 font-semibold mt-1.5 leading-snug">
+                            Same merchant QR as Banking &amp; Settlement. Member enters {currencyFormatter.format(totalPayable)} in their UPI app.
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-center sm:justify-start gap-1.5 flex-wrap pt-1">
@@ -1932,10 +2057,22 @@ const CollectFeesPage = () => {
                           <Download size={11} /> Save SVG
                         </button>
                         <a
-                          href={`https://wa.me/?text=${encodeURIComponent(`Hi, please pay Gym Renewal Fees of ${currencyFormatter.format(totalPayable)} for ${selectedMember?.name} via UPI:\n${upiUri}`)}`}
+                          href={
+                            receivingAccount.upiVpa
+                              ? `https://wa.me/?text=${encodeURIComponent(`Hi, please pay Gym Renewal Fees of ${currencyFormatter.format(totalPayable)} for ${selectedMember?.name || "your membership"} to our UPI ID:\n${receivingAccount.upiVpa}`)}`
+                              : undefined
+                          }
+                          aria-disabled={!receivingAccount.upiVpa}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all"
+                          onClick={(e) => {
+                            if (!receivingAccount.upiVpa) e.preventDefault();
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-white text-[10px] font-bold flex items-center gap-1 transition-all ${
+                            receivingAccount.upiVpa
+                              ? "bg-emerald-600/80 hover:bg-emerald-600"
+                              : "bg-slate-700/60 cursor-not-allowed opacity-60"
+                          }`}
                         >
                           <Share2 size={11} /> WhatsApp
                         </a>
@@ -2068,11 +2205,11 @@ const CollectFeesPage = () => {
                         Direct Bank Settlement (IMPS / NEFT)
                       </span>
                       <h3 className="text-xs font-bold text-slate-800 mt-0.5">
-                        Direct credit to {receivingAccount.bankName}
+                        Direct credit to {receivingAccount.bankName || "your settlement account"}
                       </h3>
                     </div>
                     <span className="text-xs font-bold text-slate-500 font-mono">
-                      A/C: {receivingAccount.accountNumberMasked}
+                      A/C: {receivingAccount.accountNumberMasked || "—"}
                     </span>
                   </div>
 
@@ -2177,12 +2314,16 @@ const CollectFeesPage = () => {
                 <p className="text-xs font-medium text-slate-500 mb-6">Scan with Google Pay, PhonePe, Paytm, or BHIM</p>
 
                 <div className="w-72 h-72 bg-white p-4 rounded-3xl border-2 border-slate-100 shadow-xl flex items-center justify-center relative">
-                  <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: qrSvgString }} />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-12 h-12 bg-slate-900 border-2 border-white rounded-xl flex items-center justify-center text-white font-black text-sm shadow-md">
-                      GD
+                  {qrSvgString ? (
+                    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: qrSvgString }} />
+                  ) : (
+                    <div className="text-center text-slate-400 px-4">
+                      <QrCode size={40} className="mx-auto mb-2 opacity-50" />
+                      <span className="text-[11px] font-bold leading-snug block">
+                        No merchant UPI ID saved yet. Add one in Settings → Banking &amp; Settlement.
+                      </span>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="mt-6 text-center">

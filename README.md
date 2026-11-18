@@ -304,7 +304,7 @@ The GymDeck AI engine (`apps/member-mobile/src/services/ai/`) delivers edge comp
 
 ```
 DashboardWidgets      CollectFees           MemberDocuments       TrainerPerformance
-Agreements            DailyCheckin          MembershipGrowth      TrainerSchedule
+Agreements            DailyCheckin          MembershipGrowth      Inventory
 AllTrainers           DeviceSync            PastMembers           WelcomeOverlay
 AppSettings           ExpiringMemberships   Profile               RevenueReport
 AssignTrainer         GymProfile            PTClients             SendNotification

@@ -51,9 +51,7 @@ export class MediaEngine {
       'paths:',
     ];
 
-    if (routes.length === 0) {
-      lines.push('  all_others:');
-    }
+    lines.push('  all_others:');
 
     for (const r of routes) {
       lines.push(`  ${r.streamId}:`);

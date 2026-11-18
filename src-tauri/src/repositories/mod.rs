@@ -9,5 +9,8 @@ pub mod gym_qr_sync;
 pub mod member_repo;
 pub mod plan_repo;
 pub mod payment_account_repo;
+pub mod communication_settings_repo;
+pub mod gym_profile_repo;
+pub mod broadcast_queue_repo;
 pub mod payment_account_sync;
 pub mod sync_repo;

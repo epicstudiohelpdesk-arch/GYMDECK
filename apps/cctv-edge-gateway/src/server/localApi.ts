@@ -275,15 +275,21 @@ export class LocalApiServer {
                 fps
               );
 
-              // Register route in MediaMTX and ensure daemon is running
-              mediaMtxManager.registerRoute({
-                streamId: stream.id,
-                cameraId,
-                channelNumber: channelNumber || 1,
-                profile: profile || 'SUB',
-                rtspUrl,
-              });
-              mediaMtxManager.start().catch(() => {});
+              // If the route is already pointing to our internal MediaMTX RTSP listener (e.g. synthetic test publisher),
+              // do NOT register a loopback proxy route in config to prevent reload termination
+              const isLocalPublisher = rtspUrl.includes(`127.0.0.1:${mediaMtxManager.getStatus().rtspPort}`) ||
+                                       rtspUrl.includes(`localhost:${mediaMtxManager.getStatus().rtspPort}`);
+
+              if (!isLocalPublisher) {
+                mediaMtxManager.registerRoute({
+                  streamId: stream.id,
+                  cameraId,
+                  channelNumber: channelNumber || 1,
+                  profile: profile || 'SUB',
+                  rtspUrl,
+                });
+                mediaMtxManager.start().catch(() => {});
+              }
 
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(
@@ -498,12 +504,14 @@ export class LocalApiServer {
           req.on('data', (chunk) => (body += chunk));
           req.on('end', async () => {
             try {
-              const sdpOffer = body.trim();
+              // Ensure SDP ends with CRLF as required by RFC 4566 & MediaMTX SDP parser
+              let sdpOffer = body.trim();
               if (!sdpOffer.startsWith('v=0')) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Invalid SDP Offer' }));
                 return;
               }
+              sdpOffer += '\r\n';
 
               const localIp = gatewayIdentity.getFingerprint().localIp;
               const result = await whepGateway.handleOfferAsync(streamId, sdpOffer, remoteIp || '127.0.0.1', localIp);

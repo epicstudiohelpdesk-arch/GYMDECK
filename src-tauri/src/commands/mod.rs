@@ -5,4 +5,7 @@ pub mod sync_commands;
 pub mod backup_commands;
 pub mod cloud_enroll_commands;
 pub mod payment_account_commands;
+pub mod communication_settings_commands;
+pub mod gym_profile_commands;
+pub mod broadcast_queue_commands;
 pub mod system_commands;

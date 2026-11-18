@@ -1,4 +1,14 @@
 import BrandFooter from "./BrandFooter.jsx";
+import {
+  previewBroadcast,
+  getBroadcast,
+  listBroadcasts,
+  recordBroadcastResult,
+  cancelBroadcast,
+  deleteBroadcast,
+  openWhatsAppLink,
+  isTauri,
+} from "./broadcastQueue.js";
 import React, { useState, useMemo, useEffect, useCallback, useRef, Component } from "react";
 import {
   Send,
@@ -32,6 +42,7 @@ import {
   Globe,
   Bell,
   MessageCircle,
+  ExternalLink,
   FileText,
   Save,
   Trash2,
@@ -195,6 +206,57 @@ const HISTORY_SORT_OPTIONS = [
 
 const MOCK_HISTORY = [];
 
+// Composer intent → stored broadcast kind, so history can label the run again later.
+const BROADCAST_KIND_BY_TYPE = {
+  announcement: "ANNOUNCEMENT",
+  reminder: "REMINDER",
+  payment: "DUES_REMINDER",
+  pt: "PT_REMINDER",
+  promo: "PROMO",
+  emergency: "ALERT",
+};
+
+const BROADCAST_TYPE_BY_KIND = {
+  ANNOUNCEMENT: "Announcement",
+  REMINDER: "Reminder",
+  DUES_REMINDER: "Payment Alert",
+  PT_REMINDER: "PT Reminder",
+  PROMO: "Promo Campaign",
+  ALERT: "Emergency Alert",
+  CUSTOM: "Announcement",
+};
+
+const PLACEHOLDER_HINT =
+  "{first_name} {name} {plan} {amount} {due_date} {days_left} {gym_name} — filled in per member";
+
+/**
+ * A stored run reads like a broadcast history row, but keeps the raw vault id and the
+ * live counters so an unfinished queue can be resumed from history.
+ */
+const mapBroadcastToHistoryItem = (run) => {
+  const processed = (run.sentCount || 0) + (run.failedCount || 0);
+  return {
+    id: `BQ-${String(run.id || "").slice(0, 6).toUpperCase()}`,
+    rawId: run.id,
+    title: run.title || BROADCAST_TYPE_BY_KIND[run.messageKind] || "Broadcast",
+    type: BROADCAST_TYPE_BY_KIND[run.messageKind] || "Announcement",
+    preview: run.body || "",
+    recipients: run.recipientCount || 0,
+    delivered: run.sentCount || 0,
+    opened: 0,
+    clicked: 0,
+    channels: [String(run.channel || "WHATSAPP").toLowerCase()],
+    status: processed > 0 || run.status === "COMPLETED" ? "sent" : "scheduled",
+    runStatus: run.status,
+    queuedCount: run.queuedCount || 0,
+    failedCount: run.failedCount || 0,
+    skippedCount: run.skippedCount || 0,
+    timestamp: run.createdAt,
+    author: "Admin",
+    audience: run.audienceLabel || "Selected members",
+  };
+};
+
 // ─────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────
@@ -301,6 +363,26 @@ const SendNotification = () => {
   const [recipientSearch, setRecipientSearch] = useState("");
   const [activeSegment, setActiveSegment] = useState("all");
   const [historyList, setHistoryList] = useState(MOCK_HISTORY);
+
+  // Assisted WhatsApp send queue (null when closed). Each recipient carries the
+  // per-member message and the `wa.me` link built by the vault.
+  const [queue, setQueue] = useState(null);
+  const [queueBusy, setQueueBusy] = useState(false);
+  const [sendNotice, setSendNotice] = useState(null);
+
+  const refreshHistory = useCallback(async () => {
+    if (!isTauri()) return;
+    try {
+      const runs = await listBroadcasts(80);
+      setHistoryList(runs.map(mapBroadcastToHistoryItem));
+    } catch (err) {
+      console.warn("GymDeck: could not load broadcast history", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshHistory();
+  }, [refreshHistory]);
 
   // Sync with native backend if Tauri SQLite DB is available
   useEffect(() => {
@@ -486,12 +568,21 @@ const SendNotification = () => {
   };
 
   // Delete History Item
-  const handleDeleteHistoryItem = (id, e) => {
+  const handleDeleteHistoryItem = async (id, e) => {
     if (e) e.stopPropagation();
+    const target = historyList.find(item => item.id === id);
     setHistoryList(prev => prev.filter(item => item.id !== id));
     if (selectedHistoryItem?.id === id) {
       setDrawerOpen(false);
       setSelectedHistoryItem(null);
+    }
+    if (target?.rawId && isTauri()) {
+      try {
+        await deleteBroadcast(target.rawId);
+      } catch (err) {
+        console.warn("GymDeck: could not delete broadcast", err);
+        await refreshHistory();
+      }
     }
   };
 
@@ -501,34 +592,125 @@ const SendNotification = () => {
     );
   };
 
-  const handleSend = () => {
+  // Members still waiting for the owner to send their message.
+  const queuedRecipients = useMemo(
+    () => (queue ? queue.recipients.filter(r => r.status === "QUEUED") : []),
+    [queue]
+  );
+  const currentRecipient = queuedRecipients[0] || null;
+  const queueTotal = queue ? queue.recipients.length : 0;
+
+  /**
+   * Starts a real assisted run: the vault resolves the audience, renders each member's
+   * message and hands back click-to-chat links. Nothing is sent until the owner taps
+   * "Open WhatsApp & Send" on each card.
+   */
+  const handleSend = async () => {
+    if (isSending) return;
     if (!messageTitle || !messageContent || selectedChannels.length === 0 || selectedMemberIds.length === 0) return;
+
+    if (!selectedChannels.includes("whatsapp")) {
+      setSendNotice("Assisted WhatsApp delivery is the only rail wired in this build. Select WhatsApp to continue.");
+      return;
+    }
+    if (!isTauri()) {
+      setSendNotice("The WhatsApp send queue runs inside the GymDeck desktop app, where it can write to the encrypted vault.");
+      return;
+    }
+
+    const selectedMembers = membersList.filter(member => selectedMemberIds.includes(member.id));
+    const memberIds = selectedMembers.map(member => member.rawId).filter(Boolean);
+    if (memberIds.length === 0) {
+      setSendNotice("These members are not linked to a vault record yet, so no message can be queued for them.");
+      return;
+    }
+
     setIsSending(true);
+    setSendNotice(null);
+    try {
+      const run = await previewBroadcast({
+        channel: "WHATSAPP",
+        messageKind: BROADCAST_KIND_BY_TYPE[selectedType] || "CUSTOM",
+        title: messageTitle,
+        body: messageContent,
+        audienceLabel: selectedMemberIds.length === membersList.length
+          ? "All Members"
+          : `${selectedMemberIds.length} Selected Members`,
+        memberIds,
+      });
 
-    const newHistoryItem = {
-      id: `MSG-${Date.now().toString().slice(-4)}`,
-      title: messageTitle,
-      type: NOTIFICATION_TYPES.find(t => t.id === selectedType)?.label || "Announcement",
-      preview: messageContent,
-      recipients: selectedMemberIds.length,
-      delivered: selectedMemberIds.length,
-      opened: 0,
-      clicked: 0,
-      channels: selectedChannels,
-      status: scheduleType === "now" ? "sent" : "scheduled",
-      timestamp: new Date().toISOString(),
-      author: "Admin",
-      audience: selectedMemberIds.length === membersList.length ? "All Members" : `${selectedMemberIds.length} Selected Members`
-    };
-
-    setTimeout(() => {
+      setQueue({
+        broadcast: run.broadcast,
+        recipients: run.recipients || [],
+        truncated: Boolean(run.truncated),
+        audienceTotal: run.audienceTotal || memberIds.length,
+      });
+      if (selectedChannels.length > 1) {
+        setSendNotice("Only WhatsApp was queued in this run. The other selected rails need a paid provider and were skipped.");
+      }
+      await refreshHistory();
+    } catch (err) {
+      setSendNotice(err?.message || "Could not start this broadcast.");
+    } finally {
       setIsSending(false);
-      setIsSuccess(true);
-      setHistoryList(prev => [newHistoryItem, ...prev]);
-      setTimeout(() => setIsSuccess(false), 3000);
+    }
+  };
+
+  const markCurrentRecipient = async (status) => {
+    if (!queue || !currentRecipient || queueBusy) return;
+    setQueueBusy(true);
+    try {
+      const run = await recordBroadcastResult({
+        broadcastId: queue.broadcast.id,
+        recipientId: currentRecipient.id,
+        status,
+      });
+      setQueue(prev => prev ? { ...prev, broadcast: run.broadcast, recipients: run.recipients } : prev);
+      await refreshHistory();
+    } catch (err) {
+      setSendNotice(err?.message || "Could not save this delivery result.");
+    } finally {
+      setQueueBusy(false);
+    }
+  };
+
+  const closeQueue = () => {
+    const finished = queue && !queue.recipients.some(recipient => recipient.status === "QUEUED");
+    setQueue(null);
+    if (finished) {
       setMessageTitle("");
       setMessageContent("");
-    }, 1200);
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 3000);
+    }
+  };
+
+  const cancelRun = async () => {
+    if (!queue || queueBusy) return;
+    setQueueBusy(true);
+    try {
+      const run = await cancelBroadcast(queue.broadcast.id);
+      setQueue(prev => prev ? { ...prev, broadcast: run.broadcast, recipients: run.recipients } : prev);
+      await refreshHistory();
+    } catch (err) {
+      setSendNotice(err?.message || "Could not cancel this broadcast.");
+    } finally {
+      setQueueBusy(false);
+    }
+  };
+
+  const resumeRun = async (item) => {
+    if (!isTauri() || !item?.rawId) {
+      setSendNotice("Resume is available in the GymDeck desktop app.");
+      return;
+    }
+    try {
+      const run = await getBroadcast(item.rawId);
+      setQueue({ broadcast: run.broadcast, recipients: run.recipients || [] });
+      setDrawerOpen(false);
+    } catch (err) {
+      setSendNotice(err?.message || "Could not reopen this broadcast.");
+    }
   };
 
   const openDrawer = (item) => {
@@ -722,6 +904,12 @@ const SendNotification = () => {
                           >
                             Clear Message
                           </button>
+                        </div>
+                      )}
+                      {selectedChannels.includes("whatsapp") && (
+                        <div className="px-3 py-1.5 border-t border-slate-100 bg-emerald-50/50 flex items-start gap-1.5 text-[10px] font-semibold text-emerald-800 leading-snug">
+                          <Info size={11} className="shrink-0 mt-0.5" />
+                          <span>{PLACEHOLDER_HINT}</span>
                         </div>
                       )}
                     </div>
@@ -1375,14 +1563,21 @@ const SendNotification = () => {
                       ) : (
                         <>
                           <Send size={15} />
-                          <span>Launch Broadcast ({selectedMemberIds.length})</span>
+                          <span>Start WhatsApp Queue ({selectedMemberIds.length})</span>
                         </>
                       )}
                     </button>
 
+                    {sendNotice && (
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800 leading-snug">
+                        <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                        <span>{sendNotice}</span>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
                       <Shield size={11} className="text-emerald-600" />
-                      <span>Compliant with TRAI DLT & Meta Anti-Spam Guidelines</span>
+                      <span>Sent one chat at a time from your own WhatsApp — no bulk API, no per-message fee</span>
                     </div>
                   </div>
 
@@ -1775,7 +1970,17 @@ const SendNotification = () => {
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                                   : "bg-amber-50 text-amber-700 border-amber-200"
                               }`}>
-                                {msg.status === "sent" ? "Delivered" : "Scheduled"}
+                                {msg.runStatus === "CANCELLED"
+                                  ? "Cancelled"
+                                  : msg.runStatus === "COMPLETED"
+                                    ? "Delivered"
+                                    : msg.runStatus === "IN_PROGRESS"
+                                      ? "In progress"
+                                      : msg.runStatus === "QUEUED"
+                                        ? "Queued"
+                                        : msg.status === "sent"
+                                          ? "Delivered"
+                                          : "Scheduled"}
                               </span>
 
                               <span className="text-[10px] font-mono text-slate-400 font-bold ml-auto sm:ml-0">
@@ -2062,6 +2267,21 @@ const SendNotification = () => {
 
                 {/* Footer Actions */}
                 <div className="p-5 border-t border-slate-100 bg-white flex items-center gap-2.5">
+                  {selectedHistoryItem.queuedCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        resumeRun(selectedHistoryItem);
+                      }}
+                      className="h-10 px-3.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center justify-center gap-2 hover:bg-emerald-100 transition-all cursor-pointer"
+                      title="Reopen the pending WhatsApp queue"
+                    >
+                      <MessageCircle size={14} />
+                      <span>Resume ({selectedHistoryItem.queuedCount})</span>
+                    </button>
+                  )}
+
                   <button 
                     type="button"
                     onClick={(e) => handleDuplicateBroadcast(selectedHistoryItem, e)}
@@ -2085,6 +2305,180 @@ const SendNotification = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ─── ASSISTED WHATSAPP SEND QUEUE ─── */}
+        {queue && (
+          <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                    <MessageCircle size={13} />
+                    <span>WhatsApp send queue</span>
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900 truncate mt-1">
+                    {queue.broadcast.title || "Broadcast"}
+                  </h3>
+                  <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                    Sent from your gym's own WhatsApp · no API, no per-message fee
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeQueue}
+                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+                  title="Close (progress is saved)"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="px-5 py-3 border-b border-slate-100 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
+                  <span>
+                    {Math.max(0, queueTotal - queuedRecipients.length)} of {queueTotal} handled
+                  </span>
+                  <span className="font-mono">{queuedRecipients.length} left</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 transition-all"
+                    style={{ width: `${queueTotal > 0 ? Math.round(((queueTotal - queuedRecipients.length) / queueTotal) * 100) : 0}%` }}
+                  />
+                </div>
+                {queue.truncated && (
+                  <p className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                    Only the first {queueTotal} of {queue.audienceTotal} members were queued. Start a second run for the rest.
+                  </p>
+                )}
+              </div>
+
+              <div className="px-5 py-4 overflow-y-auto flex-1">
+                {currentRecipient ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-black text-slate-900 truncate">
+                          {currentRecipient.memberName || "Member"}
+                        </div>
+                        <div className="text-[11px] font-semibold text-slate-500 font-mono">
+                          {currentRecipient.phoneMasked || "—"}
+                          {currentRecipient.memberCode ? ` · ${currentRecipient.memberCode}` : ""}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-[9px] font-black uppercase tracking-wider text-emerald-700">
+                        Ready to send
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[#dcf8c6]/40 border border-emerald-200/60">
+                      <p className="text-xs font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">
+                        {currentRecipient.renderedBody}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openWhatsAppLink(currentRecipient.sendUrl)}
+                      className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98 transition-all"
+                    >
+                      <ExternalLink size={15} />
+                      <span>Open WhatsApp &amp; Send</span>
+                    </button>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        disabled={queueBusy}
+                        onClick={() => markCurrentRecipient("SENT")}
+                        className="h-9 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black flex items-center justify-center gap-1 hover:bg-emerald-100 disabled:opacity-50 cursor-pointer"
+                      >
+                        <CheckCircle2 size={13} /> Sent
+                      </button>
+                      <button
+                        type="button"
+                        disabled={queueBusy}
+                        onClick={() => markCurrentRecipient("FAILED")}
+                        className="h-9 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-black flex items-center justify-center gap-1 hover:bg-rose-100 disabled:opacity-50 cursor-pointer"
+                      >
+                        <AlertCircle size={13} /> Not sent
+                      </button>
+                      <button
+                        type="button"
+                        disabled={queueBusy}
+                        onClick={() => markCurrentRecipient("SKIPPED")}
+                        className="h-9 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-black flex items-center justify-center gap-1 hover:bg-slate-100 disabled:opacity-50 cursor-pointer"
+                      >
+                        <ArrowRight size={13} /> Skip
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] font-medium text-slate-400 text-center">
+                      Press send in WhatsApp, then mark the outcome here — the next member loads automatically.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="py-4 text-center space-y-2">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                      <CheckCircle2 size={22} />
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900">Queue finished</h4>
+                    <p className="text-[11px] font-semibold text-slate-500">
+                      {queue.broadcast.sentCount || 0} sent · {queue.broadcast.failedCount || 0} not sent · {queue.broadcast.skippedCount || 0} skipped
+                    </p>
+                  </div>
+                )}
+
+                {(queue.broadcast.skippedCount || 0) > 0 && (
+                  <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                      Skipped members ({queue.broadcast.skippedCount})
+                    </div>
+                    <div className="space-y-1 max-h-28 overflow-y-auto">
+                      {queue.recipients
+                        .filter(recipient => recipient.status === "SKIPPED")
+                        .slice(0, 20)
+                        .map(recipient => (
+                          <div key={recipient.id} className="flex items-center justify-between gap-2 text-[10px] font-semibold text-slate-500">
+                            <span className="truncate">{recipient.memberName || "Member"}</span>
+                            <span className="font-mono text-slate-400">
+                              {recipient.skipReason === "NO_PHONE"
+                                ? "no phone"
+                                : recipient.skipReason === "DUPLICATE_PHONE"
+                                  ? "duplicate"
+                                  : recipient.skipReason === "CANCELLED"
+                                    ? "cancelled"
+                                    : recipient.skipReason || "skipped"}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={closeQueue}
+                  className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                >
+                  Close &amp; resume later
+                </button>
+                {queuedRecipients.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={queueBusy}
+                    onClick={cancelRun}
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancel run
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </LocalErrorBoundary>

@@ -138,23 +138,32 @@ pub fn get_cctv_ipc_token() -> Result<String, String> {
         use std::os::unix::fs::PermissionsExt;
         use std::io::Read;
 
-        // 1. Validate parent directory (~/.gymdeck) permissions
-        let dir_meta = std::fs::symlink_metadata(&gymdeck_dir)
+        // 1. Open parent directory (~/.gymdeck) as a safe file descriptor
+        // O_DIRECTORY ensures we only open directories; O_NOFOLLOW prevents following symlinked dir
+        #[cfg(target_os = "macos")]
+        const O_NOFOLLOW: i32 = 0x0100;
+        #[cfg(target_os = "linux")]
+        const O_NOFOLLOW: i32 = 0o400000;
+        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        const O_NOFOLLOW: i32 = 0;
+
+        let dir_file = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(O_NOFOLLOW)
+            .open(&gymdeck_dir)
+            .map_err(|e| format!("Security violation: failed to open ~/.gymdeck safely (O_NOFOLLOW): {}", e))?;
+
+        let dir_meta = dir_file.metadata()
             .map_err(|e| format!("Failed to inspect ~/.gymdeck directory metadata: {}", e))?;
-        if dir_meta.file_type().is_symlink() {
-            return Err("Security violation: ~/.gymdeck directory cannot be a symbolic link".into());
+
+        if !dir_meta.file_type().is_dir() {
+            return Err("Security violation: ~/.gymdeck is not a directory".into());
         }
         if dir_meta.permissions().mode() & 0o077 != 0 {
             return Err("Security violation: ~/.gymdeck directory has insecure permissions (must be 0700)".into());
         }
 
-        // 2. Race-resistant opening with O_NOFOLLOW (libc::O_NOFOLLOW = 0x0100 on macOS/BSD, 0o400000 on Linux)
-        // std::fs::OpenOptions custom_flags allows setting O_NOFOLLOW atomically at open() syscall time
-        #[cfg(target_os = "macos")]
-        const O_NOFOLLOW: i32 = 0x0100;
-        #[cfg(not(target_os = "macos"))]
-        const O_NOFOLLOW: i32 = 0o400000;
-
+        // 2. Open token file with O_NOFOLLOW to block symlink following
         let mut file = std::fs::OpenOptions::new()
             .read(true)
             .custom_flags(O_NOFOLLOW)

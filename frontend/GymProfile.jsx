@@ -1,11 +1,21 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import BrandFooter from "./BrandFooter.jsx";
 import { communicationsApi } from "./communicationsApi.js";
+import { loadGymCommunicationSettings, saveGymCommunicationSettings } from "./gymCommunicationSettings.js";
+import { loadGymProfile, saveGymProfile, saveGymProfileMedia } from "./gymProfileSettings.js";
 import { paymentsV2Api } from "./paymentsV2Api.js";
-import { qrcode } from "./qr-lib.js";
+import { buildMerchantUpiQrSvg, buildMerchantUpiUri } from "./upiQr.js";
+import {
+  QR_QUIET_ZONE,
+  buildCheckInStandeeSvg,
+  getQRMatrix,
+  isFinderModule,
+  loadGymCheckinPass,
+  toGymPassInfo
+} from "./gymCheckinQr.js";
 import FacilityLeafletMapModal from "./FacilityLeafletMapModal.jsx";
 import { 
   Building2, 
@@ -309,27 +319,73 @@ const ROLE_OPTIONS = [
 ];
 
 /**
+ * GYM CHECK-IN PASS ARTWORK (pure vector, genuine ISO/IEC 18004 symbol)
+ *
+ * Renders the pass's real module matrix — rounded data modules plus styled
+ * finder eyes — so it scans with the GymDeck Member App. `stroke: none` is set
+ * inline because the app's global icon reset (`svg { stroke: currentColor }`)
+ * would otherwise paint a white outline over every module and destroy the code.
+ */
+const GymCheckInQr = ({ matrix, size = 190, gradientId = "gymPassInk", title }) => {
+  if (!matrix || !matrix.length) return null;
+
+  const modules = matrix.length;
+  const total = modules + QR_QUIET_ZONE * 2;
+  const finderOrigins = [
+    [0, 0],
+    [modules - 7, 0],
+    [0, modules - 7]
+  ];
+
+  return (
+    <svg
+      viewBox={`${-QR_QUIET_ZONE} ${-QR_QUIET_ZONE} ${total} ${total}`}
+      width={size}
+      height={size}
+      shapeRendering="geometricPrecision"
+      style={{ stroke: "none", width: size, height: size }}
+      role="img"
+      aria-label={title || "Gym check-in QR pass"}
+    >
+      <defs>
+        <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={modules} y2={modules}>
+          <stop offset="0%" stopColor="#0b1220" />
+          <stop offset="52%" stopColor="#101d34" />
+          <stop offset="100%" stopColor="#0a2b3d" />
+        </linearGradient>
+      </defs>
+      <rect x={-QR_QUIET_ZONE} y={-QR_QUIET_ZONE} width={total} height={total} fill="#ffffff" />
+      <g fill={`url(#${gradientId})`}>
+        {matrix.map((row, r) =>
+          row.map((filled, c) =>
+            filled && !isFinderModule(r, c, modules) ? (
+              <rect key={`m-${r}-${c}`} x={c} y={r} width="1" height="1" rx="0.22" />
+            ) : null
+          )
+        )}
+        {finderOrigins.map(([x, y]) => (
+          <g key={`eye-${x}-${y}`}>
+            <rect x={x} y={y} width="7" height="7" rx="2" />
+            <rect x={x + 1} y={y + 1} width="5" height="5" rx="1.35" fill="#ffffff" />
+            <rect x={x + 2} y={y + 2} width="3" height="3" rx="0.9" />
+          </g>
+        ))}
+      </g>
+    </svg>
+  );
+};
+
+/**
  * AUTHENTIC SCANNABLE NPCI UPI 2.0 QR CODE GENERATOR (Pure Vector SVG)
+ *
+ * Uses the shared merchant UPI builder in ./upiQr.js so the symbol shown here in
+ * Banking & Settlement is byte-for-byte the one Collect Fees renders for payment.
  */
 const UpiQrCodeSvg = ({ vpa, name, size = 210 }) => {
-  const qrSvgString = useMemo(() => {
-    if (!vpa) return null;
-    try {
-      const payeeName = encodeURIComponent((name || "Merchant").trim());
-      const uri = `upi://pay?pa=${vpa.trim()}&pn=${payeeName}&cu=INR`;
-      const qr = qrcode(0, "M");
-      qr.addData(uri);
-      qr.make();
-      return qr.createSvgTag({
-        cellSize: 6,
-        margin: 2,
-        scalable: true
-      });
-    } catch (err) {
-      console.error("Failed to generate vector UPI QR code:", err);
-      return null;
-    }
-  }, [vpa, name]);
+  const qrSvgString = useMemo(
+    () => buildMerchantUpiQrSvg(buildMerchantUpiUri({ vpa, name })),
+    [vpa, name]
+  );
 
   if (!qrSvgString) {
     return (
@@ -566,6 +622,135 @@ const POPULAR_WEST_BENGAL_LOCATIONS = [
  * Professional Monochromatic Enterprise Edition
  */
 
+// Maps a persisted Contact & Communication record (vault column shape) onto the
+// gymData keys the form edits. Shared by the initial hydration and the save path.
+const mapCommunicationSettings = (settings) => ({
+  primaryPhone: settings.primaryPhone || "",
+  whatsapp: settings.whatsappNumber || "",
+  email: settings.officialEmail || "",
+  mobileForMembers: settings.mobileForMembers ?? true,
+  mobileSmsAllowed: settings.mobileSmsAllowed ?? true,
+  mobileCallsAllowed: settings.mobileCallsAllowed ?? true,
+  mobilePromosAllowed: settings.mobilePromosAllowed ?? false,
+  whatsappForMembers: settings.whatsappForMembers ?? true,
+  whatsappReceiptsAllowed: settings.whatsappReceiptsAllowed ?? true,
+  whatsappRemindersAllowed: settings.whatsappRemindersAllowed ?? true,
+  whatsappSupportAllowed: settings.whatsappSupportAllowed ?? true,
+  whatsappPromosAllowed: settings.whatsappPromosAllowed ?? false,
+  emailForMembers: settings.emailForMembers ?? true,
+  emailInvoicesAllowed: settings.emailInvoicesAllowed ?? true,
+  emailAlertsAllowed: settings.emailAlertsAllowed ?? true,
+  emailNewsletterAllowed: settings.emailNewsletterAllowed ?? false,
+  quietHoursStart: settings.quietHoursStart || "22:00",
+  quietHoursEnd: settings.quietHoursEnd || "06:00",
+});
+
+// The exact record written to the vault: contact channels plus the per-channel
+// consent switches and quiet hours the Contact & Communication tab edits.
+const toCommunicationPayload = (data) => ({
+  primaryPhone: data.primaryPhone || "",
+  whatsappNumber: data.whatsapp || "",
+  officialEmail: data.email || "",
+  mobileForMembers: Boolean(data.mobileForMembers),
+  mobileSmsAllowed: Boolean(data.mobileSmsAllowed),
+  mobileCallsAllowed: Boolean(data.mobileCallsAllowed),
+  mobilePromosAllowed: Boolean(data.mobilePromosAllowed),
+  whatsappForMembers: Boolean(data.whatsappForMembers),
+  whatsappReceiptsAllowed: Boolean(data.whatsappReceiptsAllowed),
+  whatsappRemindersAllowed: Boolean(data.whatsappRemindersAllowed),
+  whatsappSupportAllowed: Boolean(data.whatsappSupportAllowed),
+  whatsappPromosAllowed: Boolean(data.whatsappPromosAllowed),
+  emailForMembers: Boolean(data.emailForMembers),
+  emailInvoicesAllowed: Boolean(data.emailInvoicesAllowed),
+  emailAlertsAllowed: Boolean(data.emailAlertsAllowed),
+  emailNewsletterAllowed: Boolean(data.emailNewsletterAllowed),
+  quietHoursStart: data.quietHoursStart || "22:00",
+  quietHoursEnd: data.quietHoursEnd || "06:00",
+});
+
+// Maps a persisted General-tab row (including the stored logo/cover data URLs)
+// onto the gymData keys the form edits.
+const mapGymProfile = (profile) => ({
+  name: profile.displayName || "",
+  tagline: profile.tagline || "",
+  description: profile.description || "",
+  foundedYear: profile.foundedYear || "",
+  businessType: profile.businessType || "",
+  website: profile.website || "",
+  address: profile.address || "",
+  city: profile.city || "",
+  state: profile.state || "",
+  pincode: profile.pincode || "",
+  openingHours: profile.openingHours || "",
+  closingHours: profile.closingHours || "",
+  weekendOpening: profile.weekendOpening || "",
+  weekendClosing: profile.weekendClosing || "",
+  slotDurationMinutes: profile.slotDurationMinutes || "",
+  autoHolidayClosure: profile.autoHolidayClosure ?? true,
+  qrCheckinEnabled: profile.qrCheckinEnabled ?? true,
+  qrTurnstileRelay: profile.qrTurnstileRelay ?? true,
+  qrAudibleChime: profile.qrAudibleChime ?? true,
+  isPubliclyActive: profile.isPubliclyActive ?? true,
+  subdomain: profile.subdomain || "",
+  customDomain: profile.customDomain || "",
+  logoUrl: profile.logoDataUrl || null,
+  coverImageUrl: profile.coverDataUrl || null,
+  branches: Array.isArray(profile.branches) ? profile.branches : [],
+});
+
+// The exact General-tab record written to the vault for the signed-in gym.
+const toGymProfilePayload = (data) => ({
+  displayName: data.name || "",
+  tagline: data.tagline || "",
+  description: data.description || "",
+  foundedYear: data.foundedYear || "",
+  businessType: data.businessType || "",
+  website: data.website || "",
+  address: data.address || "",
+  city: data.city || "",
+  state: data.state || "",
+  pincode: data.pincode || "",
+  openingHours: data.openingHours || "",
+  closingHours: data.closingHours || "",
+  weekendOpening: data.weekendOpening || "",
+  weekendClosing: data.weekendClosing || "",
+  slotDurationMinutes: data.slotDurationMinutes || "",
+  autoHolidayClosure: Boolean(data.autoHolidayClosure),
+  qrCheckinEnabled: data.qrCheckinEnabled ?? true,
+  qrTurnstileRelay: data.qrTurnstileRelay ?? true,
+  qrAudibleChime: data.qrAudibleChime ?? true,
+  isPubliclyActive: data.isPubliclyActive ?? true,
+  subdomain: data.subdomain || "",
+  customDomain: data.customDomain || "",
+  logoDataUrl: data.logoUrl || null,
+  coverDataUrl: data.coverImageUrl || null,
+  branches: Array.isArray(data.branches) ? data.branches : [],
+});
+
+// Reads a picked image as a data URL so it can be stored in the vault (blob URLs
+// die with the page). Rejects non-images and oversized files before reading.
+const readImageAsDataUrl = (file, { maxBytes, label }) =>
+  new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error(`No ${label.toLowerCase()} selected.`));
+      return;
+    }
+    if (!file.type || !file.type.startsWith("image/")) {
+      reject(new Error(`${label} must be a JPG, PNG or WebP image.`));
+      return;
+    }
+    if (file.size > maxBytes) {
+      reject(
+        new Error(`${label} must be ${Math.round(maxBytes / (1024 * 1024))} MB or smaller.`)
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error(`Could not read the selected ${label.toLowerCase()}.`));
+    reader.readAsDataURL(file);
+  });
+
 const GymProfile = () => {
   const [activeTab, setActiveTab] = useState(() => {
     try {
@@ -586,6 +771,36 @@ const GymProfile = () => {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
+
+  // Permanent gym check-in pass. Minted inside the gym signup transaction and
+  // stored in the encrypted vault, so logging in is enough to display it. Loaded
+  // lazily the first time the owner opens QR Passes instead of on every visit.
+  const [gymQrPass, setGymQrPass] = useState({ status: "idle", data: null, error: null });
+
+  const loadGymQrPass = useCallback(async () => {
+    setGymQrPass((prev) => ({ ...prev, status: "loading", error: null }));
+    try {
+      const record = await loadGymCheckinPass();
+      setGymQrPass({ status: "ready", data: record, error: null });
+    } catch (e) {
+      setGymQrPass({
+        status: "error",
+        data: null,
+        error: e?.message || "Unable to load this gym's check-in pass."
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "QR Passes" || gymQrPass.status !== "idle") return;
+    loadGymQrPass();
+  }, [activeTab, gymQrPass.status, loadGymQrPass]);
+
+  const gymQrInfo = useMemo(() => toGymPassInfo(gymQrPass.data), [gymQrPass.data]);
+  const gymQrMatrix = useMemo(
+    () => getQRMatrix(gymQrPass.data?.qrPayload),
+    [gymQrPass.data]
+  );
 
   // Sync external tab switch requests (e.g. from member registration modal)
   useEffect(() => {
@@ -679,7 +894,8 @@ const GymProfile = () => {
   // Banking & Settlement sync state. The local gym_payment_accounts table in the
   // SQLCipher vault (scoped to the signed-in gym) is the source of truth; localStorage
   // is only a read-through cache so the UI can render instantly before the DB hydrates.
-  const [bankingDbSync, setBankingDbSync] = useState({ loading: true, online: false, error: null });
+  // The status is not surfaced as a banner; it only drives rollback on failed writes.
+  const [, setBankingDbSync] = useState({ loading: true, online: false, error: null });
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const toggleFaq = (id) => setExpandedFaqId(prev => (prev === id ? null : prev === "all" ? null : id));
   const [communicationFaqId, setCommunicationFaqId] = useState(null);
@@ -906,36 +1122,62 @@ const GymProfile = () => {
       });
   };
 
-  // Hydrate persisted communication settings from the cloud tenant record.
+  // Hydrate Contact & Communication from this gym's locked database row.
+  // The local vault is authoritative; the cloud tenant record is only consulted to
+  // seed the row the first time (an account created before local persistence), and
+  // that seed is written straight back into the vault so it stays account-bound.
   useEffect(() => {
     let cancelled = false;
-    communicationsApi.getSettings()
-      .then((res) => {
+
+    const hydrate = async () => {
+      let stored = null;
+      try {
+        stored = await loadGymCommunicationSettings();
+      } catch (err) {
+        console.warn("GymDeck: could not read communication settings from the vault", err);
+      }
+      if (cancelled) return;
+      if (stored) {
+        setGymData((prev) => ({ ...prev, ...mapCommunicationSettings(stored) }));
+        return;
+      }
+
+      try {
+        const res = await communicationsApi.getSettings();
         if (cancelled || !res?.data) return;
-        const s = res.data;
-        setGymData((prev) => ({
-          ...prev,
-          primaryPhone: s.primaryPhone || "",
-          whatsapp: s.whatsappNumber || "",
-          email: s.officialEmail || "",
-          mobileForMembers: s.mobileForMembers,
-          mobileSmsAllowed: s.mobileSmsAllowed,
-          mobileCallsAllowed: s.mobileCallsAllowed,
-          mobilePromosAllowed: s.mobilePromosAllowed,
-          whatsappForMembers: s.whatsappForMembers,
-          whatsappReceiptsAllowed: s.whatsappReceiptsAllowed,
-          whatsappRemindersAllowed: s.whatsappRemindersAllowed,
-          whatsappSupportAllowed: s.whatsappSupportAllowed,
-          whatsappPromosAllowed: s.whatsappPromosAllowed,
-          emailForMembers: s.emailForMembers,
-          emailInvoicesAllowed: s.emailInvoicesAllowed,
-          emailAlertsAllowed: s.emailAlertsAllowed,
-          emailNewsletterAllowed: s.emailNewsletterAllowed,
-          quietHoursStart: s.quietHoursStart || "22:00",
-          quietHoursEnd: s.quietHoursEnd || "06:00",
-        }));
+        const mapped = mapCommunicationSettings(res.data);
+        setGymData((prev) => ({ ...prev, ...mapped }));
+        await saveGymCommunicationSettings(toCommunicationPayload(mapped)).catch(() => {});
+      } catch {
+        /* Offline / unenrolled: keep the empty local defaults. */
+      }
+    };
+
+    hydrate();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Hydrate the General tab (identity, location, hours, kiosk flags, branches) and
+  // the uploaded logo / cover photo from this gym's locked database row.
+  useEffect(() => {
+    let cancelled = false;
+    loadGymProfile()
+      .then((stored) => {
+        if (cancelled || !stored) return;
+        setGymData((prev) => {
+          const mapped = mapGymProfile(stored);
+          return {
+            ...prev,
+            ...mapped,
+            // An empty brand name in the stored row must not blank the form.
+            name: mapped.name || prev.name,
+            branches: mapped.branches.length ? mapped.branches : prev.branches,
+          };
+        });
       })
-      .catch(() => { /* Offline / unenrolled: keep local defaults. */ });
+      .catch((err) => {
+        console.warn("GymDeck: could not read gym profile from the vault", err);
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -1625,21 +1867,28 @@ const GymProfile = () => {
     setIsBranchModalOpen(true);
   };
 
+  // Branch changes are part of the General tab, so they are written to this gym's
+  // locked row straight away (same account-bound record the form saves into).
+  const persistBranches = (branches) => {
+    saveGymProfile(toGymProfilePayload({ ...gymData, branches })).catch((err) => {
+      console.warn("GymDeck: could not persist branches", err);
+    });
+  };
+
   const handleSaveBranch = () => {
     if (!branchForm.name.trim()) {
       showToast("Please enter a valid branch name.");
       return;
     }
     if (editingBranchId) {
-      setGymData(prev => ({
-        ...prev,
-        branches: prev.branches.map(b => b.id === editingBranchId ? {
-          ...b,
-          ...branchForm,
-          members: parseInt(branchForm.members) || 0,
-          trainers: parseInt(branchForm.trainers) || 0
-        } : b)
-      }));
+      const nextBranches = gymData.branches.map(b => b.id === editingBranchId ? {
+        ...b,
+        ...branchForm,
+        members: parseInt(branchForm.members) || 0,
+        trainers: parseInt(branchForm.trainers) || 0
+      } : b);
+      setGymData(prev => ({ ...prev, branches: nextBranches }));
+      persistBranches(nextBranches);
       setHasChanges(true);
       showToast("Branch updated successfully!");
     } else {
@@ -1649,10 +1898,9 @@ const GymProfile = () => {
         members: parseInt(branchForm.members) || 0,
         trainers: parseInt(branchForm.trainers) || 0
       };
-      setGymData(prev => ({
-        ...prev,
-        branches: [...prev.branches, newBranch]
-      }));
+      const nextBranches = [...gymData.branches, newBranch];
+      setGymData(prev => ({ ...prev, branches: nextBranches }));
+      persistBranches(nextBranches);
       setHasChanges(true);
       showToast("New branch added to network!");
     }
@@ -1660,10 +1908,12 @@ const GymProfile = () => {
   };
 
   const handleDeleteBranch = (branchId) => {
+    const nextBranches = gymData.branches.filter(b => b.id !== branchId);
     setGymData(prev => ({
       ...prev,
-      branches: prev.branches.filter(b => b.id !== branchId)
+      branches: nextBranches
     }));
+    persistBranches(nextBranches);
     setHasChanges(true);
     setIsBranchModalOpen(false);
     showToast("Branch removed from network.");
@@ -1782,36 +2032,57 @@ const GymProfile = () => {
     }, 600);
   };
 
-  // Live Cover Banner Image Upload Handler
-  const handleBannerUpload = (e) => {
+  // Cover banner upload: the image is stored in this gym's database the moment it is
+  // picked, so it is locked to the account and survives a reload.
+  const handleBannerUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      handleInputChange('coverImageUrl', imageUrl);
-      showToast("Cover banner updated successfully.");
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const dataUrl = await readImageAsDataUrl(file, { maxBytes: 5 * 1024 * 1024, label: "Cover photo" });
+      handleInputChange('coverImageUrl', dataUrl);
+      await saveGymProfileMedia({ coverDataUrl: dataUrl });
+      showToast("Cover photo saved to this gym's database.");
+    } catch (err) {
+      showToast(err?.message || "Could not save the cover photo.");
     }
   };
 
-  // Live Profile Logo Image Upload Handler
-  const handleLogoUpload = (e) => {
+  // Profile logo upload: same immediate, per-gym persistence.
+  const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      handleInputChange('logoUrl', imageUrl);
-      showToast("Profile photo updated successfully.");
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const dataUrl = await readImageAsDataUrl(file, { maxBytes: 2 * 1024 * 1024, label: "Profile photo" });
+      handleInputChange('logoUrl', dataUrl);
+      await saveGymProfileMedia({ logoDataUrl: dataUrl });
+      showToast("Profile photo saved to this gym's database.");
+    } catch (err) {
+      showToast(err?.message || "Could not save the profile photo.");
     }
   };
 
-  const handleRemoveCover = (e) => {
+  const handleRemoveCover = async (e) => {
     e.stopPropagation();
     handleInputChange('coverImageUrl', null);
-    showToast("Cover photo removed.");
+    try {
+      await saveGymProfileMedia({ coverDataUrl: null });
+      showToast("Cover photo removed from this gym's database.");
+    } catch (err) {
+      showToast(err?.message || "Could not remove the cover photo.");
+    }
   };
 
-  const handleRemoveLogo = (e) => {
+  const handleRemoveLogo = async (e) => {
     e.stopPropagation();
     handleInputChange('logoUrl', null);
-    showToast("Profile photo removed.");
+    try {
+      await saveGymProfileMedia({ logoDataUrl: null });
+      showToast("Profile photo removed from this gym's database.");
+    } catch (err) {
+      showToast(err?.message || "Could not remove the profile photo.");
+    }
   };
 
   const handleToggleAmenity = (amenity) => {
@@ -1829,42 +2100,57 @@ const GymProfile = () => {
 
   const handleSave = async () => {
     setIsSaving(true);
+    const payload = toCommunicationPayload(gymData);
+    const profilePayload = toGymProfilePayload(gymData);
+
+    // 1. Write the locked per-gym rows in the encrypted local vault: the General tab
+    // (with its logo/cover imagery) and the Contact & Communication tab. This always
+    // runs and does not depend on a cloud session, so both survive logout/login and
+    // stay bound to the signed-in gym account.
+    let savedRecord = null;
+    let savedProfile = null;
+    let vaultError = null;
     try {
-      const res = await communicationsApi.saveSettings({
-        primaryPhone: gymData.primaryPhone,
-        whatsappNumber: gymData.whatsapp,
-        officialEmail: gymData.email,
-        mobileForMembers: gymData.mobileForMembers,
-        mobileSmsAllowed: gymData.mobileSmsAllowed,
-        mobileCallsAllowed: gymData.mobileCallsAllowed,
-        mobilePromosAllowed: gymData.mobilePromosAllowed,
-        whatsappForMembers: gymData.whatsappForMembers,
-        whatsappReceiptsAllowed: gymData.whatsappReceiptsAllowed,
-        whatsappRemindersAllowed: gymData.whatsappRemindersAllowed,
-        whatsappSupportAllowed: gymData.whatsappSupportAllowed,
-        whatsappPromosAllowed: gymData.whatsappPromosAllowed,
-        emailForMembers: gymData.emailForMembers,
-        emailInvoicesAllowed: gymData.emailInvoicesAllowed,
-        emailAlertsAllowed: gymData.emailAlertsAllowed,
-        emailNewsletterAllowed: gymData.emailNewsletterAllowed,
-        quietHoursStart: gymData.quietHoursStart,
-        quietHoursEnd: gymData.quietHoursEnd,
-      });
-      if (res?.data) {
-        setGymData((prev) => ({
-          ...prev,
-          primaryPhone: res.data.primaryPhone || "",
-          whatsapp: res.data.whatsappNumber || "",
-          email: res.data.officialEmail || "",
-        }));
+      savedProfile = await saveGymProfile(profilePayload);
+      if (savedProfile) {
+        setGymData((prev) => ({ ...prev, ...mapGymProfile(savedProfile) }));
       }
-      setHasChanges(false);
-      showToast("Communication settings saved to the cloud.");
     } catch (err) {
-      showToast(err?.message || "Could not save settings. Cloud session required.");
-    } finally {
-      setIsSaving(false);
+      vaultError = err;
     }
+    try {
+      savedRecord = await saveGymCommunicationSettings(payload);
+      if (savedRecord) {
+        setGymData((prev) => ({ ...prev, ...mapCommunicationSettings(savedRecord) }));
+      }
+    } catch (err) {
+      vaultError = vaultError || err;
+    }
+
+    // 2. Mirror the contact channels to the cloud tenant record when the device is
+    // enrolled. A failure here must not discard the local save.
+    let cloudError = null;
+    try {
+      await communicationsApi.saveSettings(payload);
+    } catch (err) {
+      cloudError = err;
+    }
+
+    if (!savedRecord && !savedProfile && (vaultError || cloudError)) {
+      showToast(vaultError?.message || cloudError?.message || "Could not save the gym profile.");
+    } else {
+      setHasChanges(false);
+      const storedLocally = Boolean(savedRecord || savedProfile);
+      const storedEverywhere = Boolean(savedRecord && savedProfile);
+      showToast(
+        storedEverywhere
+          ? "Gym profile and contact settings saved to this gym's encrypted database."
+          : storedLocally
+          ? "Gym profile saved to this gym's encrypted database."
+          : "Gym profile saved to the cloud for this gym."
+      );
+    }
+    setIsSaving(false);
   };
 
   // Official Certificate Export Generator
@@ -1963,56 +2249,39 @@ const GymProfile = () => {
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
+  // Exports the real check-in standee: the same module matrix the member app
+  // scans, printed at 800x1060 with the facility code and scan instructions.
   const handleDownloadPass = () => {
-    try {
-      const passName = (gymData.name || "Gym Pass").trim();
-      const fileName = `${passName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-reception-pass.svg`;
-      
-      const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
-  <defs>
-    <radialGradient id="cardGrad" cx="50%" cy="28%" r="75%">
-      <stop offset="0%" stop-color="#163a65" />
-      <stop offset="38%" stop-color="#0d2544" />
-      <stop offset="70%" stop-color="#08172c" />
-      <stop offset="100%" stop-color="#030814" />
-    </radialGradient>
-  </defs>
-  <rect width="600" height="900" rx="56" fill="url(#cardGrad)" />
-  <rect x="24" y="24" width="552" height="852" rx="42" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
-  <circle cx="300" cy="450" r="170" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" />
-  <circle cx="300" cy="450" r="260" fill="none" stroke="rgba(186,230,253,0.4)" stroke-width="2" />
-  <circle cx="300" cy="450" r="360" fill="none" stroke="rgba(125,211,252,0.3)" stroke-width="2.5" />
-  <circle cx="300" cy="450" r="480" fill="none" stroke="rgba(56,189,248,0.2)" stroke-width="3" />
-  <rect x="130" y="280" width="340" height="340" rx="36" fill="#ffffff" filter="drop-shadow(0 20px 40px rgba(0,0,0,0.4))" />
-  <g transform="translate(170, 320)">
-    <rect width="80" height="80" rx="16" fill="#090d16" />
-    <rect x="18" y="18" width="44" height="44" rx="8" fill="#ffffff" />
-    <rect x="28" y="28" width="24" height="24" rx="4" fill="#090d16" />
-    <rect x="180" width="80" height="80" rx="16" fill="#090d16" />
-    <rect x="198" y="18" width="44" height="44" rx="8" fill="#ffffff" />
-    <rect x="208" y="28" width="24" height="24" rx="4" fill="#090d16" />
-    <rect y="180" width="80" height="80" rx="16" fill="#090d16" />
-    <rect x="18" y="198" width="44" height="44" rx="8" fill="#ffffff" />
-    <rect x="28" y="208" width="24" height="24" rx="4" fill="#090d16" />
-    <rect x="110" y="110" width="40" height="40" rx="8" fill="#090d16" />
-    <rect x="180" y="180" width="40" height="40" rx="8" fill="#090d16" />
-    <rect x="220" y="220" width="40" height="40" rx="8" fill="#090d16" />
-  </g>
-</svg>`;
-
-      const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      showToast("Gym Profile QR pass downloaded successfully!");
-    } catch (err) {
-      showToast("High-resolution QR pass downloaded.");
+    if (!gymQrMatrix) {
+      if (gymQrPass.status === "idle" || gymQrPass.status === "error") {
+        loadGymQrPass();
+      }
+      showToast("Preparing your check-in pass — try again in a moment.");
+      return;
     }
+
+    const passName = (gymQrInfo?.name || gymData.name || "Gym Pass").trim();
+    const svgContent = buildCheckInStandeeSvg(gymQrMatrix, {
+      gymName: passName,
+      gymCode: gymQrInfo?.code
+    });
+
+    if (!svgContent) {
+      showToast("Could not export the check-in pass. Try again.");
+      return;
+    }
+
+    const fileName = `${passName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-checkin-pass.svg`;
+    const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast("Check-in pass standee downloaded successfully.");
   };
 
   return (
@@ -2543,6 +2812,10 @@ const GymProfile = () => {
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200/80 text-xs font-semibold">
                       <Layers size={13} strokeWidth={2} className="text-zinc-600" />
                       <span>{gymData.businessType || "Commercial Facility"}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-50 text-zinc-700 border border-zinc-200 text-xs font-semibold">
+                      <Lock size={12} strokeWidth={2} />
+                      <span>Locked to this gym account</span>
                     </span>
                   </div>
                 </div>
@@ -3176,6 +3449,10 @@ const GymProfile = () => {
                       <ShieldCheck size={13} strokeWidth={2} />
                       <span>Zero-Spam Compliant</span>
                     </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-50 text-zinc-700 border border-zinc-200 text-xs font-semibold">
+                      <Lock size={12} strokeWidth={2} />
+                      <span>Locked to this gym account</span>
+                    </span>
                   </div>
                 </div>
 
@@ -3468,7 +3745,7 @@ const GymProfile = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2.5 mb-1 flex-wrap">
-                          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Touchless Reception Pass & Portal QR</h2>
+                          <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Gym Check-in Pass</h2>
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Live Check-in Active
@@ -3479,7 +3756,7 @@ const GymProfile = () => {
                           </span>
                         </div>
                         <p className="text-xs text-zinc-500 max-w-2xl leading-relaxed">
-                          Deploy high-resolution QR entrance cards for member self-check-in, turnstile scanners, and front-desk kiosk hardware. Members scan with smartphone cameras or handheld laser units.
+                          One permanent pass is generated automatically for this gym the moment it is created — no setup required. New members open the GymDeck Member App, scan the pass, and are recognised and linked to this facility instantly. Download or print the vector standee for the front desk.
                         </p>
                       </div>
                     </div>
@@ -3545,7 +3822,7 @@ const GymProfile = () => {
                           }}
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                          Public Profile QR
+                          Gym Check-in Pass
                         </div>
 
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -3560,7 +3837,44 @@ const GymProfile = () => {
                         className="relative z-10 p-5 bg-white rounded-2xl shadow-2xl border-2 border-white/95 group/qrpass cursor-pointer transition-all duration-300 hover:scale-[1.03] active:scale-95"
                         title="Click to expand luxury full-screen pass"
                       >
-                        <QrCode size={190} strokeWidth={1.8} className="text-zinc-950 group-hover/qrpass:scale-[0.98] transition-transform" />
+                        {gymQrMatrix ? (
+                          <div className="transition-transform group-hover/qrpass:scale-[0.98]">
+                            <GymCheckInQr
+                              matrix={gymQrMatrix}
+                              size={208}
+                              gradientId="gymPassCardInk"
+                              title={`Check-in pass for ${gymQrInfo?.name || gymData.name || "this gym"}`}
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-[208px] w-[208px] flex flex-col items-center justify-center gap-2.5 rounded-xl bg-zinc-50 border border-dashed border-zinc-300 text-center px-3">
+                            {gymQrPass.status === "error" ? (
+                              <>
+                                <AlertCircle size={22} className="text-amber-500" strokeWidth={2} />
+                                <span className="text-[10px] font-semibold text-zinc-600 leading-tight">
+                                  Pass unavailable
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    loadGymQrPass();
+                                  }}
+                                  className="h-6 px-2.5 rounded-md bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                                >
+                                  Retry
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-5 h-5 rounded-full border-2 border-zinc-300 border-t-zinc-700 animate-spin" />
+                                <span className="text-[10px] font-semibold text-zinc-500 leading-tight">
+                                  Generating pass…
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        )}
                         
                         {/* Hover Overlay with Eye */}
                         <div className="absolute inset-0 bg-blue-600/10 rounded-2xl opacity-0 group-hover/qrpass:opacity-100 transition-opacity flex items-center justify-center">
@@ -3571,20 +3885,23 @@ const GymProfile = () => {
                         </div>
                       </div>
 
-                      {/* Subdomain Label */}
+                      {/* Facility Check-in Code */}
                       <div className="relative z-10 text-center mt-3 mb-1">
-                        <span className="text-xs font-mono font-medium text-cyan-300 tracking-tight">
-                          {gymData.subdomain ? gymData.subdomain : "yourgym.gymdeck.app"}
+                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 block mb-1">
+                          Facility code
+                        </span>
+                        <span className="text-xs font-mono font-bold text-cyan-300 tracking-[0.15em]">
+                          {gymQrInfo?.code || "PROVISIONING…"}
                         </span>
                       </div>
 
                       {/* Card Title & Operational Descriptor */}
                       <div className="relative z-10 text-center mt-2 max-w-xs">
                         <h3 className="text-base font-bold text-white tracking-tight">
-                          Touchless Reception Pass
+                          GymDeck Member Check-in Pass
                         </h3>
                         <p className="text-xs text-slate-400 font-normal mt-1 leading-relaxed">
-                          Front-desk kiosk & member web check-in. Instant scanning for entry validation and profile lookup.
+                          Generated automatically for this gym. Members scan it once in the GymDeck Member App to be recognised and join this facility.
                         </p>
                       </div>
 
@@ -3607,14 +3924,17 @@ const GymProfile = () => {
                         <button 
                           type="button"
                           onClick={() => {
-                            const url = gymData.subdomain ? `https://${gymData.subdomain}` : "https://yourgym.gymdeck.app";
-                            navigator.clipboard?.writeText(url);
-                            showToast("Public profile link copied to clipboard.");
+                            if (!gymQrInfo?.qrPayload) {
+                              showToast("Check-in pass is still loading. Try again in a moment.");
+                              return;
+                            }
+                            navigator.clipboard?.writeText(gymQrInfo.qrPayload);
+                            showToast("Check-in pass link copied to clipboard.");
                           }}
                           className="h-10 px-3 text-slate-200 hover:text-white text-xs font-semibold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer border border-white/15 hover:border-white/30 bg-white/[0.06] hover:bg-white/[0.12]"
                         >
                           <Copy size={13} strokeWidth={2} />
-                          <span>Copy URL</span>
+                          <span>Copy Pass Link</span>
                         </button>
                       </div>
 
@@ -3801,32 +4121,6 @@ const GymProfile = () => {
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="space-y-6 pb-12"
               >
-                {/* DB sync status: confirms banking data is bound to the signed-in account */}
-                {(() => {
-                  const { loading, online, error } = bankingDbSync;
-                  if (loading && !online) {
-                    return (
-                      <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-800">
-                        <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-                        <span className="font-medium">Syncing banking accounts with your account…</span>
-                      </div>
-                    );
-                  }
-                  if (online) {
-                    return (
-                      <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span className="font-medium">Banking accounts are saved to your account and remain connected when you log in again.</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 mt-0.5 shrink-0" />
-                      <span className="font-medium">Local secure vault unavailable — banking changes are not being saved to your account. {error ? `(${error})` : ""} Open the app in the desktop client to persist.</span>
-                    </div>
-                  );
-                })()}
                 {/* 1. SECTION 1: RECEIVE MONEY (MEMBER INFLOW RAILS) */}
                 {bankingFilter === "inflow" && (
                   <div className="space-y-4">
@@ -4771,7 +5065,17 @@ const GymProfile = () => {
                       border: '1.5px solid rgba(255, 255, 255, 0.9)'
                     }}
                   >
-                    <QrCode size={210} strokeWidth={1.8} className="text-zinc-950" />
+                    <GymCheckInQr
+                      matrix={gymQrMatrix}
+                      size={210}
+                      gradientId="gymPassModalInk"
+                      title={`Check-in pass for ${gymQrInfo?.name || gymData.name || "this gym"}`}
+                    />
+                    {!gymQrMatrix && (
+                      <div className="h-[210px] w-[210px] flex items-center justify-center text-[11px] font-semibold text-zinc-500 text-center px-4">
+                        {gymQrPass.status === "error" ? "Check-in pass unavailable — retry from the QR Passes tab." : "Generating check-in pass…"}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -6054,12 +6358,12 @@ const GymProfile = () => {
                     onClick={() => {
                       if (!selectedQrAccount?.upiId) return;
                       try {
-                        const payeeName = encodeURIComponent((selectedQrAccount.accountHolderName || gymData.name || "Merchant").trim());
-                        const uri = `upi://pay?pa=${selectedQrAccount.upiId.trim()}&pn=${payeeName}&cu=INR`;
-                        const qr = qrcode(0, "M");
-                        qr.addData(uri);
-                        qr.make();
-                        const svgTag = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
+                        const uri = buildMerchantUpiUri({
+                          vpa: selectedQrAccount.upiId,
+                          name: selectedQrAccount.accountHolderName || gymData.name
+                        });
+                        const svgTag = buildMerchantUpiQrSvg(uri, { cellSize: 8, margin: 4 });
+                        if (!svgTag) throw new Error("could not encode standee");
                         const blob = new Blob([svgTag], { type: "image/svg+xml;charset=utf-8" });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement("a");

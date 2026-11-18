@@ -4536,7 +4536,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   box-shadow: 0 18px 34px rgba(31, 41, 55, 0.08);
 }
 
-.trainer-schedule-stage {
+.inventory-stage {
   position: absolute;
   inset: 0;
   padding: 22px;
@@ -4549,7 +4549,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   background-color: #f8fafc;
 }
 
-.trainer-schedule-stage.is-active {
+.inventory-stage.is-active {
   display: block !important;
   opacity: 1 !important;
   transform: none !important;
@@ -4557,7 +4557,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   z-index: 100 !important;
 }
 
-.trainer-schedule-shell {
+.inventory-shell {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -4569,7 +4569,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   box-shadow: 0 24px 54px rgba(38, 47, 68, 0.12);
 }
 
-.trainer-schedule-workspace {
+.inventory-workspace {
   display: flex;
   flex: 1;
   min-height: 0;
@@ -6405,7 +6405,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-stage,
   .all-trainers-stage,
   .assign-trainer-stage,
-  .trainer-schedule-stage,
+  .inventory-stage,
   .staff-roles-stage,
   .pt-clients-stage,
   .pt-packages-stage,
@@ -6434,7 +6434,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-shell,
   .all-trainers-shell,
   .assign-trainer-shell,
-  .trainer-schedule-shell,
+  .inventory-shell,
   .staff-roles-shell,
   .pt-clients-shell,
   .pt-packages-shell,
@@ -6482,7 +6482,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-workspace,
   .all-trainers-workspace,
   .assign-trainer-workspace,
-  .trainer-schedule-workspace,
+  .inventory-workspace,
   .staff-roles-workspace,
   .pt-clients-workspace,
   .pt-packages-workspace,
@@ -6554,7 +6554,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-stage,
   .all-trainers-stage,
   .assign-trainer-stage,
-  .trainer-schedule-stage,
+  .inventory-stage,
   .staff-roles-stage,
   .pt-clients-stage,
   .pt-packages-stage,
@@ -6583,7 +6583,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-shell,
   .all-trainers-shell,
   .assign-trainer-shell,
-  .trainer-schedule-shell,
+  .inventory-shell,
   .staff-roles-shell,
   .pt-clients-shell,
   .pt-packages-shell,
@@ -9320,7 +9320,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-stage:not(.is-active),
   .all-trainers-stage:not(.is-active),
   .assign-trainer-stage:not(.is-active),
-  .trainer-schedule-stage:not(.is-active),
+  .inventory-stage:not(.is-active),
   .staff-roles-stage:not(.is-active),
   .pt-clients-stage:not(.is-active),
   .pt-packages-stage:not(.is-active),
@@ -9351,7 +9351,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-stage,
   .all-trainers-stage,
   .assign-trainer-stage,
-  .trainer-schedule-stage,
+  .inventory-stage,
   .staff-roles-stage,
   .pt-clients-stage,
   .pt-packages-stage,
@@ -9384,7 +9384,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-shell,
   .all-trainers-shell,
   .assign-trainer-shell,
-  .trainer-schedule-shell,
+  .inventory-shell,
   .staff-roles-shell,
   .pt-clients-shell,
   .pt-packages-shell,
@@ -9692,7 +9692,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .generate-receipt-shell,
   .all-trainers-shell,
   .assign-trainer-shell,
-  .trainer-schedule-shell,
+  .inventory-shell,
   .staff-roles-shell,
   .pt-clients-shell,
   .pt-packages-shell,

@@ -94,9 +94,12 @@ export class WhepGateway {
         const locationHeader = `/whep/${streamId}/sessions/${sessionId}`;
 
         return { sessionId, sdpAnswer, locationHeader };
+      } else {
+        const errText = await res.text().catch(() => '');
+        console.error(`[WhepGateway] MediaMTX returned HTTP ${res.status}: ${errText}`);
       }
-    } catch {
-      // MediaMTX offline or stream pending; proceed to compliant fallback
+    } catch (err: any) {
+      console.error(`[WhepGateway] MediaMTX fetch failed: ${err.message}`);
     }
 
     // Fallback: local compliant generation

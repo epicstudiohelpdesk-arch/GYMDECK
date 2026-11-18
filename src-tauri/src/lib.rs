@@ -29,6 +29,12 @@ pub mod sync_adversarial_tests;
 pub mod payment_account_tests;
 #[cfg(test)]
 pub mod gym_qr_tests;
+#[cfg(test)]
+pub mod communication_settings_tests;
+#[cfg(test)]
+pub mod gym_profile_tests;
+#[cfg(test)]
+pub mod broadcast_queue_tests;
 
 use tauri::Manager;
 use commands::auth_commands::{
@@ -53,6 +59,16 @@ use commands::gym_qr_commands::get_gym_checkin_qr_command;
 use commands::payment_account_commands::{
     payment_accounts_list_command, payment_accounts_create_command, payment_accounts_update_command,
     payment_accounts_set_primary_command, payment_accounts_deactivate_command
+};
+use commands::communication_settings_commands::{
+    get_gym_communication_settings_command, save_gym_communication_settings_command
+};
+use commands::gym_profile_commands::{
+    get_gym_profile_command, save_gym_profile_command, save_gym_profile_media_command
+};
+use commands::broadcast_queue_commands::{
+    preview_broadcast_command, get_broadcast_command, list_broadcasts_command,
+    record_broadcast_result_command, cancel_broadcast_command, delete_broadcast_command
 };
 use commands::backup_commands::{
     create_backup_command, list_backups_command, verify_backup_command, verify_restore_command
@@ -239,6 +255,17 @@ pub fn run() {
         payment_accounts_update_command,
         payment_accounts_set_primary_command,
         payment_accounts_deactivate_command,
+        get_gym_communication_settings_command,
+        save_gym_communication_settings_command,
+        get_gym_profile_command,
+        save_gym_profile_command,
+        save_gym_profile_media_command,
+        preview_broadcast_command,
+        get_broadcast_command,
+        list_broadcasts_command,
+        record_broadcast_result_command,
+        cancel_broadcast_command,
+        delete_broadcast_command,
         get_gym_checkin_qr_command,
         get_system_status,
         get_cctv_ipc_token
