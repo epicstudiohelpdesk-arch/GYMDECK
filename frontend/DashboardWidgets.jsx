@@ -1190,7 +1190,7 @@ export const Dashboard = () => {
                   <p className="text-[10px] text-slate-500 font-medium mt-0.5">Durations & rates</p>
                 </button>
 
-                {/* Communication Hub */}
+                {/* Whatsapp Line */}
                 <button
                   type="button"
                   onClick={() => navigateTo("whatsapp-hub")}
@@ -1199,7 +1199,7 @@ export const Dashboard = () => {
                   <div className="w-7 h-7 rounded-lg bg-rose-100/80 text-rose-700 flex items-center justify-center mb-2 group-hover:bg-rose-600 group-hover:text-white transition-colors">
                     <Bell size={14} strokeWidth={2.4} />
                   </div>
-                  <h4 className="text-xs font-black text-slate-900 leading-tight">Communication Hub</h4>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Whatsapp Line</h4>
                   <p className="text-[10px] text-slate-500 font-medium mt-0.5">Automated WhatsApp</p>
                 </button>
 

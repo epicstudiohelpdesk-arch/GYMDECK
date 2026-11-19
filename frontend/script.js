@@ -758,7 +758,7 @@ const viewLabels = {
   inventory: "Inventory",
   "pt-packages": "PT Packages",
   "notify-members": "Send Notification",
-  "whatsapp-hub": "Communication Hub",
+  "whatsapp-hub": "Whatsapp Line",
   "whatsapp-alerts": "WhatsApp Alerts",
   "renewal-reminders": "Renewal Reminders",
   announcements: "Announcements",
