@@ -203,19 +203,19 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
     <div className={compact ? 'space-y-3' : 'space-y-3.5'}>
       {/* ─── GRAPHICAL ENTERPRISE CONNECTION CARD (SOLID WHATSAPP GREEN) ─── */}
       <div 
-        className="rounded-2xl border p-4 sm:p-5 transition-all duration-200 text-white shadow-md relative overflow-hidden"
+        className="rounded-2xl border p-5 transition-all duration-200 text-white shadow-md relative overflow-hidden"
         style={{
           backgroundColor: '#40c351',
           borderColor: '#36ab46',
-          boxShadow: '0 8px 24px rgba(64, 195, 81, 0.22)',
+          boxShadow: '0 10px 28px -4px rgba(64, 195, 81, 0.28)',
         }}
       >
-        {/* Top Section: Header with Official Logo, Title, and Telemetry Badge */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Top Section: Header with Official Logo, Title, Phone Pill, and Telemetry Badge */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
             {/* Official WhatsApp Brand Icon Container */}
             <div 
-              className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-white shadow-xs border border-white/60"
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-white shadow-xs border border-white/70"
             >
               <img 
                 src="/whatsapp-logo.png" 
@@ -227,35 +227,34 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span 
-                  className="text-sm font-extrabold tracking-tight flex items-center gap-1.5 text-white"
+                  className="text-base font-extrabold tracking-tight text-white flex items-center gap-2"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                   }}
                 >
-                  <span>WhatsApp Line</span>
-                  {isLive ? (
-                    <span 
-                      className="font-bold text-xs text-white/95 bg-white/20 px-2 py-0.5 rounded-full"
-                    >
-                      Online
-                    </span>
-                  ) : status === 'CONNECTING' ? (
-                    <span 
-                      className="font-bold text-xs text-white/90 bg-black/15 px-2 py-0.5 rounded-full"
-                    >
-                      Pairing…
-                    </span>
-                  ) : null}
+                  WhatsApp Line
                 </span>
 
+                {isLive ? (
+                  <span className="inline-flex items-center gap-1.5 font-bold text-[11px] text-emerald-950 bg-white/95 px-2.5 py-0.5 rounded-full shadow-2xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Online
+                  </span>
+                ) : status === 'CONNECTING' ? (
+                  <span className="inline-flex items-center gap-1.5 font-bold text-[11px] text-white bg-black/20 px-2.5 py-0.5 rounded-full">
+                    <Loader2 size={10} className="animate-spin text-white" />
+                    Pairing…
+                  </span>
+                ) : null}
+
                 {connection?.businessPhoneNumber ? (
-                  <span className="text-[10px] font-mono font-medium text-emerald-950 bg-white/90 px-2 py-0.5 rounded-md shadow-2xs truncate">
+                  <span className="text-[11px] font-mono font-bold text-emerald-950 bg-white/95 px-2.5 py-0.5 rounded-md shadow-2xs truncate">
                     {connection.businessPhoneNumber}
                   </span>
                 ) : null}
               </div>
 
-              <p className="text-[11px] text-white/90 mt-0.5 leading-snug font-medium">
+              <p className="text-xs text-white/90 mt-1 leading-snug font-medium">
                 {isLive 
                   ? 'Active companion pipeline • Sending automated PDF invoices and renewal notices.'
                   : status === 'CONNECTING'
@@ -266,17 +265,17 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
           </div>
 
           {/* Right Status Indicator */}
-          <div className="shrink-0 hidden sm:block">
+          <div className="shrink-0 self-start sm:self-center">
             {isLive ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-950 bg-white/90 px-2.5 py-1 rounded-xl shadow-xs">
-                <ShieldCheck size={12} strokeWidth={2.5} /> Connected
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-950 bg-white px-3 py-1.5 rounded-xl shadow-xs border border-white/60">
+                <ShieldCheck size={14} strokeWidth={2.5} className="text-emerald-600" /> Connected
               </span>
             ) : status === 'CONNECTING' ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/20 px-2.5 py-1 rounded-xl shadow-xs">
-                <Loader2 size={11} className="animate-spin" /> Ready for Scan
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-black/25 px-3 py-1.5 rounded-xl shadow-xs">
+                <Loader2 size={12} className="animate-spin" /> Ready for Scan
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/85">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/90 bg-black/20 px-3 py-1.5 rounded-xl">
                 <Unplug size={13} strokeWidth={2} /> Disconnected
               </span>
             )}
@@ -284,89 +283,91 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
         </div>
 
         {/* Bottom Section: Integrated Action Buttons Side by Side Inside The Card */}
-        <div className="mt-4 pt-3.5 border-t border-white/25 flex flex-wrap items-center gap-2.5">
-          {canConnect || status === 'CONNECTING' ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (status === 'CONNECTING' && qrCode) {
-                  setShowConnectModal(true);
-                } else {
-                  handleConnect();
-                }
-              }}
-              disabled={Boolean(busy)}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-900 text-white text-[11px] font-semibold hover:bg-slate-800 disabled:opacity-60 cursor-pointer transition-colors shadow-xs"
-            >
-              {busy === 'connect' ? (
-                <Loader2 size={12} className="animate-spin" />
-              ) : (
-                <Smartphone size={12} />
-              )}
-              <span>
-                {status === 'NOT_CONNECTED' 
-                  ? 'Connect WhatsApp' 
-                  : status === 'CONNECTING' 
-                  ? 'Refresh QR' 
-                  : 'Reconnect WhatsApp'}
-              </span>
-            </button>
-          ) : null}
-
-          {status === 'CONNECTING' ? (
-            <button
-              type="button"
-              onClick={handleCancelLinking}
-              disabled={Boolean(busy)}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 hover:bg-white text-[11px] font-semibold text-slate-700 hover:text-slate-900 disabled:opacity-60 cursor-pointer transition-colors shadow-2xs"
-            >
-              {busy === 'cancel' ? (
-                <Loader2 size={12} className="animate-spin" />
-              ) : (
-                <X size={12} className="text-slate-500" />
-              )}
-              <span>Cancel setup</span>
-            </button>
-          ) : null}
-
-          {status === 'CONNECTED' ? (
-            <>
+        <div className="mt-4 pt-3.5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {canConnect || status === 'CONNECTING' ? (
               <button
                 type="button"
-                onClick={handleVerify}
+                onClick={() => {
+                  if (status === 'CONNECTING' && qrCode) {
+                    setShowConnectModal(true);
+                  } else {
+                    handleConnect();
+                  }
+                }}
                 disabled={Boolean(busy)}
-                className="group relative inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/95 hover:bg-white text-[11px] font-semibold text-slate-800 hover:text-slate-950 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 disabled:opacity-60 cursor-pointer transition-colors shadow-xs"
               >
-                {busy === 'verify' ? (
-                  <Loader2 size={12} className="animate-spin text-emerald-600" />
+                {busy === 'connect' ? (
+                  <Loader2 size={13} className="animate-spin" />
                 ) : (
-                  <RefreshCw size={12} className="text-slate-500 group-hover:text-slate-900 group-hover:rotate-45 transition-transform" />
+                  <Smartphone size={13} />
                 )}
-                <span>Refresh status</span>
+                <span>
+                  {status === 'NOT_CONNECTED' 
+                    ? 'Connect WhatsApp' 
+                    : status === 'CONNECTING' 
+                    ? 'Refresh QR' 
+                    : 'Reconnect WhatsApp'}
+                </span>
               </button>
+            ) : null}
 
+            {status === 'CONNECTING' ? (
               <button
                 type="button"
-                onClick={() => setShowDisconnectModal(true)}
+                onClick={handleCancelLinking}
                 disabled={Boolean(busy)}
-                className="group inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-[11px] font-semibold text-white shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 hover:bg-white text-xs font-bold text-slate-700 hover:text-slate-900 disabled:opacity-60 cursor-pointer transition-colors shadow-2xs"
               >
-                {busy === 'disconnect' ? (
-                  <Loader2 size={12} className="animate-spin" />
+                {busy === 'cancel' ? (
+                  <Loader2 size={13} className="animate-spin" />
                 ) : (
-                  <Unplug size={12} className="text-white/80 group-hover:text-white transition-colors" />
+                  <X size={13} className="text-slate-500" />
                 )}
-                <span>Disconnect</span>
+                <span>Cancel setup</span>
               </button>
-            </>
-          ) : null}
+            ) : null}
+
+            {status === 'CONNECTED' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleVerify}
+                  disabled={Boolean(busy)}
+                  className="group relative inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white text-xs font-bold text-slate-800 hover:text-slate-950 shadow-xs hover:shadow transition-all disabled:opacity-50 cursor-pointer border border-white/40"
+                >
+                  {busy === 'verify' ? (
+                    <Loader2 size={13} className="animate-spin text-emerald-600" />
+                  ) : (
+                    <RefreshCw size={13} className="text-slate-500 group-hover:text-slate-900 group-hover:rotate-45 transition-transform" />
+                  )}
+                  <span>Refresh status</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDisconnectModal(true)}
+                  disabled={Boolean(busy)}
+                  className="group inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-xs font-bold text-white shadow-xs hover:shadow transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {busy === 'disconnect' ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Unplug size={13} className="text-white/80 group-hover:text-white transition-colors" />
+                  )}
+                  <span>Disconnect</span>
+                </button>
+              </>
+            ) : null}
+          </div>
 
           <button
             type="button"
             onClick={() => setShowHelp(true)}
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[11px] font-medium text-white/90 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-semibold text-white/95 hover:text-white hover:bg-white/15 transition-colors cursor-pointer ml-auto"
           >
-            <QrCode size={12} className="text-white/80" />
+            <QrCode size={13} className="text-white/90" />
             <span>How it works</span>
           </button>
         </div>

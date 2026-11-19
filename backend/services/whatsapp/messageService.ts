@@ -145,8 +145,8 @@ export class WhatsAppMessageService {
       template: plan.templateView,
       mode: effectiveMode,
       windowRule:
-        effectiveMode === 'TEXT'
-          ? 'Free-form text is allowed because the 24-hour customer window is open.'
+        effectiveMode === 'TEXT' || Boolean(input.body?.trim())
+          ? 'Direct gateway delivery via connected WhatsApp session.'
           : effectiveMode === 'MIXED'
             ? 'Some members have an open 24-hour window and will receive text; the rest need an approved utility template.'
             : 'An approved utility template is required because the 24-hour customer window is closed.',
@@ -273,13 +273,28 @@ export class WhatsAppMessageService {
         classTime: input.classTime ?? null,
       });
 
-      const renderSource = evaluation.mode === 'TEMPLATE' ? definition?.body || sourceBody : sourceBody;
+      const isCustomBody = Boolean(rawBody && rawBody.trim());
+      const renderSource = isCustomBody
+        ? sourceBody
+        : evaluation.mode === 'TEMPLATE'
+          ? definition?.body || sourceBody
+          : sourceBody;
       const rendered = renderWhatsAppMessage(renderSource, values);
 
       let eligible = evaluation.allowed;
       let reasonCode = evaluation.reasonCode;
       let ownerMessage = evaluation.ownerMessage;
       let renderedText = rendered.text;
+
+      // When the gym owner writes a custom message, check variables against that custom message.
+      // If the owner typed free text without missing variables, don't fail for template variables!
+      if (isCustomBody) {
+        if (!rendered.unknownVariables.length && !rendered.missingVariables.length && renderedText.trim()) {
+          eligible = true;
+          reasonCode = null;
+          ownerMessage = null;
+        }
+      }
 
       if (eligible && rendered.unknownVariables.length) {
         eligible = false;
@@ -299,7 +314,8 @@ export class WhatsAppMessageService {
           const value = (values as Record<string, string | undefined>)[key];
           return value || '';
         });
-        if (templateParameters.some((value) => !value)) {
+        // Only enforce templateParameters if the message is actually an automated predefined template, not an owner's custom body
+        if (!isCustomBody && templateParameters.some((value) => !value)) {
           eligible = false;
           reasonCode = 'MISSING_TEMPLATE_VARIABLES';
           ownerMessage = `${member.fullName} is missing data required by the approved template.`;

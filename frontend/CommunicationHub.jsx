@@ -319,6 +319,8 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
   const [sendResult, setSendResult] = useState(null);
   const [error, setError] = useState('');
   const [showConnectNoticeModal, setShowConnectNoticeModal] = useState(false);
+  const [showSendSuccessModal, setShowSendSuccessModal] = useState(false);
+  const [dispatchedCount, setDispatchedCount] = useState(0);
 
   const textareaRef = useRef(null);
 
@@ -534,6 +536,7 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
 
     setSending(true);
     setError('');
+    const countToSend = selectedIds.length;
     try {
       const result = await whatsappApi.send({
         ...buildPayload(),
@@ -545,6 +548,9 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
       });
       setSendResult(result);
       setPreview(null);
+      setDispatchedCount(result?.queued ?? countToSend);
+      setSelectedIds([]);
+      setShowSendSuccessModal(true);
       if (onSent) onSent();
     } catch (err) {
       setError(err.message || 'Could not queue the message.');
@@ -659,18 +665,21 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
               placeholder="Type notification message here or choose an active template above..."
               className="w-full p-3.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
             />
-            {body && (
-              <div className="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => setBody('')}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-[11px] font-bold transition-all shadow-2xs cursor-pointer"
-                >
-                  <Trash2 size={12} strokeWidth={2.4} />
-                  <span>Clear Message</span>
-                </button>
-              </div>
-            )}
+            <div className="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setBody('')}
+                disabled={!body}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-xs ${
+                  body
+                    ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white cursor-pointer border border-rose-600'
+                    : 'bg-rose-300 text-white/90 border border-rose-300 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <Trash2 size={12} strokeWidth={2.4} />
+                <span>Clear Message</span>
+              </button>
+            </div>
           </div>
         </Card>
 
@@ -704,7 +713,7 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
                   {connection?.displayName || 'Registered Business Line'}
                 </h4>
                 <p className="text-[11px] font-mono text-slate-500 mt-0.5">
-                  {connection?.businessPhoneNumber ? `+${connection.businessPhoneNumber}` : '+91 6291773811'} · OpenWA Linked Device
+                  {connection?.businessPhoneNumber ? `+${connection.businessPhoneNumber}` : '+91 6291773811'} · WhatsApp Linked Device
                 </p>
               </div>
             </div>
@@ -790,10 +799,21 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono transition-all ${
-                selectedIds.length > 0 ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-500'
-              }`}>
-                {selectedIds.length} Selected
+              <span 
+                className="px-2.5 py-1 rounded-lg text-xs font-black font-mono tracking-tight transition-all flex items-center gap-1 shadow-2xs"
+                style={{
+                  backgroundColor: selectedIds.length > 0 ? '#128C7E' : '#f1f5f9',
+                  color: selectedIds.length > 0 ? '#ffffff' : '#64748b',
+                  border: selectedIds.length > 0 ? '1px solid #075E54' : '1px solid #e2e8f0',
+                }}
+              >
+                <span className={selectedIds.length > 0 ? 'text-white font-extrabold' : 'text-slate-600'}>
+                  {String(selectedIds.length).padStart(2, '0')}
+                </span>
+                <span className={selectedIds.length > 0 ? 'text-white/60' : 'text-slate-400'}>/</span>
+                <span className={selectedIds.length > 0 ? 'text-white/90' : 'text-slate-500'}>
+                  {String(filteredMembers.length).padStart(2, '0')}
+                </span>
               </span>
 
               <button
@@ -1172,6 +1192,127 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
           document.body
         )
       ) : null}
+
+      {/* ─── MODAL: MESSAGE SENT SUCCESS (SETUP GUIDE STYLE) ─── */}
+      {showSendSuccessModal && typeof document !== 'undefined' ? (
+        createPortal(
+          <div 
+            className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 transition-all duration-200 animate-in fade-in"
+            style={{
+              background: 'rgba(14, 18, 28, 0.44)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowSendSuccessModal(false);
+            }}
+          >
+            <div 
+              className="w-full max-w-[440px] rounded-[32px] p-8 transition-all duration-200 text-left relative"
+              style={{
+                background: 'rgba(255, 255, 255, 0.98)',
+                border: '1px solid rgba(255, 255, 255, 0.9)',
+                boxShadow: '0 32px 80px rgba(15, 23, 42, 0.22)',
+              }}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setShowSendSuccessModal(false)}
+                className="absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={17} />
+              </button>
+
+              <div className="mb-2">
+                <p className="logout-dialog-kicker" style={{ margin: 0 }}>Dispatch Confirmed</p>
+              </div>
+
+              {/* Title with Official WhatsApp Branding */}
+              <h2 className="text-slate-900 font-extrabold tracking-tight flex items-center flex-wrap gap-2.5" style={{ fontSize: '1.65rem', lineHeight: '1.25' }}>
+                <span>Message</span>
+                <span 
+                  className="inline-flex items-center gap-2"
+                  style={{
+                    color: '#25D366',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    fontWeight: 800,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  <img 
+                    src="/whatsapp-logo.png" 
+                    alt="WhatsApp" 
+                    className="w-7 h-7 object-contain inline-block shrink-0 -mt-0.5"
+                  />
+                  <span>Sent</span>
+                </span>
+                <span className="text-emerald-600">!</span>
+              </h2>
+
+              <p 
+                className="text-slate-500 font-normal leading-relaxed"
+                style={{
+                  margin: '12px 0 0',
+                  fontSize: '0.88rem',
+                  lineHeight: '1.55',
+                  color: '#556070',
+                }}
+              >
+                Broadcast dispatched successfully through the gym's official line. The background queue has accepted the request with delivery receipts enabled.
+              </p>
+
+              {/* Status Graphic & Details Card */}
+              <div className="mt-5 p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center gap-3.5 shadow-2xs">
+                <div className="w-12 h-12 rounded-2xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-2xs shrink-0">
+                  <ShieldCheck size={26} strokeWidth={2.4} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                      Queue Accepted
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <p className="text-[11px] font-mono text-emerald-800 mt-0.5 font-medium">
+                    {dispatchedCount} {dispatchedCount === 1 ? 'message' : 'messages'} enqueued for dispatch
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div 
+                className="logout-dialog-actions"
+                style={{
+                  marginTop: '28px',
+                  display: 'flex',
+                  gap: '12px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowSendSuccessModal(false)}
+                  className="dialog-btn dialog-btn-danger cursor-pointer"
+                  style={{
+                    minHeight: '48px',
+                    borderRadius: '16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    width: '100%',
+                  }}
+                >
+                  <span>Done & Close</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="btn-arrow-icon" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      ) : null}
     </div>
   );
 }
@@ -1464,74 +1605,74 @@ function HistoryTab({ onChanged }) {
   }, [messages]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* ─── METRIC CARDS / STAT TILES ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
-          <div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs flex items-center justify-between">
+          <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               Total Logged
             </span>
-            <div className="text-2xl font-black text-slate-900 font-mono tabular-nums">
+            <div className="text-xl font-black text-slate-900 font-mono tabular-nums leading-tight">
               {statusCounts.ALL}
             </div>
-            <span className="text-[10px] font-medium text-slate-500">All transmissions</span>
+            <span className="text-[10px] font-medium text-slate-500 block truncate mt-0.5">All transmissions</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200/60">
-            <Layers size={16} strokeWidth={2.4} />
+          <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200/60">
+            <Layers size={15} strokeWidth={2.4} />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
-          <div>
+        <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs flex items-center justify-between">
+          <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               Delivered
             </span>
-            <div className="text-2xl font-black text-emerald-700 font-mono tabular-nums">
+            <div className="text-xl font-black text-emerald-700 font-mono tabular-nums leading-tight">
               {statusCounts.DELIVERED}
             </div>
-            <span className="text-[10px] font-medium text-slate-500">Confirmed on handset</span>
+            <span className="text-[10px] font-medium text-slate-500 block truncate mt-0.5">Handset confirmed</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
-            <CheckCheck size={16} strokeWidth={2.4} />
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <CheckCheck size={15} strokeWidth={2.4} />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
-          <div>
+        <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs flex items-center justify-between">
+          <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               Read by Member
             </span>
-            <div className="text-2xl font-black text-teal-700 font-mono tabular-nums">
+            <div className="text-xl font-black text-teal-700 font-mono tabular-nums leading-tight">
               {statusCounts.READ}
             </div>
-            <span className="text-[10px] font-medium text-slate-500">Blue tick verified</span>
+            <span className="text-[10px] font-medium text-slate-500 block truncate mt-0.5">Blue tick receipt</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100">
-            <CheckCircle2 size={16} strokeWidth={2.4} />
+          <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100">
+            <CheckCircle2 size={15} strokeWidth={2.4} />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
-          <div>
+        <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs flex items-center justify-between">
+          <div className="min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               Failed / Blocked
             </span>
-            <div className="text-2xl font-black text-rose-700 font-mono tabular-nums">
+            <div className="text-xl font-black text-rose-700 font-mono tabular-nums leading-tight">
               {statusCounts.FAILED}
             </div>
-            <span className="text-[10px] font-medium text-slate-500">Delivery exceptions</span>
+            <span className="text-[10px] font-medium text-slate-500 block truncate mt-0.5">Delivery exceptions</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 border border-rose-100">
-            <AlertCircle size={16} strokeWidth={2.4} />
+          <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 border border-rose-100">
+            <AlertCircle size={15} strokeWidth={2.4} />
           </div>
         </div>
       </div>
 
-      {/* ─── FILTER CONTROL BAR ─── */}
-      <Card className="p-4 shadow-2xs">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+      {/* ─── FILTER CONTROL BAR (COMPACT & MODERN) ─── */}
+      <Card className="p-3 shadow-2xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <CustomDropdown
               value={status}
               onChange={(val) => setStatus(val)}
@@ -1546,23 +1687,23 @@ function HistoryTab({ onChanged }) {
                 { value: 'FAILED', label: 'Failed' },
                 { value: 'CANCELLED', label: 'Cancelled' },
               ]}
-              className="w-full sm:w-48"
-              buttonClassName="h-9.5 rounded-xl border border-slate-200 text-xs font-bold shadow-2xs"
+              className="w-full sm:w-44"
+              buttonClassName="h-8.5 rounded-lg border border-slate-200 text-xs font-bold shadow-2xs"
             />
 
             <div className="relative flex-1 min-w-44 flex items-center">
-              <Search size={14} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+              <Search size={13} className="absolute left-3 text-slate-400 pointer-events-none" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search recipient name, member code, or phone..."
-                className="h-9.5 pl-9.5 pr-8 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-slate-50 focus:bg-white text-xs w-full focus:outline-none focus:border-indigo-500 font-medium transition-all shadow-2xs"
+                placeholder="Search member, ID, or phone..."
+                className="h-8.5 pl-8.5 pr-8 rounded-lg border border-slate-200/90 bg-slate-50/70 hover:bg-slate-50 focus:bg-white text-xs w-full focus:outline-none focus:border-indigo-500 font-medium transition-all shadow-2xs"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 p-1 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer"
+                  className="absolute right-2 p-1 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   <X size={12} />
                 </button>
@@ -1570,31 +1711,36 @@ function HistoryTab({ onChanged }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={load}
-            className="inline-flex items-center justify-center gap-1.5 h-9.5 px-4 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer shadow-2xs transition-all shrink-0"
-          >
-            <RefreshCw size={12} strokeWidth={2.4} />
-            <span>Refresh Logs</span>
-          </button>
+          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+            <span className="text-[11px] font-mono text-slate-400 font-medium sm:hidden">
+              {messages.length} log(s)
+            </span>
+            <button
+              type="button"
+              onClick={load}
+              className="inline-flex items-center justify-center gap-1.5 h-8.5 px-3 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer shadow-2xs transition-all shrink-0"
+            >
+              <RefreshCw size={11} strokeWidth={2.4} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
         <ErrorNote message={error} onRetry={load} />
       </Card>
 
       {/* ─── DATA TABLE / AUDIT LEDGER ─── */}
-      <Card className="overflow-hidden shadow-2xs">
-        <div className="bg-slate-50/90 border-b border-slate-100 px-4 py-3 flex items-center justify-between">
+      <Card className="overflow-hidden shadow-2xs border-slate-200">
+        <div className="bg-slate-50/90 border-b border-slate-100 px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <History size={15} className="text-slate-500" />
+            <History size={14} className="text-slate-500" />
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-              WhatsApp Transmission Ledger
+              Transmission Ledger
             </h3>
-            <span className="text-[10px] font-mono font-bold text-slate-400 ml-1">
-              ({messages.length} Records)
+            <span className="text-[10px] font-mono font-bold text-slate-400 ml-0.5">
+              ({messages.length})
             </span>
           </div>
-          <span className="text-[11px] font-medium text-slate-400">
+          <span className="text-[10px] font-semibold text-slate-400">
             Real-time delivery receipts
           </span>
         </div>
@@ -1609,60 +1755,213 @@ function HistoryTab({ onChanged }) {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/60 text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50/70 text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200/80">
                 <tr>
-                  <th className="px-4 py-3 font-black">Recipient</th>
-                  <th className="px-4 py-3 font-black">Type / Template</th>
-                  <th className="px-4 py-3 font-black">Timestamp</th>
-                  <th className="px-4 py-3 font-black">Delivery Status</th>
-                  <th className="px-4 py-3 font-black">Content Preview / Reason</th>
-                  <th className="px-4 py-3 text-right font-black">Actions</th>
+                  <th className="px-4 py-2.5 font-bold">Recipient</th>
+                  <th className="px-4 py-2.5 font-bold">Channel / Type</th>
+                  <th className="px-4 py-2.5 font-bold">Sent At</th>
+                  <th className="px-4 py-2.5 font-bold">Status</th>
+                  <th className="px-4 py-2.5 font-bold">Content Preview</th>
+                  <th className="px-4 py-2.5 text-right font-bold">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {messages.map((m) => (
-                  <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <p className="font-bold text-slate-900 leading-tight">{m.recipientName || 'Member'}</p>
-                      <p className="text-[10px] font-mono text-slate-400 mt-0.5">{m.recipientMasked || '—'}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
-                        {m.messageType === 'TEMPLATE' ? m.templateName || 'Utility Template' : 'Text Broadcast'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-slate-500 font-mono text-[11px] whitespace-nowrap">
-                      {new Date(m.createdAt).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <Badge status={m.deliveryStatus} />
-                    </td>
-                    <td className="px-4 py-3.5 text-[11px] text-slate-600 max-w-sm truncate">
-                      {m.failureReason ? (
-                        <span className="text-rose-600 font-semibold">{m.failureReason}</span>
-                      ) : (
-                        m.preview || '—'
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      {m.deliveryStatus === 'QUEUED' && (
-                        <button
-                          type="button"
-                          onClick={() => cancel(m.id)}
-                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-rose-600 hover:bg-rose-50 border border-rose-200/80 cursor-pointer shadow-2xs transition-all"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-100/90">
+                {messages.map((m) => {
+                  const avatar = getAvatarStyle(m.recipientName);
+                  return (
+                    <tr key={m.id} className="hover:bg-slate-50/80 transition-colors group">
+                      {/* RECIPIENT */}
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 border ${avatar.bg}`}
+                          >
+                            {(m.recipientName || 'M').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 leading-tight truncate">
+                              {m.recipientName || 'Member'}
+                            </p>
+                            <p className="text-[10px] font-mono text-slate-400 mt-0.5 leading-none">
+                              {m.recipientMasked || '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* CHANNEL / TYPE */}
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100/80 text-slate-700 border border-slate-200/70">
+                          {m.messageType === 'TEMPLATE'
+                            ? m.templateName || 'Utility Template'
+                            : 'Direct Message'}
+                        </span>
+                      </td>
+
+                      {/* TIMESTAMP */}
+                      <td className="px-4 py-2.5 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                        {new Date(m.createdAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+
+                      {/* STATUS */}
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <Badge status={m.deliveryStatus} />
+                      </td>
+
+                      {/* PREVIEW */}
+                      <td className="px-4 py-2.5 text-[11px] text-slate-600 max-w-xs md:max-w-sm">
+                        {m.failureReason ? (
+                          <div className="flex items-center gap-1.5 text-rose-600 font-semibold truncate">
+                            <AlertCircle size={12} className="shrink-0" />
+                            <span className="truncate">{m.failureReason}</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMessage(m)}
+                            className="text-left truncate block w-full hover:text-indigo-600 cursor-pointer font-medium"
+                            title="Click to view full message"
+                          >
+                            {m.preview || '—'}
+                          </button>
+                        )}
+                      </td>
+
+                      {/* ACTIONS */}
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMessage(m)}
+                            className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/60 cursor-pointer transition-colors"
+                            title="View Details"
+                          >
+                            <ExternalLink size={13} />
+                          </button>
+
+                          {m.deliveryStatus === 'QUEUED' && (
+                            <button
+                              type="button"
+                              onClick={() => cancel(m.id)}
+                              className="px-2 py-0.5 rounded-md text-[10px] font-bold text-rose-600 hover:bg-rose-50 border border-rose-200/80 cursor-pointer shadow-2xs transition-all"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </Card>
+
+      {/* ─── MESSAGE DETAILS MODAL ─── */}
+      {selectedMessage && typeof document !== 'undefined' ? (
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 transition-all duration-200 animate-in fade-in"
+            style={{
+              background: 'rgba(14, 18, 28, 0.44)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedMessage(null);
+            }}
+          >
+            <div
+              className="w-full max-w-[460px] rounded-[28px] p-6 transition-all duration-200 text-left relative bg-white border border-slate-100"
+              style={{
+                boxShadow: '0 32px 80px rgba(15, 23, 42, 0.22)',
+              }}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setSelectedMessage(null)}
+                className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                  Message Dispatch Record
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 mb-4 pr-6">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">
+                    {selectedMessage.recipientName || 'Member'}
+                  </h3>
+                  <p className="text-xs font-mono text-slate-500 mt-0.5">
+                    {selectedMessage.recipientMasked || selectedMessage.recipientNumber}
+                  </p>
+                </div>
+                <Badge status={selectedMessage.deliveryStatus} />
+              </div>
+
+              {/* Message Content Bubble (WhatsApp style preview) */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 mb-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Dispatched Text
+                </span>
+                <p className="text-xs text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
+                  {selectedMessage.preview || selectedMessage.messagePayload || 'No content preview available.'}
+                </p>
+              </div>
+
+              {/* Meta details grid */}
+              <div className="grid grid-cols-2 gap-2 text-[11px] mb-5">
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-bold">Type</span>
+                  <span className="font-semibold text-slate-700">{selectedMessage.messageType || 'TEXT'}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-bold">Sent Time</span>
+                  <span className="font-semibold text-slate-700 font-mono text-[10px]">
+                    {new Date(selectedMessage.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {selectedMessage.failureReason && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-700 text-xs mb-4 flex items-start gap-2">
+                  <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-bold">Failure Diagnostics:</strong>
+                    <span>{selectedMessage.failureReason}</span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSelectedMessage(null)}
+                className="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+              >
+                Close Record
+              </button>
+            </div>
+          </div>,
+          document.body
+        )
+      ) : null}
+    </div>
+  );
+}
     </div>
   );
 }
