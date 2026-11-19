@@ -74,6 +74,8 @@ async function runPhase15Verification() {
     JWT_SECRET: 'a_very_strong_production_secret_key_32_bytes_long!!',
     CORS_ORIGINS: 'https://app.gymdeck.com,https://owner.gymdeck.com',
     NOTIFICATION_PROVIDER_MODE: 'sandbox',
+    OPENWA_API_KEY: 'a_very_strong_openwa_production_api_key_32_chars!!',
+    OPENWA_WEBHOOK_SECRET: 'a_very_strong_openwa_production_webhook_secret!!',
   });
   assert.equal(validProd.success, true, 'Valid production configuration must pass');
   assert.equal(validProd.data?.NODE_ENV, 'production');
