@@ -33,7 +33,16 @@ export function createApp(): Express {
   );
 
   // 3. Body Parsing
-  app.use(express.json({ limit: '1mb' }));
+  // The raw body is preserved for provider webhooks that must be verified with
+  // an HMAC over the exact bytes Meta signed (WhatsApp Cloud API).
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req, _res, buf) => {
+        (req as any).rawBody = Buffer.from(buf);
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // 4. Correlation & Request Tracking

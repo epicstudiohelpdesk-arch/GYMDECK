@@ -17,3 +17,4 @@ export * from './audit';
 export * from './sync';
 export * from './payments';
 export * from './cctv';
+export * from './whatsapp';

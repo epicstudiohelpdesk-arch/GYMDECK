@@ -13,6 +13,7 @@ import { DahuaRecordingAdapter } from '../src/recordings/dahuaRecordingAdapter';
 import { RecordingAdapterFactory } from '../src/recordings/recordingAdapterFactory';
 import { PlaybackEngine } from '../src/recordings/playbackEngine';
 import { LocalApiServer } from '../src/server/localApi';
+import { secureStore } from '../src/config/secureStore';
 
 describe('CCTV Gate 7 - Recording Search & Playback Architecture', () => {
   const cameraId = 'cam-uuid-101';
@@ -174,11 +175,16 @@ describe('CCTV Gate 7 - Recording Search & Playback Architecture', () => {
     it('should handle /recordings/search and /recordings/playback-session over loopback', async () => {
       await localApi.start(0);
       const testPort = localApi.getPort();
+      const ipcToken = secureStore.getOrGenerateIpcSecret();
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'X-GymDeck-IPC-Token': ipcToken,
+      };
 
       // 1. Search recordings
       const searchRes = await fetch(`http://127.0.0.1:${testPort}/recordings/search`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           brand: 'HIKVISION',
           ipAddress: '192.168.1.50',
@@ -197,7 +203,7 @@ describe('CCTV Gate 7 - Recording Search & Playback Architecture', () => {
       // 2. Start playback session
       const pbRes = await fetch(`http://127.0.0.1:${testPort}/recordings/playback-session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           brand: 'HIKVISION',
           ipAddress: '192.168.1.50',
@@ -216,7 +222,7 @@ describe('CCTV Gate 7 - Recording Search & Playback Architecture', () => {
       // 3. Control speed
       const speedRes = await fetch(`http://127.0.0.1:${testPort}/recordings/playback-control`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           sessionId,
           action: 'SPEED',
@@ -230,6 +236,9 @@ describe('CCTV Gate 7 - Recording Search & Playback Architecture', () => {
       // 4. Teardown session
       const delRes = await fetch(`http://127.0.0.1:${testPort}/recordings/playback-session/${sessionId}`, {
         method: 'DELETE',
+        headers: {
+          'X-GymDeck-IPC-Token': ipcToken,
+        },
       });
       assert.strictEqual(delRes.status, 200);
 

@@ -316,6 +316,7 @@ pub async fn cloud_communications_request_command(
         return Err(AppError::Unauthorized);
     }
     if !(request.path.starts_with("/v1/owner/communications")
+        || request.path.starts_with("/v1/owner/whatsapp")
         || request.path.starts_with("/v1/owner/payment-accounts")
         || request.path.starts_with("/v1/owner/payment-reconciliation")
         || request.path.starts_with("/v1/payments"))
@@ -327,30 +328,60 @@ pub async fn cloud_communications_request_command(
     }
 
     let cloud_url = get_effective_cloud_url(None);
-    let client = CloudAuthClient::build_http_client();
-    let token = match state.cloud_session.get_access_token().await {
+    let mut token = match state.cloud_session.get_access_token().await {
         Some(t) if !t.is_empty() => t,
-        _ => state.cloud_session.refresh_access_token_single_flight(&client, &cloud_url).await?,
+        _ => {
+            let client = CloudAuthClient::build_http_client();
+            match state.cloud_session.refresh_access_token_single_flight(&client, &cloud_url).await {
+                Ok(t) => t,
+                Err(_) => String::new(),
+            }
+        }
     };
     let url = format!("{}{}", cloud_url.trim_end_matches('/'), request.path);
-    let builder = match method.as_str() {
-        "GET" => client.get(&url),
-        "POST" => client.post(&url),
-        "PUT" => client.put(&url),
-        _ => client.patch(&url),
+    let execute_req = |tok: &str| {
+        let client = CloudAuthClient::build_http_client();
+        let b = match method.as_str() {
+            "GET" => client.get(&url),
+            "POST" => client.post(&url),
+            "PUT" => client.put(&url),
+            _ => client.patch(&url),
+        };
+        let b = b
+            .bearer_auth(tok)
+            .header("x-request-id", uuid::Uuid::new_v4().to_string());
+        if let Some(ref body) = request.body {
+            b.json(body)
+        } else {
+            b
+        }
     };
 
-    let builder = builder
-        .bearer_auth(token)
-        .header("x-request-id", uuid::Uuid::new_v4().to_string());
-    let builder = if let Some(body) = request.body {
-        builder.json(&body)
+    let mut response = if !token.is_empty() {
+        execute_req(&token).send().await.map_err(|e| {
+            AppError::Network(format!("Cloud communications request failed: {}", e))
+        })?
     } else {
-        builder
+        // If initial token was empty, attempt refresh right now
+        let client = CloudAuthClient::build_http_client();
+        let new_tok = state.cloud_session.refresh_access_token_single_flight(&client, &cloud_url).await?;
+        token = new_tok;
+        execute_req(&token).send().await.map_err(|e| {
+            AppError::Network(format!("Cloud communications request failed: {}", e))
+        })?
     };
-    let response = builder.send().await.map_err(|e| {
-        AppError::Network(format!("Cloud communications request failed: {}", e))
-    })?;
+
+    // Auto-refresh token if 401 Unauthorized (e.g. JWT expired after 15 mins) and retry once
+    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+        let client = CloudAuthClient::build_http_client();
+        if let Ok(new_tok) = state.cloud_session.refresh_access_token_single_flight(&client, &cloud_url).await {
+            token = new_tok;
+            if let Ok(retry_resp) = execute_req(&token).send().await {
+                response = retry_resp;
+            }
+        }
+    }
+
     let status = response.status().as_u16();
     let body = response.json::<serde_json::Value>().await.unwrap_or_else(|_| {
         serde_json::json!({ "success": false, "error": { "message": "Invalid cloud response" } })

@@ -13,6 +13,7 @@ import { notificationService } from '../../../services/notifications/notificatio
 import { gymCheckInQrService } from '../../../services/member/gymCheckInQrService';
 import analyticsRouter from './analytics';
 import communicationsRouter from './communications';
+import whatsappRouter from './whatsapp';
 import { backupRouter } from './backup';
 import paymentAccountsRouter from './paymentAccounts';
 import paymentReconciliationRouter from './paymentReconciliation';
@@ -35,6 +36,9 @@ router.use('/backup', backupRouter);
 
 // Sub-router for owner communications, Mode A (/v1/owner/communications)
 router.use('/communications', communicationsRouter);
+
+// Native WhatsApp Communication Hub (/v1/owner/whatsapp)
+router.use('/whatsapp', whatsappRouter);
 
 // Payments V2: receiving accounts and reconciliation
 router.use('/payment-accounts', paymentAccountsRouter);

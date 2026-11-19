@@ -40,13 +40,51 @@ services:
       RESEND_FROM_EMAIL: GymDeck Staging <no-reply@staging.gymdeck.com>
       STORAGE_ENDPOINT: https://vault-staging.r2.cloudflarestorage.com
       STORAGE_BUCKET: gymdeck-vault-staging
+      WHATSAPP_PROVIDER: openwa
+      OPENWA_API_URL: http://openwa_staging:2785/api
+      OPENWA_API_KEY: ${OPENWA_STAGING_API_KEY:?FATAL: OPENWA_STAGING_API_KEY must be set}
+      OPENWA_WEBHOOK_SECRET: ${OPENWA_STAGING_WEBHOOK_SECRET:?FATAL: OPENWA_STAGING_WEBHOOK_SECRET must be set}
+      OPENWA_WEBHOOK_URL: http://backend_staging:8080/v1/webhooks/openwa
     ports:
       - "8080:8080"
     networks:
       - gymdeck_staging_net
 
+  openwa_staging:
+    build:
+      context: ../../services/openwa
+    container_name: gymdeck-openwa-staging
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 2785
+      DATABASE_TYPE: sqlite
+      DATABASE_NAME: /app/data/openwa.sqlite
+      MAIN_DATABASE_NAME: /app/data/main.sqlite
+      DATABASE_SYNCHRONIZE: "false"
+      MAIN_DATABASE_SYNCHRONIZE: "false"
+      ENGINE_TYPE: whatsapp-web.js
+      SESSION_DATA_PATH: /app/data/sessions
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_PATH: /app/data/media
+      REDIS_ENABLED: "false"
+      QUEUE_ENABLED: "false"
+      CACHE_ENABLED: "false"
+      AUTO_START_SESSIONS: "true"
+      PUPPETEER_HEADLESS: "true"
+      PUPPETEER_ARGS: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
+      API_MASTER_KEY: ${OPENWA_STAGING_API_KEY:?FATAL: OPENWA_STAGING_API_KEY must be set}
+      WEBHOOK_SSRF_PROTECT: "true"
+      SSRF_ALLOWED_HOSTS: backend_staging
+    volumes:
+      - openwa_staging_data:/app/data
+    networks:
+      - gymdeck_staging_net
+
 volumes:
   postgres_staging_data:
+    driver: local
+  openwa_staging_data:
     driver: local
 
 networks:

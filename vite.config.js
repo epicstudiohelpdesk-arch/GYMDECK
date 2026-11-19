@@ -106,6 +106,14 @@ export default defineConfig({
     port: 3000,
     open: false,
     strictPort: true,
+    watch: {
+      ignored: [
+        '**/services/**',
+        '**/services/openwa/**',
+        '**/services/openwa/data/**',
+        '**/.wa-web-cache/**',
+      ],
+    },
   },
   // Pre-bundle heavy dependencies for faster dev startup
   optimizeDeps: {

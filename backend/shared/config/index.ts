@@ -42,12 +42,39 @@ export const EnvironmentSchema = z.object({
   EXPO_ACCESS_TOKEN: z.string().optional(),
   EXPO_PUSH_API_URL: z.string().url().default('https://exp.host/--/api/v2/push/send'),
 
-  // WhatsApp Provider (Meta WhatsApp Cloud API)
+  // WhatsApp Provider. GymDeck now ships the OpenWA gateway as the messaging
+  // engine; the Cloud API settings below remain only for reading legacy rows.
+  WHATSAPP_PROVIDER: z.enum(['openwa']).default('openwa'),
+  OPENWA_API_URL: z.string().url().default('http://127.0.0.1:2785/api'),
+  OPENWA_API_KEY: z.string().optional().default('dev_openwa_api_key_change_me_32chars'),
+  OPENWA_WEBHOOK_SECRET: z
+    .string()
+    .optional()
+    .default('dev_openwa_webhook_secret_32chars'),
+  // Public URL OpenWA should POST events to. When empty, the GymDeck backend
+  // derives it from the incoming request origin (local development) or from
+  // WHATSAPP_PUBLIC_WEBHOOK_URL.
+  OPENWA_WEBHOOK_URL: z
+    .string()
+    .optional()
+    .default('http://127.0.0.1:3001/v1/webhooks/openwa'),
+  OPENWA_REQUEST_TIMEOUT_MS: z.coerce.number().min(1000).max(120000).default(30000),
+  OPENWA_SESSION_PREFIX: z.string().optional().default('gymdeck'),
+  OPENWA_ENGINE: z.enum(['whatsapp-web.js', 'baileys']).optional().default('whatsapp-web.js'),
+
+  // Meta credentials used only by the legacy notification-provider module, not
+  // by the Communication Hub (which is OpenWA-only).
   WHATSAPP_API_URL: z.string().url().default('https://graph.facebook.com/v22.0'),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default('dev_whatsapp_phone_number_id'),
   WHATSAPP_ACCESS_TOKEN: z.string().optional().default('dev_whatsapp_access_token'),
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional().default('dev_whatsapp_webhook_verify_token'),
   WHATSAPP_APP_SECRET: z.string().optional().default('dev_whatsapp_app_secret_12345'),
+
+  WHATSAPP_DEFAULT_COUNTRY_CODE: z.string().optional().default('91'),
+  WHATSAPP_MAX_SENDS_PER_HOUR: z.coerce.number().min(1).max(10000).default(200),
+  WHATSAPP_QUEUE_BATCH_SIZE: z.coerce.number().min(1).max(200).default(25),
+  WHATSAPP_WORKER_INTERVAL_MS: z.coerce.number().min(1000).max(600000).default(15000),
+  WHATSAPP_TEST_RECIPIENT: z.string().optional().default(''),
 
   // Provider Dispatch Mode
   NOTIFICATION_PROVIDER_MODE: z.enum(['live', 'sandbox', 'mock']).default('sandbox'),
@@ -79,6 +106,31 @@ export const EnvironmentSchema = z.object({
         path: ['CORS_ORIGINS'],
         message: 'Security Violation: Wildcard CORS (*) is forbidden in production. Explicit allowed origins required.',
       });
+    }
+
+    if (data.WHATSAPP_PROVIDER === 'openwa') {
+      if (
+        !data.OPENWA_API_KEY ||
+        data.OPENWA_API_KEY.length < 16 ||
+        /dev_openwa|change_me|placeholder/i.test(data.OPENWA_API_KEY)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['OPENWA_API_KEY'],
+          message: 'Production requires a strong OPENWA_API_KEY of at least 16 characters.',
+        });
+      }
+      if (
+        !data.OPENWA_WEBHOOK_SECRET ||
+        data.OPENWA_WEBHOOK_SECRET.length < 16 ||
+        /dev_openwa|change_me|placeholder/i.test(data.OPENWA_WEBHOOK_SECRET)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['OPENWA_WEBHOOK_SECRET'],
+          message: 'Production requires a strong OPENWA_WEBHOOK_SECRET of at least 16 characters.',
+        });
+      }
     }
 
     if (data.NOTIFICATION_PROVIDER_MODE === 'live') {

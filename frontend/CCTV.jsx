@@ -1088,47 +1088,85 @@ export const CCTV = () => {
     }
 
     try {
-      // 3. Attempt real cloud search API if server is connected
-      const fromTime = `${recordDate}T00:00:00Z`;
-      const toTime = `${recordDate}T23:59:59Z`;
+      // 3. Query Edge Gateway loopback for recordings (offline-first architecture)
+      const fromTime = `${recordDate}T00:00:00.000Z`;
+      const toTime = `${recordDate}T23:59:59.999Z`;
 
-      const res = await fetch(`${CLOUD_API_BASE}/recordings/search`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          cameraId: cam.id,
-          from: fromTime,
-          to: toTime,
-          startTime: fromTime,
-          endTime: toTime,
-        }),
-        signal: AbortSignal.timeout(1500),
-      }).catch(() => null);
+      const token = await getGatewayIpcToken();
+      let segments = [];
+      let foundViaGateway = false;
 
-      if (res && res.ok) {
-        const data = await res.json();
-        const segments = data.data?.segments || [];
-        setRecordSegments(segments);
-        if (segments.length > 0) {
-          setRecordingSearchMessage({
-            type: "success",
-            text: `Found ${segments.length} recorded blocks for ${cam.name} on ${recordDate}. Scrubber timeline synced.`,
+      // Extract IP address from rtspUrl or cam object
+      let cameraIp = "127.0.0.1";
+      if (cam.rtspUrl) {
+        try {
+          const match = cam.rtspUrl.match(/@([^:/]+)/) || cam.rtspUrl.match(/:\/\/([^:/]+)/);
+          if (match && match[1]) cameraIp = match[1];
+        } catch (_) {}
+      }
+
+      if (token) {
+        try {
+          const gwRes = await fetch(`${GATEWAY_LOOPBACK_URL}/recordings/search`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-GymDeck-IPC-Token": token,
+            },
+            body: JSON.stringify({
+              brand: cam.brand || cam.model || "ONVIF",
+              ipAddress: cameraIp,
+              cameraId: cam.id,
+              channelNumber: cam.channelNumber || 1,
+              from: fromTime,
+              to: toTime,
+            }),
+            signal: AbortSignal.timeout(3500),
           });
-          showToast(`Loaded ${segments.length} segments from NVR storage.`);
-        } else {
-          setRecordingSearchMessage({
-            type: "info",
-            text: `No recordings found on NVR storage for ${cam.name} on ${recordDate}.`,
-          });
-          showToast(`No footage found for ${recordDate}.`);
+          if (gwRes.ok) {
+            const gwData = await gwRes.json();
+            if (gwData.success && Array.isArray(gwData.segments)) {
+              segments = gwData.segments;
+              foundViaGateway = true;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // If loopback gateway didn't return segments, try cloud API fallback if available
+      if (!foundViaGateway) {
+        const res = await fetch(`${CLOUD_API_BASE}/recordings/search`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            cameraId: cam.id,
+            from: fromTime,
+            to: toTime,
+            startTime: fromTime,
+            endTime: toTime,
+          }),
+          signal: AbortSignal.timeout(1500),
+        }).catch(() => null);
+
+        if (res && res.ok) {
+          const data = await res.json();
+          segments = data.data?.segments || [];
         }
+      }
+
+      setRecordSegments(segments);
+      if (segments.length > 0) {
+        setRecordingSearchMessage({
+          type: "success",
+          text: `Found ${segments.length} recorded blocks for ${cam.name} on ${recordDate}. Scrubber timeline synced.`,
+        });
+        showToast(`Loaded ${segments.length} segments from NVR storage.`);
       } else {
-        setRecordSegments([]);
         setRecordingSearchMessage({
           type: "info",
-          text: `No recorded footage found for ${cam.name} on ${recordDate}. Ensure on-premise NVR is actively recording.`,
+          text: `No recordings found on NVR storage for ${cam.name} on ${recordDate}.`,
         });
-        showToast(`No recordings found for ${recordDate}.`);
+        showToast(`No footage found for ${recordDate}.`);
       }
     } catch {
       setRecordSegments([]);

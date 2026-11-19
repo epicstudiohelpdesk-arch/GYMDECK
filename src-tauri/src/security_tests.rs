@@ -297,4 +297,70 @@ mod enterprise_security_tests {
         assert!(!display_str.contains(secret_key), "Display string must never leak key");
         assert!(!serialized.contains(secret_key), "Serialized JSON must never leak key");
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_cctv_ipc_token_security_matrix() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = std::env::temp_dir().join(format!("gymdeck_ipc_test_{}", uuid::Uuid::new_v4()));
+        let fake_home = temp_dir.clone();
+        let gymdeck_dir = fake_home.join(".gymdeck");
+        std::fs::create_dir_all(&gymdeck_dir).expect("create fake home .gymdeck");
+
+        // Set HOME to fake_home
+        std::env::set_var("HOME", fake_home.to_str().unwrap());
+
+        // Sub-test 1: Directory has 0777 insecure permissions -> Rejected
+        let _ = std::fs::set_permissions(&gymdeck_dir, std::fs::Permissions::from_mode(0o777));
+        let token_path = gymdeck_dir.join("gateway-ipc.token");
+        std::fs::write(&token_path, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef").unwrap();
+        let _ = std::fs::set_permissions(&token_path, std::fs::Permissions::from_mode(0o600));
+
+        let res = crate::commands::system_commands::get_cctv_ipc_token();
+        assert!(res.is_err(), "Must reject insecure parent directory permissions");
+        assert!(res.unwrap_err().contains("insecure permissions"));
+
+        // Fix parent dir permissions to 0700
+        let _ = std::fs::set_permissions(&gymdeck_dir, std::fs::Permissions::from_mode(0o700));
+
+        // Sub-test 2: Insecure file mode 0644 or 0666 -> Rejected
+        let _ = std::fs::set_permissions(&token_path, std::fs::Permissions::from_mode(0o644));
+        let res = crate::commands::system_commands::get_cctv_ipc_token();
+        assert!(res.is_err(), "Must reject insecure 0644 token permissions");
+        assert!(res.unwrap_err().contains("strictly requires 0600 or 0400"));
+
+        // Sub-test 3: Truncated token (< 32 chars) -> Rejected
+        let _ = std::fs::set_permissions(&token_path, std::fs::Permissions::from_mode(0o600));
+        std::fs::write(&token_path, "short_token_123").unwrap();
+        let res = crate::commands::system_commands::get_cctv_ipc_token();
+        assert!(res.is_err(), "Must reject truncated token");
+        assert!(res.unwrap_err().contains("Invalid IPC token length"));
+
+        // Sub-test 4: Valid 0600 token -> Accepted
+        let valid_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        std::fs::write(&token_path, valid_token).unwrap();
+        let _ = std::fs::set_permissions(&token_path, std::fs::Permissions::from_mode(0o600));
+        let res = crate::commands::system_commands::get_cctv_ipc_token();
+        assert!(res.is_ok(), "Must accept valid 0600 token: {:?}", res);
+        assert_eq!(res.unwrap(), valid_token);
+
+        // Sub-test 5: Valid 0400 (read-only) token -> Accepted
+        let _ = std::fs::set_permissions(&token_path, std::fs::Permissions::from_mode(0o400));
+        let res = crate::commands::system_commands::get_cctv_ipc_token();
+        assert!(res.is_ok(), "Must accept valid 0400 token: {:?}", res);
+        assert_eq!(res.unwrap(), valid_token);
+
+        // Sub-test 6: Token file is a symlink -> Rejected by openat(O_NOFOLLOW)
+        let _ = std::fs::remove_file(&token_path);
+        let target_file = temp_dir.join("secret_target.txt");
+        std::fs::write(&target_file, valid_token).unwrap();
+        let _ = std::fs::set_permissions(&target_file, std::fs::Permissions::from_mode(0o600));
+        std::os::unix::fs::symlink(&target_file, &token_path).expect("create token symlink");
+
+        let res = crate::commands::system_commands::get_cctv_ipc_token();
+        assert!(res.is_err(), "Must reject symlinked token file via O_NOFOLLOW");
+
+        // Cleanup
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
 }

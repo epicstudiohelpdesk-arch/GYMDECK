@@ -446,3 +446,185 @@ CREATE TABLE IF NOT EXISTS gym_payment_accounts (
 
 CREATE INDEX IF NOT EXISTS idx_gym_payment_accounts_gym ON gym_payment_accounts(gym_id, is_active);
 
+-- 13. INVENTORY SYSTEM (Retail, Supplements, Merchandise & Stock Ledger)
+CREATE TABLE IF NOT EXISTS inventory_categories (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    icon TEXT,
+    image_reference TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
+    UNIQUE(gym_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_inv_categories_gym ON inventory_categories(gym_id, is_active);
+
+CREATE TABLE IF NOT EXISTS inventory_suppliers (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    supplier_name TEXT NOT NULL,
+    contact_person TEXT,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    gstin TEXT,
+    notes TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_inv_suppliers_gym ON inventory_suppliers(gym_id, is_active);
+
+CREATE TABLE IF NOT EXISTS inventory_products (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    category_id TEXT,
+    name TEXT NOT NULL,
+    brand TEXT,
+    sku TEXT,
+    barcode TEXT,
+    short_description TEXT,
+    description TEXT,
+    product_type TEXT NOT NULL DEFAULT 'PHYSICAL',
+    unit_of_measure TEXT NOT NULL DEFAULT 'pcs',
+    cost_price_minor_units INTEGER,
+    selling_price_minor_units INTEGER NOT NULL DEFAULT 0,
+    mrp_minor_units INTEGER,
+    discount_price_minor_units INTEGER,
+    tax_configuration TEXT DEFAULT 'EXEMPT',
+    tax_rate REAL DEFAULT 0.0,
+    has_variants INTEGER NOT NULL DEFAULT 0,
+    batch_tracking_enabled INTEGER NOT NULL DEFAULT 0,
+    expiry_tracking_enabled INTEGER NOT NULL DEFAULT 0,
+    low_stock_threshold INTEGER NOT NULL DEFAULT 5,
+    status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','DRAFT','ARCHIVED')),
+    store_visibility TEXT NOT NULL DEFAULT 'HIDDEN' CHECK (store_visibility IN ('VISIBLE','HIDDEN')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at DATETIME,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
+    FOREIGN KEY(category_id) REFERENCES inventory_categories(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inv_products_gym ON inventory_products(gym_id, status);
+CREATE INDEX IF NOT EXISTS idx_inv_products_cat ON inventory_products(gym_id, category_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inv_products_sku ON inventory_products(gym_id, sku) WHERE sku IS NOT NULL AND sku != '';
+
+CREATE TABLE IF NOT EXISTS inventory_product_images (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    storage_key TEXT NOT NULL,
+    original_filename TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    width INTEGER,
+    height INTEGER,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES inventory_products(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_inv_images_product ON inventory_product_images(product_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_inv_images_gym ON inventory_product_images(gym_id);
+
+CREATE TABLE IF NOT EXISTS inventory_variants (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    variant_name TEXT NOT NULL,
+    attributes_json TEXT NOT NULL DEFAULT '{}',
+    sku TEXT,
+    barcode TEXT,
+    cost_price_minor_units INTEGER,
+    selling_price_minor_units INTEGER NOT NULL DEFAULT 0,
+    mrp_minor_units INTEGER,
+    low_stock_threshold INTEGER NOT NULL DEFAULT 5,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES inventory_products(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_inv_variants_product ON inventory_variants(product_id, is_active);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inv_variants_sku ON inventory_variants(gym_id, sku) WHERE sku IS NOT NULL AND sku != '';
+
+CREATE TABLE IF NOT EXISTS inventory_batches (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    variant_id TEXT,
+    supplier_id TEXT,
+    batch_number TEXT NOT NULL,
+    manufactured_at DATETIME,
+    expires_at DATETIME,
+    received_quantity INTEGER NOT NULL DEFAULT 0,
+    available_quantity INTEGER NOT NULL DEFAULT 0,
+    purchase_cost_minor_units INTEGER,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES inventory_products(id) ON DELETE CASCADE,
+    FOREIGN KEY(variant_id) REFERENCES inventory_variants(id) ON DELETE CASCADE,
+    FOREIGN KEY(supplier_id) REFERENCES inventory_suppliers(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inv_batches_product ON inventory_batches(product_id, expires_at ASC);
+CREATE INDEX IF NOT EXISTS idx_inv_batches_gym_expiry ON inventory_batches(gym_id, expires_at ASC);
+
+CREATE TABLE IF NOT EXISTS inventory_stock (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    variant_id TEXT,
+    available_quantity INTEGER NOT NULL DEFAULT 0,
+    reserved_quantity INTEGER NOT NULL DEFAULT 0,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES inventory_products(id) ON DELETE CASCADE,
+    FOREIGN KEY(variant_id) REFERENCES inventory_variants(id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inv_stock_product_variant ON inventory_stock(gym_id, product_id, IFNULL(variant_id, ''));
+
+CREATE TABLE IF NOT EXISTS inventory_stock_movements (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    variant_id TEXT,
+    batch_id TEXT,
+    movement_type TEXT NOT NULL CHECK (movement_type IN ('OPENING','PURCHASE','ADJUSTMENT_ADD','ADJUSTMENT_SUB','SALE','RETURN','DAMAGE','EXPIRY','LOSS','INTERNAL_USE')),
+    quantity_change INTEGER NOT NULL,
+    quantity_before INTEGER NOT NULL,
+    quantity_after INTEGER NOT NULL,
+    unit_cost_minor_units INTEGER,
+    reference_type TEXT,
+    reference_id TEXT,
+    reason TEXT,
+    actor_id TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES inventory_products(id) ON DELETE CASCADE,
+    FOREIGN KEY(variant_id) REFERENCES inventory_variants(id) ON DELETE SET NULL,
+    FOREIGN KEY(batch_id) REFERENCES inventory_batches(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inv_movements_product ON inventory_stock_movements(product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_inv_movements_gym ON inventory_stock_movements(gym_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS inventory_audit_logs (
+    id TEXT PRIMARY KEY,
+    gym_id TEXT NOT NULL,
+    actor_id TEXT,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    previous_data TEXT,
+    new_data TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_inv_audit_logs_gym ON inventory_audit_logs(gym_id, created_at DESC);
+
+

@@ -61,6 +61,11 @@ services:
       STORAGE_BUCKET: ${STORAGE_BUCKET:-gymdeck-vault-prod}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-}
+      WHATSAPP_PROVIDER: openwa
+      OPENWA_API_URL: http://openwa:2785/api
+      OPENWA_API_KEY: ${OPENWA_API_KEY:?FATAL: OPENWA_API_KEY must be set}
+      OPENWA_WEBHOOK_SECRET: ${OPENWA_WEBHOOK_SECRET:?FATAL: OPENWA_WEBHOOK_SECRET must be set}
+      OPENWA_WEBHOOK_URL: http://backend:8080/v1/webhooks/openwa
     networks:
       - gymdeck_internal
       - gymdeck_ingress
@@ -79,8 +84,59 @@ services:
         max-size: "50m"
         max-file: "5"
 
+  # ----------------------------------------------------------------------------
+  # OpenWA WhatsApp Gateway (single instance: sessions live on its local volume)
+  # ----------------------------------------------------------------------------
+  openwa:
+    build:
+      context: ../../services/openwa
+    container_name: gymdeck-openwa-prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 2785
+      DATABASE_TYPE: sqlite
+      DATABASE_NAME: /app/data/openwa.sqlite
+      MAIN_DATABASE_NAME: /app/data/main.sqlite
+      DATABASE_SYNCHRONIZE: "false"
+      MAIN_DATABASE_SYNCHRONIZE: "false"
+      ENGINE_TYPE: whatsapp-web.js
+      SESSION_DATA_PATH: /app/data/sessions
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_PATH: /app/data/media
+      REDIS_ENABLED: "false"
+      QUEUE_ENABLED: "false"
+      CACHE_ENABLED: "false"
+      AUTO_START_SESSIONS: "true"
+      PUPPETEER_HEADLESS: "true"
+      PUPPETEER_ARGS: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
+      API_MASTER_KEY: ${OPENWA_API_KEY:?FATAL: OPENWA_API_KEY must be set}
+      WEBHOOK_SSRF_PROTECT: "true"
+      SSRF_ALLOWED_HOSTS: backend
+    volumes:
+      - openwa_prod_data:/app/data
+    networks:
+      - gymdeck_internal
+      - gymdeck_ingress
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4096M
+        reservations:
+          cpus: '0.5'
+          memory: 1024M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
 volumes:
   postgres_prod_data:
+    driver: local
+  openwa_prod_data:
     driver: local
 
 networks:

@@ -1,42 +1,31 @@
 /**
- * GymDeck Cloud Backend - Provider Webhook Routes
+ * GymDeck Cloud Backend - OpenWA provider webhooks.
+ *
+ * OpenWA posts every session event to /v1/webhooks/openwa and signs the exact
+ * raw body with HMAC-SHA256. No Meta callback or hub handshake remains.
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
-import { webhookService } from '../../../services/notifications/webhookService';
+import { openwaWebhookProcessor } from '../../../services/whatsapp/openwaWebhookProcessor';
+import { resourceRateLimiter } from '../../../shared/security/rateLimiter';
 
 const router: Router = Router();
 
 /**
- * 1. Meta WhatsApp Webhook Subscription Handshake (GET)
- */
-router.get(
-  '/whatsapp',
-  (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const mode = (req.query['hub.mode'] as string) || '';
-      const token = (req.query['hub.verify_token'] as string) || '';
-      const challenge = (req.query['hub.challenge'] as string) || '';
-
-      const responseChallenge = webhookService.verifyWhatsAppSubscription(mode, token, challenge);
-      res.status(200).send(responseChallenge);
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * 2. Meta WhatsApp Status Updates Callback (POST)
+ * OpenWA gateway callback (POST).
+ *
+ * OpenWA signs every delivery with X-OpenWA-Signature: sha256=<hex> over the
+ * exact body. The tenant is resolved from the session id stored on the gym's
+ * account row; no caller-supplied gym id is trusted.
  */
 router.post(
-  '/whatsapp',
+  '/openwa',
+  resourceRateLimiter.webhookIngress,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const signature = req.headers['x-hub-signature-256'] as string | undefined;
-      const rawBody = JSON.stringify(req.body);
-
-      const result = await webhookService.processWhatsAppWebhook(req.body, rawBody, signature);
+      const signature = req.headers['x-openwa-signature'] as string | undefined;
+      const rawBody = (req as any).rawBody as Buffer | undefined;
+      const result = await openwaWebhookProcessor.handle(rawBody, signature, req.body);
       res.status(200).json({ status: 'ok', ...result });
     } catch (err) {
       next(err);

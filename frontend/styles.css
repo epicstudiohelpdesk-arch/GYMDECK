@@ -4812,7 +4812,8 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   box-shadow: 0 18px 34px rgba(31, 41, 55, 0.08);
 }
 
-.notify-members-stage {
+.notify-members-stage,
+.whatsapp-hub-stage {
   position: absolute;
   inset: 0;
   padding: 0 !important;
@@ -4820,12 +4821,14 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   transform: translateY(18px) scale(0.99);
   pointer-events: none;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-gutter: stable;
   transition: opacity 240ms ease, transform 240ms ease;
   background-color: #f8fafc;
 }
 
-.notify-members-stage.is-active {
+.notify-members-stage.is-active,
+.whatsapp-hub-stage.is-active {
   display: block !important;
   opacity: 1 !important;
   transform: none !important;
@@ -9327,6 +9330,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .session-tracking-stage:not(.is-active),
   .trainer-earnings-stage:not(.is-active),
   .notify-members-stage:not(.is-active),
+  .whatsapp-hub-stage:not(.is-active),
   .revenue-reports-stage:not(.is-active),
   .attendance-analytics-stage:not(.is-active),
   .member-growth-stage:not(.is-active),
@@ -9358,6 +9362,7 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
   .session-tracking-stage,
   .trainer-earnings-stage,
   .notify-members-stage,
+  .whatsapp-hub-stage,
   .revenue-reports-stage,
   .attendance-analytics-stage,
   .member-growth-stage,

@@ -133,69 +133,108 @@ pub fn get_cctv_ipc_token() -> Result<String, String> {
 
     #[cfg(unix)]
     {
-        use std::os::unix::fs::MetadataExt;
-        use std::os::unix::fs::OpenOptionsExt;
-        use std::os::unix::fs::PermissionsExt;
+        use std::ffi::CString;
+        use std::os::unix::ffi::OsStrExt;
         use std::io::Read;
+        use std::os::unix::io::FromRawFd;
 
-        // 1. Open parent directory (~/.gymdeck) as a safe file descriptor
-        // O_DIRECTORY ensures we only open directories; O_NOFOLLOW prevents following symlinked dir
-        #[cfg(target_os = "macos")]
-        const O_NOFOLLOW: i32 = 0x0100;
-        #[cfg(target_os = "linux")]
-        const O_NOFOLLOW: i32 = 0o400000;
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-        const O_NOFOLLOW: i32 = 0;
+        // 1. Open parent directory (~/.gymdeck) as a safe file descriptor using O_DIRECTORY | O_NOFOLLOW
+        // This validates that the parent directory itself is not a symlink.
+        let dir_c_str = CString::new(gymdeck_dir.as_os_str().as_bytes())
+            .map_err(|e| format!("Invalid directory path string: {}", e))?;
 
-        let dir_file = std::fs::OpenOptions::new()
-            .read(true)
-            .custom_flags(O_NOFOLLOW)
-            .open(&gymdeck_dir)
-            .map_err(|e| format!("Security violation: failed to open ~/.gymdeck safely (O_NOFOLLOW): {}", e))?;
+        let dir_flags = libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW;
+        let dir_fd = unsafe { libc::open(dir_c_str.as_ptr(), dir_flags) };
+        if dir_fd < 0 {
+            return Err(format!(
+                "Security violation: failed to open ~/.gymdeck safely (O_DIRECTORY | O_NOFOLLOW): errno {}",
+                std::io::Error::last_os_error()
+            ));
+        }
 
-        let dir_meta = dir_file.metadata()
-            .map_err(|e| format!("Failed to inspect ~/.gymdeck directory metadata: {}", e))?;
+        // Wrap in struct that closes fd automatically on drop
+        struct FdCloser(libc::c_int);
+        impl Drop for FdCloser {
+            fn drop(&mut self) {
+                if self.0 >= 0 {
+                    unsafe { libc::close(self.0) };
+                }
+            }
+        }
+        let dir_closer = FdCloser(dir_fd);
 
-        if !dir_meta.file_type().is_dir() {
+        // Validate opened directory descriptor via fstat()
+        let mut dir_stat: libc::stat = unsafe { std::mem::zeroed() };
+        if unsafe { libc::fstat(dir_closer.0, &mut dir_stat) } != 0 {
+            return Err(format!("Failed to fstat ~/.gymdeck directory: {}", std::io::Error::last_os_error()));
+        }
+
+        if (dir_stat.st_mode & libc::S_IFMT) != libc::S_IFDIR {
             return Err("Security violation: ~/.gymdeck is not a directory".into());
         }
-        if dir_meta.permissions().mode() & 0o077 != 0 {
+
+        let effective_uid = unsafe { libc::geteuid() };
+        if dir_stat.st_uid != effective_uid {
+            return Err("Security violation: ~/.gymdeck directory owner mismatch with effective user".into());
+        }
+
+        if (dir_stat.st_mode & 0o077) != 0 {
             return Err("Security violation: ~/.gymdeck directory has insecure permissions (must be 0700)".into());
         }
 
-        // 2. Open token file with O_NOFOLLOW to block symlink following
-        let mut file = std::fs::OpenOptions::new()
-            .read(true)
-            .custom_flags(O_NOFOLLOW)
-            .open(&token_path)
-            .map_err(|e| format!("Failed to open IPC token file securely (O_NOFOLLOW): {}", e))?;
+        // 2. Open token file relative to parent directory descriptor using openat()
+        // O_NOFOLLOW prevents following symlinks; O_CLOEXEC prevents fd inheritance
+        let file_c_str = CString::new("gateway-ipc.token")
+            .map_err(|e| format!("Invalid token file name: {}", e))?;
 
-        // 3. fstat() on the opened file descriptor to prevent TOCTOU race
-        let file_meta = file.metadata()
-            .map_err(|e| format!("Failed to inspect opened token file descriptor metadata: {}", e))?;
+        let file_flags = libc::O_RDONLY | libc::O_NOFOLLOW | libc::O_CLOEXEC;
+        let file_fd = unsafe { libc::openat(dir_closer.0, file_c_str.as_ptr(), file_flags) };
+        if file_fd < 0 {
+            return Err(format!(
+                "Failed to open IPC token file securely via openat(O_NOFOLLOW): errno {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        let file_closer = FdCloser(file_fd);
 
-        if !file_meta.file_type().is_file() {
+        // 3. fstat() on the opened token file descriptor to prevent TOCTOU race
+        let mut file_stat: libc::stat = unsafe { std::mem::zeroed() };
+        if unsafe { libc::fstat(file_closer.0, &mut file_stat) } != 0 {
+            return Err(format!("Failed to fstat opened token file descriptor: {}", std::io::Error::last_os_error()));
+        }
+
+        if (file_stat.st_mode & libc::S_IFMT) != libc::S_IFREG {
             return Err("Security violation: ~/.gymdeck/gateway-ipc.token is not a regular file".into());
         }
-        if file_meta.uid() != dir_meta.uid() {
-            return Err("Security violation: ~/.gymdeck/gateway-ipc.token owner mismatch with ~/.gymdeck directory".into());
+
+        if file_stat.st_uid != effective_uid || file_stat.st_uid != dir_stat.st_uid {
+            return Err("Security violation: ~/.gymdeck/gateway-ipc.token owner mismatch with effective user/directory".into());
         }
 
-        let mode = file_meta.permissions().mode();
-        // Validate that permissions are strictly owner-only (mode 0600 or 0400)
-        if mode & 0o077 != 0 {
-            return Err("Security violation: ~/.gymdeck/gateway-ipc.token has insecure permissions".into());
+        let mode = (file_stat.st_mode & 0o777) as u32;
+        // Enforce exact permitted file modes of 0600 or 0400 (owner read-write or owner read-only)
+        if mode != 0o600 && mode != 0o400 {
+            return Err(format!(
+                "Security violation: ~/.gymdeck/gateway-ipc.token has insecure mode {:04o} (strictly requires 0600 or 0400)",
+                mode
+            ));
         }
+
+        // Read token from the verified file descriptor
+        // Convert to std::fs::File without double close
+        let mut file = unsafe { std::fs::File::from_raw_fd(file_closer.0) };
+        // Transfer ownership of fd to std::fs::File so FdCloser does not double-close
+        std::mem::forget(file_closer);
 
         let mut token_buf = String::new();
         file.read_to_string(&mut token_buf)
             .map_err(|e| format!("Failed to read token from safe file descriptor: {}", e))?;
-        
+
         let token = token_buf.trim().to_string();
         if token.len() < 32 {
-            return Err("Invalid IPC token length".into());
+            return Err("Invalid IPC token length: token must be at least 32 characters".into());
         }
-        return Ok(token);
+        Ok(token)
     }
 
     #[cfg(not(unix))]

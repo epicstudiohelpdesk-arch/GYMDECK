@@ -9,6 +9,7 @@ import { config } from '../../shared/config';
 import { logger } from '../../shared/logging';
 import { closeDatabasePool } from '../../shared/database';
 import { communicationRetentionWorker } from '../../services/communications/retentionWorker';
+import { whatsappWorker } from '../../services/whatsapp/worker';
 import { cctvSignalingService } from '../../services/cctv/cctvSignalingService';
 
 let server: Server | null = null;
@@ -42,6 +43,9 @@ export function startServer(): Server {
     });
     if (config.NODE_ENV !== 'test') {
       communicationRetentionWorker.start();
+      // Persistent WhatsApp queue + reminder scheduler. Runs server-side so
+      // delivery continues while every gym owner's desktop is closed.
+      whatsappWorker.start();
     }
   });
 
@@ -51,6 +55,8 @@ export function startServer(): Server {
 // Graceful Shutdown Logic
 async function handleShutdown(signal: string): Promise<void> {
   logger.info(`[Lifecycle] Received ${signal}. Commencing graceful shutdown...`);
+  whatsappWorker.stop();
+  communicationRetentionWorker.stop();
 
   if (server) {
     server.close(async () => {

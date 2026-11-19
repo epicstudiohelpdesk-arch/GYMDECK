@@ -35,6 +35,8 @@ pub mod communication_settings_tests;
 pub mod gym_profile_tests;
 #[cfg(test)]
 pub mod broadcast_queue_tests;
+#[cfg(test)]
+pub mod inventory_tests;
 
 use tauri::Manager;
 use commands::auth_commands::{
@@ -72,6 +74,15 @@ use commands::broadcast_queue_commands::{
 };
 use commands::backup_commands::{
     create_backup_command, list_backups_command, verify_backup_command, verify_restore_command
+};
+use commands::inventory_commands::{
+    list_inventory_categories_command, create_inventory_category_command, update_inventory_category_command,
+    list_inventory_suppliers_command, create_inventory_supplier_command, update_inventory_supplier_command,
+    list_inventory_products_command, get_inventory_product_command, create_inventory_product_command,
+    update_inventory_product_command, archive_inventory_product_command, unarchive_inventory_product_command,
+    upload_inventory_product_image_command, delete_inventory_product_image_command, set_primary_inventory_product_image_command,
+    receive_inventory_stock_command, adjust_inventory_stock_command, list_inventory_stock_movements_command,
+    list_inventory_batches_command, get_inventory_overview_stats_command
 };
 use commands::system_commands::{get_system_status, get_cctv_ipc_token};
 use auth::rate_limit::default_auth_limiter;
@@ -267,6 +278,26 @@ pub fn run() {
         cancel_broadcast_command,
         delete_broadcast_command,
         get_gym_checkin_qr_command,
+        list_inventory_categories_command,
+        create_inventory_category_command,
+        update_inventory_category_command,
+        list_inventory_suppliers_command,
+        create_inventory_supplier_command,
+        update_inventory_supplier_command,
+        list_inventory_products_command,
+        get_inventory_product_command,
+        create_inventory_product_command,
+        update_inventory_product_command,
+        archive_inventory_product_command,
+        unarchive_inventory_product_command,
+        upload_inventory_product_image_command,
+        delete_inventory_product_image_command,
+        set_primary_inventory_product_image_command,
+        receive_inventory_stock_command,
+        adjust_inventory_stock_command,
+        list_inventory_stock_movements_command,
+        list_inventory_batches_command,
+        get_inventory_overview_stats_command,
         get_system_status,
         get_cctv_ipc_token
     ])

@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "tsx test/health.test.ts && tsx test/config.test.ts && tsx test/errors.test.ts"
+    "test": "tsx test/health.test.ts && tsx test/config.test.ts && tsx test/errors.test.ts",
+    "test:whatsapp": "tsx test/whatsapp.test.ts",
+    "test:whatsapp:db": "tsx test/whatsapp.db.test.ts",
+    "test:whatsapp:integration": "tsx test/whatsapp.integration.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

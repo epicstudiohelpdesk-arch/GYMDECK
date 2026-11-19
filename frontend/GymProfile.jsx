@@ -17,6 +17,7 @@ import {
   toGymPassInfo
 } from "./gymCheckinQr.js";
 import FacilityLeafletMapModal from "./FacilityLeafletMapModal.jsx";
+import WhatsAppConnectionCard from "./WhatsAppConnectionCard.jsx";
 import { 
   Building2, 
   Upload, 
@@ -434,7 +435,7 @@ const COMMUNICATION_FAQS = [
   {
     id: "whatsapp-setup",
     question: "Do I need a paid WhatsApp Business API subscription?",
-    answer: "No paid API subscription is required for regular operations. GymDeck includes native Assisted Delivery, allowing you to trigger member chats and send digital invoice PDFs directly via WhatsApp Web or Desktop from your existing phone number at zero additional operational cost."
+    answer: "No paid Meta API subscription is required. GymDeck includes its own OpenWA gateway: connect the gym phone once by scanning a QR code under WhatsApp Business, and GymDeck can send member messages through that linked account. Use a dedicated gym number, and keep in mind that OpenWA is an unofficial WhatsApp Web client."
   }
 ];
 
@@ -3545,7 +3546,7 @@ const GymProfile = () => {
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
                           <span>Registered WhatsApp Number</span>
-                          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-md">Business API</span>
+                          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-md">Linked device</span>
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
@@ -3580,19 +3581,9 @@ const GymProfile = () => {
                       </div>
                     </div>
 
-                    {/* Footer Status Pill */}
+                    {/* Real connection state — a saved number alone is never "connected". */}
                     <div className="pt-4 mt-2">
-                      {gymData.whatsapp ? (
-                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50/70 border border-emerald-200/60 px-3 py-1.5 rounded-xl">
-                          <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
-                          <span className="truncate">Active for WhatsApp receipts & 1-click chat</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-700 bg-amber-50/70 border border-amber-200/60 px-3 py-1.5 rounded-xl">
-                          <AlertCircle size={13} className="text-amber-600 shrink-0" />
-                          <span className="truncate">Enter WhatsApp number to enable PDF invoices</span>
-                        </div>
-                      )}
+                      <WhatsAppConnectionCard phoneNumber={gymData.whatsapp} compact />
                     </div>
                   </div>
 

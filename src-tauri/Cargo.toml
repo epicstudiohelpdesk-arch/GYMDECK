@@ -42,7 +42,7 @@ rand = "0.8.5"
 # Secure memory wiping for sensitive credentials
 zeroize = { version = "1.8.1", features = ["zeroize_derive"] }
 # OS Native secure credential storage (Keychain / Credential Manager)
-keyring = "3.0.4"
+keyring = { version = "3.0.4", features = ["apple-native", "windows-native", "sync-secret-service"] }
 # Identifiers and timestamps
 uuid = { version = "1.8.0", features = ["v4", "serde"] }
 chrono = { version = "0.4.38", features = ["serde"] }
@@ -64,6 +64,7 @@ r2d2_sqlite = "0.24.0"
 secrecy = "0.8.0"
 hex = "0.4.3"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+libc = "0.2.191"
 
 [profile.release]
 lto = true
