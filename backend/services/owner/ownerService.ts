@@ -18,6 +18,8 @@ import {
   auditLogs,
   syncChangeLog,
   syncIdempotencyLog,
+  whatsappMessageConsents,
+  whatsappConsentHistory,
 } from '../../shared/database/schema';
 import { AppError } from '../../shared/errors';
 import { generateSecureToken, hashToken } from '../../shared/security';
@@ -48,6 +50,7 @@ export interface CreateMemberDto {
   address?: string;
   memberCode?: string;
   notes?: string;
+  whatsappOptIn?: boolean;
   planId?: string;
   initialPaymentAmount?: number;
   initialPaymentMethod?: string;
@@ -63,6 +66,7 @@ export interface UpdateMemberDto {
   address?: string;
   membershipStatus?: 'ACTIVE' | 'EXPIRED' | 'FROZEN' | 'INACTIVE';
   notes?: string;
+  whatsappOptIn?: boolean;
 }
 
 export class OwnerService {
@@ -491,6 +495,7 @@ export class OwnerService {
           dob: dto.dob ? (dto.dob as any) : null,
           address: dto.address?.trim() || null,
           membershipStatus: 'ACTIVE',
+          whatsappOptIn: dto.whatsappOptIn !== undefined ? Boolean(dto.whatsappOptIn) : true,
           joinedAt: new Date(),
           expiresAt: expiryDate,
           notes: dto.notes?.trim() || null,
@@ -522,7 +527,45 @@ export class OwnerService {
         });
       }
 
-      // 4. Record Audit Log
+      // 4. Record WhatsApp Communication Consent if member created
+      if (newMember) {
+        const isOptedIn = dto.whatsappOptIn !== undefined ? Boolean(dto.whatsappOptIn) : true;
+        const consentStatus = isOptedIn ? 'GRANTED' : 'WITHDRAWN';
+        const now = new Date();
+
+        await tx
+          .insert(whatsappMessageConsents)
+          .values({
+            gymId,
+            memberId: newMember.id,
+            consentStatus,
+            consentSource: 'REGISTRATION_MODAL',
+            consentTimestamp: isOptedIn ? now : null,
+            withdrawalTimestamp: isOptedIn ? null : now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [whatsappMessageConsents.gymId, whatsappMessageConsents.memberId],
+            set: {
+              consentStatus,
+              consentSource: 'REGISTRATION_MODAL',
+              consentTimestamp: isOptedIn ? now : null,
+              withdrawalTimestamp: isOptedIn ? null : now,
+              updatedAt: now,
+            },
+          });
+
+        await tx.insert(whatsappConsentHistory).values({
+          gymId,
+          memberId: newMember.id,
+          consentStatus,
+          consentSource: 'REGISTRATION_MODAL',
+          actorUserId: actorUserId || null,
+          recordedAt: now,
+        });
+      }
+
+      // 5. Record Audit Log
       await tx.insert(auditLogs).values({
         gymId,
         actorType: 'OWNER',
@@ -608,6 +651,7 @@ export class OwnerService {
     if (dto.address !== undefined) updates.address = dto.address.trim();
     if (dto.membershipStatus !== undefined) updates.membershipStatus = dto.membershipStatus;
     if (dto.notes !== undefined) updates.notes = dto.notes.trim();
+    if (dto.whatsappOptIn !== undefined) updates.whatsappOptIn = Boolean(dto.whatsappOptIn);
 
     return await db.transaction(async (tx) => {
       const [updated] = await tx
@@ -615,6 +659,43 @@ export class OwnerService {
         .set(updates)
         .where(and(eq(gymMembers.id, memberId), eq(gymMembers.gymId, gymId)))
         .returning();
+
+      if (dto.whatsappOptIn !== undefined) {
+        const isOptedIn = Boolean(dto.whatsappOptIn);
+        const consentStatus = isOptedIn ? 'GRANTED' : 'WITHDRAWN';
+        const now = new Date();
+
+        await tx
+          .insert(whatsappMessageConsents)
+          .values({
+            gymId,
+            memberId,
+            consentStatus,
+            consentSource: 'MEMBER_UPDATE',
+            consentTimestamp: isOptedIn ? now : null,
+            withdrawalTimestamp: isOptedIn ? null : now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [whatsappMessageConsents.gymId, whatsappMessageConsents.memberId],
+            set: {
+              consentStatus,
+              consentSource: 'MEMBER_UPDATE',
+              consentTimestamp: isOptedIn ? now : null,
+              withdrawalTimestamp: isOptedIn ? null : now,
+              updatedAt: now,
+            },
+          });
+
+        await tx.insert(whatsappConsentHistory).values({
+          gymId,
+          memberId,
+          consentStatus,
+          consentSource: 'MEMBER_UPDATE',
+          actorUserId: actorUserId || null,
+          recordedAt: now,
+        });
+      }
 
       await tx.insert(auditLogs).values({
         gymId,

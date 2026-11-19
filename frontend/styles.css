@@ -17151,14 +17151,142 @@ body:not(.verification-modal-open) .verification-modal.verification-animate-slid
   z-index: 10050 !important;
 }
 
+/* --- Page 1: Integrated Footer inside Registration Canvas --- */
+.registration-card-integrated-footer {
+  margin-top: 14px !important;
+  padding-top: 12px !important;
+  border-top: 1px dashed rgba(203, 213, 225, 0.8) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.registration-footnote-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.registration-footnote-star {
+  color: #ef4444 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+}
+
+.registration-footnote-text {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.35 !important;
+}
+
+/* WhatsApp Consent Toggle (Cardless, Inline, Official Branding) */
+.registration-whatsapp-consent-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  flex: 0 0 auto !important;
+  box-shadow: none !important;
+  transition: opacity 0.15s ease !important;
+}
+
+.registration-whatsapp-consent-toggle:hover {
+  opacity: 0.88 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.registration-whatsapp-consent-toggle input[type="checkbox"] {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.registration-whatsapp-consent-toggle .custom-consent-checkbox {
+  width: 15px !important;
+  height: 15px !important;
+  border-radius: 4px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.registration-whatsapp-consent-toggle .custom-consent-checkbox svg {
+  width: 9.5px !important;
+  height: 9.5px !important;
+  stroke: #ffffff !important;
+  display: none !important;
+}
+
+.registration-whatsapp-consent-toggle input[type="checkbox"]:checked + .custom-consent-checkbox {
+  background: #25D366 !important;
+  border-color: #25D366 !important;
+}
+
+.registration-whatsapp-consent-toggle input[type="checkbox"]:checked + .custom-consent-checkbox svg {
+  display: block !important;
+}
+
+.whatsapp-official-badge-icon {
+  width: 16px !important;
+  height: 16px !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+.registration-whatsapp-consent-toggle .consent-text-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1.2 !important;
+}
+
+.registration-whatsapp-consent-toggle .consent-headline {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  letter-spacing: -0.01em !important;
+}
+
+@media (max-width: 900px) {
+  .registration-card-integrated-footer {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .registration-whatsapp-consent-toggle {
+    width: 100% !important;
+  }
+}
+
 .registration-form-note {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
-  padding: 8px 14px !important;
-  border-radius: 10px !important;
-  background: rgba(248, 250, 252, 0.85) !important;
-  border: 1px solid #e2e8f0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: none !important;
   font-size: 11px !important;
   font-weight: 550 !important;
   color: #64748b !important;

@@ -1937,6 +1937,7 @@ const resetMemberForm = () => {
   const textLabels = [
     "Full Name",
     "Contact Number",
+    "WhatsApp Number",
     "Alternate Contact",
     "Email Address",
     "Address"
@@ -1959,6 +1960,12 @@ const resetMemberForm = () => {
       if (wrapper) syncCustomDropdownValue(wrapper);
     }
   });
+
+  // Ensure WhatsApp consent checkbox is always checked by default
+  const whatsappConsentEl = document.getElementById("member-whatsapp-consent");
+  if (whatsappConsentEl) {
+    whatsappConsentEl.checked = true;
+  }
 
   // Clear plan selection cards
   document.querySelectorAll(".plan-select-card").forEach((card) => {
@@ -2068,6 +2075,7 @@ const isAddMemberModalDirty = () => {
   const fields = [
     "Full Name",
     "Contact Number",
+    "WhatsApp Number",
     "Alternate Contact",
     "Email Address",
     "Height",
@@ -2162,6 +2170,7 @@ const prefillMemberForm = (row) => {
   
   setFieldValue("Full Name", row.dataset.memberName || "");
   setFieldValue("Contact Number", row.dataset.memberPhone || "");
+  setFieldValue("WhatsApp Number", row.dataset.memberAltPhone || "");
   setFieldValue("Alternate Contact", row.dataset.memberAltPhone || "");
   setFieldValue("Email Address", row.dataset.memberEmail || "");
   setFieldValue("Height", row.dataset.memberHeight || "");
@@ -2201,7 +2210,7 @@ const checkIfMemberFormChanged = () => {
 
   const nameVal = getFieldValue("Full Name");
   const phoneVal = getFieldValue("Contact Number");
-  const altPhoneVal = getFieldValue("Alternate Contact");
+  const altPhoneVal = getFieldValue("WhatsApp Number") || getFieldValue("Alternate Contact");
   const emailVal = getFieldValue("Email Address");
   const dobVal = addMemberDobInput?.value || "";
   const heightVal = getFieldValue("Height");
@@ -3514,9 +3523,11 @@ const getNewMemberPayload = () => {
   const joinedAt = new Date();
   const fullName = getFieldValue("Full Name");
   const contactNumber = getFieldValue("Contact Number");
-  const alternateContact = getFieldValue("Alternate Contact");
+  const alternateContact = getFieldValue("WhatsApp Number") || getFieldValue("Alternate Contact");
   const email = getFieldValue("Email Address");
   const dobValue = addMemberDobInput?.value || "";
+  const whatsappConsentEl = document.getElementById("member-whatsapp-consent");
+  const whatsappOptIn = whatsappConsentEl ? Boolean(whatsappConsentEl.checked) : true;
 
   const gender = getFieldValue("Gender", "select");
   // Preserve previously uploaded profile photo in this session
@@ -3527,6 +3538,7 @@ const getNewMemberPayload = () => {
     name: fullName,
     contactNumber,
     alternateContact,
+    whatsappOptIn,
     email,
     dobValue,
     dobDisplay: formatDisplayDate(dobValue),

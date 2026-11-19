@@ -70,6 +70,7 @@ const CreateMemberBodySchema = z.object({
   address: z.string().optional(),
   memberCode: z.string().optional(),
   notes: z.string().optional(),
+  whatsappOptIn: z.boolean().optional(),
   planId: z.string().uuid().optional(),
   initialPaymentAmount: z.number().min(0).optional(),
   initialPaymentMethod: z.enum(['CASH', 'CARD', 'UPI', 'BANK_TRANSFER']).optional(),
@@ -85,6 +86,7 @@ const UpdateMemberBodySchema = z.object({
   address: z.string().optional(),
   membershipStatus: z.enum(['ACTIVE', 'EXPIRED', 'FROZEN', 'INACTIVE']).optional(),
   notes: z.string().optional(),
+  whatsappOptIn: z.boolean().optional(),
 });
 
 const CreatePlanBodySchema = z.object({

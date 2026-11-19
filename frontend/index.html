@@ -786,10 +786,10 @@
                       <small class="member-field-error" hidden>Please select the member's gender.</small>
                     </div>
 
-                    <label class="member-field" data-field-label="Alternate Contact">
-                      <span>Alternate Contact</span>
-                      <input type="tel" placeholder="Enter alternate contact" />
-                      <small class="member-field-error" hidden>Please enter the alternate contact number.</small>
+                    <label class="member-field" data-field-label="WhatsApp Number">
+                      <span>WhatsApp Number <em>*</em></span>
+                      <input type="tel" placeholder="Enter WhatsApp contact" required />
+                      <small class="member-field-error" hidden>Please enter the WhatsApp contact number.</small>
                     </label>
 
                     <!-- Row 3: Physical & Health Metrics -->
@@ -878,19 +878,28 @@
                     </label>
                   </form>
                 </div>
-              </div>
-            </div>
 
-            <!-- Mandatory Info Note (Below and outside the dotted box) -->
-            <div class="registration-form-note">
-              <span class="registration-form-note-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-              </span>
-              <span><em>*</em> Fields marked with a red star are mandatory. Identity documents can be added right after saving.</span>
+                <!-- Registration Card Integrated Footer -->
+                <div class="registration-card-integrated-footer">
+                  <div class="registration-footnote-item">
+                    <span class="registration-footnote-star">*</span>
+                    <span class="registration-footnote-text">Fields with an asterisk are required. Documents can be uploaded after saving.</span>
+                  </div>
+
+                  <label class="registration-whatsapp-consent-toggle" for="member-whatsapp-consent">
+                    <input type="checkbox" id="member-whatsapp-consent" checked />
+                    <span class="custom-consent-checkbox" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </span>
+                    <img class="whatsapp-official-badge-icon" src="/whatsapp-logo.png" alt="WhatsApp" width="16" height="16" />
+                    <span class="consent-text-wrap">
+                      <span class="consent-headline">WhatsApp notifications &amp; updates</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
