@@ -1962,9 +1962,6 @@ function HistoryTab({ onChanged }) {
     </div>
   );
 }
-    </div>
-  );
-}
 
 /* ════════════════════════════════════════════════════════════
    4. AUTOMATION TAB
