@@ -48,6 +48,7 @@ export interface MemberContext {
   trainerName: string | null;
   latestPaymentAmount: number | null;
   latestPaymentStatus: string | null;
+  profilePhotoUrl?: string | null;
 }
 
 export interface VariableInputs {
@@ -156,6 +157,7 @@ export class WhatsAppMemberContextService {
         phone: gymMembers.phone,
         membershipStatus: gymMembers.membershipStatus,
         expiresAt: gymMembers.expiresAt,
+        profilePhotoUrl: gymMembers.profilePhotoUrl,
       })
       .from(gymMembers)
       .where(and(...conditions))
@@ -176,6 +178,7 @@ export class WhatsAppMemberContextService {
         phone: gymMembers.phone,
         membershipStatus: gymMembers.membershipStatus,
         expiresAt: gymMembers.expiresAt,
+        profilePhotoUrl: gymMembers.profilePhotoUrl,
       })
       .from(gymMembers)
       .where(
@@ -197,6 +200,7 @@ export class WhatsAppMemberContextService {
       phone: string;
       membershipStatus: string;
       expiresAt: Date | null;
+      profilePhotoUrl?: string | null;
     }>
   ): Promise<MemberContext[]> {
     const ids = members.map((member) => member.id);
@@ -286,6 +290,7 @@ export class WhatsAppMemberContextService {
         trainerName: trainerByMember.get(member.id) || null,
         latestPaymentAmount: payment?.amount ?? null,
         latestPaymentStatus: payment?.status ?? null,
+        profilePhotoUrl: member.profilePhotoUrl || null,
       };
     });
   }
@@ -337,6 +342,7 @@ export class WhatsAppMemberContextService {
       membershipStatus: member.membershipStatus,
       planName: member.planName,
       membershipExpiry: formatWhatsAppDate(member.expiresAt),
+      profilePhotoUrl: member.profilePhotoUrl || null,
     };
   }
 }

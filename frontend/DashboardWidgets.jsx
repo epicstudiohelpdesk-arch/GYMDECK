@@ -1190,17 +1190,17 @@ export const Dashboard = () => {
                   <p className="text-[10px] text-slate-500 font-medium mt-0.5">Durations & rates</p>
                 </button>
 
-                {/* Send Notifications */}
+                {/* Communication Hub */}
                 <button
                   type="button"
-                  onClick={() => navigateTo("notify-members")}
+                  onClick={() => navigateTo("whatsapp-hub")}
                   className="p-3 rounded-xl bg-slate-50 hover:bg-rose-50/70 border border-slate-200/80 hover:border-rose-200 text-left transition-all group cursor-pointer active:scale-[0.98]"
                 >
                   <div className="w-7 h-7 rounded-lg bg-rose-100/80 text-rose-700 flex items-center justify-center mb-2 group-hover:bg-rose-600 group-hover:text-white transition-colors">
                     <Bell size={14} strokeWidth={2.4} />
                   </div>
-                  <h4 className="text-xs font-black text-slate-900 leading-tight">Notify Members</h4>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Broadcast alerts</p>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Communication Hub</h4>
+                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Automated WhatsApp</p>
                 </button>
 
               </div>
