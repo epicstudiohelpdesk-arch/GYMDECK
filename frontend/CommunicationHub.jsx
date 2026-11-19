@@ -252,6 +252,19 @@ function ComposeTab({ templates, onSent, connection }) {
 
   useEffect(() => {
     loadAudience();
+    const handleMemberChange = () => {
+      loadAudience();
+    };
+    window.addEventListener('gymdeck:member-added', handleMemberChange);
+    window.addEventListener('gymdeck:member-transferred', handleMemberChange);
+    window.addEventListener('gymdeck:member-deleted', handleMemberChange);
+    window.addEventListener('gymdeck:member-reactivated', handleMemberChange);
+    return () => {
+      window.removeEventListener('gymdeck:member-added', handleMemberChange);
+      window.removeEventListener('gymdeck:member-transferred', handleMemberChange);
+      window.removeEventListener('gymdeck:member-deleted', handleMemberChange);
+      window.removeEventListener('gymdeck:member-reactivated', handleMemberChange);
+    };
   }, [loadAudience]);
 
   const selectedMembers = useMemo(
@@ -315,13 +328,6 @@ function ComposeTab({ templates, onSent, connection }) {
 
   const handleSend = async () => {
     if (!preview) return;
-    if (preview.counts?.eligible > 1) {
-      const ok = window.confirm(
-        `Send this WhatsApp message to ${preview.counts.eligible} members?\n\n` +
-          `${preview.mode === 'TEMPLATE' ? 'A saved utility template will be sent because the 24-hour window is closed.' : 'Free-form text will be used because the customer window is open.'}`
-      );
-      if (!ok) return;
-    }
 
     setSending(true);
     setError('');
@@ -1128,7 +1134,20 @@ export function CommunicationHub() {
   useEffect(() => {
     refresh();
     const timer = setInterval(refresh, 20000);
-    return () => clearInterval(timer);
+    const handleMemberChange = () => {
+      refresh();
+    };
+    window.addEventListener('gymdeck:member-added', handleMemberChange);
+    window.addEventListener('gymdeck:member-transferred', handleMemberChange);
+    window.addEventListener('gymdeck:member-deleted', handleMemberChange);
+    window.addEventListener('gymdeck:member-reactivated', handleMemberChange);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('gymdeck:member-added', handleMemberChange);
+      window.removeEventListener('gymdeck:member-transferred', handleMemberChange);
+      window.removeEventListener('gymdeck:member-deleted', handleMemberChange);
+      window.removeEventListener('gymdeck:member-reactivated', handleMemberChange);
+    };
   }, [refresh]);
 
   return (

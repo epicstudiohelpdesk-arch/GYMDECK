@@ -5106,6 +5106,9 @@ const saveUploadedDocuments = async (submitButton) => {
         setActiveView("members");
         showToast("Member registered successfully!");
 
+        // Broadcast member addition event so Communication Hub & other modules refresh instantly
+        window.dispatchEvent(new CustomEvent('gymdeck:member-added', { detail: rustMember }));
+
         // 4. Asynchronously persist to SQLite in background (non-blocking)
         (async () => {
           try {
@@ -5547,6 +5550,9 @@ document.addEventListener('click', async (event) => {
       // 3. Dispatch event to PastMembers React component (for instant UI update if mounted)
       window.dispatchEvent(new CustomEvent('gymdeck:member-transferred', {
         detail: transferredMember
+      }));
+      window.dispatchEvent(new CustomEvent('gymdeck:member-deleted', {
+        detail: { id: memberId }
       }));
 
       // 4. Remove from cache and directory
