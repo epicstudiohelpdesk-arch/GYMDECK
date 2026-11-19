@@ -339,7 +339,20 @@ export class WhatsAppAccountService {
       metadata: { sessionName, sessionStatus: session.status },
     });
 
-    return this.getConnection(gymId);
+    // If OpenWA hasn't generated the QR immediately on start, poll quickly for a couple seconds
+    // so the initial response to the user already contains the fresh QR image.
+    let initialConnection = await this.getConnection(gymId);
+    if (!initialConnection.qrCode && initialConnection.connectionStatus === 'CONNECTING') {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        initialConnection = await this.getConnection(gymId);
+        if (initialConnection.qrCode || initialConnection.connectionStatus !== 'CONNECTING') {
+          break;
+        }
+      }
+    }
+
+    return initialConnection;
   }
 
   public async refreshConnection(gymId: string): Promise<any> {

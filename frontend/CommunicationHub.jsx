@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { createPortal } from 'react-dom';
 import {
   Activity,
   AlertCircle,
@@ -296,7 +297,7 @@ function ErrorNote({ message, onRetry }) {
 /* ════════════════════════════════════════════════════════════
    1. COMPOSER STUDIO TAB (PARALLEL TO SEND NOTIFICATION)
 ════════════════════════════════════════════════════════════ */
-function ComposeTab({ templates, onSent, connection }) {
+function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
   const [selectedType, setSelectedType] = useState('attendance');
   const [templateId, setTemplateId] = useState('');
   const [intent, setIntent] = useState('ATTENDANCE');
@@ -317,6 +318,7 @@ function ComposeTab({ templates, onSent, connection }) {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState(null);
   const [error, setError] = useState('');
+  const [showConnectNoticeModal, setShowConnectNoticeModal] = useState(false);
 
   const textareaRef = useRef(null);
 
@@ -478,6 +480,13 @@ function ComposeTab({ templates, onSent, connection }) {
   };
 
   const handlePreview = async () => {
+    // If WhatsApp is not connected, display the professional setup guide modal
+    const isLive = connection?.connectionStatus === 'CONNECTED';
+    if (!isLive) {
+      setShowConnectNoticeModal(true);
+      return;
+    }
+
     setPreviewing(true);
     setError('');
     setSendResult(null);
@@ -485,7 +494,12 @@ function ComposeTab({ templates, onSent, connection }) {
       const res = await whatsappApi.preview(buildPayload());
       setPreview(res);
     } catch (err) {
-      setError(err.message || 'Could not prepare preview.');
+      // If backend returns not connected error during preview
+      if (err.message && /not connected|disconnected|session/i.test(err.message)) {
+        setShowConnectNoticeModal(true);
+      } else {
+        setError(err.message || 'Could not prepare preview.');
+      }
       setPreview(null);
     } finally {
       setPreviewing(false);
@@ -493,6 +507,11 @@ function ComposeTab({ templates, onSent, connection }) {
   };
 
   const handleSend = async () => {
+    const isLive = connection?.connectionStatus === 'CONNECTED';
+    if (!isLive) {
+      setShowConnectNoticeModal(true);
+      return;
+    }
     if (!preview) {
       // Auto-preview first if not yet done
       setPreviewing(true);
@@ -673,8 +692,12 @@ function ComposeTab({ templates, onSent, connection }) {
 
           <div className="p-3.5 rounded-xl border border-emerald-200/80 bg-emerald-50/40 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                <Smartphone size={18} />
+              <div className="w-10 h-10 rounded-xl bg-white border border-emerald-200/80 flex items-center justify-center shadow-xs shrink-0">
+                <img 
+                  src="/whatsapp-logo.png" 
+                  alt="WhatsApp" 
+                  className="w-6 h-6 object-contain"
+                />
               </div>
               <div>
                 <h4 className="text-xs font-black text-slate-900 leading-tight">
@@ -940,12 +963,14 @@ function ComposeTab({ templates, onSent, connection }) {
         {/* LAUNCH BROADCAST ACTION CARD */}
         <Card className="p-5 space-y-3.5">
           <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-slate-500 font-medium">
-              <span>Selected Recipients:</span>
-              <strong className="text-slate-900 font-bold font-mono">
-                {selectedIds.length > 0 ? `${selectedIds.length} members` : 'All members'}
-              </strong>
-            </div>
+            {selectedIds.length > 0 ? (
+              <div className="flex items-center justify-between text-slate-500 font-medium">
+                <span>Selected Recipients:</span>
+                <strong className="text-slate-900 font-bold font-mono">
+                  {selectedIds.length} {selectedIds.length === 1 ? 'member' : 'members'}
+                </strong>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between text-slate-500 font-medium">
               <span>Channel:</span>
               <strong className="text-slate-900 font-bold">WhatsApp Business Gateway</strong>
@@ -970,11 +995,13 @@ function ComposeTab({ templates, onSent, connection }) {
             <button
               type="button"
               onClick={handleSend}
-              disabled={sending}
-              className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer ${
+              disabled={sending || selectedIds.length === 0}
+              className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition-all shadow-md ${
                 sending
                   ? 'bg-slate-200 text-slate-400 cursor-wait shadow-none'
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-98'
+                  : selectedIds.length === 0
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-98 cursor-pointer'
               }`}
             >
               {sending ? (
@@ -985,7 +1012,7 @@ function ComposeTab({ templates, onSent, connection }) {
               ) : (
                 <>
                   <Send size={15} />
-                  <span>Send WhatsApp ({selectedIds.length || 'All'})</span>
+                  <span>Send WhatsApp</span>
                 </>
               )}
             </button>
@@ -997,6 +1024,154 @@ function ComposeTab({ templates, onSent, connection }) {
           </div>
         </Card>
       </div>
+
+      {/* ─── MODAL: WHATSAPP NOT CONNECTED NOTICE (SETUP GUIDE STYLE) ─── */}
+      {showConnectNoticeModal && typeof document !== 'undefined' ? (
+        createPortal(
+          <div 
+            className="fixed inset-0 z-[100000] flex items-center justify-center p-4 sm:p-6 transition-all duration-200 animate-in fade-in"
+            style={{
+              background: 'rgba(14, 18, 28, 0.44)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowConnectNoticeModal(false);
+            }}
+          >
+            <div 
+              className="w-full max-w-[440px] rounded-[32px] p-8 transition-all duration-200 text-left relative"
+              style={{
+                background: 'rgba(255, 255, 255, 0.98)',
+                border: '1px solid rgba(255, 255, 255, 0.9)',
+                boxShadow: '0 32px 80px rgba(15, 23, 42, 0.22)',
+              }}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setShowConnectNoticeModal(false)}
+                className="absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={17} />
+              </button>
+
+              <div className="mb-2">
+                <p className="logout-dialog-kicker" style={{ margin: 0 }}>Connection required</p>
+              </div>
+
+              {/* Title with Official WhatsApp Branding */}
+              <h2 className="text-slate-900 font-extrabold tracking-tight flex items-center flex-wrap gap-2.5" style={{ fontSize: '1.65rem', lineHeight: '1.25' }}>
+                <span>Connect</span>
+                <span 
+                  className="inline-flex items-center gap-2"
+                  style={{
+                    color: '#25D366',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    fontWeight: 800,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  <img 
+                    src="/whatsapp-logo.png" 
+                    alt="WhatsApp" 
+                    className="w-7 h-7 object-contain inline-block shrink-0 -mt-0.5"
+                  />
+                  <span>WhatsApp</span>
+                </span>
+              </h2>
+
+              <p 
+                className="text-slate-500 font-normal leading-relaxed"
+                style={{
+                  margin: '12px 0 0',
+                  fontSize: '0.88rem',
+                  lineHeight: '1.55',
+                  color: '#556070',
+                }}
+              >
+                Your gym WhatsApp account is not linked. To preview or dispatch automated receipts, membership reminders, and alerts, link the gym's official phone by QR:
+              </p>
+
+              {/* Quick Steps */}
+              <div className="mt-5 space-y-2.5">
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-50">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs">
+                    1
+                  </span>
+                  <div className="text-xs text-slate-700 leading-snug pt-0.5">
+                    Navigate to the <span className="font-semibold text-slate-900">Gateway Cockpit</span> tab.
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-50">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs">
+                    2
+                  </span>
+                  <div className="text-xs text-slate-700 leading-snug pt-0.5">
+                    Click <span className="font-semibold text-slate-900">Connect WhatsApp</span> to generate a secure QR code.
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-50">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs">
+                    3
+                  </span>
+                  <div className="text-xs text-slate-700 leading-snug pt-0.5">
+                    Scan with gym WhatsApp &rarr; <span className="font-semibold text-slate-900">Linked devices</span>.
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div 
+                className="logout-dialog-actions"
+                style={{
+                  marginTop: '28px',
+                  display: 'flex',
+                  gap: '12px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowConnectNoticeModal(false)}
+                  className="dialog-btn dialog-btn-muted cursor-pointer"
+                  style={{
+                    minHeight: '48px',
+                    borderRadius: '16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowConnectNoticeModal(false);
+                    if (onNavigateTab) onNavigateTab('overview');
+                  }}
+                  className="dialog-btn dialog-btn-danger cursor-pointer"
+                  style={{
+                    minHeight: '48px',
+                    borderRadius: '16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <span>Go to Gateway</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="btn-arrow-icon" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      ) : null}
     </div>
   );
 }
@@ -1005,6 +1180,11 @@ function ComposeTab({ templates, onSent, connection }) {
    2. GATEWAY COCKPIT (OVERVIEW)
 ════════════════════════════════════════════════════════════ */
 function OverviewTab({ overview, loading, error, onRefresh }) {
+  const [expandedFaqId, setExpandedFaqId] = useState(null);
+
+  const toggleFaq = (id) => {
+    setExpandedFaqId((curr) => (curr === id ? null : id));
+  };
   if (loading && !overview) return <Spinner label="Reading WhatsApp activity…" />;
 
   const today = overview?.today || {};
@@ -1118,157 +1298,113 @@ function OverviewTab({ overview, loading, error, onRefresh }) {
         </div>
       </div>
 
-      {/* ─── SECTION 2: HARDWARE & ENGINE STATUS + COMPLIANCE & TEMPLATES ─── */}
+      {/* ─── SECTION 2: HARDWARE & ENGINE STATUS + DATA GOVERNANCE ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* LEFT COLUMN: CONNECTION CONTROL PANEL (COL-SPAN-7) */}
         <div className="lg:col-span-7 space-y-5">
           <WhatsAppConnectionCard onStatusChange={onRefresh} />
-
-          {/* ENGINE PERFORMANCE & HEALTH DIAGNOSTICS */}
-          <Card className="p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                  <Server size={15} strokeWidth={2.4} />
-                </div>
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 leading-none">
-                    Engine Diagnostic & Delivery SLA
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
-                    Real-time local OpenWA socket & pipeline telemetry
-                  </span>
-                </div>
-              </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Operational
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60">
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Success Ratio</span>
-                  <BarChart3 size={12} className="text-slate-400" />
-                </div>
-                <div className="text-xl font-black text-slate-900 font-mono">
-                  {deliveryRate}%
-                </div>
-                <span className="text-[10px] text-slate-400 font-medium">Successful delivery</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60">
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Gateway Latency</span>
-                  <Zap size={12} className="text-slate-400" />
-                </div>
-                <div className="text-xl font-black text-emerald-700 font-mono">
-                  &lt; 250ms
-                </div>
-                <span className="text-[10px] text-slate-400 font-medium">Local headless dispatch</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60">
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Per-Message Fee</span>
-                  <ShieldCheck size={12} className="text-slate-400" />
-                </div>
-                <div className="text-xl font-black text-indigo-700 font-mono">
-                  ₹0.00
-                </div>
-                <span className="text-[10px] text-slate-400 font-medium">Direct gym WhatsApp line</span>
-              </div>
-            </div>
-          </Card>
         </div>
 
-        {/* RIGHT COLUMN: TEMPLATES & CONSENT REPOSITORIES (COL-SPAN-5) */}
+        {/* RIGHT COLUMN: SECURITY & GOVERNANCE FAQ (COL-SPAN-5) */}
         <div className="lg:col-span-5 space-y-5">
-          {/* APPROVED UTILITY TEMPLATES */}
+          {/* SECURITY, GOVERNANCE & NON-CUSTODIAL DATA POLICY (FAQ ACCORDION) */}
           <Card className="p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
-                  <FileCheck size={15} strokeWidth={2.4} />
+                <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <ShieldCheck size={16} strokeWidth={2.2} />
                 </div>
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 leading-none">
-                    Approved Utility Templates
+                    Security & Data Governance
                   </h3>
                   <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
-                    Pre-compiled transactional patterns
+                    Companion device privacy & non-custodial pipeline
                   </span>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-black font-mono bg-indigo-50 text-indigo-700 border border-indigo-200/80">
-                {overview?.templates?.usable || 8} Active
-              </span>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              Utility and reminder templates are verified and render instantly with real-time dynamic variable replacement.
-            </p>
+            <div className="space-y-2">
+              {[
+                {
+                  id: 'faq-whatsapp-device',
+                  question: 'Does GymDeck access private chats or personal messages?',
+                  tag: 'Zero Chat Logging',
+                  tagColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                  answer:
+                    'No. GymDeck functions strictly as an automated companion outbound pipeline for official transactional receipts and renewal notices. We never log, store, or read personal conversations or incoming private messages from your linked phone.',
+                },
+                {
+                  id: 'faq-whatsapp-connection',
+                  question: 'What happens when I disconnect or logout?',
+                  tag: 'Instant Session Purge',
+                  tagColor: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+                  answer:
+                    'Clicking Disconnect immediately sends a logout command to WhatsApp Web and purges local encryption tokens. No background daemon remains connected. Reconnecting requires a brand-new QR code scan.',
+                },
+                {
+                  id: 'faq-whatsapp-cost',
+                  question: 'Are there Meta per-conversation API fees or template charges?',
+                  tag: '₹0.00 Meta Fee',
+                  tagColor: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+                  answer:
+                    'Zero Meta API fees. Messages dispatch through your gym phone line via local headless companion sockets. You do not need a Meta Cloud API developer account or paid WhatsApp Business conversation packs.',
+                },
+                {
+                  id: 'faq-whatsapp-data',
+                  question: 'Where is member contact data and phone numbers stored?',
+                  tag: 'AES-256 Encrypted',
+                  tagColor: 'bg-amber-50 text-amber-800 border-amber-200',
+                  answer:
+                    'All contact records and invoice PDFs reside locally in your isolated gym database with AES-256 encryption. Phone numbers are masked across dashboards and never shared with third-party advertising brokers.',
+                },
+              ].map((faq) => {
+                const isOpen = expandedFaqId === faq.id;
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 font-medium">Total Configured:</span>
-                <span className="font-mono font-bold text-slate-900">{overview?.templates?.total || 8}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 font-medium">Usable Offline:</span>
-                <span className="font-mono font-bold text-emerald-700">{overview?.templates?.usable || 8} Available</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 font-medium">Categories:</span>
-                <span className="font-bold text-slate-800 text-[11px]">Fee Receipts, Expiry, Welcome</span>
-              </div>
-            </div>
-          </Card>
+                return (
+                  <div
+                    key={faq.id}
+                    className={`rounded-xl border transition-all duration-150 overflow-hidden ${
+                      isOpen
+                        ? 'border-slate-300 bg-white shadow-2xs'
+                        : 'border-slate-200/80 bg-slate-50/60 hover:bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleFaq(faq.id)}
+                      className="w-full px-3.5 py-2.5 flex items-center justify-between text-left gap-2 cursor-pointer select-none"
+                      aria-expanded={isOpen}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-xs font-bold text-slate-800 tracking-tight leading-snug">
+                          {faq.question}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-[9px] font-bold font-mono px-1.5 py-0.5 rounded border uppercase tracking-wider hidden sm:inline-block ${faq.tagColor}`}
+                        >
+                          {faq.tag}
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className={`text-slate-400 transition-transform duration-200 ${
+                            isOpen ? 'rotate-180 text-slate-700' : ''
+                          }`}
+                        />
+                      </div>
+                    </button>
 
-          {/* MEMBER OPT-IN CONSENT STATUS */}
-          <Card className="p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100">
-                  <UserCheck size={15} strokeWidth={2.4} />
-                </div>
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 leading-none">
-                    Member Opt-in Compliance
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
-                    Customer window & anti-spam status
-                  </span>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-black font-mono bg-teal-50 text-teal-700 border border-teal-200/80">
-                {consentPercentage}% Opted In
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              Only members who have opted in receive automated alerts outside WhatsApp's 24-hour service conversation window.
-            </p>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 font-medium">Opted-In Members:</span>
-                <span className="font-mono font-black text-emerald-700">{optedInMembers} members</span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-emerald-600 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, Math.max(0, consentPercentage))}%` }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
-                <span className="text-slate-400">Total Directory Records:</span>
-                <span className="font-mono font-bold text-slate-700">{totalMembers}</span>
-              </div>
+                    {isOpen ? (
+                      <div className="px-3.5 pb-3 pt-1 text-[11px] text-slate-600 leading-relaxed border-t border-slate-100 bg-white">
+                        <p>{faq.answer}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </div>
@@ -1974,14 +2110,25 @@ export function CommunicationHub() {
           {/* Left: Professional Brand & Hierarchy */}
           <div className="flex items-center gap-3 min-w-0">
             <div
-              className="w-9 h-9 min-w-[36px] min-h-[36px] max-w-[36px] max-h-[36px] rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0"
+              className="w-9 h-9 min-w-[36px] min-h-[36px] max-w-[36px] max-h-[36px] rounded-xl bg-white border border-slate-200/90 flex items-center justify-center shadow-xs shrink-0"
               style={{ width: '36px', height: '36px', minWidth: '36px', minHeight: '36px' }}
             >
-              <Smartphone size={18} strokeWidth={2.2} className="text-white" />
+              <img 
+                src="/whatsapp-logo.png" 
+                alt="WhatsApp" 
+                className="w-5.5 h-5.5 object-contain"
+              />
             </div>
             <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-sm sm:text-base font-black text-slate-900 tracking-tight leading-none whitespace-nowrap">
-                Whatsapp Line
+              <h1 
+                className="text-base sm:text-[17px] font-extrabold tracking-tight leading-none whitespace-nowrap flex items-center gap-1.5"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                  letterSpacing: '-0.025em',
+                }}
+              >
+                <span style={{ color: '#128C7E', fontWeight: 800 }}>WhatsApp</span>
+                <span className="text-slate-800 font-bold text-sm sm:text-base">Line</span>
               </h1>
             </div>
           </div>
@@ -2022,7 +2169,12 @@ export function CommunicationHub() {
       <div className="flex-1 max-w-[1600px] w-full mx-auto px-6 sm:px-8 py-5 flex flex-col gap-5">
         <div className="notify-members-workspace !p-0 !border-0 !bg-transparent !shadow-none">
           {tab === 'compose' && (
-            <ComposeTab templates={templates} onSent={refresh} connection={overview?.connection} />
+            <ComposeTab
+              templates={templates}
+              onSent={refresh}
+              connection={overview?.connection}
+              onNavigateTab={(targetTab) => setTab(targetTab)}
+            />
           )}
           {tab === 'overview' && (
             <OverviewTab overview={overview} loading={loading} error={error} onRefresh={refresh} />
