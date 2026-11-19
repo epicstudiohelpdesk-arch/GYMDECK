@@ -385,10 +385,31 @@ export class WhatsAppAccountService {
 
     if (account.openwaSessionId) {
       try {
-        await openwaClient.stopSession(account.openwaSessionId);
+        // First perform a clean logout while engine is alive (unlinks phone on WhatsApp Web)
         await openwaClient.logoutSession(account.openwaSessionId);
       } catch (err: any) {
         logger.warn('[whatsapp] OpenWA logout failed', {
+          gymId,
+          message: err instanceof Error ? err.message : 'unknown',
+        });
+      }
+
+      try {
+        // Ensure engine is stopped
+        await openwaClient.stopSession(account.openwaSessionId);
+      } catch (err: any) {
+        logger.warn('[whatsapp] OpenWA stop failed', {
+          gymId,
+          message: err instanceof Error ? err.message : 'unknown',
+        });
+      }
+
+      try {
+        // Delete session and purge on-disk authentication directories completely
+        // so that subsequent connects will strictly require a fresh QR scan
+        await openwaClient.deleteSession(account.openwaSessionId);
+      } catch (err: any) {
+        logger.warn('[whatsapp] OpenWA delete session failed', {
           gymId,
           message: err instanceof Error ? err.message : 'unknown',
         });
@@ -398,6 +419,11 @@ export class WhatsAppAccountService {
     await db
       .update(gymWhatsAppAccounts)
       .set({
+        openwaSessionId: null,
+        openwaSessionName: null,
+        openwaWebhookId: null,
+        businessPhoneNumber: null,
+        displayName: 'GymDeck WhatsApp',
         connectionStatus: 'DISCONNECTED',
         openwaStatus: 'disconnected',
         statusReason: 'Disconnected by the gym owner.',
