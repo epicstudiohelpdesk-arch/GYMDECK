@@ -80,6 +80,15 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
+  // Auto-clear transient errors (e.g. rate limit, connection timeouts) after 2.5s
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => {
+      setError('');
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [error]);
+
   const load = useCallback(async () => {
     try {
       setError('');
@@ -136,10 +145,6 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
     setError('');
     try {
       await whatsappApi.verifyConnection();
-      setNotice('Connection refreshed.');
-      setTimeout(() => {
-        setNotice((current) => (current === 'Connection refreshed.' ? '' : current));
-      }, 1300);
       await load();
     } catch (err) {
       setError(err.message || 'Could not refresh the connection.');
@@ -200,78 +205,113 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
   const qrCode = connection?.qrCode;
 
   return (
-    <div className={compact ? 'space-y-3' : 'space-y-3.5'}>
-      {/* ─── GRAPHICAL ENTERPRISE CONNECTION CARD (SOLID WHATSAPP GREEN) ─── */}
+    <div className={`h-full flex flex-col ${compact ? 'space-y-3' : 'space-y-3.5'}`}>
+      {/* ─── GRAPHICAL ENTERPRISE CONNECTION CARD (#009A00 WITH FAINT GRID TEXTURE) ─── */}
       <div 
-        className="rounded-2xl border p-5 transition-all duration-200 text-white shadow-md relative overflow-hidden"
+        className="rounded-2xl border p-5 transition-all duration-200 text-white shadow-2xs relative overflow-hidden flex flex-col justify-between h-full"
         style={{
-          backgroundColor: '#40c351',
-          borderColor: '#36ab46',
-          boxShadow: '0 10px 28px -4px rgba(64, 195, 81, 0.28)',
+          backgroundColor: '#009A00',
+          borderColor: '#008700',
+          boxShadow: '0 8px 24px -4px rgba(0, 154, 0, 0.28)',
         }}
       >
+        {/* Faded grid texture overlay */}
+        <div 
+          aria-hidden="true" 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
+            `,
+            backgroundSize: '24px 24px',
+            maskImage: 'radial-gradient(ellipse 100% 100% at 50% 50%, black 40%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 100% 100% at 50% 50%, black 40%, transparent 100%)',
+          }}
+        />
+
+        {/* Ambient radial lighting glow for depth */}
+        <div 
+          aria-hidden="true" 
+          className="absolute -top-16 -right-16 w-48 h-48 rounded-full pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%)',
+          }}
+        />
+
+        {/* Refreshing connection overlay with wave pulsing dots */}
+        {busy === 'verify' ? (
+          <div 
+            className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950/70 backdrop-blur-[2px] transition-all duration-200 animate-in fade-in"
+            aria-live="polite"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.8s' }} />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.8s' }} />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.8s' }} />
+            </div>
+            <span className="text-xs font-semibold tracking-wide text-white/95">
+              Refreshing connection…
+            </span>
+          </div>
+        ) : null}
+
         {/* Top Section: Header with Official Logo, Title, Phone Pill, and Telemetry Badge */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5 min-w-0">
-            {/* Official WhatsApp Brand Icon Container */}
-            <div 
-              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-white shadow-xs border border-white/70"
-            >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {/* WhatsApp Brand Icon placed inline & aligned with text */}
               <img 
                 src="/whatsapp-logo.png" 
                 alt="WhatsApp" 
-                className="w-7 h-7 object-contain shrink-0"
+                className="w-6 h-6 object-contain shrink-0 drop-shadow-xs -mt-0.5"
               />
-            </div>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-base font-extrabold tracking-tight text-white">
+                WhatsApp Line
+              </span>
+
+              {isLive ? (
                 <span 
-                  className="text-base font-extrabold tracking-tight text-white flex items-center gap-2"
-                  style={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                  }}
+                  className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white shadow-2xs backdrop-blur-xs" 
+                  title="Signal Online"
                 >
-                  WhatsApp Line
+                  <Wifi size={13} strokeWidth={2.5} className="text-white animate-pulse" />
                 </span>
+              ) : status === 'CONNECTING' ? (
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/20 text-white" title="Pairing">
+                  <Loader2 size={12} className="animate-spin text-white" />
+                </span>
+              ) : (
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 text-white/70" title="Offline">
+                  <WifiOff size={12} strokeWidth={2} />
+                </span>
+              )}
 
-                {isLive ? (
-                  <span className="inline-flex items-center gap-1.5 font-bold text-[11px] text-emerald-950 bg-white/95 px-2.5 py-0.5 rounded-full shadow-2xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Online
-                  </span>
-                ) : status === 'CONNECTING' ? (
-                  <span className="inline-flex items-center gap-1.5 font-bold text-[11px] text-white bg-black/20 px-2.5 py-0.5 rounded-full">
-                    <Loader2 size={10} className="animate-spin text-white" />
-                    Pairing…
-                  </span>
-                ) : null}
-
-                {connection?.businessPhoneNumber ? (
-                  <span className="text-[11px] font-mono font-bold text-emerald-950 bg-white/95 px-2.5 py-0.5 rounded-md shadow-2xs truncate">
-                    {connection.businessPhoneNumber}
-                  </span>
-                ) : null}
-              </div>
-
-              <p className="text-xs text-white/90 mt-1 leading-snug font-medium">
-                {isLive 
-                  ? 'Active companion pipeline • Sending automated PDF invoices and renewal notices.'
-                  : status === 'CONNECTING'
-                  ? 'Awaiting QR scan from official gym phone.'
-                  : 'Link the gym phone to enable automated fee receipts, renewal alerts, and member chat.'}
-              </p>
+              {connection?.businessPhoneNumber ? (
+                <span className="text-[11px] font-mono font-bold text-emerald-950 bg-white/95 px-2.5 py-0.5 rounded-md shadow-2xs truncate">
+                  {connection.businessPhoneNumber}
+                </span>
+              ) : null}
             </div>
+
+            <p className="text-xs text-white/90 mt-1.5 leading-relaxed font-normal">
+              {isLive 
+                ? 'Active companion pipeline • Sending automated PDF invoices and renewal notices.'
+                : status === 'CONNECTING'
+                ? 'Awaiting QR scan from official gym phone.'
+                : 'Link the gym phone to enable automated fee receipts, renewal alerts, and member chat.'}
+            </p>
           </div>
 
           {/* Right Status Indicator */}
           <div className="shrink-0 self-start sm:self-center">
             {isLive ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-950 bg-white px-3 py-1.5 rounded-xl shadow-xs border border-white/60">
-                <ShieldCheck size={14} strokeWidth={2.5} className="text-emerald-600" /> Connected
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-950 bg-white px-3 py-1.5 rounded-xl shadow-2xs border border-white/60">
+                <ShieldCheck size={14} strokeWidth={2.4} className="text-emerald-600" /> Connected
               </span>
             ) : status === 'CONNECTING' ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-black/25 px-3 py-1.5 rounded-xl shadow-xs">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-black/25 px-3 py-1.5 rounded-xl shadow-2xs">
                 <Loader2 size={12} className="animate-spin" /> Ready for Scan
               </span>
             ) : (
@@ -283,7 +323,7 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
         </div>
 
         {/* Bottom Section: Integrated Action Buttons Side by Side Inside The Card */}
-        <div className="mt-4 pt-3.5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-4 pt-3.5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 relative z-1">
           <div className="flex flex-wrap items-center gap-2">
             {canConnect || status === 'CONNECTING' ? (
               <button
@@ -296,7 +336,7 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
                   }
                 }}
                 disabled={Boolean(busy)}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 disabled:opacity-60 cursor-pointer transition-colors shadow-xs"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 disabled:opacity-60 cursor-pointer transition-colors shadow-2xs"
               >
                 {busy === 'connect' ? (
                   <Loader2 size={13} className="animate-spin" />
@@ -318,12 +358,12 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
                 type="button"
                 onClick={handleCancelLinking}
                 disabled={Boolean(busy)}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 hover:bg-white text-xs font-bold text-slate-700 hover:text-slate-900 disabled:opacity-60 cursor-pointer transition-colors shadow-2xs"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/90 hover:bg-white text-xs font-bold text-zinc-700 hover:text-zinc-900 disabled:opacity-60 cursor-pointer transition-colors shadow-2xs"
               >
                 {busy === 'cancel' ? (
                   <Loader2 size={13} className="animate-spin" />
                 ) : (
-                  <X size={13} className="text-slate-500" />
+                  <X size={13} className="text-zinc-500" />
                 )}
                 <span>Cancel setup</span>
               </button>
@@ -335,12 +375,12 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
                   type="button"
                   onClick={handleVerify}
                   disabled={Boolean(busy)}
-                  className="group relative inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white text-xs font-bold text-slate-800 hover:text-slate-950 shadow-xs hover:shadow transition-all disabled:opacity-50 cursor-pointer border border-white/40"
+                  className="group relative inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white text-xs font-bold text-zinc-800 hover:text-zinc-950 shadow-2xs hover:shadow transition-all disabled:opacity-50 cursor-pointer border border-white/40"
                 >
                   {busy === 'verify' ? (
                     <Loader2 size={13} className="animate-spin text-emerald-600" />
                   ) : (
-                    <RefreshCw size={13} className="text-slate-500 group-hover:text-slate-900 group-hover:rotate-45 transition-transform" />
+                    <RefreshCw size={13} className="text-zinc-500 group-hover:text-zinc-900 group-hover:rotate-45 transition-transform" />
                   )}
                   <span>Refresh status</span>
                 </button>
@@ -349,7 +389,7 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
                   type="button"
                   onClick={() => setShowDisconnectModal(true)}
                   disabled={Boolean(busy)}
-                  className="group inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-xs font-bold text-white shadow-xs hover:shadow transition-all disabled:opacity-50 cursor-pointer"
+                  className="group inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-xs font-bold text-white shadow-2xs hover:shadow transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {busy === 'disconnect' ? (
                     <Loader2 size={13} className="animate-spin" />

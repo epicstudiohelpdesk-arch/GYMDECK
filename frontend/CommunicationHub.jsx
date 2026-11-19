@@ -26,6 +26,7 @@ import {
   Megaphone,
   MessageCircle,
   MessageSquare,
+  Network,
   Radio,
   RefreshCcw,
   RefreshCw,
@@ -1353,7 +1354,7 @@ function OverviewTab({ overview, loading, error, onRefresh }) {
       icon: Clock,
       tone: 'sky',
       badgeBg: 'bg-sky-50 text-sky-700 border-sky-200/80',
-      iconBg: 'bg-sky-500/10 text-sky-600',
+      iconBg: 'bg-sky-50 text-sky-600 border-sky-100',
     },
     {
       label: 'Accepted',
@@ -1362,7 +1363,7 @@ function OverviewTab({ overview, loading, error, onRefresh }) {
       icon: Send,
       tone: 'indigo',
       badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
-      iconBg: 'bg-indigo-500/10 text-indigo-600',
+      iconBg: 'bg-indigo-50 text-indigo-600 border-indigo-100',
     },
     {
       label: 'Delivered',
@@ -1371,16 +1372,16 @@ function OverviewTab({ overview, loading, error, onRefresh }) {
       icon: CheckCheck,
       tone: 'emerald',
       badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
-      iconBg: 'bg-emerald-500/10 text-emerald-600',
+      iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
     },
     {
       label: 'Read by Member',
       value: read,
       sublabel: 'Blue tick receipt',
-      icon: CheckCheck,
+      icon: CheckCircle2,
       tone: 'teal',
       badgeBg: 'bg-teal-50 text-teal-800 border-teal-200/80',
-      iconBg: 'bg-teal-500/10 text-teal-600',
+      iconBg: 'bg-teal-50 text-teal-600 border-teal-100',
     },
     {
       label: 'Failed / Skipped',
@@ -1389,165 +1390,327 @@ function OverviewTab({ overview, loading, error, onRefresh }) {
       icon: AlertCircle,
       tone: failed > 0 ? 'rose' : 'zinc',
       badgeBg: failed > 0 ? 'bg-rose-50 text-rose-700 border-rose-200/80' : 'bg-slate-100 text-slate-500 border-slate-200',
-      iconBg: failed > 0 ? 'bg-rose-500/10 text-rose-600' : 'bg-slate-100 text-slate-400',
+      iconBg: failed > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-100 text-slate-500 border-slate-200',
     },
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <ErrorNote message={error} onRetry={onRefresh} />
 
-      {/* ─── SECTION 1: METRICS KPI STRIP ─── */}
-      <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2">
-            <Activity size={14} className="text-emerald-600" />
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
-              Live Gateway Activity
-            </h2>
+      {/* ─── COCKPIT TOP SUMMARY HEADER (PREMIUM OPERATIONAL DASHBOARD) ─── */}
+      <div className="bg-white border border-zinc-200/90 rounded-2xl p-5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <Activity size={19} strokeWidth={2} className="text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
+                  Gateway Telemetry & Pipeline
+                </h2>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Socket
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Real-time outbound transmission metrics, compliance opt-in, and companion health.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-400">
-            <span className="font-mono">Total Volume Today: <strong className="text-slate-700">{totalVolume}</strong></span>
+
+          {/* Quick Rate & Volume Indicators */}
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-50 border border-zinc-200/80">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Today</span>
+              <span className="text-sm font-black text-zinc-900 font-mono tabular-nums leading-none">{totalVolume}</span>
+            </div>
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200/80">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Success Rate</span>
+              <span className="text-sm font-black text-emerald-700 font-mono tabular-nums leading-none">{deliveryRate}%</span>
+            </div>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer shadow-2xs"
+              title="Refresh telemetry"
+              aria-label="Refresh telemetry"
+            >
+              <RefreshCw size={13} strokeWidth={2.2} />
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* 5-Column Live Metrics Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4 pt-4 border-t border-zinc-100">
           {statsCards.map((s) => {
             const Icon = s.icon;
             return (
-              <Card key={s.label} className="p-4 hover:border-slate-300 transition-all shadow-2xs group">
+              <div
+                key={s.label}
+                className="bg-zinc-50/70 hover:bg-white border border-zinc-200/80 hover:border-zinc-300 rounded-xl p-3.5 transition-all shadow-2xs group flex flex-col justify-between"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 truncate">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate">
                     {s.label}
                   </span>
-                  <div className={`w-6 h-6 rounded-lg ${s.iconBg} flex items-center justify-center shrink-0`}>
-                    <Icon size={13} strokeWidth={2.4} />
+                  <div className="w-6 h-6 rounded-lg bg-white border border-zinc-200/90 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Icon size={12} strokeWidth={2.2} />
                   </div>
                 </div>
                 <div className="mt-2.5 flex items-baseline gap-1.5">
-                  <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">
+                  <span className="text-xl font-black text-zinc-900 tracking-tight tabular-nums font-mono leading-none">
                     {s.value}
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-400 font-mono">msgs</span>
+                  <span className="text-[10px] font-medium text-zinc-400 font-mono">msgs</span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium truncate mt-1">
+                <p className="text-[10.5px] text-zinc-500 font-normal truncate mt-1">
                   {s.sublabel}
                 </p>
-              </Card>
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* ─── SECTION 2: HARDWARE & ENGINE STATUS + DATA GOVERNANCE ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* LEFT COLUMN: CONNECTION CONTROL PANEL (COL-SPAN-7) */}
-        <div className="lg:col-span-7 space-y-5">
+      {/* ─── SECTION 2: CONNECTION HARDWARE & PIPELINE COMPLIANCE ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        {/* CONNECTION CONTROL PANEL (COL-SPAN-8) */}
+        <div className="lg:col-span-8 flex flex-col h-full">
           <WhatsAppConnectionCard onStatusChange={onRefresh} />
         </div>
 
-        {/* RIGHT COLUMN: SECURITY & GOVERNANCE FAQ (COL-SPAN-5) */}
-        <div className="lg:col-span-5 space-y-5">
-          {/* SECURITY, GOVERNANCE & NON-CUSTODIAL DATA POLICY (FAQ ACCORDION) */}
-          <Card className="p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <ShieldCheck size={16} strokeWidth={2.2} />
+        {/* COMPLIANCE & PROTOCOL TELEMETRY (COL-SPAN-4) */}
+        <div className="lg:col-span-4 flex flex-col justify-between bg-white border border-zinc-200/90 rounded-2xl p-5 shadow-2xs h-full">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200/80 text-zinc-800 flex items-center justify-center shrink-0 shadow-2xs">
+                  <Database size={13} strokeWidth={2} />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 leading-none">
-                    Security & Data Governance
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
-                    Companion device privacy & non-custodial pipeline
+                  <h4 className="text-xs font-bold text-zinc-900 tracking-tight leading-none">
+                    Pipeline Compliance
+                  </h4>
+                  <span className="text-[10px] text-zinc-400 mt-0.5 block">Automated opt-in records</span>
+                </div>
+              </div>
+              <span className="text-[10.5px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                Opt-in {consentPercentage}%
+              </span>
+            </div>
+
+            <div className="mt-3.5">
+              <div className="p-3.5 rounded-xl bg-zinc-50/70 border border-zinc-200/70 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Opted-In Members</span>
+                  <span className="text-base font-black text-zinc-900 font-mono tabular-nums leading-tight block mt-1">
+                    {optedInMembers} <span className="text-xs text-zinc-400 font-normal font-sans">/ {totalMembers} members</span>
                   </span>
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200/80 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                  <UserCheck size={15} strokeWidth={2} />
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              {[
-                {
-                  id: 'faq-whatsapp-device',
-                  question: 'Does GymDeck access private chats or personal messages?',
-                  tag: 'Zero Chat Logging',
-                  tagColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-                  answer:
-                    'No. GymDeck functions strictly as an automated companion outbound pipeline for official transactional receipts and renewal notices. We never log, store, or read personal conversations or incoming private messages from your linked phone.',
-                },
-                {
-                  id: 'faq-whatsapp-connection',
-                  question: 'What happens when I disconnect or logout?',
-                  tag: 'Instant Session Purge',
-                  tagColor: 'bg-zinc-100 text-zinc-700 border-zinc-200',
-                  answer:
-                    'Clicking Disconnect immediately sends a logout command to WhatsApp Web and purges local encryption tokens. No background daemon remains connected. Reconnecting requires a brand-new QR code scan.',
-                },
-                {
-                  id: 'faq-whatsapp-cost',
-                  question: 'Are there Meta per-conversation API fees or template charges?',
-                  tag: '₹0.00 Meta Fee',
-                  tagColor: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-                  answer:
-                    'Zero Meta API fees. Messages dispatch through your gym phone line via local headless companion sockets. You do not need a Meta Cloud API developer account or paid WhatsApp Business conversation packs.',
-                },
-                {
-                  id: 'faq-whatsapp-data',
-                  question: 'Where is member contact data and phone numbers stored?',
-                  tag: 'AES-256 Encrypted',
-                  tagColor: 'bg-amber-50 text-amber-800 border-amber-200',
-                  answer:
-                    'All contact records and invoice PDFs reside locally in your isolated gym database with AES-256 encryption. Phone numbers are masked across dashboards and never shared with third-party advertising brokers.',
-                },
-              ].map((faq) => {
-                const isOpen = expandedFaqId === faq.id;
+      {/* ─── SECTION 3: SECURITY & DATA GOVERNANCE (MATCHING BANKING & SETTLEMENT FAQ DESIGN) ─── */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xs space-y-4">
+        {/* Header Block matching Banking & Settlement */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
+            <ShieldCheck size={18} strokeWidth={1.75} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-zinc-900 tracking-tight">
+              Security & Non-Custodial Data Policy
+            </h3>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Common questions regarding companion WhatsApp connectivity, privacy permissions, and non-custodial safeguards.
+            </p>
+          </div>
+        </div>
 
-                return (
-                  <div
-                    key={faq.id}
-                    className={`rounded-xl border transition-all duration-150 overflow-hidden ${
-                      isOpen
-                        ? 'border-slate-300 bg-white shadow-2xs'
-                        : 'border-slate-200/80 bg-slate-50/60 hover:bg-slate-50 hover:border-slate-300'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleFaq(faq.id)}
-                      className="w-full px-3.5 py-2.5 flex items-center justify-between text-left gap-2 cursor-pointer select-none"
-                      aria-expanded={isOpen}
+        {/* FAQ Accordion List matching Banking & Settlement Item Design */}
+        <div className="space-y-2">
+          {[
+            {
+              id: 'faq-whatsapp-device',
+              icon: Smartphone,
+              question: 'Does GymDeck access private chats or personal messages?',
+              topic: 'Zero Chat Logging',
+              tag: 'Non-Custodial',
+              tagColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+              answer:
+                'No. GymDeck functions strictly as an automated companion outbound pipeline for official transactional receipts and renewal notices. We never log, store, or read personal conversations or incoming private messages from your linked phone.',
+            },
+            {
+              id: 'faq-whatsapp-connection',
+              icon: Trash2,
+              question: 'What happens when I disconnect or logout?',
+              topic: 'Instant Session Purge',
+              tag: 'Session Purged',
+              tagColor: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+              answer:
+                'Clicking Disconnect immediately sends a logout command to WhatsApp Web and purges local encryption tokens. No background daemon remains connected. Reconnecting requires a brand-new QR code scan.',
+            },
+            {
+              id: 'faq-whatsapp-cost',
+              icon: Zap,
+              question: 'Are there Meta per-conversation API fees or template charges?',
+              topic: 'Zero Platform Toll',
+              tag: '₹0.00 Meta Fee',
+              tagColor: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+              answer:
+                'Zero Meta API fees. Messages dispatch through your gym phone line via local headless companion sockets. You do not need a Meta Cloud API developer account or paid WhatsApp Business conversation packs.',
+            },
+            {
+              id: 'faq-whatsapp-custody',
+              icon: ShieldAlert,
+              question: 'Does GymDeck ever hold, pool, or custody member phone data?',
+              topic: 'Non-Custodial Data',
+              tag: 'Zero Data Brokerage',
+              tagColor: 'bg-amber-50 text-amber-800 border-amber-200',
+              answer:
+                'All contact records and invoice PDFs reside locally in your isolated gym database with AES-256 encryption. Phone numbers are masked across dashboards and never shared with third-party advertising brokers.',
+            },
+            {
+              id: 'faq-whatsapp-autodebit',
+              icon: Lock,
+              question: 'Can messages ever be sent without gym owner consent or authorization?',
+              topic: 'Zero Auto-Dispatch Abuse',
+              tag: 'Opt-In Mandatory',
+              tagColor: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+              answer:
+                'Automated messages only dispatch for events explicitly toggled in your Automation settings (e.g. digital payment receipt or expiring membership). Mass broadcasts require manual owner composition and send confirmation.',
+            },
+            {
+              id: 'faq-whatsapp-credentials',
+              icon: Database,
+              question: 'What WhatsApp credentials and secrets does GymDeck store?',
+              topic: 'Zero Credential Storage',
+              tag: 'Sandbox Stored',
+              tagColor: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+              answer:
+                'We strictly never store or transmit your WhatsApp account passwords, PINs, or cloud backups. WhatsApp Web companion authentication session tokens are stored in an encrypted sandbox on your local machine.',
+            },
+          ].map((faq) => {
+            const isOpen = expandedFaqId === 'all' || expandedFaqId === faq.id;
+            const IconComp = faq.icon;
+
+            return (
+              <div
+                key={faq.id}
+                className={`rounded-xl border transition-all duration-150 overflow-hidden ${
+                  isOpen
+                    ? 'border-zinc-300 bg-white shadow-2xs'
+                    : 'border-zinc-200/80 bg-zinc-50/60 hover:bg-zinc-50 hover:border-zinc-300'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleFaq(faq.id)}
+                  className="w-full px-4 py-3 flex items-center justify-between text-left gap-3 cursor-pointer select-none"
+                  aria-expanded={isOpen}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                        isOpen
+                          ? 'bg-zinc-900 text-white'
+                          : 'bg-white text-zinc-700 border border-zinc-200/80 shadow-2xs'
+                      }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className="text-xs font-bold text-slate-800 tracking-tight leading-snug">
-                          {faq.question}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`text-[9px] font-bold font-mono px-1.5 py-0.5 rounded border uppercase tracking-wider hidden sm:inline-block ${faq.tagColor}`}
-                        >
-                          {faq.tag}
-                        </span>
-                        <ChevronDown
-                          size={14}
-                          className={`text-slate-400 transition-transform duration-200 ${
-                            isOpen ? 'rotate-180 text-slate-700' : ''
-                          }`}
-                        />
-                      </div>
-                    </button>
-
-                    {isOpen ? (
-                      <div className="px-3.5 pb-3 pt-1 text-[11px] text-slate-600 leading-relaxed border-t border-slate-100 bg-white">
-                        <p>{faq.answer}</p>
-                      </div>
-                    ) : null}
+                      <IconComp size={14} strokeWidth={2} />
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      <span className="text-xs font-bold text-zinc-900">{faq.question}</span>
+                    </div>
                   </div>
-                );
-              })}
+                  <div className="shrink-0 flex items-center gap-2.5">
+                    <span className="text-[10px] text-zinc-400 font-mono hidden md:inline">{faq.topic}</span>
+                    <ChevronDown
+                      size={14}
+                      strokeWidth={2}
+                      className={`text-zinc-400 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180 text-zinc-800' : ''
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {isOpen ? (
+                  <div className="px-4 pb-3.5 pt-1 border-t border-zinc-100 bg-white">
+                    <p className="text-xs text-zinc-600 leading-relaxed pl-10">
+                      {faq.answer}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Technical Security & Regulatory Specs Grid matching Banking & Settlement */}
+        <div className="pt-1">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div
+              title="Session credentials encrypted at rest using AES-256."
+              className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+            >
+              <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <Lock size={13} strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold text-zinc-900 text-xs truncate leading-tight">256-Bit Hardware AES</div>
+                <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">Local Sandbox Vault</div>
+              </div>
             </div>
-          </Card>
+
+            <div
+              title="End-to-end cryptographic transit tunneling protecting companion socket events."
+              className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+            >
+              <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <Network size={13} strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold text-zinc-900 text-xs truncate leading-tight">TLS 1.3 Strict Tunnel</div>
+                <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">Encrypted WebSocket</div>
+              </div>
+            </div>
+
+            <div
+              title="Full telecom compliance with WhatsApp outbound rate-limits and opt-in consent mandates."
+              className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+            >
+              <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <ShieldCheck size={13} strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold text-zinc-900 text-xs truncate leading-tight">Consent & Opt-In Rules</div>
+                <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">Anti-Spam Safeguards</div>
+              </div>
+            </div>
+
+            <div
+              title="Official direct messaging pipeline with zero intermediary delays or third-party message hops."
+              className="p-2.5 bg-zinc-50/80 rounded-xl border border-zinc-200/80 flex items-center gap-2.5 hover:bg-zinc-50 transition-colors"
+            >
+              <div className="w-7 h-7 rounded-lg bg-white border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <CheckCircle2 size={13} strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold text-zinc-900 text-xs truncate leading-tight">Zero-Intermediary Rails</div>
+                <div className="text-[10px] text-zinc-400 font-mono truncate leading-tight mt-0.5">Direct Outbound Pipeline</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
