@@ -104,6 +104,7 @@ export const whatsappApi = {
   getMessages: (params) => data('GET', `/v1/owner/whatsapp/messages${queryString(params)}`),
   getMessage: (id) => data('GET', `/v1/owner/whatsapp/messages/${id}`),
   cancelMessage: (id) => data('POST', `/v1/owner/whatsapp/messages/${id}/cancel`, {}),
+  deleteMessage: (id) => data('DELETE', `/v1/owner/whatsapp/messages/${id}`),
 
   getOverview: () => data('GET', '/v1/owner/whatsapp/overview'),
   getUsage: (days) => data('GET', `/v1/owner/whatsapp/usage${queryString({ days })}`),

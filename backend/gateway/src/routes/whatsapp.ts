@@ -302,6 +302,20 @@ router.post(
   }
 );
 
+router.delete(
+  '/messages/:id',
+  requirePermission('communications.send'),
+  async (req, res, next) => {
+    try {
+      const { gymId, userId } = tenantContext(req);
+      const id = z.string().uuid().parse(req.params.id);
+      res.json({ data: await whatsappMessageService.deleteJob(gymId, id, userId) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 /* ------------------------------------------------------------------ summary */
 
 router.get('/overview', requirePermission('communications.read'), async (req, res, next) => {

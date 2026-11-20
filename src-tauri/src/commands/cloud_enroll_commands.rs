@@ -345,6 +345,7 @@ pub async fn cloud_communications_request_command(
             "GET" => client.get(&url),
             "POST" => client.post(&url),
             "PUT" => client.put(&url),
+            "DELETE" => client.delete(&url),
             _ => client.patch(&url),
         };
         let b = b

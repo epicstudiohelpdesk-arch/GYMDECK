@@ -171,12 +171,12 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
 
   const handleCancelLinking = async () => {
     setShowConnectModal(false);
+    setConnection(null);
     setBusy('cancel');
     setError('');
     setNotice('');
     try {
       await whatsappApi.disconnect();
-      setConnection(null);
       await load();
     } catch (err) {
       setError(err.message || 'Could not cancel WhatsApp setup.');

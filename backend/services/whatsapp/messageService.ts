@@ -540,8 +540,12 @@ export class WhatsAppMessageService {
     }
 
     const rows = await db
-      .select()
+      .select({
+        job: whatsappMessageJobs,
+        profilePhotoUrl: gymMembers.profilePhotoUrl,
+      })
       .from(whatsappMessageJobs)
+      .leftJoin(gymMembers, eq(whatsappMessageJobs.memberId, gymMembers.id))
       .where(and(...conditions))
       .orderBy(desc(whatsappMessageJobs.createdAt))
       .limit(limit)
@@ -550,20 +554,26 @@ export class WhatsAppMessageService {
     return {
       limit,
       offset,
-      messages: rows.map((row) => this.toJobDto(row)),
+      messages: rows.map(({ job, profilePhotoUrl }) =>
+        this.toJobDto({ ...job, profilePhotoUrl })
+      ),
     };
   }
 
   public async getJob(gymId: string, jobId: string): Promise<any> {
     const rows = await db
-      .select()
+      .select({
+        job: whatsappMessageJobs,
+        profilePhotoUrl: gymMembers.profilePhotoUrl,
+      })
       .from(whatsappMessageJobs)
+      .leftJoin(gymMembers, eq(whatsappMessageJobs.memberId, gymMembers.id))
       .where(
         and(eq(whatsappMessageJobs.id, jobId), eq(whatsappMessageJobs.gymId, gymId))
       )
       .limit(1);
     if (!rows[0]) throw AppError.notFound('Message not found.');
-    return this.toJobDto(rows[0]);
+    return this.toJobDto({ ...rows[0].job, profilePhotoUrl: rows[0].profilePhotoUrl });
   }
 
   public async cancel(gymId: string, jobId: string, actorUserId?: string): Promise<any> {
@@ -597,6 +607,31 @@ export class WhatsAppMessageService {
     return { id: jobId, deliveryStatus: 'CANCELLED' };
   }
 
+  public async deleteJob(gymId: string, jobId: string, actorUserId?: string): Promise<any> {
+    const [deleted] = await db
+      .delete(whatsappMessageJobs)
+      .where(
+        and(
+          eq(whatsappMessageJobs.id, jobId),
+          eq(whatsappMessageJobs.gymId, gymId)
+        )
+      )
+      .returning({ id: whatsappMessageJobs.id });
+
+    if (!deleted) {
+      throw AppError.notFound('Message record not found.');
+    }
+
+    await recordWhatsAppAudit({
+      gymId,
+      actorId: actorUserId,
+      action: 'WHATSAPP_MESSAGE_DELETED',
+      targetId: jobId,
+    });
+
+    return { id: jobId, deleted: true };
+  }
+
   private toJobDto(row: any): any {
     const tail = String(row.recipientNumber || '').slice(-4);
     const cc = String(row.recipientNumber || '').slice(0, Math.max(2, String(row.recipientNumber || '').length - 10));
@@ -612,6 +647,7 @@ export class WhatsAppMessageService {
       batchId: row.batchId,
       memberId: row.memberId,
       recipientName: row.recipientName,
+      recipientPhoto: row.profilePhotoUrl || null,
       recipientMasked: tail ? `+${cc} ••••• ${tail}` : null,
       messageType: row.messageType,
       environment: row.environment || 'PRODUCTION',

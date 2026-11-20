@@ -1323,10 +1323,22 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
 ════════════════════════════════════════════════════════════ */
 function OverviewTab({ overview, loading, error, onRefresh }) {
   const [expandedFaqId, setExpandedFaqId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const toggleFaq = (id) => {
     setExpandedFaqId((curr) => (curr === id ? null : id));
   };
+
+  const handleManualRefresh = async () => {
+    if (refreshing || typeof onRefresh !== 'function') return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setTimeout(() => setRefreshing(false), 400);
+    }
+  };
+
   if (loading && !overview) return <Spinner label="Reading WhatsApp activity…" />;
 
   const today = overview?.today || {};
@@ -1402,18 +1414,14 @@ function OverviewTab({ overview, loading, error, onRefresh }) {
       <div className="bg-white border border-zinc-200/90 rounded-2xl p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-              <Activity size={19} strokeWidth={2} className="text-emerald-400" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-600 flex items-center justify-center shrink-0 shadow-2xs">
+              <Activity size={19} strokeWidth={2.2} />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
                   Gateway Telemetry & Pipeline
                 </h2>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Socket
-                </span>
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">
                 Real-time outbound transmission metrics, compliance opt-in, and companion health.
@@ -1433,12 +1441,13 @@ function OverviewTab({ overview, loading, error, onRefresh }) {
             </div>
             <button
               type="button"
-              onClick={onRefresh}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer shadow-2xs"
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
               title="Refresh telemetry"
               aria-label="Refresh telemetry"
             >
-              <RefreshCw size={13} strokeWidth={2.2} />
+              <RefreshCw size={13} strokeWidth={2.2} className={refreshing ? 'animate-spin text-emerald-600' : ''} />
             </button>
           </div>
         </div>
@@ -1727,12 +1736,60 @@ function HistoryTab({ onChanged }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [deletingId, setDeletingId] = useState('');
 
   const load = useCallback(async () => {
     setError('');
     try {
       const result = await whatsappApi.getMessages({ status, search, limit: 100 });
-      setMessages(result?.messages || []);
+      let loaded = result?.messages || [];
+
+      // Check local Tauri database or window.cachedMembers for profile photos fallback
+      let localPhotoMap = new Map();
+      if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
+        try {
+          const dbMembers = await window.__TAURI__.core.invoke('get_members_command', {
+            limit: 5000,
+            offset: 0,
+          });
+          if (Array.isArray(dbMembers)) {
+            for (const m of dbMembers) {
+              const photo = m.profile_photo_path || m.photo_url || m.photoUrl || m.image || null;
+              if (photo) {
+                if (m.id) localPhotoMap.set(String(m.id), photo);
+                if (m.member_code) localPhotoMap.set(String(m.member_code), photo);
+                if (m.phone) localPhotoMap.set(String(m.phone).replace(/\D/g, ''), photo);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore fallback error
+        }
+      }
+
+      if (localPhotoMap.size === 0 && typeof window !== 'undefined' && Array.isArray(window.cachedMembers)) {
+        for (const m of window.cachedMembers) {
+          const photo = m.profile_photo_path || m.photo_url || m.photoUrl || m.image || null;
+          if (photo) {
+            if (m.id) localPhotoMap.set(String(m.id), photo);
+            if (m.member_code) localPhotoMap.set(String(m.member_code), photo);
+            if (m.phone) localPhotoMap.set(String(m.phone).replace(/\D/g, ''), photo);
+          }
+        }
+      }
+
+      if (localPhotoMap.size > 0) {
+        loaded = loaded.map((m) => {
+          if (m.recipientPhoto) return m;
+          const phoneDigits = (m.recipientMasked || '').replace(/\D/g, '');
+          const localPhoto =
+            (m.memberId ? localPhotoMap.get(String(m.memberId)) : null) ||
+            (phoneDigits ? localPhotoMap.get(phoneDigits) : null);
+          return localPhoto ? { ...m, recipientPhoto: localPhoto } : m;
+        });
+      }
+
+      setMessages(loaded);
     } catch (err) {
       setError(err.message || 'Could not load message history.');
     } finally {
@@ -1746,13 +1803,18 @@ function HistoryTab({ onChanged }) {
     return () => clearInterval(timer);
   }, [load]);
 
-  const cancel = async (id) => {
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    setDeletingId(id);
     try {
-      await whatsappApi.cancelMessage(id);
-      await load();
+      await whatsappApi.deleteMessage(id);
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      if (selectedMessage?.id === id) setSelectedMessage(null);
       if (onChanged) onChanged();
     } catch (err) {
-      setError(err.message || 'Could not cancel the message.');
+      setError(err.message || 'Could not delete the message record.');
+    } finally {
+      setDeletingId('');
     }
   };
 
@@ -1851,22 +1913,25 @@ function HistoryTab({ onChanged }) {
                 { value: 'CANCELLED', label: 'Cancelled' },
               ]}
               className="w-full sm:w-44"
-              buttonClassName="h-8.5 rounded-lg border border-slate-200 text-xs font-bold shadow-2xs"
+              buttonClassName="h-9 rounded-xl border border-slate-200/90 text-xs font-bold shadow-2xs"
             />
 
-            <div className="relative flex-1 min-w-44 flex items-center">
-              <Search size={13} className="absolute left-3 text-slate-400 pointer-events-none" />
+            <div className="relative flex-1 min-w-44 flex items-center w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <Search size={13} strokeWidth={2.2} />
+              </div>
               <input
+                type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search member, ID, or phone..."
-                className="h-8.5 pl-8.5 pr-8 rounded-lg border border-slate-200/90 bg-slate-50/70 hover:bg-slate-50 focus:bg-white text-xs w-full focus:outline-none focus:border-indigo-500 font-medium transition-all shadow-2xs"
+                placeholder="Search member name, ID code, or phone..."
+                className="w-full h-9 pl-9 pr-8 bg-slate-50 hover:bg-slate-50/80 focus:bg-white border border-slate-200/90 focus:border-indigo-500 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all shadow-2xs"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-2 p-1 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer"
+                  className="absolute right-2.5 p-1 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   <X size={12} />
                 </button>
@@ -1881,7 +1946,7 @@ function HistoryTab({ onChanged }) {
             <button
               type="button"
               onClick={load}
-              className="inline-flex items-center justify-center gap-1.5 h-8.5 px-3 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer shadow-2xs transition-all shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer shadow-2xs transition-all shrink-0"
             >
               <RefreshCw size={11} strokeWidth={2.4} />
               <span>Refresh</span>
@@ -1919,31 +1984,51 @@ function HistoryTab({ onChanged }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50/70 text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-200/80">
+              <thead className="bg-slate-50/80 text-[10.5px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-2.5 font-bold">Recipient</th>
-                  <th className="px-4 py-2.5 font-bold">Channel / Type</th>
-                  <th className="px-4 py-2.5 font-bold">Sent At</th>
-                  <th className="px-4 py-2.5 font-bold">Status</th>
-                  <th className="px-4 py-2.5 font-bold">Content Preview</th>
-                  <th className="px-4 py-2.5 text-right font-bold">Action</th>
+                  <th className="px-4 py-3 font-bold">Recipient</th>
+                  <th className="px-4 py-3 font-bold">Channel / Type</th>
+                  <th className="px-4 py-3 font-bold">Sent At</th>
+                  <th className="px-4 py-3 font-bold">Status</th>
+                  <th className="px-4 py-3 font-bold">Content Preview</th>
+                  <th className="px-4 py-3 text-right font-bold">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100/90">
+              <tbody className="divide-y divide-slate-100">
                 {messages.map((m) => {
                   const avatar = getAvatarStyle(m.recipientName);
+                  const photoSrc = resolveMemberPhoto(m.recipientPhoto);
+                  const isDeleting = deletingId === m.id;
                   return (
-                    <tr key={m.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <tr 
+                      key={m.id} 
+                      onClick={() => setSelectedMessage(m)}
+                      className="hover:bg-slate-50/90 transition-colors group cursor-pointer"
+                      title="Click anywhere to inspect message log"
+                    >
                       {/* RECIPIENT */}
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
+                          {photoSrc ? (
+                            <img
+                              src={photoSrc}
+                              alt={m.recipientName || 'Member'}
+                              className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200/90 shadow-2xs"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                if (e.currentTarget.nextElementSibling) {
+                                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                                }
+                              }}
+                            />
+                          ) : null}
                           <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 border ${avatar.bg}`}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${avatar.bg} ${photoSrc ? 'hidden' : ''}`}
                           >
                             {(m.recipientName || 'M').charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-900 leading-tight truncate">
+                            <p className="font-bold text-slate-900 leading-tight truncate group-hover:text-indigo-600 transition-colors">
                               {m.recipientName || 'Member'}
                             </p>
                             <p className="text-[10px] font-mono text-slate-400 mt-0.5 leading-none">
@@ -1954,8 +2039,8 @@ function HistoryTab({ onChanged }) {
                       </td>
 
                       {/* CHANNEL / TYPE */}
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100/80 text-slate-700 border border-slate-200/70">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10.5px] font-bold bg-slate-100/90 text-slate-700 border border-slate-200/80">
                           {m.messageType === 'TEMPLATE'
                             ? m.templateName || 'Utility Template'
                             : 'Direct Message'}
@@ -1963,7 +2048,7 @@ function HistoryTab({ onChanged }) {
                       </td>
 
                       {/* TIMESTAMP */}
-                      <td className="px-4 py-2.5 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                      <td className="px-4 py-3 text-slate-500 font-mono text-[11px] whitespace-nowrap">
                         {new Date(m.createdAt).toLocaleDateString('en-IN', {
                           day: '2-digit',
                           month: 'short',
@@ -1973,50 +2058,41 @@ function HistoryTab({ onChanged }) {
                       </td>
 
                       {/* STATUS */}
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <Badge status={m.deliveryStatus} />
                       </td>
 
                       {/* PREVIEW */}
-                      <td className="px-4 py-2.5 text-[11px] text-slate-600 max-w-xs md:max-w-sm">
+                      <td className="px-4 py-3 text-[11.5px] text-slate-600 max-w-xs md:max-w-sm">
                         {m.failureReason ? (
                           <div className="flex items-center gap-1.5 text-rose-600 font-semibold truncate">
                             <AlertCircle size={12} className="shrink-0" />
                             <span className="truncate">{m.failureReason}</span>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedMessage(m)}
-                            className="text-left truncate block w-full hover:text-indigo-600 cursor-pointer font-medium"
-                            title="Click to view full message"
-                          >
+                          <span className="truncate block font-medium group-hover:text-slate-900 transition-colors">
                             {m.preview || '—'}
-                          </button>
+                          </span>
                         )}
                       </td>
 
                       {/* ACTIONS */}
-                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setSelectedMessage(m)}
-                            className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/60 cursor-pointer transition-colors"
-                            title="View Details"
+                            onClick={(e) => handleDelete(e, m.id)}
+                            disabled={isDeleting}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200/60 cursor-pointer transition-all disabled:opacity-50"
+                            title="Delete message record"
+                            aria-label="Delete message record"
                           >
-                            <ExternalLink size={13} />
+                            {isDeleting ? (
+                              <Loader2 size={13} className="animate-spin text-rose-600" />
+                            ) : (
+                              <Trash2 size={13} strokeWidth={2} />
+                            )}
                           </button>
-
-                          {m.deliveryStatus === 'QUEUED' && (
-                            <button
-                              type="button"
-                              onClick={() => cancel(m.id)}
-                              className="px-2 py-0.5 rounded-md text-[10px] font-bold text-rose-600 hover:bg-rose-50 border border-rose-200/80 cursor-pointer shadow-2xs transition-all"
-                            >
-                              Cancel
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -2372,85 +2448,87 @@ function SettingsTab({ templates, usage, onRefresh }) {
   const pendingCount = consents.filter((c) => c.consentStatus !== 'GRANTED').length;
 
   return (
-    <div className="space-y-5">
-      {/* ─── SUMMARY KPI TILES ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
+    <div className="space-y-4">
+      {/* ─── SUMMARY KPI TILES (PREMIUM CLEAN STYLING) ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
               Opted-In Members
             </span>
             <div className="text-2xl font-black text-emerald-700 font-mono tabular-nums">
               {grantedCount}
             </div>
-            <span className="text-[10px] font-medium text-slate-500">Allowed automated alerts</span>
+            <span className="text-[10.5px] font-medium text-zinc-500">Allowed automated alerts</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
-            <UserCheck size={16} strokeWidth={2.4} />
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/80 shadow-2xs">
+            <UserCheck size={16} strokeWidth={2.2} />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
+        <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
               Pending / Revoked
             </span>
             <div className="text-2xl font-black text-amber-700 font-mono tabular-nums">
               {pendingCount}
             </div>
-            <span className="text-[10px] font-medium text-slate-500">Restricted to 24h window</span>
+            <span className="text-[10.5px] font-medium text-zinc-500">Restricted to 24h window</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-100">
-            <ShieldAlert size={16} strokeWidth={2.4} />
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200/80 shadow-2xs">
+            <ShieldAlert size={16} strokeWidth={2.2} />
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
+        <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
               Directory Records
             </span>
-            <div className="text-2xl font-black text-slate-900 font-mono tabular-nums">
+            <div className="text-2xl font-black text-zinc-900 font-mono tabular-nums">
               {consents.length}
             </div>
-            <span className="text-[10px] font-medium text-slate-500">Registered members</span>
+            <span className="text-[10.5px] font-medium text-zinc-500">Registered members</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200/60">
-            <Users size={16} strokeWidth={2.4} />
+          <div className="w-9 h-9 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0 border border-zinc-200/80 shadow-2xs">
+            <Users size={16} strokeWidth={2.2} />
           </div>
         </div>
       </div>
 
       {/* ─── CONSENT DIRECTORY REGISTRY ─── */}
-      <Card className="p-5 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      <div className="bg-white border border-zinc-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3.5 border-b border-zinc-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100">
-              <ShieldCheck size={16} strokeWidth={2.4} />
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/80 shadow-2xs">
+              <ShieldCheck size={17} strokeWidth={2.2} />
             </div>
             <div>
-              <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+              <h2 className="text-xs font-bold text-zinc-900 tracking-tight uppercase">
                 WhatsApp Opt-In Consent Registry
               </h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
+              <p className="text-xs text-zinc-500 mt-0.5">
                 Audit compliance records required for automated broadcast dispatch outside customer windows.
               </p>
             </div>
           </div>
 
-          <div className="relative min-w-64">
-            <Search size={14} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
+          <div className="relative min-w-64 flex items-center">
+            <span className="absolute left-3.5 flex items-center pointer-events-none text-zinc-400">
+              <Search size={14} />
+            </span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search member name or phone..."
-              className="h-9.5 pl-9.5 pr-8 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-slate-50 focus:bg-white text-xs w-full font-medium focus:outline-none focus:border-indigo-500 transition-all shadow-2xs"
+              className="h-9 pl-9.5 pr-8 rounded-xl border border-zinc-200 bg-zinc-50/70 hover:bg-zinc-50 focus:bg-white text-xs w-full font-medium focus:outline-none focus:border-emerald-600 transition-all shadow-2xs"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-2.5 p-1 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer"
+                className="absolute right-2.5 p-1 rounded-md text-zinc-400 hover:text-zinc-700 cursor-pointer"
               >
                 <X size={12} />
               </button>
@@ -2460,7 +2538,7 @@ function SettingsTab({ templates, usage, onRefresh }) {
 
         <ErrorNote message={error} onRetry={load} />
         {notice && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
             <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
             <span>{notice}</span>
           </div>
@@ -2471,16 +2549,39 @@ function SettingsTab({ templates, usage, onRefresh }) {
         ) : consents.length === 0 ? (
           <EmptyState title="No members found" description="Add members to see their WhatsApp consent status." icon={Users} />
         ) : (
-          <div className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto custom-scrollbar">
+          <div className="divide-y divide-zinc-100 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
             {consents.map((m) => {
               const isGranted = m.consentStatus === 'GRANTED';
+              const photoSrc = resolveMemberPhoto(m.profilePhotoUrl);
+              const avatar = getAvatarStyle(m.fullName);
               return (
-                <div key={m.id} className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/60 px-2 rounded-xl transition-colors">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{m.fullName}</p>
-                    <p className="text-[10px] font-mono text-slate-400 mt-0.5">{m.phoneMasked || 'No phone'}</p>
+                <div key={m.id} className="py-2.5 flex items-center justify-between gap-3 hover:bg-zinc-50/80 px-2.5 rounded-xl transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {photoSrc ? (
+                      <img
+                        src={photoSrc}
+                        alt={m.fullName || 'Member'}
+                        className="w-8 h-8 rounded-full object-cover shrink-0 border border-zinc-200/90 shadow-2xs"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          if (e.currentTarget.nextElementSibling) {
+                            e.currentTarget.nextElementSibling.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${avatar.bg} ${photoSrc ? 'hidden' : ''}`}
+                    >
+                      {(m.fullName || 'M').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-zinc-900 truncate leading-snug">{m.fullName}</p>
+                      <p className="text-[10px] font-mono text-zinc-400 mt-0.5">{m.phoneMasked || 'No phone'}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2.5">
+
+                  <div className="flex items-center gap-2.5 shrink-0">
                     <span
                       className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider font-mono border ${
                         isGranted
@@ -2496,8 +2597,8 @@ function SettingsTab({ templates, usage, onRefresh }) {
                       onClick={() => toggleConsent(m.id, m.consentStatus)}
                       className={`h-7.5 px-3 rounded-lg border text-[11px] font-bold cursor-pointer shadow-2xs transition-all disabled:opacity-50 ${
                         isGranted
-                          ? 'bg-white hover:bg-rose-50 border-slate-200 text-slate-700 hover:text-rose-700 hover:border-rose-200'
-                          : 'bg-slate-900 text-white hover:bg-emerald-600 border-slate-900'
+                          ? 'bg-white hover:bg-rose-50 border-zinc-200 text-zinc-700 hover:text-rose-700 hover:border-rose-200'
+                          : 'bg-zinc-900 text-white hover:bg-emerald-600 border-zinc-900'
                       }`}
                     >
                       {busyId === m.id ? 'Updating…' : isGranted ? 'Revoke Consent' : 'Grant Opt-In'}
@@ -2508,7 +2609,7 @@ function SettingsTab({ templates, usage, onRefresh }) {
             })}
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
@@ -2611,15 +2712,6 @@ export function CommunicationHub() {
                 </button>
               ))}
             </div>
-
-            <button
-              type="button"
-              onClick={refresh}
-              className="h-8 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <RefreshCw size={12} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
           </div>
         </div>
       </header>
