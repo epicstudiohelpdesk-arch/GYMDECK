@@ -8,6 +8,7 @@ import syncRouter from './sync';
 import webhookRouter from './webhooks';
 import paymentConfigRouter from './paymentConfig';
 import cctvRouter from './cctv';
+import emailRouter from './email';
 
 const router: Router = Router();
 
@@ -19,6 +20,9 @@ router.use('/v1/payments', paymentConfigRouter);
 
 // Security & CCTV API (/v1/cctv)
 router.use('/v1/cctv', cctvRouter);
+
+// Email Communication API (/v1/owner/email)
+router.use('/v1/owner/email', emailRouter);
 
 // Authentication API (/v1/auth)
 router.use('/v1/auth/owner', ownerAuthRouter);

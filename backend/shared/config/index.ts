@@ -62,6 +62,18 @@ export const EnvironmentSchema = z.object({
   OPENWA_SESSION_PREFIX: z.string().optional().default('gymdeck'),
   OPENWA_ENGINE: z.enum(['whatsapp-web.js', 'baileys']).optional().default('whatsapp-web.js'),
 
+  // Postal Email Gateway Infrastructure
+  POSTAL_API_URL: z.string().url().default('http://127.0.0.1:5000/api/v1'),
+  POSTAL_SERVER_API_KEY: z.string().optional().default('dev_postal_server_api_key_gymdeck'),
+  POSTAL_WEBHOOK_KEY: z.string().optional().default('dev_postal_webhook_signing_key'),
+  POSTAL_FROM_DOMAIN: z.string().default('mail.gymdeck.com'),
+  POSTAL_DEFAULT_FROM_NAME: z.string().default('GymDeck Member Desk'),
+  POSTAL_DEFAULT_FROM_EMAIL: z.string().default('notifications@mail.gymdeck.com'),
+  POSTAL_DELIVERY_MODE: z.enum(['live', 'mock']).default('mock'),
+  EMAIL_MONTHLY_QUOTA_DEFAULT: z.coerce.number().min(1).max(100000).default(300),
+  EMAIL_WORKER_INTERVAL_MS: z.coerce.number().min(500).max(300000).default(5000),
+  EMAIL_BATCH_SIZE: z.coerce.number().min(1).max(100).default(25),
+
   // Meta credentials used only by the legacy notification-provider module, not
   // by the Communication Hub (which is OpenWA-only).
   WHATSAPP_API_URL: z.string().url().default('https://graph.facebook.com/v22.0'),

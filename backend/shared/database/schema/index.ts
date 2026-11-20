@@ -18,3 +18,4 @@ export * from './sync';
 export * from './payments';
 export * from './cctv';
 export * from './whatsapp';
+export * from './email';

@@ -141,6 +141,13 @@ export function classifyOpenWAError(status: number, message: string): {
   return { errorClass: 'TRANSIENT', retryable: true, retryAfterSeconds: 30 };
 }
 
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+const sessionCache = new Map<string, CacheEntry<OpenWASession>>();
+const qrCache = new Map<string, CacheEntry<string | null>>();
+
 export const openwaClient = {
   async health(): Promise<{ ok: boolean; status: number; detail: string }> {
     try {
@@ -161,7 +168,23 @@ export const openwaClient = {
   },
 
   async getSession(sessionId: string): Promise<OpenWASession> {
-    return request<OpenWASession>('GET', `/sessions/${encodeURIComponent(sessionId)}`);
+    const now = Date.now();
+    const cached = sessionCache.get(sessionId);
+    if (cached && cached.expiresAt > now) {
+      return cached.data;
+    }
+
+    try {
+      const fresh = await request<OpenWASession>('GET', `/sessions/${encodeURIComponent(sessionId)}`);
+      sessionCache.set(sessionId, { data: fresh, expiresAt: now + 1200 });
+      return fresh;
+    } catch (err: any) {
+      // If rate limited but we have a slightly older cached session, return it to prevent dropouts
+      if (err?.status === 429 && cached) {
+        return cached.data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -199,13 +222,26 @@ export const openwaClient = {
   },
 
   async getQR(sessionId: string): Promise<string | null> {
+    const now = Date.now();
+    const cached = qrCache.get(sessionId);
+    if (cached && cached.expiresAt > now) {
+      return cached.data;
+    }
+
     try {
       const data = await request<{ qrCode?: string; status?: string }>(
         'GET',
         `/sessions/${encodeURIComponent(sessionId)}/qr`
       );
-      return data?.qrCode || null;
+      const code = data?.qrCode || null;
+      if (code) {
+        qrCache.set(sessionId, { data: code, expiresAt: now + 2000 });
+      }
+      return code;
     } catch (err: any) {
+      if (err?.status === 429 && cached) {
+        return cached.data;
+      }
       // OpenWA returns 400 until a QR exists or after the session authenticates.
       if (err?.status === 400 || err?.status === 404) return null;
       throw err;

@@ -10,6 +10,7 @@ import { logger } from '../../shared/logging';
 import { closeDatabasePool } from '../../shared/database';
 import { communicationRetentionWorker } from '../../services/communications/retentionWorker';
 import { whatsappWorker } from '../../services/whatsapp/worker';
+import { startEmailWorker, stopEmailWorker } from '../../services/email/deliveryWorker';
 import { cctvSignalingService } from '../../services/cctv/cctvSignalingService';
 
 let server: Server | null = null;
@@ -46,6 +47,8 @@ export function startServer(): Server {
       // Persistent WhatsApp queue + reminder scheduler. Runs server-side so
       // delivery continues while every gym owner's desktop is closed.
       whatsappWorker.start();
+      // Persistent Email outbox worker for Postal dispatch
+      startEmailWorker();
     }
   });
 
@@ -55,6 +58,7 @@ export function startServer(): Server {
 // Graceful Shutdown Logic
 async function handleShutdown(signal: string): Promise<void> {
   logger.info(`[Lifecycle] Received ${signal}. Commencing graceful shutdown...`);
+  stopEmailWorker();
   whatsappWorker.stop();
   communicationRetentionWorker.stop();
 

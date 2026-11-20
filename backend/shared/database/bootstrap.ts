@@ -739,4 +739,17 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       break;
     }
   }
+
+  // Email Communication System migration (additive; safe to re-run).
+  const emailCandidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0007_email_communication_system.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0007_email_communication_system.sql'),
+    path.join(__dirname, 'migrations', '0007_email_communication_system.sql'),
+  ];
+  for (const file of emailCandidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
 }

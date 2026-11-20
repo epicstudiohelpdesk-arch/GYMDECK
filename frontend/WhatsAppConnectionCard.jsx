@@ -90,22 +90,33 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
     return () => clearTimeout(timer);
   }, [error]);
 
+  const lastReportedStatusRef = React.useRef(null);
+
   const load = useCallback(async () => {
     try {
       setError('');
       const data = await whatsappApi.getConnection();
       // If modal is NOT open, don't revert user to an unprompted CONNECTING state
       if (!modalOpenRef.current && data?.connectionStatus === 'CONNECTING') {
-        setConnection({
+        const fallback = {
           ...data,
           connectionStatus: 'NOT_CONNECTED',
           qrCode: null,
-        });
-        if (onStatusChange) onStatusChange({ ...data, connectionStatus: 'NOT_CONNECTED' });
+        };
+        setConnection(fallback);
+        if (onStatusChange && lastReportedStatusRef.current !== 'NOT_CONNECTED') {
+          lastReportedStatusRef.current = 'NOT_CONNECTED';
+          onStatusChange(fallback);
+        }
         return;
       }
       setConnection(data);
-      if (onStatusChange) onStatusChange(data);
+      // Only notify parent dashboard if status meaningfully changed, preventing infinite rapid refreshes
+      const statusKey = `${data?.connectionStatus}_${data?.isLive}`;
+      if (onStatusChange && lastReportedStatusRef.current !== statusKey) {
+        lastReportedStatusRef.current = statusKey;
+        onStatusChange(data);
+      }
     } catch (err) {
       setError(err.message || 'Could not read the WhatsApp connection status.');
     } finally {
@@ -120,8 +131,8 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
   useEffect(() => {
     // Only poll for QR/connection progression if modal is open and in CONNECTING state
     if (!connection || connection.connectionStatus !== 'CONNECTING' || !showConnectModal) return undefined;
-    // Poll faster (every 700ms) so QR and Connected states appear immediately
-    const timer = setInterval(load, 700);
+    // Poll every 2000ms to stay safely within OpenWA API rate limits while keeping QR responsive
+    const timer = setInterval(load, 2000);
     return () => clearInterval(timer);
   }, [connection, showConnectModal, load]);
 
