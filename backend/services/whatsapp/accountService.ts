@@ -262,14 +262,22 @@ export class WhatsAppAccountService {
 
     try {
       session = await openwaClient.ensureSession(sessionName);
-      await openwaClient.startSession(session.id);
-
-      const webhook = await openwaClient.ensureWebhook(
-        session.id,
-        config.OPENWA_WEBHOOK_URL,
-        config.OPENWA_WEBHOOK_SECRET,
-        WEBHOOK_EVENTS
-      );
+      // Start session & ensure webhook concurrently for faster launch
+      const [, webhook] = await Promise.all([
+        openwaClient.startSession(session.id),
+        openwaClient.ensureWebhook(
+          session.id,
+          config.OPENWA_WEBHOOK_URL,
+          config.OPENWA_WEBHOOK_SECRET,
+          WEBHOOK_EVENTS
+        ).catch((webhookErr) => {
+          logger.warn('[whatsapp] Webhook setup non-fatal warning', {
+            gymId,
+            message: webhookErr instanceof Error ? webhookErr.message : 'unknown',
+          });
+          return null;
+        }),
+      ]);
       webhookId = webhook?.id ? String(webhook.id) : null;
 
       // Re-read after start: a session already authenticated is READY now.
@@ -339,12 +347,12 @@ export class WhatsAppAccountService {
       metadata: { sessionName, sessionStatus: session.status },
     });
 
-    // If OpenWA hasn't generated the QR immediately on start, poll quickly for a couple seconds
-    // so the initial response to the user already contains the fresh QR image.
+    // If OpenWA hasn't generated the QR immediately on start, poll quickly with a tight interval
+    // so the initial response to the user already contains the fresh QR image with minimal latency.
     let initialConnection = await this.getConnection(gymId);
     if (!initialConnection.qrCode && initialConnection.connectionStatus === 'CONNECTING') {
-      for (let attempt = 0; attempt < 8; attempt++) {
-        await new Promise((resolve) => setTimeout(resolve, 600));
+      for (let attempt = 0; attempt < 12; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
         initialConnection = await this.getConnection(gymId);
         if (initialConnection.qrCode || initialConnection.connectionStatus !== 'CONNECTING') {
           break;

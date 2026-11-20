@@ -79,6 +79,7 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
   const [showHelp, setShowHelp] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  const modalOpenRef = React.useRef(false);
 
   // Auto-clear transient errors (e.g. rate limit, connection timeouts) after 2.5s
   useEffect(() => {
@@ -93,6 +94,16 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
     try {
       setError('');
       const data = await whatsappApi.getConnection();
+      // If modal is NOT open, don't revert user to an unprompted CONNECTING state
+      if (!modalOpenRef.current && data?.connectionStatus === 'CONNECTING') {
+        setConnection({
+          ...data,
+          connectionStatus: 'NOT_CONNECTED',
+          qrCode: null,
+        });
+        if (onStatusChange) onStatusChange({ ...data, connectionStatus: 'NOT_CONNECTED' });
+        return;
+      }
       setConnection(data);
       if (onStatusChange) onStatusChange(data);
     } catch (err) {
@@ -107,13 +118,12 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
   }, [load]);
 
   useEffect(() => {
-    // Poll while the QR is waiting to be scanned so the card advances to
-    // Connected without the owner pressing refresh.
-    // Poll faster (every 1200ms) so QR and Connected states appear immediately.
-    if (!connection || connection.connectionStatus !== 'CONNECTING') return undefined;
-    const timer = setInterval(load, 1200);
+    // Only poll for QR/connection progression if modal is open and in CONNECTING state
+    if (!connection || connection.connectionStatus !== 'CONNECTING' || !showConnectModal) return undefined;
+    // Poll faster (every 700ms) so QR and Connected states appear immediately
+    const timer = setInterval(load, 700);
     return () => clearInterval(timer);
-  }, [connection, load]);
+  }, [connection, showConnectModal, load]);
 
   const status =
     connection?.gatewayReachable === false
@@ -126,17 +136,25 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
     setBusy('connect');
     setError('');
     setNotice('');
+    modalOpenRef.current = true;
     setShowConnectModal(true);
     try {
       const result = await whatsappApi.connect();
+      // If user closed or cancelled before this async connect finished, discard result
+      if (!modalOpenRef.current) {
+        whatsappApi.disconnect().catch(() => {});
+        return;
+      }
       setConnection(result);
       if (result?.connectionStatus === 'CONNECTED') {
         setNotice('WhatsApp connected successfully.');
       }
     } catch (err) {
-      setError(err.message || 'Could not start the WhatsApp session.');
+      if (modalOpenRef.current) {
+        setError(err.message || 'Could not start the WhatsApp session.');
+      }
     } finally {
-      setBusy('');
+      setBusy((prev) => (prev === 'connect' ? '' : prev));
     }
   };
 
@@ -160,7 +178,12 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
     setNotice('');
     try {
       await whatsappApi.disconnect();
-      setConnection(null);
+      setConnection({
+        connectionStatus: 'NOT_CONNECTED',
+        isLive: false,
+        qrCode: null,
+        businessPhoneNumber: null,
+      });
       await load();
     } catch (err) {
       setError(err.message || 'Could not disconnect WhatsApp.');
@@ -170,16 +193,35 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
   };
 
   const handleCancelLinking = async () => {
+    // 1. Immediately dismiss modal, update ref, and reset connection state to clean NOT_CONNECTED
+    modalOpenRef.current = false;
     setShowConnectModal(false);
-    setConnection(null);
+    setConnection({
+      connectionStatus: 'NOT_CONNECTED',
+      isLive: false,
+      qrCode: null,
+      businessPhoneNumber: null,
+    });
     setBusy('cancel');
     setError('');
     setNotice('');
+
+    // 2. Tear down the session in background so it never hangs in CONNECTING
     try {
       await whatsappApi.disconnect();
-      await load();
+      const fresh = await whatsappApi.getConnection();
+      if (fresh?.connectionStatus === 'CONNECTING') {
+        setConnection({
+          ...fresh,
+          connectionStatus: 'NOT_CONNECTED',
+          qrCode: null,
+        });
+      } else {
+        setConnection(fresh);
+      }
+      if (onStatusChange) onStatusChange(fresh);
     } catch (err) {
-      setError(err.message || 'Could not cancel WhatsApp setup.');
+      console.warn('[WhatsAppConnectionCard] Cancel connection cleanup error:', err);
     } finally {
       setBusy('');
     }
@@ -257,67 +299,64 @@ export default function WhatsAppConnectionCard({ compact = false, onStatusChange
         ) : null}
 
         {/* Top Section: Header with Official Logo, Title, Phone Pill, and Telemetry Badge */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-1">
+        <div className="flex items-start justify-between gap-3 relative z-1">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
               {/* WhatsApp Brand Icon placed inline & aligned with text */}
               <img 
                 src="/whatsapp-logo.png" 
                 alt="WhatsApp" 
-                className="w-6 h-6 object-contain shrink-0 drop-shadow-xs -mt-0.5"
+                className="w-5 h-5 object-contain shrink-0 drop-shadow-xs"
               />
 
-              <span className="text-base font-extrabold tracking-tight text-white">
+              <span className="text-sm font-bold tracking-tight text-white">
                 WhatsApp Line
               </span>
 
-              {isLive ? (
-                <span 
-                  className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white shadow-2xs backdrop-blur-xs" 
-                  title="Signal Online"
-                >
-                  <Wifi size={13} strokeWidth={2.5} className="text-white animate-pulse" />
-                </span>
-              ) : status === 'CONNECTING' ? (
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/20 text-white" title="Pairing">
-                  <Loader2 size={12} className="animate-spin text-white" />
-                </span>
-              ) : (
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/25 text-white/70" title="Offline">
-                  <WifiOff size={12} strokeWidth={2} />
-                </span>
-              )}
-
               {connection?.businessPhoneNumber ? (
-                <span className="text-[11px] font-mono font-bold text-emerald-950 bg-white/95 px-2.5 py-0.5 rounded-md shadow-2xs truncate">
+                <span className="text-[11px] font-mono font-semibold text-emerald-950 bg-white/95 px-2 py-0.5 rounded-md shadow-2xs truncate">
                   {connection.businessPhoneNumber}
                 </span>
               ) : null}
             </div>
 
-            <p className="text-xs text-white/90 mt-1.5 leading-relaxed font-normal">
+            <p className="text-[11px] text-white/85 mt-1 leading-relaxed font-normal max-w-sm">
               {isLive 
-                ? 'Active companion pipeline • Sending automated PDF invoices and renewal notices.'
+                ? 'Companion gateway online. Delivering real-time fee receipts, renewal alerts, and 1-click member chat.'
                 : status === 'CONNECTING'
-                ? 'Awaiting QR scan from official gym phone.'
-                : 'Link the gym phone to enable automated fee receipts, renewal alerts, and member chat.'}
+                ? 'Scan QR from WhatsApp > Linked Devices on gym phone.'
+                : 'Link gym device to enable automatic PDF invoices, payment alerts, and direct member chats.'}
             </p>
           </div>
 
-          {/* Right Status Indicator */}
-          <div className="shrink-0 self-start sm:self-center">
+          {/* Top Right: Status Badge & Live Wi-Fi Signal Indicator */}
+          <div className="shrink-0 flex items-center gap-1.5 self-start">
             {isLive ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-950 bg-white px-3 py-1.5 rounded-xl shadow-2xs border border-white/60">
-                <ShieldCheck size={14} strokeWidth={2.4} className="text-emerald-600" /> Connected
-              </span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 shadow-2xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-white">
+                  Connected
+                </span>
+                <span className="w-px h-3 bg-white/30 ml-0.5" />
+                <Wifi size={13} strokeWidth={2.5} className="text-white animate-pulse" />
+              </div>
             ) : status === 'CONNECTING' ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-black/25 px-3 py-1.5 rounded-xl shadow-2xs">
-                <Loader2 size={12} className="animate-spin" /> Ready for Scan
-              </span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/25 backdrop-blur-md border border-white/20 shadow-2xs">
+                <Loader2 size={12} className="animate-spin text-white" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-white">
+                  Pairing
+                </span>
+              </div>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/90 bg-black/20 px-3 py-1.5 rounded-xl">
-                <Unplug size={13} strokeWidth={2} /> Disconnected
-              </span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/25 backdrop-blur-md border border-white/15 shadow-2xs">
+                <WifiOff size={12} strokeWidth={2} className="text-white/70" />
+                <span className="text-[11px] font-medium text-white/90">
+                  Offline
+                </span>
+              </div>
             )}
           </div>
         </div>

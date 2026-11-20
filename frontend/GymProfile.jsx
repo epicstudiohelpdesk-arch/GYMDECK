@@ -3528,63 +3528,9 @@ const GymProfile = () => {
                     </div>
                   </div>
 
-                  {/* CHANNEL 2: WHATSAPP BUSINESS */}
-                  <div className="bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 p-5 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm">
-                    <div className="space-y-4">
-                      {/* Card Header */}
-                      <div className="flex items-center gap-3 pb-3.5 border-b border-zinc-100">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-2xs">
-                          <Smartphone size={17} strokeWidth={2} />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-zinc-900">WhatsApp Business</h3>
-                          <span className="text-xs text-zinc-500 block">PDF Invoices, Reminders & Chat</span>
-                        </div>
-                      </div>
-
-                      {/* Primary Input */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
-                          <span>Registered WhatsApp Number</span>
-                          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-md">Linked device</span>
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
-                            <Smartphone size={14} strokeWidth={1.75} />
-                          </div>
-                          <input 
-                            type="text" 
-                            value={gymData.whatsapp} 
-                            placeholder="e.g. +91 98765 43210"
-                            onChange={(e) => handleInputChange('whatsapp', e.target.value)}
-                            className="w-full h-10 pl-9 pr-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all placeholder:text-zinc-400 placeholder:font-normal" 
-                          />
-                        </div>
-                      </div>
-
-                      {/* Feature Capabilities Strip */}
-                      <div className="pt-2 border-t border-zinc-100 space-y-2.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
-                            PDF Receipts
-                          </span>
-                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
-                            Expiry Alerts
-                          </span>
-                          <span className="px-2.5 py-1 text-[10px] font-semibold bg-zinc-100 text-zinc-700 rounded-lg border border-zinc-200/60">
-                            Direct Chat
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-500 leading-relaxed">
-                          Enables automatic PDF invoice delivery upon fee payment, renewal alerts, personal trainer updates, and 1-click member chat.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Real connection state — a saved number alone is never "connected". */}
-                    <div className="pt-4 mt-2">
-                      <WhatsAppConnectionCard phoneNumber={gymData.whatsapp} compact />
-                    </div>
+                  {/* CHANNEL 2: WHATSAPP BUSINESS CONNECTION CARD */}
+                  <div className="flex flex-col h-full">
+                    <WhatsAppConnectionCard />
                   </div>
 
                   {/* CHANNEL 3: OFFICIAL EMAIL */}
