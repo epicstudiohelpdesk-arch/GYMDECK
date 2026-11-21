@@ -51,15 +51,23 @@ async function runEmailSubsystemVerification() {
   console.log('🧪 GYMDECK EMAIL LINE: AUTOMATED VERIFICATION SUITE');
   console.log('===============================================================\n');
 
-  // Ensure test Gym B exists in DB for cross-tenant tests
+  // Ensure test Gyms exist in DB for cross-tenant tests
   await db
     .insert(gyms)
-    .values({
-      id: testGymB,
-      code: 'TESTB01',
-      name: 'Tenant B Fitness Test Gym',
-      status: 'ACTIVE',
-    })
+    .values([
+      {
+        id: testGymA,
+        code: 'TESTA01',
+        name: 'Tenant A Fitness Test Gym',
+        status: 'ACTIVE',
+      },
+      {
+        id: testGymB,
+        code: 'TESTB01',
+        name: 'Tenant B Fitness Test Gym',
+        status: 'ACTIVE',
+      },
+    ])
     .onConflictDoNothing();
 
   // Reset Quota for Gym A in current month for testing
@@ -229,7 +237,7 @@ async function runEmailSubsystemVerification() {
 
   // Create recipient with providerMessageId
   const uniqueEmail = `bounce_${Date.now()}@gymdecktest.com`;
-  const providerMessageId = `provider_msg_${Date.now()}`;
+  const numericProviderMsgId = Math.floor(800000 + Math.random() * 100000);
   const [createdMsg] = await db
     .insert(emailMessages)
     .values({
@@ -250,18 +258,18 @@ async function runEmailSubsystemVerification() {
       emailMessageId: createdMsg!.id,
       recipientEmail: uniqueEmail,
       deliveryStatus: 'SENT',
-      providerMessageId: providerMessageId,
+      providerMessageId: String(numericProviderMsgId),
     })
     .returning();
 
-  const testEventUuid = `evt_dedup_${Date.now()}`;
+  const testEventUuid = crypto.randomUUID();
   const bounceWebhookPayload: any = {
     event: 'MessageBounced',
     timestamp: Math.floor(Date.now() / 1000),
     uuid: testEventUuid,
     payload: {
       message: {
-        id: providerMessageId as any,
+        id: numericProviderMsgId,
         token: 'tok_bounce',
         to: uniqueEmail,
         status: 'Bounced',
