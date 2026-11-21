@@ -16,9 +16,9 @@
  *     - Unmatched numeric provider ID cannot cross-contaminate another gym's records.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
-import { db } from '../shared/database';
+import { db, closeDatabasePool } from '../shared/database';
 import {
   emailMessages,
   emailRecipients,
@@ -30,6 +30,10 @@ import { PostalApiError } from '../services/email/postalClient';
 
 describe('GYMDECK EMAIL LINE — PHASE 5A.1 CRITICAL REMEDIATION SUITE', () => {
   const testGymId = '15a8189e-0b2d-4f21-a5af-07929a6fb916';
+
+  after(async () => {
+    await closeDatabasePool();
+  });
 
   describe('1. Webhook UUID Deduplication & Replay Defense', () => {
     it('1.1: Missing or invalid UUID must be rejected and quarantined without updating DB state', async () => {

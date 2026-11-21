@@ -14,9 +14,9 @@
  * 10. Existing quota and outbox behavior remains unchanged.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
-import { db } from '../shared/database';
+import { db, closeDatabasePool } from '../shared/database';
 import {
   emailMessages,
   emailRecipients,
@@ -29,6 +29,10 @@ import { PostalApiError } from '../services/email/postalClient';
 
 describe('GYMDECK EMAIL LINE — PHASE 5A.2 FINAL RISK CLOSURE SUITE', () => {
   const testGymId = '15a8189e-0b2d-4f21-a5af-07929a6fb916';
+
+  after(async () => {
+    await closeDatabasePool();
+  });
 
   describe('1. Dispatch Safety & Error Classification (Items 1-4)', () => {
     it('1.1: Pre-transmission failure (ECONNREFUSED) is definite non-dispatch (isAmbiguous: false)', () => {

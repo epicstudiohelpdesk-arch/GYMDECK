@@ -8,10 +8,10 @@
  * 4. Webhook processing: Webhook signature verification and state synchronization.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import { db } from '../shared/database';
+import { db, closeDatabasePool } from '../shared/database';
 import {
   emailMessages,
   emailRecipients,
@@ -21,6 +21,9 @@ import { postalClient } from '../services/email/postalClient';
 import { postalWebhookService } from '../services/email/webhookService';
 
 describe('GYMDECK EMAIL LINE — PHASE 4: Controlled Live Delivery Verification', () => {
+  after(async () => {
+    await closeDatabasePool();
+  });
   const testGymId = '15a8189e-0b2d-4f21-a5af-07929a6fb916';
   const allowlistedRecipient = 'staging-verifier@gymdeck.local';
   const unauthorizedRecipient = 'unauthorized-external-user@randomdomain.org';
