@@ -14,10 +14,11 @@
  * 10. Existing quota and outbox behavior remains unchanged.
  */
 
-import { describe, it, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { db, closeDatabasePool } from '../shared/database';
 import {
+  gyms,
   emailMessages,
   emailRecipients,
   emailDeliveryEvents,
@@ -29,6 +30,14 @@ import { PostalApiError } from '../services/email/postalClient';
 
 describe('GYMDECK EMAIL LINE — PHASE 5A.2 FINAL RISK CLOSURE SUITE', () => {
   const testGymId = '15a8189e-0b2d-4f21-a5af-07929a6fb916';
+  const altGymId = '0f7b2454-015f-4128-85a9-d84e18bf2f94';
+
+  before(async () => {
+    await db.insert(gyms).values([
+      { id: testGymId, name: 'Risk Closure Test Gym A', code: 'RCGA' },
+      { id: altGymId, name: 'Risk Closure Test Gym B', code: 'RCGB' },
+    ]).onConflictDoNothing();
+  });
 
   after(async () => {
     await closeDatabasePool();
