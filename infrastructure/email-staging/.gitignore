@@ -1,0 +1,5 @@
+.env
+config/postal.yml
+config/signing.key
+data/
+*.log

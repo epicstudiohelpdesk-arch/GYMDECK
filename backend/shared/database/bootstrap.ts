@@ -752,4 +752,30 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       break;
     }
   }
+
+  // Email Dispatch Attempts & Zombie Recovery Leases migration (Phase 2 additive; safe to re-run).
+  const emailPhase2Candidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0008_email_dispatch_attempts_and_leases.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0008_email_dispatch_attempts_and_leases.sql'),
+    path.join(__dirname, 'migrations', '0008_email_dispatch_attempts_and_leases.sql'),
+  ];
+  for (const file of emailPhase2Candidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
+
+  // Email Provider Instance Scoping & Webhook Quarantine migration (Phase 5A.2 additive; safe to re-run).
+  const emailPhase5Candidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0009_email_provider_instance_scoping.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0009_email_provider_instance_scoping.sql'),
+    path.join(__dirname, 'migrations', '0009_email_provider_instance_scoping.sql'),
+  ];
+  for (const file of emailPhase5Candidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
 }

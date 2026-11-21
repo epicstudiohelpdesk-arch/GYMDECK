@@ -1,0 +1,70 @@
+version: 2
+
+postal:
+  web_hostname: mail.epic-studio.in
+  web_protocol: https
+  smtp_hostname: mail.epic-studio.in
+  use_ip_pools: false
+  signing_key_path: /config/signing.key
+  default_maximum_delivery_attempts: 10
+  default_maximum_hold_expiry_days: 7
+  # Security whitelist: allow loopback, internal docker bridges, and GymDeck backend host
+  allowed_request_destinations:
+    - 127.0.0.1/32
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+
+web_server:
+  default_port: 5000
+  default_bind_address: 0.0.0.0
+  max_threads: 4
+
+worker:
+  threads: 2
+
+main_db:
+  host: mariadb
+  port: 3306
+  username: postal
+  password: CHANGE_ME_MARIADB_USER_PASSWORD_STRONG_HEX
+  database: postal
+  pool_size: 5
+  encoding: utf8mb4
+
+message_db:
+  host: mariadb
+  port: 3306
+  username: postal
+  password: CHANGE_ME_MARIADB_USER_PASSWORD_STRONG_HEX
+  encoding: utf8mb4
+  database_name_prefix: postal
+
+dns:
+  mx_records:
+    - mail.epic-studio.in
+  spf_include: spf.mail.epic-studio.in
+  return_path_domain: rp.mail.epic-studio.in
+  helo_hostname: mail.epic-studio.in
+  dkim_identifier: postal
+  dkim_key_size: 2048
+  custom_return_path_prefix: psrp
+
+smtp_server:
+  default_port: 25
+  default_bind_address: 0.0.0.0
+  tls_enabled: false
+
+smtp:
+  host: 127.0.0.1
+  port: 25
+  from_name: GymDeck
+  from_address: notifications@mail.epic-studio.in
+
+rails:
+  environment: production
+  secret_key: CHANGE_ME_RAILS_SECRET_KEY_64_HEX
+
+logging:
+  enabled: true
+  level: INFO

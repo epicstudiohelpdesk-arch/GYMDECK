@@ -1,13 +1,15 @@
 /**
  * GymDeck Email Communication Workspace
  *
- * Production ERP Email Hub:
- *  - Overview metrics & real-time quota meter (300 recipients/month)
- *  - Rich composer with recipient segment selection (Active, Expiring, Trial, All)
- *  - Personalization variable tokens ({member_name}, {gym_name}, {expiry_date})
- *  - Confirmation modal reflecting server-validated recipient counts & quota
- *  - Sent broadcast ledger & message delivery drilldown inspection
- *  - Drafts & reusable templates
+ * Professional Enterprise Design:
+ *  - Ultra-clean, properly scaled and compact layout tailored for Desktop ERP viewport.
+ *  - High-density information architecture without wasted vertical padding or awkward wrapping.
+ *  - Executive KPI Telemetry: Quota usage meter, delivery success percentage, Postal engine health.
+ *  - Modern Tabbed Navigation with crisp iconography and badge pill indicators.
+ *  - Ergonomic Two-Column Composer with structured sender metadata, dynamic personalization tags,
+ *    and an interactive Member Directory selector with instant search & filter pills.
+ *  - Audit-ready Transmission History table with real-time status badges and modal inspection drilldown.
+ *  - Enterprise-grade Drafts and Production Templates manager.
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -35,6 +37,14 @@ import {
   ArrowRight,
   Loader2,
   AlertTriangle,
+  Server,
+  Zap,
+  Layers,
+  CheckCheck,
+  Bookmark,
+  FileEdit,
+  Info,
+  BarChart3,
 } from 'lucide-react';
 import { emailApi } from './emailApi.js';
 
@@ -114,7 +124,7 @@ export default function EmailHub() {
       const data = await emailApi.getRecipients({
         status: status === 'ALL' ? undefined : status,
         search: search || undefined,
-        limit: 100,
+        limit: 150,
       });
       setAvailableMembers(data.members || []);
     } catch (err) {
@@ -143,7 +153,7 @@ export default function EmailHub() {
     const timer = setTimeout(() => {
       setNotice('');
       setError('');
-    }, 3000);
+    }, 3500);
     return () => clearTimeout(timer);
   }, [notice, error]);
 
@@ -213,7 +223,7 @@ export default function EmailHub() {
         idempotencyKey: `idemp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       });
 
-      setNotice(`Broadcast queued for ${recipientsToSend.length} members!`);
+      setNotice(`Broadcast successfully queued for ${recipientsToSend.length} members.`);
       setSubject('');
       setBodyHtml('');
       setSelectedMemberIds(new Set());
@@ -242,7 +252,7 @@ export default function EmailHub() {
         replyToAddress,
         recipients: Array.from(selectedMemberIds).map((id) => ({ memberId: id, email: '' })),
       });
-      setNotice('Draft saved successfully.');
+      setNotice('Draft saved to cloud storage.');
       loadDrafts();
     } catch (err) {
       setError(err.message || 'Failed to save draft.');
@@ -259,6 +269,7 @@ export default function EmailHub() {
     consumedCount: 0,
     reservedCount: 0,
     remainingQuota: 300,
+    billingPeriod: 'Current Month',
   };
 
   const quotaPercent = Math.min(
@@ -267,56 +278,62 @@ export default function EmailHub() {
   );
 
   return (
-    <div className="min-h-full bg-zinc-50/60 font-sans text-zinc-900 flex flex-col p-6 sm:p-8 space-y-6">
+    <div className="w-full max-w-7xl mx-auto font-sans text-slate-800 flex flex-col p-4 sm:p-6 space-y-4">
       {/* ─── TOAST NOTIFICATIONS ─── */}
       {notice ? (
-        <div className="fixed top-6 right-6 z-[1000] flex items-center gap-2.5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold animate-in fade-in slide-in-from-top-2">
-          <CheckCircle2 size={16} />
+        <div className="fixed top-5 right-5 z-[1000] flex items-center gap-2 bg-slate-900 border border-slate-700/60 text-white px-3.5 py-2 rounded-xl shadow-xl text-xs font-semibold backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
           <span>{notice}</span>
         </div>
       ) : null}
       {error ? (
-        <div className="fixed top-6 right-6 z-[1000] flex items-center gap-2.5 bg-rose-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold animate-in fade-in slide-in-from-top-2">
-          <AlertCircle size={16} />
+        <div className="fixed top-5 right-5 z-[1000] flex items-center gap-2 bg-rose-950 border border-rose-800 text-rose-100 px-3.5 py-2 rounded-xl shadow-xl text-xs font-semibold backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+          <AlertCircle size={15} className="text-rose-400 shrink-0" />
           <span>{error}</span>
         </div>
       ) : null}
 
-      {/* ─── WORKSPACE HEADER & NAVIGATION TABS ─── */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
-            <Mail size={22} strokeWidth={2.2} />
+      {/* ─── WORKSPACE COMPACT HEADER & NAVIGATION TABS ─── */}
+      <div className="bg-white rounded-xl border border-slate-200/90 px-4 py-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 text-white flex items-center justify-center shrink-0 shadow-xs shadow-indigo-200">
+            <Mail size={18} strokeWidth={2.2} />
           </div>
           <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-bold tracking-tight text-zinc-900">Email Line Workspace</h1>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                <ShieldCheck size={12} strokeWidth={2.5} /> Central Engine Online
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-base font-bold tracking-tight text-slate-900">Email Line Workspace</h1>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Postal Relay Online
               </span>
             </div>
-            <p className="text-xs text-zinc-500 font-normal mt-0.5">
-              Multi-tenant member broadcast, transactional GST invoices & renewal announcements
+            <p className="text-[11px] text-slate-400 font-normal">
+              Member broadcast notices, renewal updates, and transaction receipts.
             </p>
           </div>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1.5 bg-zinc-100 p-1.5 rounded-xl self-start md:self-center">
+        <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-lg border border-slate-200/60 self-start sm:self-center">
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'overview' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'overview'
+                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            Overview
+            <BarChart3 size={13} />
+            <span>Overview</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('compose')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'compose' ? 'bg-zinc-900 text-white shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'compose'
+                ? 'bg-indigo-600 text-white shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             <Send size={12} />
@@ -325,154 +342,214 @@ export default function EmailHub() {
           <button
             type="button"
             onClick={() => setActiveTab('history')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'history' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'history'
+                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            Sent History
+            <Clock size={13} />
+            <span>History</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('drafts')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'drafts' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'drafts'
+                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            Drafts ({drafts.length})
+            <FileEdit size={13} />
+            <span>Drafts</span>
+            {drafts.length > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700 text-[10px] font-bold">
+                {drafts.length}
+              </span>
+            )}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('templates')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'templates' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'templates'
+                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            Templates
+            <Bookmark size={13} />
+            <span>Templates</span>
           </button>
         </div>
       </div>
 
       {/* ─── TAB 1: OVERVIEW DASHBOARD ─── */}
       {activeTab === 'overview' ? (
-        <div className="space-y-6">
-          {/* Top 3 Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="space-y-4">
+          {/* Executive Compact KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             {/* 1. Monthly Allowance Gauge */}
-            <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Monthly Allowance</span>
-                  <span className="text-[11px] font-mono font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Layers size={13} className="text-slate-500" /> Monthly Allowance
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/70">
                     {quota.billingPeriod}
                   </span>
                 </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-3xl font-black tracking-tight text-zinc-900">{quota.remainingQuota}</span>
-                  <span className="text-xs text-zinc-400 font-semibold">/ {quota.allocatedQuota} remaining</span>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-2xl font-black tracking-tight text-slate-900">{quota.remainingQuota}</span>
+                  <span className="text-xs text-slate-400 font-semibold">/ {quota.allocatedQuota} remaining</span>
                 </div>
-                <div className="mt-3 w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
+                <div className="mt-2.5 w-full bg-slate-100 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
                   <div
-                    className={`h-full transition-all duration-500 ${
-                      quotaPercent > 90 ? 'bg-rose-500' : quotaPercent > 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      quotaPercent > 90
+                        ? 'bg-rose-500'
+                        : quotaPercent > 70
+                        ? 'bg-amber-500'
+                        : 'bg-indigo-600'
                     }`}
                     style={{ width: `${quotaPercent}%` }}
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-4 pt-3 border-t border-zinc-100 leading-normal">
-                {quota.consumedCount} dispatched • {quota.reservedCount} queued in pipeline
-              </p>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>{quota.consumedCount} dispatched</span>
+                <span className="text-slate-400">{quota.reservedCount} queued</span>
+              </div>
             </div>
 
             {/* 2. Success & Deliverability */}
-            <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Delivery Success</span>
-                  <CheckCircle2 size={15} className="text-emerald-600" />
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <CheckCheck size={14} className="text-emerald-600" /> Delivery Success
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    High Trust
+                  </span>
                 </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-3xl font-black tracking-tight text-emerald-700">
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-2xl font-black tracking-tight text-emerald-600">
                     {overview?.metrics?.successRate ?? 100}%
                   </span>
-                  <span className="text-xs text-zinc-400 font-semibold">inbox delivery rate</span>
+                  <span className="text-xs text-slate-400 font-semibold">inbox placement</span>
                 </div>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-4 pt-3 border-t border-zinc-100 leading-normal">
-                {overview?.metrics?.deliveredCount ?? 0} delivered • {overview?.metrics?.bouncedCount ?? 0} bounced
-              </p>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>{overview?.metrics?.deliveredCount ?? 0} confirmed delivered</span>
+                <span className="text-slate-400">{overview?.metrics?.bouncedCount ?? 0} bounced</span>
+              </div>
             </div>
 
             {/* 3. Central Infrastructure Telemetry */}
-            <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Postal Core Node</span>
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Server size={13} className="text-slate-500" /> Relay Node
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/70">
+                    <ShieldCheck size={11} className="text-emerald-600" /> DKIM Verified
                   </span>
                 </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-base font-extrabold text-zinc-900">DKIM / SPF Verified</span>
+                <div className="mt-3">
+                  <span className="text-xs font-bold text-slate-900 block truncate">notifications@mail.gymdeck.com</span>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Automated Postal tenant dispatch</p>
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">From: notifications@mail.gymdeck.com</p>
               </div>
-              <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
-                <span className="text-[11px] text-zinc-400 font-medium">Tenant Isolated Isolation</span>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400">Automatic DMARC</span>
                 <button
                   type="button"
                   onClick={() => setActiveTab('compose')}
-                  className="text-xs font-bold text-zinc-900 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-0.5 cursor-pointer"
                 >
-                  Start Email <ChevronRight size={13} />
+                  Compose <ChevronRight size={12} />
                 </button>
               </div>
             </div>
           </div>
 
+          {/* Compact Quick Guidance Banner */}
+          <div className="bg-slate-900 rounded-xl p-4 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <h3 className="text-xs font-bold tracking-tight text-white flex items-center gap-1.5">
+                <Zap size={14} className="text-amber-400" /> Out-of-the-Box Managed Mail Server
+              </h3>
+              <p className="text-[11px] text-slate-300 max-w-2xl leading-normal">
+                GymDeck manages all email servers and reputation automatically. Members receive emails with your gym's brand name, and their replies go directly to your contact email.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('compose')}
+              className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer self-start sm:self-auto"
+            >
+              <Send size={12} />
+              <span>Compose Message</span>
+            </button>
+          </div>
+
           {/* Recent Broadcasts Strip */}
-          <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-100 mb-4">
-              <h3 className="text-sm font-bold text-zinc-900">Recent Email Broadcasts</h3>
+          <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
+              <div className="flex items-center gap-1.5">
+                <Clock size={15} className="text-slate-500" />
+                <h3 className="text-xs font-bold text-slate-900">Recent Transmissions</h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setActiveTab('history')}
-                className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 cursor-pointer"
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer inline-flex items-center gap-0.5"
               >
-                View all history &rarr;
+                View all <ChevronRight size={12} />
               </button>
             </div>
 
             {overview?.recentMessages?.length > 0 ? (
-              <div className="divide-y divide-zinc-100">
+              <div className="divide-y divide-slate-100">
                 {overview.recentMessages.map((msg) => (
-                  <div key={msg.id} className="py-3.5 flex items-center justify-between gap-4">
+                  <div key={msg.id} className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 px-2 rounded-lg transition-colors">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-zinc-900 truncate">{msg.subject}</p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                      <p className="text-xs font-bold text-slate-900 truncate">{msg.subject}</p>
+                      <p className="text-[10px] text-slate-400">
                         {new Date(msg.createdAt).toLocaleDateString()} • {msg.recipientCount} recipients
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-700">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                          msg.status === 'COMPLETED'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : msg.status === 'SENDING'
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
                         {msg.status}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleInspect(msg.id)}
-                        className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
                       >
-                        Inspect
+                        <Eye size={12} />
+                        <span>Inspect</span>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="py-12 text-center text-zinc-400 text-xs">
-                <Inbox size={32} className="mx-auto mb-2 opacity-50" />
-                No emails sent yet this month. Click <strong>Compose</strong> to broadcast to your gym members.
+              <div className="py-10 text-center text-slate-400 text-xs">
+                <Inbox size={20} className="mx-auto mb-1.5 opacity-50" />
+                <p className="font-semibold text-slate-600">No email broadcasts sent this month</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Click Compose to dispatch emails to your gym members.</p>
               </div>
             )}
           </div>
@@ -481,64 +558,68 @@ export default function EmailHub() {
 
       {/* ─── TAB 2: COMPOSE EMAIL WORKSPACE ─── */}
       {activeTab === 'compose' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           {/* Left Column: Email Composer & Content (7 Cols) */}
-          <div className="lg:col-span-7 bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-              <h2 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                <FileText size={16} /> Compose Broadcast
+          <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <h2 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
+                <FileText size={15} className="text-indigo-600" />
+                <span>Message Editor</span>
               </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveDraft}
-                  className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold text-zinc-700 hover:bg-zinc-50 transition-colors cursor-pointer"
-                >
-                  Save Draft
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+              >
+                <FileEdit size={12} />
+                <span>Save Draft</span>
+              </button>
             </div>
 
             {/* Sender Identity Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50/70 p-3 rounded-lg border border-slate-200/60">
               <div>
-                <label className="text-xs font-semibold text-zinc-700 block mb-1">Display Name (Gym Title)</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Display Name (Gym Title)
+                </label>
                 <input
                   type="text"
                   value={senderDisplayName}
                   onChange={(e) => setSenderDisplayName(e.target.value)}
                   placeholder="e.g. FitLife Gym Desk"
-                  className="w-full h-9 px-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-zinc-900 transition-all"
+                  className="w-full h-8 px-2.5 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-600"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-zinc-700 block mb-1">Reply-To Address</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Reply-To Address
+                </label>
                 <input
                   type="email"
                   value={replyToAddress}
                   onChange={(e) => setReplyToAddress(e.target.value)}
                   placeholder="e.g. contact@yourgym.com"
-                  className="w-full h-9 px-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-zinc-900 transition-all"
+                  className="w-full h-8 px-2.5 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-600"
                 />
               </div>
             </div>
 
             {/* Subject Input */}
             <div>
-              <label className="text-xs font-semibold text-zinc-700 block mb-1">Subject</label>
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">Subject</label>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Important: Membership Renewal & Weekend Workshop Notice"
-                className="w-full h-10 px-3.5 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-zinc-900 transition-all placeholder:font-normal"
+                placeholder="Important: Membership Renewal & Workshop Notice"
+                className="w-full h-8.5 px-3 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-600"
               />
             </div>
 
             {/* Personalization Variable Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap pt-1">
-              <span className="text-[11px] font-semibold text-zinc-400 mr-1 flex items-center gap-1">
-                <Sparkles size={12} /> Personalize:
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-0.5 flex items-center gap-1">
+                <Sparkles size={12} className="text-indigo-600" /> Insert:
               </span>
               {[
                 { label: 'Member Name', token: '{member_name}' },
@@ -550,7 +631,7 @@ export default function EmailHub() {
                   key={item.token}
                   type="button"
                   onClick={() => insertToken(item.token)}
-                  className="px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-[10px] font-bold text-zinc-700 transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[10px] font-semibold text-slate-700 border border-slate-200/80 cursor-pointer"
                 >
                   +{item.label}
                 </button>
@@ -559,52 +640,52 @@ export default function EmailHub() {
 
             {/* Rich HTML/Text Body Editor */}
             <div>
-              <label className="text-xs font-semibold text-zinc-700 block mb-1">Email Body (HTML Supported)</label>
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">Email Body Content</label>
               <textarea
-                rows={12}
+                rows={9}
                 value={bodyHtml}
                 onChange={(e) => setBodyHtml(e.target.value)}
                 placeholder="Dear {member_name},&#10;&#10;We hope you are enjoying your workouts at {gym_name}!&#10;&#10;This is a gentle reminder that your membership is due for renewal soon..."
-                className="w-full p-3.5 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-zinc-900 transition-all resize-y leading-relaxed"
+                className="w-full p-3 rounded-lg border border-slate-200 bg-white text-xs font-normal text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-600 resize-y leading-relaxed"
               />
             </div>
 
             {/* Composer Footer Actions */}
-            <div className="pt-3 border-t border-zinc-100 flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">
-                Selected: <strong className="text-zinc-900">{selectedMemberIds.size} recipients</strong>
+            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500">
+                Audience: <strong className="text-slate-900">{selectedMemberIds.size} recipients</strong>
               </span>
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(true)}
                 disabled={selectedMemberIds.size === 0 || !subject.trim() || !bodyHtml.trim() || isSending}
-                className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 h-8.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all disabled:opacity-40 cursor-pointer shadow-xs"
               >
-                {isSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {isSending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                 <span>Review & Dispatch</span>
               </button>
             </div>
           </div>
 
           {/* Right Column: Member Recipient Selector (5 Cols) */}
-          <div className="lg:col-span-5 bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5">
-                <Users size={14} /> Member Directory
+          <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Users size={14} className="text-slate-500" /> Member Directory
               </h3>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={selectAllFiltered}
-                  className="text-[11px] font-bold text-zinc-600 hover:text-zinc-900 cursor-pointer"
+                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
                 >
                   Select All
                 </button>
-                <span className="text-zinc-300">|</span>
+                <span className="text-slate-300">|</span>
                 <button
                   type="button"
                   onClick={deselectAllFiltered}
-                  className="text-[11px] font-bold text-zinc-600 hover:text-zinc-900 cursor-pointer"
+                  className="text-[11px] font-bold text-slate-500 hover:text-slate-700 cursor-pointer"
                 >
                   Clear
                 </button>
@@ -613,29 +694,29 @@ export default function EmailHub() {
 
             {/* Search Input */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
-                <Search size={14} />
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                <Search size={13} />
               </div>
               <input
                 type="text"
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
                 placeholder="Search member name or email..."
-                className="w-full h-9 pl-9 pr-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-zinc-900 transition-all"
+                className="w-full h-8 pl-8 pr-2.5 rounded-md border border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
             {/* Segmentation Filter Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1 flex-wrap">
               {['ALL', 'ACTIVE', 'EXPIRED', 'TRIAL'].map((status) => (
                 <button
                   key={status}
                   type="button"
                   onClick={() => setRecipientFilter(status)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
                     recipientFilter === status
-                      ? 'bg-zinc-900 text-white shadow-2xs'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200/60'
                   }`}
                 >
                   {status}
@@ -644,11 +725,11 @@ export default function EmailHub() {
             </div>
 
             {/* Member List with Checkboxes */}
-            <div className="border border-zinc-100 rounded-xl divide-y divide-zinc-100 max-h-[380px] overflow-y-auto">
+            <div className="border border-slate-200/80 rounded-lg divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
               {loadingMembers ? (
-                <div className="py-12 text-center text-xs text-zinc-400">
-                  <Loader2 size={18} className="animate-spin mx-auto mb-2" />
-                  Loading member directory...
+                <div className="py-10 text-center text-xs text-slate-400">
+                  <Loader2 size={16} className="animate-spin mx-auto mb-1 text-indigo-600" />
+                  Loading directory...
                 </div>
               ) : validEmailMembers.length > 0 ? (
                 validEmailMembers.map((member) => {
@@ -657,88 +738,93 @@ export default function EmailHub() {
                     <div
                       key={member.id}
                       onClick={() => toggleSelectMember(member.id)}
-                      className={`p-2.5 flex items-center gap-3 cursor-pointer transition-colors ${
-                        isChecked ? 'bg-zinc-50/80' : 'hover:bg-zinc-50/40'
+                      className={`p-2 flex items-center gap-2.5 cursor-pointer transition-colors ${
+                        isChecked ? 'bg-indigo-50/50' : 'hover:bg-slate-50'
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => {}}
-                        className="w-4 h-4 rounded text-zinc-900 focus:ring-zinc-900 shrink-0"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 shrink-0 border-slate-300"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-zinc-900 truncate">{member.fullName}</span>
-                          <span className="text-[10px] font-semibold text-zinc-400 uppercase">
+                          <span className="text-xs font-bold text-slate-900 truncate">{member.fullName}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                             {member.membershipStatus}
                           </span>
                         </div>
-                        <span className="text-[11px] text-zinc-500 font-mono block truncate">{member.email}</span>
+                        <span className="text-[10px] text-slate-500 font-mono block truncate">{member.email}</span>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <div className="py-8 text-center text-xs text-zinc-400">
+                <div className="py-8 text-center text-xs text-slate-400">
                   No members with registered email found.
                 </div>
               )}
             </div>
 
-            <p className="text-[10px] text-zinc-400 leading-normal">
-              Showing members with valid email addresses registered in this gym.
-            </p>
+            <div className="p-2 bg-slate-50 rounded-lg border border-slate-200/60 flex items-center gap-1.5 text-[10px] text-slate-500">
+              <Info size={13} className="text-slate-400 shrink-0" />
+              <span>Only members with valid emails are listed.</span>
+            </div>
           </div>
         </div>
       ) : null}
 
       {/* ─── TAB 3: SENT EMAIL HISTORY ─── */}
       {activeTab === 'history' ? (
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-            <h2 className="text-sm font-bold text-zinc-900">Transmission History</h2>
+        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+            <div>
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Transmission History & Audit Ledger</h2>
+              <p className="text-[11px] text-slate-400">Permanent delivery records and per-recipient statuses</p>
+            </div>
             <button
               type="button"
               onClick={loadHistory}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-bold text-zinc-700 hover:bg-zinc-50 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
             >
-              <RefreshCw size={12} /> Refresh
+              <RefreshCw size={11} />
+              <span>Refresh</span>
             </button>
           </div>
 
           {history.messages.length > 0 ? (
-            <div className="border border-zinc-200/80 rounded-xl overflow-hidden divide-y divide-zinc-100">
-              <div className="bg-zinc-50/80 px-4 py-2.5 grid grid-cols-12 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
+            <div className="border border-slate-200/80 rounded-lg overflow-hidden divide-y divide-slate-100">
+              <div className="bg-slate-50 px-3 py-2 grid grid-cols-12 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 <span className="col-span-5">Subject</span>
                 <span className="col-span-2">Date</span>
                 <span className="col-span-2 text-center">Recipients</span>
                 <span className="col-span-2 text-center">Status</span>
-                <span className="col-span-1 text-right">Action</span>
+                <span className="col-span-1 text-right">Details</span>
               </div>
               {history.messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="px-4 py-3 grid grid-cols-12 items-center text-xs font-medium hover:bg-zinc-50/50 transition-colors"
+                  className="px-3 py-2.5 grid grid-cols-12 items-center text-xs font-medium hover:bg-slate-50/60 transition-colors"
                 >
                   <div className="col-span-5 pr-2">
-                    <span className="font-bold text-zinc-900 block truncate">{msg.subject}</span>
-                    <span className="text-[11px] text-zinc-400 block truncate">
+                    <span className="font-bold text-slate-900 block truncate">{msg.subject}</span>
+                    <span className="text-[10px] text-slate-400 block truncate">
                       From: {msg.senderDisplayName || 'GymDeck'} &lt;{msg.fromAddress}&gt;
                     </span>
                   </div>
-                  <span className="col-span-2 text-zinc-500 font-mono text-[11px]">
+                  <span className="col-span-2 text-slate-500 font-mono text-[10px]">
                     {new Date(msg.createdAt).toLocaleDateString()}
                   </span>
-                  <span className="col-span-2 text-center font-bold text-zinc-800">{msg.recipientCount}</span>
+                  <span className="col-span-2 text-center font-bold text-slate-800">{msg.recipientCount}</span>
                   <div className="col-span-2 text-center">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                         msg.status === 'COMPLETED'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : msg.status === 'SENDING'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
-                          : 'bg-zinc-100 text-zinc-700'
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                          : 'bg-slate-100 text-slate-700'
                       }`}
                     >
                       {msg.status}
@@ -748,18 +834,19 @@ export default function EmailHub() {
                     <button
                       type="button"
                       onClick={() => handleInspect(msg.id)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
                     >
-                      <Eye size={14} />
+                      <Eye size={12} />
+                      <span className="hidden sm:inline">Inspect</span>
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="py-16 text-center text-zinc-400 text-xs">
-              <Mail size={32} className="mx-auto mb-2 opacity-40" />
-              No sent emails recorded yet.
+            <div className="py-12 text-center text-slate-400 text-xs">
+              <Mail size={20} className="mx-auto mb-1.5 opacity-50" />
+              <p className="font-semibold text-slate-600">No sent emails recorded yet</p>
             </div>
           )}
         </div>
@@ -767,18 +854,21 @@ export default function EmailHub() {
 
       {/* ─── TAB 4: DRAFTS ─── */}
       {activeTab === 'drafts' ? (
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-            <h2 className="text-sm font-bold text-zinc-900">Saved Drafts</h2>
+        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+            <div>
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Saved Drafts</h2>
+              <p className="text-[11px] text-slate-400">Continue working on unfinished broadcasts</p>
+            </div>
           </div>
           {drafts.length > 0 ? (
-            <div className="divide-y divide-zinc-100">
+            <div className="divide-y divide-slate-100 border border-slate-200/80 rounded-lg overflow-hidden">
               {drafts.map((d) => (
-                <div key={d.id} className="py-4 flex items-center justify-between gap-4">
+                <div key={d.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
                   <div>
-                    <h4 className="text-xs font-bold text-zinc-900">{d.subject || 'Untitled Draft'}</h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Updated {new Date(d.updatedAt).toLocaleDateString()}
+                    <h4 className="text-xs font-bold text-slate-900">{d.subject || 'Untitled Draft'}</h4>
+                    <p className="text-[10px] text-slate-400">
+                      Last edited {new Date(d.updatedAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -789,7 +879,7 @@ export default function EmailHub() {
                         setBodyHtml(d.bodyHtml);
                         setActiveTab('compose');
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors cursor-pointer"
+                      className="px-3 py-1 rounded-md bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors cursor-pointer"
                     >
                       Resume
                     </button>
@@ -799,49 +889,69 @@ export default function EmailHub() {
                         await emailApi.deleteDraft(d.id);
                         loadDrafts();
                       }}
-                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer transition-colors"
+                      title="Delete Draft"
                     >
-                      <Trash2 size={15} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="py-16 text-center text-zinc-400 text-xs">No saved drafts.</div>
+            <div className="py-12 text-center text-slate-400 text-xs">
+              <FileEdit size={20} className="mx-auto mb-1.5 opacity-50" />
+              <p className="font-semibold text-slate-600">No saved drafts</p>
+            </div>
           )}
         </div>
       ) : null}
 
       {/* ─── TAB 5: TEMPLATES ─── */}
       {activeTab === 'templates' ? (
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-            <h2 className="text-sm font-bold text-zinc-900">Email Templates</h2>
+        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+            <div>
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Gym Communication Templates</h2>
+              <p className="text-[11px] text-slate-400">Standardized templates for operations and announcements</p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
               {
                 title: 'Membership Renewal Notice',
                 subject: 'Your {gym_name} Membership is Expiring Soon',
                 body: 'Dear {member_name}, your membership plan {plan_name} expires on {expiry_date}. Please renew at the desk or online to keep training without interruption.',
+                tag: 'Operations',
               },
               {
-                title: 'Payment Receipt & GST Invoice',
+                title: 'Payment Receipt & Statement',
                 subject: 'Fee Receipt & Statement from {gym_name}',
                 body: 'Dear {member_name}, thank you for your payment. Please find your official gym receipt and tax invoice details attached.',
+                tag: 'Billing',
               },
               {
-                title: 'Weekend Fitness Workshop Announcement',
+                title: 'Weekend Strength Workshop',
                 subject: 'Join Us for Special Weekend Strength Sessions at {gym_name}',
                 body: 'Dear {member_name}, join our certified trainers this Saturday for an exclusive strength workshop.',
+                tag: 'Events',
               },
             ].map((tmpl, idx) => (
-              <div key={idx} className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/50 space-y-2">
-                <h4 className="text-xs font-bold text-zinc-900">{tmpl.title}</h4>
-                <p className="text-[11px] text-zinc-500 font-mono bg-white p-2 rounded-lg border border-zinc-100 truncate">
-                  Subject: {tmpl.subject}
-                </p>
+              <div key={idx} className="p-3.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-2 flex flex-col justify-between hover:border-slate-300 transition-colors">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-900">{tmpl.title}</h4>
+                    <span className="text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                      {tmpl.tag}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-mono bg-white p-1.5 rounded border border-slate-200/70 truncate">
+                    Subject: {tmpl.subject}
+                  </p>
+                  <p className="text-[11px] text-slate-600 line-clamp-3 leading-relaxed">
+                    {tmpl.body}
+                  </p>
+                </div>
                 <div className="pt-2 flex justify-end">
                   <button
                     type="button"
@@ -850,9 +960,10 @@ export default function EmailHub() {
                       setBodyHtml(tmpl.body);
                       setActiveTab('compose');
                     }}
-                    className="px-3 py-1 rounded-lg bg-white border border-zinc-200 text-xs font-bold text-zinc-700 hover:bg-zinc-100 cursor-pointer transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-100 cursor-pointer shadow-2xs"
                   >
-                    Use Template
+                    <span>Use Template</span>
+                    <ArrowRight size={11} />
                   </button>
                 </div>
               </div>
@@ -867,59 +978,61 @@ export default function EmailHub() {
             <div
               className="fixed inset-0 z-[100000] flex items-center justify-center p-4"
               style={{
-                background: 'rgba(14, 18, 28, 0.44)',
+                background: 'rgba(15, 23, 42, 0.45)',
                 backdropFilter: 'blur(8px)',
               }}
               onClick={(e) => {
                 if (e.target === e.currentTarget && !isSending) setShowConfirmModal(false);
               }}
             >
-              <div className="w-full max-w-[460px] rounded-3xl bg-white p-7 shadow-2xl border border-white/80 space-y-5 animate-in fade-in zoom-in-95">
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-                  <h3 className="text-base font-extrabold text-zinc-900">Confirm Broadcast Dispatch</h3>
+              <div className="w-full max-w-[420px] rounded-2xl bg-white p-5 shadow-2xl border border-white/80 space-y-4 animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                    <Send size={15} className="text-indigo-600" />
+                    <span>Confirm Dispatch</span>
+                  </h3>
                   <button
                     type="button"
                     onClick={() => setShowConfirmModal(false)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 cursor-pointer"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
                   >
-                    <X size={16} />
+                    <X size={15} />
                   </button>
                 </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/60 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500 font-medium">Subject:</span>
-                      <strong className="text-zinc-900 truncate max-w-[240px]">{subject}</strong>
+                <div className="space-y-2.5 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/70 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Subject:</span>
+                      <strong className="text-slate-900 truncate max-w-[200px]">{subject}</strong>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500 font-medium">Recipients:</span>
-                      <strong className="text-zinc-900">{selectedMemberIds.size} members</strong>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Recipients:</span>
+                      <strong className="text-slate-900">{selectedMemberIds.size} members</strong>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500 font-medium">Quota Impact:</span>
-                      <strong className="text-amber-700">-{selectedMemberIds.size} units</strong>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Quota Impact:</span>
+                      <strong className="text-amber-700 font-mono">-{selectedMemberIds.size} units</strong>
                     </div>
-                    <div className="flex justify-between pt-2 border-t border-zinc-200/60">
-                      <span className="text-zinc-500 font-medium">Remaining After Send:</span>
-                      <strong className="text-emerald-700">
+                    <div className="flex justify-between items-center pt-1.5 border-t border-slate-200/60">
+                      <span className="text-slate-500">Remaining:</span>
+                      <strong className="text-emerald-700 font-mono font-bold">
                         {Math.max(0, quota.remainingQuota - selectedMemberIds.size)} units
                       </strong>
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    This email will be submitted to the durable outbox and dispatched through the central Postal
-                    delivery gateway with tenant DKIM signing.
+                  <p className="text-[10px] text-slate-500 leading-normal">
+                    This message will be queued into the durable outbox and dispatched through the Postal relay.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 pt-2">
+                <div className="flex items-center gap-2.5 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowConfirmModal(false)}
                     disabled={isSending}
-                    className="flex-1 h-11 rounded-xl border border-zinc-200 font-bold text-xs text-zinc-700 hover:bg-zinc-50 transition-colors cursor-pointer"
+                    className="flex-1 h-9 rounded-lg border border-slate-200 font-bold text-xs text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -927,9 +1040,9 @@ export default function EmailHub() {
                     type="button"
                     onClick={handleConfirmSend}
                     disabled={isSending}
-                    className="flex-1 h-11 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-2 shadow-xs"
+                    className="flex-1 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-xs"
                   >
-                    {isSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    {isSending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                     <span>Confirm & Send</span>
                   </button>
                 </div>
@@ -945,46 +1058,49 @@ export default function EmailHub() {
             <div
               className="fixed inset-0 z-[100000] flex items-center justify-center p-4"
               style={{
-                background: 'rgba(14, 18, 28, 0.44)',
+                background: 'rgba(15, 23, 42, 0.45)',
                 backdropFilter: 'blur(8px)',
               }}
               onClick={(e) => {
                 if (e.target === e.currentTarget) setShowInspectModal(false);
               }}
             >
-              <div className="w-full max-w-[560px] rounded-3xl bg-white p-7 shadow-2xl border border-white/80 space-y-5 animate-in fade-in zoom-in-95">
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="w-full max-w-[500px] rounded-2xl bg-white p-5 shadow-2xl border border-white/80 space-y-4 animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                   <div>
-                    <h3 className="text-base font-extrabold text-zinc-900">Delivery Inspection</h3>
-                    <p className="text-[11px] text-zinc-400 font-medium mt-0.5">{inspectMessage?.subject}</p>
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                      <Eye size={15} className="text-indigo-600" />
+                      <span>Delivery Inspection</span>
+                    </h3>
+                    <p className="text-[10px] text-slate-400 truncate max-w-[340px] mt-0.5">{inspectMessage?.subject}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowInspectModal(false)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 cursor-pointer"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
                   >
-                    <X size={16} />
+                    <X size={15} />
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Status Badges */}
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
-                      <span className="text-[10px] uppercase font-bold text-zinc-400 block">Total</span>
-                      <strong className="text-sm font-black text-zinc-900">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Total</span>
+                      <strong className="text-xs font-black text-slate-900">
                         {inspectMessage?.recipientCount ?? 0}
                       </strong>
                     </div>
-                    <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
-                      <span className="text-[10px] uppercase font-bold text-emerald-600 block">Delivered</span>
-                      <strong className="text-sm font-black text-emerald-700">
+                    <div className="p-2 bg-emerald-50/60 rounded-lg border border-emerald-100" title="Accepted by remote mail server (MTA 250 OK)">
+                      <span className="text-[9px] uppercase font-bold text-emerald-600 block">Server Delivered</span>
+                      <strong className="text-xs font-black text-emerald-700">
                         {inspectMessage?.deliveredCount ?? 0}
                       </strong>
                     </div>
-                    <div className="p-3 bg-rose-50/60 rounded-xl border border-rose-100">
-                      <span className="text-[10px] uppercase font-bold text-rose-600 block">Bounced</span>
-                      <strong className="text-sm font-black text-rose-700">
+                    <div className="p-2 bg-rose-50/60 rounded-lg border border-rose-100">
+                      <span className="text-[9px] uppercase font-bold text-rose-600 block">Bounced</span>
+                      <strong className="text-xs font-black text-rose-700">
                         {inspectMessage?.bouncedCount ?? 0}
                       </strong>
                     </div>
@@ -992,24 +1108,24 @@ export default function EmailHub() {
 
                   {/* Recipient Breakdown List */}
                   <div>
-                    <h4 className="text-xs font-bold text-zinc-700 mb-2">Recipient Delivery Telemetry</h4>
-                    <div className="border border-zinc-100 rounded-xl divide-y divide-zinc-100 max-h-[240px] overflow-y-auto">
+                    <h4 className="text-[11px] font-bold text-slate-700 mb-1.5">Recipient Delivery Details</h4>
+                    <div className="border border-slate-200/70 rounded-lg divide-y divide-slate-100 max-h-[200px] overflow-y-auto">
                       {inspectRecipients.length > 0 ? (
                         inspectRecipients.map((rec) => (
-                          <div key={rec.id} className="p-2.5 flex items-center justify-between text-xs">
+                          <div key={rec.id} className="p-2 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
                             <div>
-                              <span className="font-bold text-zinc-800 block">{rec.recipientName || 'Member'}</span>
-                              <span className="text-[11px] text-zinc-400 font-mono">{rec.recipientEmail}</span>
+                              <span className="font-bold text-slate-800 block text-[11px]">{rec.recipientName || 'Member'}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">{rec.recipientEmail}</span>
                             </div>
                             <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                              className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                                 rec.deliveryStatus === 'DELIVERED'
-                                  ? 'bg-emerald-50 text-emerald-700'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : rec.deliveryStatus === 'SENT'
-                                  ? 'bg-blue-50 text-blue-700'
+                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                                   : rec.deliveryStatus === 'BOUNCED'
-                                  ? 'bg-rose-50 text-rose-700'
-                                  : 'bg-zinc-100 text-zinc-600'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-slate-100 text-slate-600'
                               }`}
                             >
                               {rec.deliveryStatus}
@@ -1017,17 +1133,17 @@ export default function EmailHub() {
                           </div>
                         ))
                       ) : (
-                        <div className="py-6 text-center text-xs text-zinc-400">Loading delivery telemetry...</div>
+                        <div className="py-5 text-center text-[11px] text-slate-400">Loading delivery telemetry...</div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-2 flex justify-end">
+                <div className="pt-1 flex justify-end">
                   <button
                     type="button"
                     onClick={() => setShowInspectModal(false)}
-                    className="h-10 px-5 rounded-xl bg-zinc-900 text-white font-bold text-xs hover:bg-zinc-800 cursor-pointer"
+                    className="h-8.5 px-4 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 cursor-pointer transition-colors shadow-2xs"
                   >
                     Close
                   </button>

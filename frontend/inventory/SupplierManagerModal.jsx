@@ -1,12 +1,29 @@
 import React, { useState } from "react";
-import { Users, Plus, Pencil, X, Phone, Mail, MapPin, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  Users,
+} from "lucide-react";
+import {
+  Button,
+  EmptyState,
+  IconButton,
+  InlineAlert,
+  Modal,
+  SectionHeading,
+  TextAreaField,
+  TextField,
+} from "./InventoryUI.jsx";
 import { createSupplier, updateSupplier } from "../inventoryApi.js";
 
 export const SupplierManagerModal = ({ isOpen, onClose, suppliers = [], onUpdated }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
 
-  // Form State
   const [supplierName, setSupplierName] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [phone, setPhone] = useState("");
@@ -18,33 +35,29 @@ export const SupplierManagerModal = ({ isOpen, onClose, suppliers = [], onUpdate
 
   if (!isOpen) return null;
 
-  const openForm = (sup = null) => {
+  const openForm = (supplier = null) => {
     setError("");
-    if (sup) {
-      setEditingSupplier(sup);
-      setSupplierName(sup.supplier_name || "");
-      setContactPerson(sup.contact_person || "");
-      setPhone(sup.phone || "");
-      setEmail(sup.email || "");
-      setAddress(sup.address || "");
-      setGstin(sup.gstin || "");
-    } else {
-      setEditingSupplier(null);
-      setSupplierName("");
-      setContactPerson("");
-      setPhone("");
-      setEmail("");
-      setAddress("");
-      setGstin("");
-    }
+    setEditingSupplier(supplier);
+    setSupplierName(supplier?.supplier_name || "");
+    setContactPerson(supplier?.contact_person || "");
+    setPhone(supplier?.phone || "");
+    setEmail(supplier?.email || "");
+    setAddress(supplier?.address || "");
+    setGstin(supplier?.gstin || "");
     setIsAdding(true);
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const closeForm = () => {
+    setIsAdding(false);
+    setEditingSupplier(null);
+    setError("");
+  };
+
+  const handleSave = async (event) => {
+    event.preventDefault();
     setError("");
     if (!supplierName.trim()) {
-      setError("Supplier name is required.");
+      setError("A supplier name is required.");
       return;
     }
 
@@ -59,191 +72,180 @@ export const SupplierManagerModal = ({ isOpen, onClose, suppliers = [], onUpdate
         gstin: gstin.trim() || null,
       };
 
-      if (editingSupplier?.id) {
-        await updateSupplier(editingSupplier.id, payload);
-      } else {
-        await createSupplier(payload);
-      }
+      if (editingSupplier?.id) await updateSupplier(editingSupplier.id, payload);
+      else await createSupplier(payload);
 
       setIsAdding(false);
+      setEditingSupplier(null);
       onUpdated?.();
     } catch (err) {
-      setError(err?.message || "Failed to save supplier");
+      setError(err?.message || "The supplier could not be saved.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
-      <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4.5 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
-              <Users className="h-5 w-5 stroke-[2]" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Merchandise & Supplement Suppliers</h3>
-              <p className="text-xs text-slate-400">Keep records of wholesale vendors and purchase contacts.</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      icon={Users}
+      title="Suppliers"
+      description="Wholesale vendors and purchase contacts for your inventory."
+      size="lg"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          Done
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <InlineAlert title="Supplier action failed">{error}</InlineAlert> : null}
 
-        <div className="p-6 space-y-4">
-          {error ? (
-            <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          ) : null}
-
-          {isAdding ? (
-            <form onSubmit={handleSave} className="space-y-3 bg-slate-50/60 p-4 rounded-2xl border border-slate-200">
-              <h4 className="text-xs font-bold text-slate-800">
-                {editingSupplier ? "Edit Supplier" : "New Supplier Details"}
-              </h4>
-
-              <div>
-                <label className="text-[10px] font-bold uppercase text-slate-500">Supplier Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Apex Nutrition Distributors"
-                  value={supplierName}
-                  onChange={(e) => setSupplierName(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500"
+        {isAdding ? (
+          <form onSubmit={handleSave} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <SectionHeading
+              icon={Users}
+              title={editingSupplier ? "Edit supplier" : "New supplier"}
+              description="Contact details are used on purchase receipts and reorder lists."
+              aside={
+                <IconButton
+                  label="Back to supplier list"
+                  icon={ArrowLeft}
+                  onClick={closeForm}
+                  className="text-slate-400"
                 />
-              </div>
+              }
+              className="mb-4"
+            />
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-500">Contact Person</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Rahul Sharma"
-                    value={contactPerson}
-                    onChange={(e) => setContactPerson(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-500">Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+91 98765 43210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-orange-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-500">Email</label>
-                  <input
-                    type="email"
-                    placeholder="sales@vendor.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-500">GSTIN</label>
-                  <input
-                    type="text"
-                    placeholder="07AAAAA0000A1Z5"
-                    value={gstin}
-                    onChange={(e) => setGstin(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-orange-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAdding(false)}
-                  className="rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="rounded-xl bg-orange-500 hover:bg-orange-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
-                >
-                  {saving ? "Saving..." : "Save Supplier"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-slate-500">
-                {suppliers.length} active supplier records
-              </span>
-              <button
-                onClick={() => openForm(null)}
-                className="flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs"
-              >
-                <Plus className="h-4 w-4" /> Add Supplier
-              </button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TextField
+                className="sm:col-span-2"
+                label="Supplier / business name"
+                required
+                placeholder="e.g. Apex Nutrition Distributors"
+                value={supplierName}
+                onChange={(event) => setSupplierName(event.target.value)}
+              />
+              <TextField
+                label="Contact person"
+                placeholder="e.g. Rahul Sharma"
+                value={contactPerson}
+                onChange={(event) => setContactPerson(event.target.value)}
+              />
+              <TextField
+                label="Phone"
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+              />
+              <TextField
+                label="Email"
+                type="email"
+                placeholder="sales@vendor.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <TextField
+                label="GSTIN"
+                placeholder="07AAAAA0000A1Z5"
+                value={gstin}
+                onChange={(event) => setGstin(event.target.value)}
+                inputClassName="font-mono uppercase"
+              />
+              <TextAreaField
+                className="sm:col-span-2"
+                label="Address"
+                rows={2}
+                placeholder="Warehouse or billing address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+              />
             </div>
-          )}
 
-          {/* Supplier Cards List */}
-          <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl max-h-72 overflow-y-auto">
+            <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+              <Button variant="ghost" onClick={closeForm} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={saving}>
+                {saving ? "Saving…" : editingSupplier ? "Update supplier" : "Save supplier"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11.5px] font-medium text-slate-500">
+                <span className="font-bold text-slate-700 tabular-nums">{suppliers.length}</span> supplier record
+                {suppliers.length === 1 ? "" : "s"}
+              </p>
+              <Button variant="primary" leftIcon={Plus} onClick={() => openForm(null)}>
+                Add supplier
+              </Button>
+            </div>
+
             {suppliers.length === 0 ? (
-              <p className="p-6 text-center text-xs text-slate-400">No suppliers recorded yet.</p>
+              <EmptyState
+                icon={Users}
+                title="No suppliers recorded"
+                description="Add wholesale vendors so you can attach purchase invoices and restock products faster."
+                action={
+                  <Button variant="secondary" leftIcon={Plus} onClick={() => openForm(null)}>
+                    Add your first supplier
+                  </Button>
+                }
+              />
             ) : (
-              suppliers.map((s) => (
-                <div key={s.id} className="p-3.5 bg-white hover:bg-slate-50/50 flex items-start justify-between">
-                  <div className="space-y-1">
-                    <h5 className="text-xs font-bold text-slate-900">{s.supplier_name}</h5>
-                    {s.contact_person ? (
-                      <p className="text-[11px] font-medium text-slate-600">Contact: {s.contact_person}</p>
-                    ) : null}
-                    <div className="flex flex-wrap gap-3 text-[10px] text-slate-400 pt-0.5">
-                      {s.phone ? (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" /> {s.phone}
-                        </span>
+              <ul className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+                {suppliers.map((supplier) => (
+                  <li key={supplier.id} className="flex items-start gap-3 px-3.5 py-3">
+                    <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500">
+                      <Users size={14} strokeWidth={2.1} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12.5px] font-bold text-slate-900">
+                        {supplier.supplier_name}
+                      </p>
+                      {supplier.contact_person ? (
+                        <p className="text-[11px] text-slate-500">{supplier.contact_person}</p>
                       ) : null}
-                      {s.email ? (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" /> {s.email}
-                        </span>
-                      ) : null}
-                      {s.gstin ? <span>GSTIN: {s.gstin}</span> : null}
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-slate-400">
+                        {supplier.phone ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone size={10} aria-hidden="true" /> {supplier.phone}
+                          </span>
+                        ) : null}
+                        {supplier.email ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Mail size={10} aria-hidden="true" /> {supplier.email}
+                          </span>
+                        ) : null}
+                        {supplier.gstin ? (
+                          <span className="font-mono uppercase">GSTIN {supplier.gstin}</span>
+                        ) : null}
+                        {supplier.address ? (
+                          <span className="inline-flex min-w-0 items-center gap-1">
+                            <MapPin size={10} className="shrink-0" aria-hidden="true" />
+                            <span className="truncate">{supplier.address}</span>
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => openForm(s)}
-                    className="p-1.5 text-slate-400 hover:text-orange-600 rounded-lg transition-colors"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))
+                    <IconButton
+                      label={`Edit ${supplier.supplier_name}`}
+                      icon={Pencil}
+                      onClick={() => openForm(supplier)}
+                      className="text-slate-400 hover:text-orange-600"
+                    />
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-        </div>
-
-        <div className="flex justify-end border-t border-slate-100 bg-white px-6 py-3">
-          <button
-            onClick={onClose}
-            className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-          >
-            Close
-          </button>
-        </div>
+          </>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 };

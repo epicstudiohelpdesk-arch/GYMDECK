@@ -1,0 +1,114 @@
+version: '3.8'
+
+networks:
+  postal-net:
+    driver: bridge
+    internal: false # Outbound access required for remote MTA direct delivery on TCP 25
+
+volumes:
+  postal-mariadb-data:
+    name: gymdeck-postal-production-mariadb-data
+
+services:
+  mariadb:
+    image: mariadb:10.11.10
+    platform: linux/arm64
+    container_name: postal-mariadb
+    restart: unless-stopped
+    networks:
+      - postal-net
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: postal
+      MARIADB_USER: postal
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - postal-mariadb-data:/var/lib/mysql
+    deploy:
+      resources:
+        limits:
+          memory: 3072M
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  postal-web:
+    image: postal:3.4.0-arm64
+    platform: linux/arm64
+    container_name: postal-web
+    restart: unless-stopped
+    command: ["postal", "web-server"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - postal-net
+    volumes:
+      - ./config:/config
+    ports:
+      # Bind strictly to localhost 127.0.0.1; reverse-proxied via Nginx TLS
+      - "127.0.0.1:5000:5000"
+    environment:
+      POSTAL_CONFIG_FILE_PATH: /config/postal.yml
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  postal-smtp:
+    image: postal:3.4.0-arm64
+    platform: linux/arm64
+    container_name: postal-smtp
+    restart: unless-stopped
+    command: ["postal", "smtp-server"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - postal-net
+    volumes:
+      - ./config:/config
+    ports:
+      # Inbound SMTP listener on standard public port 25 for bounces and incoming mail
+      - "0.0.0.0:25:25"
+    environment:
+      POSTAL_CONFIG_FILE_PATH: /config/postal.yml
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 25 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  postal-worker:
+    image: postal:3.4.0-arm64
+    platform: linux/arm64
+    container_name: postal-worker
+    restart: unless-stopped
+    command: ["postal", "worker"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - postal-net
+    volumes:
+      - ./config:/config
+    environment:
+      POSTAL_CONFIG_FILE_PATH: /config/postal.yml
+    deploy:
+      resources:
+        limits:
+          memory: 2560M

@@ -66,13 +66,35 @@ export const EnvironmentSchema = z.object({
   POSTAL_API_URL: z.string().url().default('http://127.0.0.1:5000/api/v1'),
   POSTAL_SERVER_API_KEY: z.string().optional().default('dev_postal_server_api_key_gymdeck'),
   POSTAL_WEBHOOK_KEY: z.string().optional().default('dev_postal_webhook_signing_key'),
-  POSTAL_FROM_DOMAIN: z.string().default('mail.gymdeck.com'),
-  POSTAL_DEFAULT_FROM_NAME: z.string().default('GymDeck Member Desk'),
-  POSTAL_DEFAULT_FROM_EMAIL: z.string().default('notifications@mail.gymdeck.com'),
+  POSTAL_SIGNING_PUBLIC_KEY: z.string().optional(),
+  POSTAL_SIGNING_KEY_ID: z.string().optional(),
+  POSTAL_AUTHORIZED_PUBLIC_KEYS: z.string().optional(),
+  POSTAL_ALLOW_LEGACY_SHA1: z
+    .preprocess((val) => {
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return Boolean(val);
+    }, z.boolean())
+    .default(false),
+  POSTAL_FROM_DOMAIN: z.string().default('mail.epic-studio.in'),
+  POSTAL_DEFAULT_FROM_NAME: z.string().default('GymDeck'),
+  POSTAL_DEFAULT_FROM_EMAIL: z.string().default('notifications@mail.epic-studio.in'),
   POSTAL_DELIVERY_MODE: z.enum(['live', 'mock']).default('mock'),
   EMAIL_MONTHLY_QUOTA_DEFAULT: z.coerce.number().min(1).max(100000).default(300),
   EMAIL_WORKER_INTERVAL_MS: z.coerce.number().min(500).max(300000).default(5000),
   EMAIL_BATCH_SIZE: z.coerce.number().min(1).max(100).default(25),
+
+  // Controlled Staging Live Email Testing Safeguards (Phase 4H)
+  EMAIL_STAGING_LIVE_TEST_ENABLED: z
+    .preprocess((val) => {
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return Boolean(val);
+    }, z.boolean())
+    .default(false),
+  EMAIL_STAGING_AUTHORIZED_RECIPIENTS: z
+    .string()
+    .default('')
+    .transform((val) => val.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)),
+  EMAIL_STAGING_DAILY_LIMIT: z.coerce.number().min(1).max(100).default(10),
 
   // Meta credentials used only by the legacy notification-provider module, not
   // by the Communication Hub (which is OpenWA-only).

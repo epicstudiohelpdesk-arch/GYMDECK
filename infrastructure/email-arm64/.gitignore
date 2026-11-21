@@ -1,0 +1,4 @@
+# Ignore local environment files and actual signing key
+.env
+config/postal.yml
+config/signing.key

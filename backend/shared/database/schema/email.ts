@@ -60,6 +60,7 @@ export const emailRecipients = pgTable(
     recipientName: varchar('recipient_name', { length: 255 }),
     deliveryStatus: varchar('delivery_status', { length: 32 }).notNull().default('QUEUED'), // QUEUED | SENT | DELIVERED | BOUNCED | FAILED | SUPPRESSED
     providerMessageId: varchar('provider_message_id', { length: 128 }),
+    providerInstanceId: varchar('provider_instance_id', { length: 128 }).default('default'),
     providerToken: varchar('provider_token', { length: 128 }),
     attempts: integer('attempts').notNull().default(0),
     lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
@@ -84,12 +85,15 @@ export const emailOutbox = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     gymId: uuid('gym_id').notNull().references(() => gyms.id, { onDelete: 'cascade' }),
     emailMessageId: uuid('email_message_id').notNull().references(() => emailMessages.id, { onDelete: 'cascade' }),
-    jobStatus: varchar('job_status', { length: 32 }).notNull().default('PENDING'), // PENDING | PROCESSING | COMPLETED | FAILED
+    jobStatus: varchar('job_status', { length: 32 }).notNull().default('PENDING'), // PENDING | PROCESSING | COMPLETED | FAILED | RECONCILIATION_REQUIRED
     attempts: integer('attempts').notNull().default(0),
     maxAttempts: integer('max_attempts').notNull().default(5),
     nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
     lockedAt: timestamp('locked_at', { withTimezone: true }),
     lockedBy: varchar('locked_by', { length: 64 }),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }),
+    currentAttemptId: uuid('current_attempt_id'),
     lastError: text('last_error'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -97,6 +101,42 @@ export const emailOutbox = pgTable(
   },
   (table) => ({
     queueIdx: index('idx_email_outbox_queue').on(table.jobStatus, table.nextAttemptAt),
+    leaseIdx: index('idx_email_outbox_lease').on(table.jobStatus, table.leaseExpiresAt),
+  })
+);
+
+export const emailDispatchAttempts = pgTable(
+  'email_dispatch_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gymId: uuid('gym_id').notNull().references(() => gyms.id, { onDelete: 'cascade' }),
+    emailMessageId: uuid('email_message_id').notNull().references(() => emailMessages.id, { onDelete: 'cascade' }),
+    outboxId: uuid('outbox_id').notNull().references(() => emailOutbox.id, { onDelete: 'cascade' }),
+    attemptNumber: integer('attempt_number').notNull().default(1),
+    attemptStatus: varchar('attempt_status', { length: 48 }).notNull().default('PREPARED'), // PREPARED | DISPATCHING | ACCEPTED | REJECTED | UNKNOWN_OUTCOME | RECONCILIATION_REQUIRED | FAILED_PERMANENT
+    provider: varchar('provider', { length: 32 }).notNull().default('POSTAL'),
+    providerInstanceId: varchar('provider_instance_id', { length: 128 }).default('default'),
+    providerMessageId: varchar('provider_message_id', { length: 128 }),
+    recipientCount: integer('recipient_count').notNull().default(0),
+    recipientBatchIds: jsonb('recipient_batch_ids'), // Array of recipient UUIDs in this attempt
+    workerId: varchar('worker_id', { length: 64 }).notNull(),
+    requestStartedAt: timestamp('request_started_at', { withTimezone: true }),
+    requestCompletedAt: timestamp('request_completed_at', { withTimezone: true }),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }),
+    httpStatus: integer('http_status'),
+    providerResponse: jsonb('provider_response'),
+    errorCode: varchar('error_code', { length: 64 }),
+    errorMessage: text('error_message'),
+    reconciliationNotes: text('reconciliation_notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uqOutboxAttempt: uniqueIndex('uq_email_dispatch_attempt_num').on(table.outboxId, table.attemptNumber),
+    statusLeaseIdx: index('idx_dispatch_attempts_status').on(table.attemptStatus, table.leaseExpiresAt),
+    providerMsgIdx: index('idx_dispatch_attempts_provider_msg').on(table.providerMessageId),
+    gymMsgIdx: index('idx_dispatch_attempts_gym_msg').on(table.gymId, table.emailMessageId),
   })
 );
 
@@ -159,6 +199,7 @@ export const emailDeliveryEvents = pgTable(
     emailMessageId: uuid('email_message_id').notNull().references(() => emailMessages.id, { onDelete: 'cascade' }),
     emailRecipientId: uuid('email_recipient_id').references(() => emailRecipients.id, { onDelete: 'set null' }),
     providerEventId: varchar('provider_event_id', { length: 128 }).notNull(),
+    providerInstanceId: varchar('provider_instance_id', { length: 128 }).default('default'),
     eventType: varchar('event_type', { length: 64 }).notNull(),
     eventTimestamp: timestamp('event_timestamp', { withTimezone: true }).notNull(),
     details: text('details'),
@@ -168,5 +209,19 @@ export const emailDeliveryEvents = pgTable(
   (table) => ({
     uqEventId: uniqueIndex('uq_provider_event_id').on(table.providerEventId),
     msgIdx: index('idx_email_events_message').on(table.emailMessageId),
+  })
+);
+
+export const emailWebhookQuarantine = pgTable(
+  'email_webhook_quarantine',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    eventType: varchar('event_type', { length: 64 }),
+    rawPayload: jsonb('raw_payload'),
+    quarantineReason: text('quarantine_reason').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    createdIdx: index('idx_email_webhook_quarantine_created').on(table.createdAt),
   })
 );

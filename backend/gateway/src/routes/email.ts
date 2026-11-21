@@ -10,6 +10,7 @@ import { requirePermission } from '../middleware/rbacMiddleware';
 import { AppError } from '../../../shared/errors';
 import { emailService } from '../../../services/email/emailService';
 import { postalWebhookService } from '../../../services/email/webhookService';
+import { verifyPostalWebhookSignature } from '../../../services/email/postalWebhookAuth';
 import { createRateLimiter } from '../../../shared/security/rateLimiter';
 
 const router: Router = Router();
@@ -160,11 +161,18 @@ router.post('/templates', requirePermission('communications.write'), async (req,
   }
 });
 
-// 8. Inbound Postal Webhook (public receiver; verified by signature/payload)
+// 8. Inbound Postal Webhook (Backward compatibility alias; canonical route is /v1/webhooks/postal)
 router.post('/webhooks/postal', async (req, res, next) => {
   try {
+    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+    const authResult = verifyPostalWebhookSignature(rawBody, req.headers);
+
+    if (!authResult.valid) {
+      throw AppError.unauthorized(`Postal webhook verification failed: ${authResult.reason || 'Invalid signature'}`);
+    }
+
     await postalWebhookService.handleWebhook(req.body);
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', verifiedVia: authResult.algorithm });
   } catch (err) {
     next(err);
   }

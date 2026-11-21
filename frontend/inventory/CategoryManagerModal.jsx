@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { FolderTree, Plus, Pencil, Check, X, AlertCircle } from "lucide-react";
+import { Check, FolderTree, Pencil, Plus, X } from "lucide-react";
+import {
+  Button,
+  EmptyState,
+  IconButton,
+  InlineAlert,
+  Modal,
+  TextField,
+} from "./InventoryUI.jsx";
 import { createCategory, updateCategory } from "../inventoryApi.js";
 
 export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdated }) => {
@@ -12,8 +20,8 @@ export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdat
 
   if (!isOpen) return null;
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
+  const handleAdd = async (event) => {
+    event.preventDefault();
     setError("");
     if (!name.trim()) return;
 
@@ -24,139 +32,144 @@ export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdat
       setDescription("");
       onUpdated?.();
     } catch (err) {
-      setError(err?.message || "Failed to create category");
+      setError(err?.message || "The category could not be created.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSaveEdit = async (cat) => {
+  const handleSaveEdit = async (category) => {
     if (!editName.trim()) return;
+    setError("");
     try {
       await updateCategory({
-        id: cat.id,
+        id: category.id,
         name: editName.trim(),
-        description: cat.description,
-        icon: cat.icon,
-        is_active: cat.is_active,
+        description: category.description,
+        icon: category.icon,
+        is_active: category.is_active,
       });
       setEditingId(null);
       onUpdated?.();
     } catch (err) {
-      setError(err?.message || "Failed to update category");
+      setError(err?.message || "The category could not be updated.");
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
-      <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4.5 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
-              <FolderTree className="h-5 w-5 stroke-[2]" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Manage Product Categories</h3>
-              <p className="text-xs text-slate-400">Classify merchandise, supplements and equipment.</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      icon={FolderTree}
+      title="Product categories"
+      description="Group merchandise, supplements and equipment for faster filtering."
+      size="md"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          Done
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <InlineAlert title="Category action failed">{error}</InlineAlert> : null}
 
-        <div className="p-6 space-y-4">
-          {error ? (
-            <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          ) : null}
-
-          {/* Add Category Form */}
-          <form onSubmit={handleAdd} className="flex gap-2">
-            <input
-              type="text"
-              placeholder="New category name..."
+        <form onSubmit={handleAdd} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+            <TextField
+              label="Category name"
+              required
+              placeholder="e.g. Supplements"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="flex-1 h-9 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500"
+              onChange={(event) => setName(event.target.value)}
             />
-            <button
+            <TextField
+              label="Description"
+              placeholder="Optional short note"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+            <Button
               type="submit"
+              variant="primary"
+              leftIcon={Plus}
               disabled={saving || !name.trim()}
-              className="flex items-center gap-1 rounded-xl bg-orange-500 hover:bg-orange-600 px-4 text-xs font-bold text-white shadow-2xs transition-all disabled:opacity-50"
+              className="h-10"
             >
-              <Plus className="h-4 w-4" /> Add
-            </button>
-          </form>
+              Add
+            </Button>
+          </div>
+        </form>
 
-          {/* Categories List */}
-          <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl max-h-60 overflow-y-auto">
-            {categories.length === 0 ? (
-              <p className="p-4 text-center text-xs text-slate-400">No categories created yet.</p>
-            ) : (
-              categories.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-3 bg-white hover:bg-slate-50/50">
-                  {editingId === c.id ? (
-                    <div className="flex items-center gap-2 flex-1 mr-2">
-                      <input
-                        type="text"
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.07em] text-slate-500">
+              Existing categories
+            </h3>
+            <span className="text-[10.5px] font-semibold text-slate-400 tabular-nums">
+              {categories.length} total
+            </span>
+          </div>
+
+          {categories.length === 0 ? (
+            <EmptyState
+              icon={FolderTree}
+              title="No categories yet"
+              description="Add a category above, then assign products to it from the product editor."
+              className="py-8"
+            />
+          ) : (
+            <ul className="max-h-72 divide-y divide-slate-100 overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+              {categories.map((category) => (
+                <li key={category.id} className="flex items-center gap-2 px-3 py-2.5">
+                  {editingId === category.id ? (
+                    <>
+                      <TextField
+                        aria-label="Category name"
                         value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="h-8 flex-1 rounded-lg border border-orange-400 px-2 text-xs font-bold text-slate-900"
+                        onChange={(event) => setEditName(event.target.value)}
+                        className="min-w-0 flex-1"
                         autoFocus
                       />
-                      <button
-                        onClick={() => handleSaveEdit(c)}
-                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md"
-                      >
-                        <Check className="h-4 w-4" />
-                      </button>
-                      <button
+                      <IconButton
+                        label="Save category name"
+                        icon={Check}
+                        onClick={() => handleSaveEdit(category)}
+                        className="text-emerald-600 hover:bg-emerald-50"
+                      />
+                      <IconButton
+                        label="Cancel editing"
+                        icon={X}
                         onClick={() => setEditingId(null)}
-                        className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-md"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
+                        className="text-slate-400"
+                      />
+                    </>
                   ) : (
                     <>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-800">{c.name}</span>
-                        {c.description ? (
-                          <span className="text-[10px] text-slate-400">{c.description}</span>
-                        ) : null}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[12px] font-bold text-slate-800">{category.name}</p>
+                        {category.description ? (
+                          <p className="truncate text-[10.5px] text-slate-400">{category.description}</p>
+                        ) : (
+                          <p className="text-[10.5px] italic text-slate-300">No description</p>
+                        )}
                       </div>
-                      <button
+                      <IconButton
+                        label={`Rename ${category.name}`}
+                        icon={Pencil}
                         onClick={() => {
-                          setEditingId(c.id);
-                          setEditName(c.name);
+                          setEditingId(category.id);
+                          setEditName(category.name);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-orange-600 rounded-lg transition-colors"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
+                        className="text-slate-400 hover:text-orange-600"
+                      />
                     </>
                   )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-end border-t border-slate-100 bg-white px-6 py-3">
-          <button
-            onClick={onClose}
-            className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-          >
-            Close
-          </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

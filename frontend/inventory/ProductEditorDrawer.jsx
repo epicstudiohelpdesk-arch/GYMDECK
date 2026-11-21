@@ -1,18 +1,25 @@
 import React, { useState } from "react";
 import {
-  X,
-  Package,
   Boxes,
   IndianRupee,
-  Layers,
-  Calendar,
-  AlertCircle,
+  Package,
   Plus,
-  Trash2,
-  CheckCircle2,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { ProductImageUploader } from "./ProductImageUploader.jsx";
+import {
+  Badge,
+  Button,
+  Drawer,
+  DropdownField,
+  IconButton,
+  InlineAlert,
+  SectionHeading,
+  Switch,
+  TextAreaField,
+  TextField,
+} from "./InventoryUI.jsx";
 import {
   createProduct,
   updateProduct,
@@ -20,6 +27,31 @@ import {
   deleteProductImage,
   setPrimaryProductImage,
 } from "../inventoryApi.js";
+
+const normalizeVariants = (product) =>
+  (product?.variants || []).map((variant) => ({
+    id: variant.id,
+    variantName: variant.variant_name ?? variant.variantName ?? "",
+    sku: variant.sku ?? "",
+    barcode: variant.barcode ?? "",
+    costPriceMinorUnits:
+      variant.cost_price_minor_units ?? variant.costPriceMinorUnits ?? null,
+    sellingPriceMinorUnits:
+      variant.selling_price_minor_units ?? variant.sellingPriceMinorUnits ?? 0,
+    mrpMinorUnits: variant.mrp_minor_units ?? variant.mrpMinorUnits ?? null,
+    lowStockThreshold:
+      variant.low_stock_threshold ?? variant.lowStockThreshold ?? 5,
+    initialStock: variant.available_quantity ?? variant.initialStock ?? 0,
+    availableQuantity: variant.available_quantity ?? variant.availableQuantity ?? 0,
+    isActive: variant.is_active ?? variant.isActive ?? true,
+  }));
+
+const EditorSection = ({ icon, title, description, aside, children }) => (
+  <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+    <SectionHeading icon={icon} title={title} description={description} aside={aside} className="mb-3.5" />
+    {children}
+  </section>
+);
 
 export const ProductEditorDrawer = ({
   isOpen,
@@ -31,10 +63,9 @@ export const ProductEditorDrawer = ({
 }) => {
   const isEdit = Boolean(product?.id);
 
-  // Form State
   const [name, setName] = useState(product?.name || "");
   const [brand, setBrand] = useState(product?.brand || "");
-  const [categoryId, setCategoryId] = useState(product?.category_id || (categories[0]?.id || ""));
+  const [categoryId, setCategoryId] = useState(product?.category_id || "");
   const [sku, setSku] = useState(product?.sku || "");
   const [barcode, setBarcode] = useState(product?.barcode || "");
   const [shortDescription, setShortDescription] = useState(product?.short_description || "");
@@ -43,7 +74,6 @@ export const ProductEditorDrawer = ({
   const [status, setStatus] = useState(product?.status || "ACTIVE");
   const [storeVisibility, setStoreVisibility] = useState(product?.store_visibility || "VISIBLE");
 
-  // Pricing (Minor units in paise)
   const [costPrice, setCostPrice] = useState(
     product?.cost_price_minor_units != null ? String(product.cost_price_minor_units / 100) : ""
   );
@@ -56,7 +86,6 @@ export const ProductEditorDrawer = ({
   const [taxConfiguration, setTaxConfiguration] = useState(product?.tax_configuration || "EXEMPT");
   const [taxRate, setTaxRate] = useState(product?.tax_rate ? String(product.tax_rate) : "0");
 
-  // Stock
   const [initialStock, setInitialStock] = useState(
     product?.available_quantity != null ? String(product.available_quantity) : "0"
   );
@@ -66,13 +95,11 @@ export const ProductEditorDrawer = ({
   const [batchTracking, setBatchTracking] = useState(Boolean(product?.batch_tracking_enabled));
   const [expiryTracking, setExpiryTracking] = useState(Boolean(product?.expiry_tracking_enabled));
 
-  // Variants
   const [hasVariants, setHasVariants] = useState(Boolean(product?.has_variants));
-  const [variants, setVariants] = useState(product?.variants || []);
+  const [variants, setVariants] = useState(() => normalizeVariants(product));
 
-  // Images state (existing + newly uploaded staging)
   const [existingImages, setExistingImages] = useState(product?.images || []);
-  const [stagedUploads, setStagedUploads] = useState([]); // { file, filename, base64Data, previewUrl }
+  const [stagedUploads, setStagedUploads] = useState([]);
   const [primaryImageId, setPrimaryImageId] = useState(product?.primary_image?.id || null);
 
   const [saving, setSaving] = useState(false);
@@ -80,10 +107,14 @@ export const ProductEditorDrawer = ({
 
   if (!isOpen) return null;
 
-  // Calculated gross margin
   const costNum = parseFloat(costPrice) || 0;
   const sellNum = parseFloat(sellingPrice) || 0;
-  const marginPercent = sellNum > 0 ? (((sellNum - costNum) / sellNum) * 100).toFixed(1) : 0;
+  const marginPercent = sellNum > 0 ? (((sellNum - costNum) / sellNum) * 100).toFixed(1) : null;
+
+  const categoryOptions = [
+    { value: "", label: "No category" },
+    ...categories.map((category) => ({ value: category.id, label: category.name })),
+  ];
 
   const handleAddVariant = () => {
     setVariants([
@@ -102,7 +133,7 @@ export const ProductEditorDrawer = ({
   };
 
   const handleRemoveVariant = (index) => {
-    setVariants(variants.filter((_, idx) => idx !== index));
+    setVariants(variants.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const handleUpdateVariant = (index, field, value) => {
@@ -111,20 +142,21 @@ export const ProductEditorDrawer = ({
     setVariants(updated);
   };
 
-  const handleStageImage = (imgData) => {
-    setStagedUploads([...stagedUploads, imgData]);
+  const handleStageImage = (imageData) => {
+    setStagedUploads((current) => [...current, imageData]);
   };
 
   const handleDeleteStagedImage = (target) => {
+    if (primaryImageId && (primaryImageId === target.id || primaryImageId === target.previewUrl)) {
+      setPrimaryImageId(null);
+    }
+
     if (target.id) {
-      // Existing server image
       deleteProductImage(target.id)
-        .then(() => {
-          setExistingImages(existingImages.filter((i) => i.id !== target.id));
-        })
-        .catch((e) => setError(e.message));
+        .then(() => setExistingImages((current) => current.filter((image) => image.id !== target.id)))
+        .catch((deleteError) => setError(deleteError.message));
     } else {
-      setStagedUploads(stagedUploads.filter((i) => i.previewUrl !== target.previewUrl));
+      setStagedUploads((current) => current.filter((image) => image.previewUrl !== target.previewUrl));
     }
   };
 
@@ -132,7 +164,7 @@ export const ProductEditorDrawer = ({
     if (target.id && isEdit) {
       setPrimaryProductImage({ imageId: target.id, productId: product.id })
         .then(() => setPrimaryImageId(target.id))
-        .catch((e) => setError(e.message));
+        .catch((primaryError) => setError(primaryError.message));
     } else {
       setPrimaryImageId(target.id || target.previewUrl);
     }
@@ -141,11 +173,11 @@ export const ProductEditorDrawer = ({
   const handleSave = async (andAddAnother = false) => {
     setError("");
     if (!name.trim()) {
-      setError("Product name is required.");
+      setError("A product name is required.");
       return;
     }
-    if (!sellingPrice || isNaN(sellNum) || sellNum < 0) {
-      setError("Please provide a valid selling price.");
+    if (!sellingPrice || Number.isNaN(sellNum) || sellNum < 0) {
+      setError("Enter a valid selling price.");
       return;
     }
 
@@ -160,12 +192,12 @@ export const ProductEditorDrawer = ({
         shortDescription: shortDescription.trim() || null,
         description: description.trim() || null,
         productType: "PHYSICAL",
-        unitOfMeasure,
+        unitOfMeasure: unitOfMeasure.trim() || "pcs",
         costPriceMinorUnits: costNum ? Math.round(costNum * 100) : null,
         sellingPriceMinorUnits: Math.round(sellNum * 100),
-        mrpMinorUnits: mrp && !isNaN(parseFloat(mrp)) ? Math.round(parseFloat(mrp) * 100) : null,
+        mrpMinorUnits: mrp && !Number.isNaN(parseFloat(mrp)) ? Math.round(parseFloat(mrp) * 100) : null,
         taxConfiguration,
-        taxRate: parseFloat(taxRate) || 0.0,
+        taxRate: parseFloat(taxRate) || 0,
         hasVariants,
         batchTrackingEnabled: batchTracking,
         expiryTrackingEnabled: expiryTracking,
@@ -174,36 +206,37 @@ export const ProductEditorDrawer = ({
         storeVisibility,
         initialStock: parseInt(initialStock, 10) || 0,
         variants: hasVariants
-          ? variants.map((v) => ({
-              id: v.id,
-              variantName: v.variantName,
-              sku: v.sku || null,
-              costPriceMinorUnits: v.costPriceMinorUnits,
-              sellingPriceMinorUnits: v.sellingPriceMinorUnits || Math.round(sellNum * 100),
-              mrpMinorUnits: v.mrpMinorUnits,
-              lowStockThreshold: v.lowStockThreshold || 5,
-              initialStock: parseInt(v.initialStock, 10) || 0,
-              isActive: v.isActive ?? true,
+          ? variants.map((variant) => ({
+              id: variant.id,
+              variantName: variant.variantName,
+              sku: variant.sku || null,
+              barcode: variant.barcode || null,
+              costPriceMinorUnits: variant.costPriceMinorUnits,
+              sellingPriceMinorUnits:
+                variant.sellingPriceMinorUnits ?? Math.round(sellNum * 100),
+              mrpMinorUnits: variant.mrpMinorUnits,
+              lowStockThreshold: variant.lowStockThreshold || 5,
+              initialStock: parseInt(variant.initialStock, 10) || 0,
+              isActive: variant.isActive ?? true,
             }))
           : [],
       };
 
-      let savedProduct;
-      if (isEdit) {
-        savedProduct = await updateProduct(product.id, payload);
-      } else {
-        savedProduct = await createProduct(payload);
-      }
+      const savedProduct = isEdit
+        ? await updateProduct(product.id, payload)
+        : await createProduct(payload);
 
-      // Upload staged images to the new or existing product
       if (stagedUploads.length > 0 && savedProduct?.id) {
-        for (let i = 0; i < stagedUploads.length; i++) {
-          const up = stagedUploads[i];
-          const isPrimary = i === 0 && existingImages.length === 0;
+        const stagedPrimary = stagedUploads.find((upload) => upload.previewUrl === primaryImageId);
+        for (let index = 0; index < stagedUploads.length; index += 1) {
+          const upload = stagedUploads[index];
+          const isPrimary = stagedPrimary
+            ? upload.previewUrl === stagedPrimary.previewUrl
+            : index === 0 && existingImages.length === 0 && !primaryImageId;
           await uploadProductImage({
             productId: savedProduct.id,
-            filename: up.filename,
-            base64Data: up.base64Data,
+            filename: upload.filename,
+            base64Data: upload.base64Data,
             isPrimary,
           });
         }
@@ -213,379 +246,326 @@ export const ProductEditorDrawer = ({
 
       if (andAddAnother) {
         setName("");
+        setBrand("");
         setSku("");
         setBarcode("");
+        setShortDescription("");
+        setDescription("");
         setSellingPrice("");
         setCostPrice("");
         setMrp("");
         setInitialStock("0");
+        setPrimaryImageId(null);
         setStagedUploads([]);
         setVariants([]);
+        setHasVariants(false);
+        setError("");
       } else {
         onClose();
       }
-    } catch (err) {
-      console.error("Save product error:", err);
-      setError(err?.message || "Failed to save product.");
+    } catch (saveError) {
+      console.error("Save product error:", saveError);
+      setError(saveError?.message || "The product could not be saved.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs transition-opacity animate-fade-in">
-      <div className="flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl overflow-hidden animate-slide-left">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4.5 bg-white">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
-              <Package className="h-5 w-5 stroke-[2]" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                {isEdit ? "Edit Product" : "Add New Gym Product"}
-              </h3>
-              <p className="text-xs text-slate-400">
-                Configure retail details, pricing, variants, and stock balances.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <Drawer
+      isOpen={isOpen}
+      onClose={onClose}
+      icon={Package}
+      title={isEdit ? "Edit product" : "Add new product"}
+      description={
+        isEdit
+          ? "Update pricing, stock configuration and catalogue details."
+          : "Create a catalogue item with pricing, stock and variants."
+      }
+      size="lg"
+      bodyClassName="space-y-4"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          {!isEdit ? (
+            <Button variant="secondary" onClick={() => handleSave(true)} disabled={saving}>
+              Save &amp; add another
+            </Button>
+          ) : null}
+          <Button variant="primary" onClick={() => handleSave(false)} disabled={saving}>
+            {saving ? "Saving…" : isEdit ? "Update product" : "Save product"}
+          </Button>
+        </>
+      }
+    >
+      {error ? <InlineAlert title="Could not save product">{error}</InlineAlert> : null}
+
+      <EditorSection
+        icon={Package}
+        title="Product media"
+        description="Primary image is used across the catalogue and member store."
+      >
+        <ProductImageUploader
+          images={[...existingImages, ...stagedUploads]}
+          primaryImageId={primaryImageId}
+          onImagesChange={handleStageImage}
+          onDeleteImage={handleDeleteStagedImage}
+          onSetPrimary={handleSetPrimary}
+        />
+      </EditorSection>
+
+      <EditorSection
+        icon={Boxes}
+        title="Basic information"
+        description="How the product is identified in your catalogue."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <TextField
+            className="sm:col-span-2"
+            label="Product name"
+            required
+            placeholder="e.g. NitroTech Whey Gold 2kg"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <TextField
+            label="Brand"
+            placeholder="e.g. MuscleTech"
+            value={brand}
+            onChange={(event) => setBrand(event.target.value)}
+          />
+          <DropdownField
+            label="Category"
+            value={categoryId}
+            onChange={setCategoryId}
+            options={categoryOptions}
+            placeholder="No category"
+            size="lg"
+          />
+          <TextField
+            label="SKU code"
+            placeholder="e.g. WHEY-GOLD-2K"
+            value={sku}
+            onChange={(event) => setSku(event.target.value)}
+            inputClassName="font-mono"
+          />
+          <TextField
+            label="Barcode / UPC"
+            placeholder="e.g. 890123456789"
+            value={barcode}
+            onChange={(event) => setBarcode(event.target.value)}
+            inputClassName="font-mono"
+          />
+          <TextField
+            className="sm:col-span-2"
+            label="Short summary"
+            placeholder="One line shown on catalogue cards"
+            value={shortDescription}
+            onChange={(event) => setShortDescription(event.target.value)}
+          />
+          <TextAreaField
+            className="sm:col-span-2"
+            label="Internal description"
+            rows={2}
+            placeholder="Optional notes about this product"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
         </div>
+      </EditorSection>
 
-        {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {error ? (
-            <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          ) : null}
+      <EditorSection
+        icon={IndianRupee}
+        title="Pricing & margin"
+        description="Amounts are stored in paise and shown in rupees."
+        aside={
+          marginPercent != null ? (
+            <Badge tone={Number(marginPercent) >= 0 ? "emerald" : "rose"}>
+              <Sparkles size={10} aria-hidden="true" /> {marginPercent}% margin
+            </Badge>
+          ) : null
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <TextField
+            label="Selling price (₹)"
+            required
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={sellingPrice}
+            onChange={(event) => setSellingPrice(event.target.value)}
+          />
+          <TextField
+            label="Purchase cost (₹)"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={costPrice}
+            onChange={(event) => setCostPrice(event.target.value)}
+          />
+          <TextField
+            label="MRP (₹)"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={mrp}
+            onChange={(event) => setMrp(event.target.value)}
+          />
+        </div>
+      </EditorSection>
 
-          {/* SECTION A: IMAGES */}
-          <section className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4">
-            <ProductImageUploader
-              images={[...existingImages, ...stagedUploads]}
-              primaryImageId={primaryImageId}
-              onImagesChange={handleStageImage}
-              onDeleteImage={handleDeleteStagedImage}
-              onSetPrimary={handleSetPrimary}
+      {!hasVariants ? (
+        <EditorSection
+          icon={Package}
+          title="Stock configuration"
+          description={
+            isEdit
+              ? "Balances change through receive and adjustment operations."
+              : "Opening stock is recorded as the first ledger movement."
+          }
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <TextField
+              label={isEdit ? "Stock balance" : "Opening stock"}
+              type="number"
+              min="0"
+              disabled={isEdit}
+              value={initialStock}
+              onChange={(event) => setInitialStock(event.target.value)}
+              hint={isEdit ? "Use stock adjustment to change this." : undefined}
             />
-          </section>
-
-          {/* SECTION B: BASIC INFORMATION */}
-          <section className="space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <Boxes className="h-3.5 w-3.5 text-orange-500" /> Basic Information
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                  Product Name <span className="text-orange-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. NitroTech Whey Gold 2kg"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Brand</label>
-                <input
-                  type="text"
-                  placeholder="e.g. MuscleTech"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Category</label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                >
-                  <option value="">No category</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">SKU Code</label>
-                <input
-                  type="text"
-                  placeholder="e.g. WHEY-GOLD-2K"
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Barcode / UPC</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 890123456789"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Short Summary</label>
-                <input
-                  type="text"
-                  placeholder="Single line overview for catalog cards"
-                  value={shortDescription}
-                  onChange={(e) => setShortDescription(e.target.value)}
-                  className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* SECTION C: PRICING */}
-          <section className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/30 p-4.5">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
-                <IndianRupee className="h-3.5 w-3.5 text-emerald-600" /> Pricing & Margins
-              </h4>
-              {marginPercent > 0 ? (
-                <span className="flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[10px] font-bold">
-                  <Sparkles className="h-3 w-3" /> {marginPercent}% Margin
-                </span>
-              ) : null}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Selling Price (₹) <span className="text-orange-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  step="0.01"
-                  value={sellingPrice}
-                  onChange={(e) => setSellingPrice(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Purchase Cost (₹)</label>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  step="0.01"
-                  value={costPrice}
-                  onChange={(e) => setCostPrice(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">MRP (₹)</label>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  step="0.01"
-                  value={mrp}
-                  onChange={(e) => setMrp(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* SECTION D: INVENTORY & STOCK */}
-          {!hasVariants ? (
-            <section className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Package className="h-3.5 w-3.5 text-orange-500" /> Stock Configuration
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    {isEdit ? "Stock Balance" : "Opening Stock"}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    disabled={isEdit}
-                    value={initialStock}
-                    onChange={(e) => setInitialStock(e.target.value)}
-                    className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 disabled:bg-slate-100 disabled:text-slate-500 outline-none"
-                  />
-                  {isEdit ? (
-                    <span className="text-[10px] text-slate-400">Use Stock Adjustment to change balances</span>
-                  ) : null}
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Low Stock Alert At
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={lowStockThreshold}
-                    onChange={(e) => setLowStockThreshold(e.target.value)}
-                    className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Unit of Measure</label>
-                  <input
-                    type="text"
-                    value={unitOfMeasure}
-                    onChange={(e) => setUnitOfMeasure(e.target.value)}
-                    className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-orange-500"
-                  />
-                </div>
-              </div>
-            </section>
-          ) : null}
-
-          {/* SECTION E: TRACKING OPTIONS */}
-          <div className="flex flex-wrap gap-4 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasVariants}
-                onChange={(e) => setHasVariants(e.target.checked)}
-                className="h-4 w-4 rounded text-orange-600 focus:ring-orange-500 border-slate-300"
-              />
-              <span className="text-xs font-semibold text-slate-700">This product has variants (Flavors, Sizes, Colors)</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={expiryTracking}
-                onChange={(e) => setExpiryTracking(e.target.checked)}
-                className="h-4 w-4 rounded text-orange-600 focus:ring-orange-500 border-slate-300"
-              />
-              <span className="text-xs font-semibold text-slate-700">Track Expiry Dates (Supplements & Edibles)</span>
-            </label>
+            <TextField
+              label="Low stock alert at"
+              type="number"
+              min="0"
+              value={lowStockThreshold}
+              onChange={(event) => setLowStockThreshold(event.target.value)}
+            />
+            <TextField
+              label="Unit of measure"
+              placeholder="pcs"
+              value={unitOfMeasure}
+              onChange={(event) => setUnitOfMeasure(event.target.value)}
+            />
           </div>
+        </EditorSection>
+      ) : null}
 
-          {/* SECTION F: VARIANTS LIST IF ENABLED */}
-          {hasVariants ? (
-            <section className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Product Variants</h4>
-                  <p className="text-[11px] text-slate-400">Stock will be tracked individually per variant.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddVariant}
-                  className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-orange-500 hover:text-orange-600 shadow-2xs transition-all"
+      <EditorSection
+        icon={Boxes}
+        title="Tracking options"
+        description="Enable only what this product actually needs."
+      >
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          <Switch
+            checked={hasVariants}
+            onChange={setHasVariants}
+            label="Product variants"
+            description="Flavours, sizes or colours with separate stock."
+          />
+          <Switch
+            checked={expiryTracking}
+            onChange={setExpiryTracking}
+            label="Expiry tracking"
+            description="For supplements and edible stock."
+          />
+          <Switch
+            checked={batchTracking}
+            onChange={setBatchTracking}
+            label="Batch tracking"
+            description="Track supplier batches and shelf rotation."
+          />
+        </div>
+      </EditorSection>
+
+      {hasVariants ? (
+        <EditorSection
+          icon={Boxes}
+          title="Product variants"
+          description="Stock is tracked individually for every variant."
+          aside={
+            <Button size="sm" variant="secondary" leftIcon={Plus} onClick={handleAddVariant}>
+              Add variant
+            </Button>
+          }
+        >
+          {variants.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-3 py-4 text-center text-[11.5px] text-slate-400">
+              No variants added yet. Add at least one to track variant-level stock.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {variants.map((variant, index) => (
+                <div
+                  key={variant.id || index}
+                  className="rounded-xl border border-slate-200 bg-slate-50/40 p-2.5"
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add Variant
-                </button>
-              </div>
-
-              {variants.map((v, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-2.5">
-                  <input
-                    type="text"
-                    placeholder="Variant Name (e.g. Chocolate 1kg)"
-                    value={v.variantName}
-                    onChange={(e) => handleUpdateVariant(idx, "variantName", e.target.value)}
-                    className="flex-1 h-9 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-800"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Sell Price ₹"
-                    value={v.sellingPriceMinorUnits ? v.sellingPriceMinorUnits / 100 : ""}
-                    onChange={(e) =>
-                      handleUpdateVariant(
-                        idx,
-                        "sellingPriceMinorUnits",
-                        Math.round((parseFloat(e.target.value) || 0) * 100)
-                      )
-                    }
-                    className="w-24 h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold text-slate-800"
-                  />
-                  {!isEdit ? (
-                    <input
-                      type="number"
-                      placeholder="Stock"
-                      value={v.initialStock || ""}
-                      onChange={(e) => handleUpdateVariant(idx, "initialStock", e.target.value)}
-                      className="w-16 h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold text-slate-800"
+                  <div className="flex items-start gap-2">
+                    <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_106px_86px]">
+                      <TextField
+                        label="Variant"
+                        placeholder="e.g. Chocolate 1kg"
+                        value={variant.variantName}
+                        onChange={(event) => handleUpdateVariant(index, "variantName", event.target.value)}
+                      />
+                      <TextField
+                        label="Sell price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={
+                          variant.sellingPriceMinorUnits
+                            ? variant.sellingPriceMinorUnits / 100
+                            : ""
+                        }
+                        onChange={(event) =>
+                          handleUpdateVariant(
+                            index,
+                            "sellingPriceMinorUnits",
+                            Math.round((parseFloat(event.target.value) || 0) * 100)
+                          )
+                        }
+                      />
+                      {isEdit ? (
+                        <div>
+                          <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-[0.07em] text-slate-500">
+                            In stock
+                          </span>
+                          <div className="flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-[12px] font-bold text-slate-600 tabular-nums">
+                            {variant.availableQuantity || 0}
+                          </div>
+                        </div>
+                      ) : (
+                        <TextField
+                          label="Stock"
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={variant.initialStock || ""}
+                          onChange={(event) => handleUpdateVariant(index, "initialStock", event.target.value)}
+                        />
+                      )}
+                    </div>
+                    <IconButton
+                      label={`Remove variant ${variant.variantName || index + 1}`}
+                      icon={Trash2}
+                      onClick={() => handleRemoveVariant(index)}
+                      className="mt-6 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                     />
-                  ) : (
-                    <span className="w-16 text-center text-xs font-bold text-slate-600">
-                      {v.available_quantity || 0}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveVariant(idx)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  </div>
                 </div>
               ))}
-            </section>
-          ) : null}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-white px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            Cancel
-          </button>
-
-          <div className="flex items-center gap-2">
-            {!isEdit ? (
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => handleSave(true)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:border-slate-300 transition-all active:scale-95 disabled:opacity-50"
-              >
-                Save & Add Another
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => handleSave(false)}
-              className="flex items-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 px-6 py-2 text-xs font-bold text-white shadow-sm shadow-orange-500/25 transition-all hover:shadow-orange-500/35 active:scale-95 disabled:opacity-50"
-            >
-              {saving ? "Saving..." : isEdit ? "Update Product" : "Save Product"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </div>
+          )}
+        </EditorSection>
+      ) : null}
+    </Drawer>
   );
 };
