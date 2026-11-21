@@ -121,6 +121,13 @@ export class PostalClient {
         id: Number(id),
         token: `mock_tok_${id}`,
         status: { status: 'Sent' },
+        details: {
+          rcpt_to: 'staging-verifier@gymdeck.local',
+          mail_from: 'notifications@mail.epic-studio.in',
+          subject: 'Mock Subject',
+          message_id: `mock_msg_${id}@mail.epic-studio.in`,
+          timestamp: Date.now() / 1000,
+        },
       };
     }
 
