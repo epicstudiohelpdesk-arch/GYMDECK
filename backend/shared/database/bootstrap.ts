@@ -778,4 +778,17 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       break;
     }
   }
+
+  // Email Provider Abstraction migration (Phase 4H / 5A.1 additive; safe to re-run).
+  const emailPhase4HCandidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0010_email_provider_abstraction.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0010_email_provider_abstraction.sql'),
+    path.join(__dirname, 'migrations', '0010_email_provider_abstraction.sql'),
+  ];
+  for (const file of emailPhase4HCandidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
 }

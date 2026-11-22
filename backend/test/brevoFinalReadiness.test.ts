@@ -33,6 +33,7 @@ import { BrevoClient, classifyBrevoError } from '../services/email/providers/bre
 import { BrevoAdapter } from '../services/email/providers/brevoAdapter';
 import { ProviderRouter } from '../services/email/providerRouter';
 import { BrevoWebhookService, verifyBrevoWebhookAuth } from '../services/email/brevoWebhookService';
+import { bootstrapDatabaseSchema } from '../shared/database/bootstrap';
 
 let testsPassed = 0;
 let testsTotal = 0;
@@ -70,6 +71,9 @@ async function runSuite() {
   console.log('\n===============================================================');
   console.log('🧪 GYMDECK EMAIL LINE: FINAL BREVO PRODUCTION READINESS SUITE');
   console.log('===============================================================\n');
+
+  // Ensure database schema migrations are applied in CI environments
+  await bootstrapDatabaseSchema();
 
   // Seed a test gym
   const testGymId = crypto.randomUUID();
