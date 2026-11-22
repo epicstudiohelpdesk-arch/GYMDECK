@@ -198,32 +198,32 @@ export const SupplierManagerModal = ({ isOpen, onClose, suppliers = [], onUpdate
                 }
               />
             ) : (
-              <ul className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+              <ul className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
                 {suppliers.map((supplier) => (
-                  <li key={supplier.id} className="flex items-start gap-3 px-3.5 py-3">
-                    <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500">
-                      <Users size={14} strokeWidth={2.1} aria-hidden="true" />
+                  <li key={supplier.id} className="flex items-start gap-3 px-3.5 py-3.5 hover:bg-slate-50/60 transition-colors">
+                    <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600">
+                      <Users size={15} strokeWidth={2.2} aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12.5px] font-bold text-slate-900">
+                      <p className="truncate text-[12.5px] font-black text-slate-900">
                         {supplier.supplier_name}
                       </p>
                       {supplier.contact_person ? (
-                        <p className="text-[11px] text-slate-500">{supplier.contact_person}</p>
+                        <p className="text-[11px] font-medium text-slate-500">{supplier.contact_person}</p>
                       ) : null}
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-slate-400">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-medium text-slate-400">
                         {supplier.phone ? (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 text-slate-500">
                             <Phone size={10} aria-hidden="true" /> {supplier.phone}
                           </span>
                         ) : null}
                         {supplier.email ? (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 text-slate-500">
                             <Mail size={10} aria-hidden="true" /> {supplier.email}
                           </span>
                         ) : null}
                         {supplier.gstin ? (
-                          <span className="font-mono uppercase">GSTIN {supplier.gstin}</span>
+                          <span className="font-mono uppercase text-indigo-600/80 font-bold bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100/60">GSTIN {supplier.gstin}</span>
                         ) : null}
                         {supplier.address ? (
                           <span className="inline-flex min-w-0 items-center gap-1">
@@ -237,7 +237,7 @@ export const SupplierManagerModal = ({ isOpen, onClose, suppliers = [], onUpdate
                       label={`Edit ${supplier.supplier_name}`}
                       icon={Pencil}
                       onClick={() => openForm(supplier)}
-                      className="text-slate-400 hover:text-orange-600"
+                      className="text-slate-400 hover:text-indigo-600"
                     />
                   </li>
                 ))}

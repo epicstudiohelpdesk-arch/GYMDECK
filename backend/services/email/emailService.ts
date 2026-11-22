@@ -21,6 +21,7 @@ import {
   gyms,
 } from '../../shared/database/schema';
 import { emailQuotaService, QuotaStatus } from './quotaService';
+import { findSuppressedEmails, normalizeEmailAddress } from './suppressionService';
 import { AppError } from '../../shared/errors';
 import { config } from '../../shared/config';
 import { processOutboxJobs } from './deliveryWorker';
@@ -170,31 +171,28 @@ export class EmailService {
 
   /**
    * Send email broadcast with atomic quota reservation and durable queueing.
+   *
+   * Idempotency, quota, message, recipients and outbox are committed in one
+   * transaction. A transaction-scoped advisory lock serializes concurrent
+   * requests that share an idempotency key, so the loser observes the winner's
+   * message instead of racing the unique index after reserving quota.
    */
-  public async sendEmail(gymId: string, userId: string, dto: ComposeEmailDto): Promise<any> {
+  public async sendEmail(
+    gymId: string,
+    userId: string,
+    dto: ComposeEmailDto,
+    options: { triggerWorker?: boolean } = {}
+  ): Promise<any> {
     if (!dto.subject?.trim()) throw AppError.validation('Subject is required.');
     if (!dto.bodyHtml?.trim()) throw AppError.validation('Email content is required.');
 
-    // 1. Idempotency Check
-    if (dto.idempotencyKey) {
-      const existing = await db
-        .select()
-        .from(emailMessages)
-        .where(and(eq(emailMessages.gymId, gymId), eq(emailMessages.idempotencyKey, dto.idempotencyKey)))
-        .limit(1);
-
-      if (existing.length > 0) {
-        return existing[0];
-      }
-    }
-
-    // 2. Validate and deduplicate recipients
+    // 1. Validate and deduplicate recipients
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanRecipients: Array<{ memberId?: string; email: string; name?: string }> = [];
     const seenEmails = new Set<string>();
 
     for (const r of dto.recipients) {
-      const email = r.email?.trim().toLowerCase();
+      const email = r.email ? normalizeEmailAddress(r.email) : '';
       if (email && emailRegex.test(email) && !seenEmails.has(email)) {
         seenEmails.add(email);
         cleanRecipients.push({
@@ -209,62 +207,93 @@ export class EmailService {
       throw AppError.validation('No valid recipient email addresses provided.');
     }
 
-    // 3. Atomically Reserve Quota
-    await emailQuotaService.reserveQuota(gymId, cleanRecipients.length);
+    const message = await db.transaction(async (tx) => {
+      // 2. Serialize same-key requests for this tenant before checking/inserting.
+      if (dto.idempotencyKey) {
+        const lockKey = `${gymId}:${dto.idempotencyKey}`;
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`);
 
-    // 4. Resolve sender defaults from gym profile if needed
-    const gymRows = await db.select().from(gyms).where(eq(gyms.id, gymId)).limit(1);
-    const gym = gymRows[0];
-    const senderName = dto.senderDisplayName?.trim() || gym?.name || config.POSTAL_DEFAULT_FROM_NAME;
-    const fromAddress = config.POSTAL_DEFAULT_FROM_EMAIL;
-    const replyTo = dto.replyToAddress?.trim() || gym?.contactEmail || undefined;
+        const existing = await tx
+          .select()
+          .from(emailMessages)
+          .where(and(eq(emailMessages.gymId, gymId), eq(emailMessages.idempotencyKey, dto.idempotencyKey)))
+          .limit(1);
 
-    // 5. Persist message record
-    const insertedMessages = await db
-      .insert(emailMessages)
-      .values({
+        if (existing.length > 0) return existing[0];
+      }
+
+      // 3. Suppressed recipients never consume a quota unit and are never enqueued.
+      const suppressed = await findSuppressedEmails(
+        tx,
+        cleanRecipients.map((r) => r.email)
+      );
+      const deliverableRecipients = cleanRecipients.filter((r) => !suppressed.has(r.email));
+
+      if (deliverableRecipients.length === 0) {
+        throw AppError.validation('All recipient addresses are suppressed.');
+      }
+
+      // 4. Reserve quota inside the transaction.
+      await emailQuotaService.reserveQuota(gymId, deliverableRecipients.length, tx);
+
+      // 5. Resolve sender defaults from gym profile if needed.
+      const gymRows = await tx.select().from(gyms).where(eq(gyms.id, gymId)).limit(1);
+      const gym = gymRows[0];
+      const senderName = dto.senderDisplayName?.trim() || gym?.name || config.POSTAL_DEFAULT_FROM_NAME;
+      const fromAddress = config.POSTAL_DEFAULT_FROM_EMAIL;
+      const replyTo = dto.replyToAddress?.trim() || gym?.contactEmail || undefined;
+
+      // 6. Persist message, recipients and outbox atomically.
+      const insertedMessages = await tx
+        .insert(emailMessages)
+        .values({
+          gymId,
+          createdByUserId: userId,
+          subject: dto.subject.trim(),
+          bodyHtml: dto.bodyHtml,
+          bodyText: dto.bodyText || dto.bodyHtml.replace(/<[^>]+>/g, ' '),
+          senderDisplayName: senderName,
+          fromAddress,
+          replyToAddress: replyTo,
+          status: 'QUEUED',
+          idempotencyKey: dto.idempotencyKey || null,
+          recipientCount: deliverableRecipients.length,
+          queuedAt: new Date(),
+        })
+        .returning();
+
+      const created = insertedMessages[0];
+      if (!created) throw AppError.database('Failed to create email message record.');
+
+      await tx.insert(emailRecipients).values(
+        deliverableRecipients.map((r) => ({
+          gymId,
+          emailMessageId: created.id,
+          memberId: r.memberId || null,
+          recipientEmail: r.email,
+          recipientName: r.name || null,
+          deliveryStatus: 'QUEUED',
+        }))
+      );
+
+      await tx.insert(emailOutbox).values({
         gymId,
-        createdByUserId: userId,
-        subject: dto.subject.trim(),
-        bodyHtml: dto.bodyHtml,
-        bodyText: dto.bodyText || dto.bodyHtml.replace(/<[^>]+>/g, ' '),
-        senderDisplayName: senderName,
-        fromAddress,
-        replyToAddress: replyTo,
-        status: 'QUEUED',
-        idempotencyKey: dto.idempotencyKey || null,
-        recipientCount: cleanRecipients.length,
-        queuedAt: new Date(),
-      })
-      .returning();
+        emailMessageId: created.id,
+        jobStatus: 'PENDING',
+        nextAttemptAt: new Date(),
+      });
 
-    const message = insertedMessages[0];
+      return created;
+    });
+
     if (!message) throw AppError.database('Failed to create email message record.');
 
-    // 6. Bulk insert recipient records
-    const recipientValues = cleanRecipients.map((r) => ({
-      gymId,
-      emailMessageId: message.id,
-      memberId: r.memberId || null,
-      recipientEmail: r.email,
-      recipientName: r.name || null,
-      deliveryStatus: 'QUEUED',
-    }));
-
-    await db.insert(emailRecipients).values(recipientValues);
-
-    // 7. Enqueue in persistent outbox
-    await db.insert(emailOutbox).values({
-      gymId,
-      emailMessageId: message.id,
-      jobStatus: 'PENDING',
-      nextAttemptAt: new Date(),
-    });
-
-    // Trigger immediate background sweep asynchronously
-    setImmediate(() => {
-      processOutboxJobs().catch(() => {});
-    });
+    // Trigger immediate background sweep asynchronously (disabled by tests).
+    if (options.triggerWorker !== false) {
+      setImmediate(() => {
+        processOutboxJobs().catch(() => {});
+      });
+    }
 
     return message;
   }

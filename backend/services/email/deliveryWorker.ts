@@ -6,20 +6,24 @@
  *  - Resolves batch recipients
  *  - Enforces suppression lists (bounces / opt-outs)
  *  - Performs Postal submission
- *  - Updates recipient statuses and commits quota
+ *  - Updates recipient statuses and commits quota atomically
+ *
+ * Delivery is at-most-once after provider acceptance: an ACCEPTED attempt is
+ * never reset to PENDING. Recovery applies the durable recipient batch instead
+ * of calling the provider again.
  */
 
-import { eq, and, sql, lte, inArray, lt } from 'drizzle-orm';
+import { eq, and, sql, lte, inArray, lt, gt } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import {
   emailOutbox,
   emailMessages,
   emailRecipients,
-  emailSuppressions,
   emailDispatchAttempts,
 } from '../../shared/database/schema';
-import { postalClient, PostalApiError } from './postalClient';
+import { providerRouter } from './providerRouter';
 import { emailQuotaService } from './quotaService';
+import { findSuppressedEmails } from './suppressionService';
 import { logger } from '../../shared/logging';
 import { config } from '../../shared/config';
 
@@ -28,19 +32,371 @@ let isProcessing = false;
 
 // 5 minutes lease duration for background jobs
 const WORKER_LEASE_MS = 5 * 60 * 1000;
+// Renew well before expiry; completed batches are short, but a provider call or
+// database stall must not let a live worker lose ownership.
+const LEASE_RENEW_INTERVAL_MS = Math.max(1000, Math.floor(WORKER_LEASE_MS / 3));
+
+type RecipientRow = typeof emailRecipients.$inferSelect;
+type DispatchAttemptRow = typeof emailDispatchAttempts.$inferSelect;
+
+class LeaseOwnershipLostError extends Error {
+  constructor(jobId: string) {
+    super(`Lease ownership lost for outbox job ${jobId}`);
+    this.name = 'LeaseOwnershipLostError';
+  }
+}
+
+function billingPeriodFor(message: { createdAt: Date }): string {
+  return emailQuotaService.getCurrentBillingPeriod(message.createdAt);
+}
 
 /**
- * Sweep for expired worker leases (zombie jobs)
- * Handles crash scenarios:
- *  - Crash before dispatch: reset to PENDING
- *  - Crash during DISPATCHING: transition to RECONCILIATION_REQUIRED / UNKNOWN_OUTCOME to prevent duplicate send
+ * Renew a worker's lease only while it still owns an unexpired PROCESSING job.
+ * The ownership and expiry predicates ensure a stale worker can never revive
+ * or overwrite another worker's lease.
+ */
+export async function renewWorkerLease(jobId: string, workerId: string): Promise<boolean> {
+  const now = new Date();
+  const leaseExpires = new Date(now.getTime() + WORKER_LEASE_MS);
+
+  return db.transaction(async (tx) => {
+    const renewed = await tx
+      .update(emailOutbox)
+      .set({
+        leaseExpiresAt: leaseExpires,
+        lastHeartbeatAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(emailOutbox.id, jobId),
+          eq(emailOutbox.jobStatus, 'PROCESSING'),
+          eq(emailOutbox.lockedBy, workerId),
+          gt(emailOutbox.leaseExpiresAt, now)
+        )
+      )
+      .returning({ currentAttemptId: emailOutbox.currentAttemptId });
+
+    if (renewed.length === 0) return false;
+
+    const currentAttemptId = renewed[0]?.currentAttemptId;
+    if (currentAttemptId) {
+      await tx
+        .update(emailDispatchAttempts)
+        .set({
+          leaseExpiresAt: leaseExpires,
+          lastHeartbeatAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(emailDispatchAttempts.id, currentAttemptId),
+            eq(emailDispatchAttempts.workerId, workerId),
+            eq(emailDispatchAttempts.attemptStatus, 'DISPATCHING')
+          )
+        );
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Lock and verify ownership inside a state-changing transaction. A worker that
+ * lost its lease must not write acceptance, failure or retry state.
+ */
+async function assertJobOwnership(
+  tx: any,
+  jobId: string,
+  workerId: string,
+  now: Date
+): Promise<void> {
+  const owned = await tx
+    .select({ id: emailOutbox.id })
+    .from(emailOutbox)
+    .where(
+      and(
+        eq(emailOutbox.id, jobId),
+        eq(emailOutbox.jobStatus, 'PROCESSING'),
+        eq(emailOutbox.lockedBy, workerId),
+        gt(emailOutbox.leaseExpiresAt, now)
+      )
+    )
+    .for('update')
+    .limit(1);
+
+  if (owned.length === 0) throw new LeaseOwnershipLostError(jobId);
+}
+
+/**
+ * Finish a batch: complete the message when nothing is queued, otherwise
+ * release the outbox for the next batch. Runs on the caller's transaction.
+ */
+async function finalizeJob(
+  tx: any,
+  jobId: string,
+  messageId: string,
+  gymId: string,
+  now: Date
+): Promise<void> {
+  const remainingRows = await tx
+    .select({ count: sql<number>`count(*)` })
+    .from(emailRecipients)
+    .where(
+      and(
+        eq(emailRecipients.emailMessageId, messageId),
+        eq(emailRecipients.gymId, gymId),
+        eq(emailRecipients.deliveryStatus, 'QUEUED')
+      )
+    );
+
+  const remaining = Number(remainingRows[0]?.count || 0);
+
+  if (remaining === 0) {
+    await tx
+      .update(emailMessages)
+      .set({ status: 'COMPLETED', completedAt: now, updatedAt: now })
+      .where(and(eq(emailMessages.id, messageId), eq(emailMessages.gymId, gymId)));
+
+    await tx
+      .update(emailOutbox)
+      .set({
+        jobStatus: 'COMPLETED',
+        completedAt: now,
+        updatedAt: now,
+        currentAttemptId: null,
+        lockedAt: null,
+        lockedBy: null,
+        leaseExpiresAt: null,
+        lastHeartbeatAt: null,
+        lastError: null,
+      })
+      .where(eq(emailOutbox.id, jobId));
+    return;
+  }
+
+  // More recipients remain: make the next batch immediately claimable.
+  await tx
+    .update(emailOutbox)
+    .set({
+      jobStatus: 'PENDING',
+      nextAttemptAt: now,
+      updatedAt: now,
+      currentAttemptId: null,
+      lockedAt: null,
+      lockedBy: null,
+      leaseExpiresAt: null,
+      lastHeartbeatAt: null,
+      lastError: null,
+    })
+    .where(eq(emailOutbox.id, jobId));
+}
+
+/**
+ * Permanently fail a job, mark only still-queued batch recipients FAILED and
+ * release their reserved quota. Runs on the caller's transaction.
+ */
+async function failQueuedBatch(
+  tx: any,
+  jobId: string,
+  messageId: string,
+  gymId: string,
+  recipientIds: string[],
+  billingPeriod: string,
+  reason: string,
+  now: Date,
+  ownerWorkerId?: string
+): Promise<number> {
+  let failedCount = 0;
+
+  if (ownerWorkerId) {
+    const owned = await tx
+      .select({ id: emailOutbox.id })
+      .from(emailOutbox)
+      .where(
+        and(
+          eq(emailOutbox.id, jobId),
+          eq(emailOutbox.jobStatus, 'PROCESSING'),
+          eq(emailOutbox.lockedBy, ownerWorkerId)
+        )
+      )
+      .for('update')
+      .limit(1);
+
+    if (owned.length === 0) return 0;
+  }
+
+  if (recipientIds.length > 0) {
+    const queued = await tx
+      .select({ id: emailRecipients.id })
+      .from(emailRecipients)
+      .where(
+        and(
+          eq(emailRecipients.gymId, gymId),
+          eq(emailRecipients.emailMessageId, messageId),
+          inArray(emailRecipients.id, recipientIds),
+          eq(emailRecipients.deliveryStatus, 'QUEUED')
+        )
+      )
+      .for('update');
+
+    failedCount = queued.length;
+
+    if (failedCount > 0) {
+      await tx
+        .update(emailRecipients)
+        .set({
+          deliveryStatus: 'FAILED',
+          failureReason: reason,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(emailRecipients.gymId, gymId),
+            inArray(
+              emailRecipients.id,
+              queued.map((row: { id: string }) => row.id)
+            ),
+            eq(emailRecipients.deliveryStatus, 'QUEUED')
+          )
+        );
+
+      await emailQuotaService.releaseReservedQuota(gymId, billingPeriod, failedCount, tx);
+    }
+  }
+
+  await tx
+    .update(emailMessages)
+    .set({ status: 'FAILED', updatedAt: now })
+    .where(and(eq(emailMessages.id, messageId), eq(emailMessages.gymId, gymId)));
+
+  const outboxWhere = ownerWorkerId
+    ? and(
+        eq(emailOutbox.id, jobId),
+        eq(emailOutbox.jobStatus, 'PROCESSING'),
+        eq(emailOutbox.lockedBy, ownerWorkerId)
+      )
+    : eq(emailOutbox.id, jobId);
+
+  await tx
+    .update(emailOutbox)
+    .set({
+      jobStatus: 'FAILED',
+      lastError: reason,
+      completedAt: now,
+      updatedAt: now,
+      currentAttemptId: null,
+      lockedAt: null,
+      lockedBy: null,
+      leaseExpiresAt: null,
+      lastHeartbeatAt: null,
+    })
+    .where(outboxWhere);
+
+  return failedCount;
+}
+
+/**
+ * Apply a provider-accepted attempt to recipients and quota exactly once.
+ * The recipient rows are locked FOR UPDATE; a concurrent recovery worker sees
+ * them as no longer QUEUED and therefore cannot commit quota twice.
+ */
+async function applyAcceptedAttempt(
+  tx: any,
+  job: any,
+  attempt: DispatchAttemptRow,
+  now: Date
+): Promise<void> {
+  const messageRows = await tx
+    .select()
+    .from(emailMessages)
+    .where(and(eq(emailMessages.id, job.emailMessageId), eq(emailMessages.gymId, job.gymId)))
+    .limit(1);
+  const message = messageRows[0];
+  if (!message) return;
+
+  const recipientIds = Array.isArray(attempt.recipientBatchIds)
+    ? (attempt.recipientBatchIds as string[])
+    : [];
+
+  let queued: RecipientRow[] = [];
+  if (recipientIds.length > 0) {
+    queued = await tx
+      .select()
+      .from(emailRecipients)
+      .where(
+        and(
+          eq(emailRecipients.gymId, job.gymId),
+          eq(emailRecipients.emailMessageId, job.emailMessageId),
+          inArray(emailRecipients.id, recipientIds),
+          eq(emailRecipients.deliveryStatus, 'QUEUED')
+        )
+      )
+      .for('update');
+  }
+
+  if (queued.length > 0) {
+    const providerMessages = (attempt.providerResponse as any)?.messages || {};
+
+    for (const rec of queued) {
+      const pMsg = providerMessages[rec.recipientEmail];
+      await tx
+        .update(emailRecipients)
+        .set({
+          deliveryStatus: 'SENT',
+          providerMessageId: pMsg
+            ? String(pMsg.id)
+            : attempt.providerMessageId || rec.providerMessageId,
+          providerToken: pMsg?.token || rec.providerToken,
+          attempts: rec.attempts + 1,
+          lastAttemptAt: attempt.requestCompletedAt || now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(emailRecipients.id, rec.id),
+            eq(emailRecipients.deliveryStatus, 'QUEUED')
+          )
+        );
+    }
+
+    await emailQuotaService.commitQuota(
+      job.gymId,
+      billingPeriodFor(message),
+      queued.length,
+      queued.length,
+      tx
+    );
+  }
+
+  await tx
+    .update(emailDispatchAttempts)
+    .set({
+      reconciliationNotes:
+        'Provider acceptance was recorded before recipient state was applied. Recipients were applied from the durable batch during lease recovery; no provider resend occurred.',
+      updatedAt: now,
+    })
+    .where(eq(emailDispatchAttempts.id, attempt.id));
+
+  await finalizeJob(tx, job.id, job.emailMessageId, job.gymId, now);
+
+  logger.warn('[emailWorker] Applied ACCEPTED attempt after lease expiry without resending', {
+    jobId: job.id,
+    attemptId: attempt.id,
+  });
+}
+
+/**
+ * Sweep for expired worker leases (zombie jobs).
+ *  - Crash before any attempt: reset to PENDING (safe).
+ *  - Crash with DISPATCHING attempt: reconciliation (outcome unknown).
+ *  - Crash after ACCEPTED: apply the durable batch, never resend.
  */
 export async function recoverExpiredLeases(): Promise<number> {
   const now = new Date();
-  
-  // Find jobs stuck in PROCESSING where lease has expired
-  const expiredJobs = await db
-    .select()
+
+  const candidates = await db
+    .select({ id: emailOutbox.id })
     .from(emailOutbox)
     .where(
       and(
@@ -51,66 +407,129 @@ export async function recoverExpiredLeases(): Promise<number> {
 
   let recoveredCount = 0;
 
-  for (const job of expiredJobs) {
-    // Check if there is an active dispatch attempt
-    if (job.currentAttemptId) {
-      const [attempt] = await db
+  for (const candidate of candidates) {
+    // Re-read under a row lock. A heartbeat that renewed the lease after the
+    // candidate query must win; recovery must never clobber a live owner.
+    const recovered = await db.transaction(async (tx) => {
+      const [job] = await tx
         .select()
-        .from(emailDispatchAttempts)
-        .where(eq(emailDispatchAttempts.id, job.currentAttemptId))
+        .from(emailOutbox)
+        .where(
+          and(
+            eq(emailOutbox.id, candidate.id),
+            eq(emailOutbox.jobStatus, 'PROCESSING'),
+            lt(emailOutbox.leaseExpiresAt, now)
+          )
+        )
+        .for('update')
         .limit(1);
 
-      if (attempt && attempt.attemptStatus === 'DISPATCHING') {
-        // Worker died while request was in-flight or before persisting Postal response!
-        // Blind retry is strictly forbidden because Postal may have accepted and sent the emails.
-        logger.error('[emailWorker] Zombie lease recovery: dispatch attempt was in-flight. Flagging RECONCILIATION_REQUIRED', {
-          jobId: job.id,
-          attemptId: attempt.id,
-        });
+      if (!job) return false;
 
-        await db.transaction(async (tx) => {
-          await tx
-            .update(emailDispatchAttempts)
-            .set({
-              attemptStatus: 'UNKNOWN_OUTCOME',
-              reconciliationNotes: 'Worker crashed or lease expired while dispatch was in-flight. Manual reconciliation or Postal status probe required.',
-              updatedAt: now,
-            })
-            .where(eq(emailDispatchAttempts.id, attempt.id));
+      if (job.currentAttemptId) {
+        const [attempt] = await tx
+          .select()
+          .from(emailDispatchAttempts)
+          .where(eq(emailDispatchAttempts.id, job.currentAttemptId))
+          .limit(1);
+
+        if (attempt?.attemptStatus === 'ACCEPTED') {
+          await applyAcceptedAttempt(tx, job, attempt, now);
+          return true;
+        }
+
+        if (
+          attempt &&
+          (attempt.attemptStatus === 'DISPATCHING' ||
+            attempt.attemptStatus === 'UNKNOWN_OUTCOME' ||
+            attempt.attemptStatus === 'RECONCILIATION_REQUIRED')
+        ) {
+          // Provider may have accepted before the crash. A retry could duplicate.
+          logger.error('[emailWorker] Zombie lease recovery: dispatch outcome unresolved. Flagging RECONCILIATION_REQUIRED', {
+            jobId: job.id,
+            attemptId: attempt.id,
+            attemptStatus: attempt.attemptStatus,
+          });
+
+          if (attempt.attemptStatus === 'DISPATCHING') {
+            await tx
+              .update(emailDispatchAttempts)
+              .set({
+                attemptStatus: 'UNKNOWN_OUTCOME',
+                reconciliationNotes:
+                  'Worker crashed or lease expired while dispatch was in-flight. Manual reconciliation or Postal status probe required.',
+                updatedAt: now,
+              })
+              .where(eq(emailDispatchAttempts.id, attempt.id));
+          }
 
           await tx
             .update(emailOutbox)
             .set({
               jobStatus: 'RECONCILIATION_REQUIRED',
-              lastError: 'Worker crashed during dispatch attempt. Outcome unknown; automatic retry prohibited.',
+              lastError:
+                'Worker crashed during dispatch attempt. Outcome unknown; automatic retry prohibited.',
               updatedAt: now,
+              leaseExpiresAt: null,
+              lastHeartbeatAt: null,
             })
             .where(eq(emailOutbox.id, job.id));
-        });
 
-        recoveredCount++;
-        continue;
+          return true;
+        }
+
+        if (
+          attempt &&
+          (attempt.attemptStatus === 'REJECTED' ||
+            attempt.attemptStatus === 'FAILED_PERMANENT')
+        ) {
+          const [message] = await tx
+            .select()
+            .from(emailMessages)
+            .where(eq(emailMessages.id, job.emailMessageId))
+            .limit(1);
+
+          if (message) {
+            const ids = Array.isArray(attempt.recipientBatchIds)
+              ? (attempt.recipientBatchIds as string[])
+              : [];
+            await failQueuedBatch(
+              tx,
+              job.id,
+              job.emailMessageId,
+              job.gymId,
+              ids,
+              billingPeriodFor(message),
+              'Provider permanently rejected the batch and the worker lease expired before cleanup.',
+              now
+            );
+            return true;
+          }
+        }
       }
-    }
 
-    // Otherwise, worker crashed before dispatch was initiated -> safe to re-queue
-    logger.warn('[emailWorker] Zombie lease recovery: worker crashed before dispatch. Resetting to PENDING', {
-      jobId: job.id,
+      // No attempt was created (or it has no provider outcome): safe to re-queue.
+      logger.warn('[emailWorker] Zombie lease recovery: resetting un-dispatched job to PENDING', {
+        jobId: job.id,
+      });
+
+      await tx
+        .update(emailOutbox)
+        .set({
+          jobStatus: 'PENDING',
+          lockedAt: null,
+          lockedBy: null,
+          leaseExpiresAt: null,
+          lastHeartbeatAt: null,
+          currentAttemptId: null,
+          updatedAt: now,
+        })
+        .where(eq(emailOutbox.id, job.id));
+
+      return true;
     });
 
-    await db
-      .update(emailOutbox)
-      .set({
-        jobStatus: 'PENDING',
-        lockedAt: null,
-        lockedBy: null,
-        leaseExpiresAt: null,
-        currentAttemptId: null,
-        updatedAt: now,
-      })
-      .where(eq(emailOutbox.id, job.id));
-
-    recoveredCount++;
+    if (recovered) recoveredCount++;
   }
 
   return recoveredCount;
@@ -121,14 +540,12 @@ export async function processOutboxJobs(): Promise<void> {
   isProcessing = true;
 
   try {
-    // 0. Recover any zombie leases first
     await recoverExpiredLeases();
 
     const now = new Date();
     const leaseExpires = new Date(now.getTime() + WORKER_LEASE_MS);
     const workerId = `worker_${process.pid}_${Math.random().toString(36).slice(2, 6)}`;
 
-    // 1. Lock a batch of pending jobs
     const pendingJobs = await db
       .update(emailOutbox)
       .set({
@@ -163,6 +580,53 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
   const { id: jobId, gymId, emailMessageId } = job;
   const activeWorkerId = workerId || job.lockedBy || `worker_${process.pid}`;
 
+  let batchRecipients: RecipientRow[] = [];
+  let billingPeriod = emailQuotaService.getCurrentBillingPeriod();
+  let leaseLost = false;
+  let heartbeatTimer: NodeJS.Timeout | null = null;
+
+  // Refuse to act unless this worker owns an unexpired PROCESSING lease.
+  const initialOwnership = await db
+    .select({ id: emailOutbox.id })
+    .from(emailOutbox)
+    .where(
+      and(
+        eq(emailOutbox.id, jobId),
+        eq(emailOutbox.jobStatus, 'PROCESSING'),
+        eq(emailOutbox.lockedBy, activeWorkerId),
+        gt(emailOutbox.leaseExpiresAt, new Date())
+      )
+    )
+    .limit(1);
+
+  if (initialOwnership.length === 0) {
+    logger.warn('[emailWorker] Refusing to process job without an active owned lease', {
+      jobId,
+      workerId: activeWorkerId,
+    });
+    return;
+  }
+
+  heartbeatTimer = setInterval(() => {
+    void renewWorkerLease(jobId, activeWorkerId)
+      .then((renewed) => {
+        if (!renewed) {
+          leaseLost = true;
+          logger.warn('[emailWorker] Lease lost during processing; worker will not commit state', {
+            jobId,
+            workerId: activeWorkerId,
+          });
+        }
+      })
+      .catch((err) => {
+        logger.warn('[emailWorker] Lease heartbeat failed; retaining current lease until expiry', {
+          jobId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+  }, LEASE_RENEW_INTERVAL_MS);
+  heartbeatTimer.unref();
+
   try {
     // 1. Load message
     const msgRows = await db
@@ -175,12 +639,14 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
       await db
         .update(emailOutbox)
         .set({ jobStatus: 'FAILED', lastError: 'Parent email message not found', completedAt: new Date() })
-        .where(eq(emailOutbox.id, jobId));
+        .where(and(eq(emailOutbox.id, jobId), eq(emailOutbox.lockedBy, activeWorkerId)));
       return;
     }
 
     const message = msgRows[0];
     if (!message) return;
+
+    billingPeriod = billingPeriodFor(message);
 
     // 2. Fetch pending recipients for this message
     const recipients = await db
@@ -196,111 +662,173 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
       .limit(config.EMAIL_BATCH_SIZE || 25);
 
     if (recipients.length === 0) {
-      await db
-        .update(emailMessages)
-        .set({ status: 'COMPLETED', completedAt: new Date(), updatedAt: new Date() })
-        .where(eq(emailMessages.id, emailMessageId));
-
-      await db
-        .update(emailOutbox)
-        .set({ jobStatus: 'COMPLETED', completedAt: new Date(), updatedAt: new Date() })
-        .where(eq(emailOutbox.id, jobId));
+      await db.transaction(async (tx) => {
+        await assertJobOwnership(tx, jobId, activeWorkerId, new Date());
+        await finalizeJob(tx, jobId, emailMessageId, gymId, new Date());
+      });
       return;
     }
 
-    // 3. Check suppressions
-    const emailList = recipients.map((r) => r.recipientEmail.toLowerCase());
-    const suppressions = await db
-      .select()
-      .from(emailSuppressions)
-      .where(inArray(emailSuppressions.emailAddress, emailList));
+    // 3. Check suppressions (re-check at dispatch time)
+    const suppressedSet = await findSuppressedEmails(
+      db,
+      recipients.map((r) => r.recipientEmail)
+    );
 
-    const suppressedSet = new Set(suppressions.map((s) => s.emailAddress.toLowerCase()));
+    const activeRecipients = recipients.filter(
+      (r) => !suppressedSet.has(r.recipientEmail.toLowerCase())
+    );
+    const skippedRecipients = recipients.filter((r) =>
+      suppressedSet.has(r.recipientEmail.toLowerCase())
+    );
 
-    const activeRecipients = recipients.filter((r) => !suppressedSet.has(r.recipientEmail.toLowerCase()));
-    const skippedRecipients = recipients.filter((r) => suppressedSet.has(r.recipientEmail.toLowerCase()));
+    // Mark suppressed and release their quota in one transaction. If this
+    // commits and the worker crashes, the recipients are no longer QUEUED, so
+    // the release cannot run twice.
+    if (skippedRecipients.length > 0) {
+      await db.transaction(async (tx) => {
+        await assertJobOwnership(tx, jobId, activeWorkerId, new Date());
+        await tx
+          .update(emailRecipients)
+          .set({
+            deliveryStatus: 'SUPPRESSED',
+            failureReason: 'Address suppressed due to previous bounce or opt-out',
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(emailRecipients.gymId, gymId),
+              inArray(
+                emailRecipients.id,
+                skippedRecipients.map((r) => r.id)
+              ),
+              eq(emailRecipients.deliveryStatus, 'QUEUED')
+            )
+          );
 
-    // Mark suppressed
-    for (const skipped of skippedRecipients) {
-      await db
-        .update(emailRecipients)
-        .set({
-          deliveryStatus: 'SUPPRESSED',
-          failureReason: 'Address suppressed due to previous bounce or opt-out',
-          updatedAt: new Date(),
-        })
-        .where(eq(emailRecipients.id, skipped.id));
+        await emailQuotaService.releaseReservedQuota(gymId, billingPeriod, skippedRecipients.length, tx);
+      });
     }
 
+    batchRecipients = activeRecipients;
+
     if (activeRecipients.length > 0) {
-      const attemptNumber = (job.attempts || 0) + 1;
       const attemptStartTime = new Date();
       const leaseExpires = new Date(attemptStartTime.getTime() + WORKER_LEASE_MS);
 
-      // 4A. Create durable email_dispatch_attempt record in state DISPATCHING before invoking provider
-      const [dispatchAttempt] = await db
-        .insert(emailDispatchAttempts)
-        .values({
-          gymId,
-          emailMessageId,
-          outboxId: jobId,
-          attemptNumber,
-          attemptStatus: 'DISPATCHING',
-          provider: 'POSTAL',
-          recipientCount: activeRecipients.length,
-          recipientBatchIds: activeRecipients.map((r) => r.id),
-          workerId: activeWorkerId,
-          requestStartedAt: attemptStartTime,
-          leaseExpiresAt: leaseExpires,
-          lastHeartbeatAt: attemptStartTime,
-        })
-        .returning();
+      // 4A. Allocate a monotonic attempt number per outbox and durably record
+      // DISPATCHING before the provider call. MAX+1 respects the existing
+      // unique (outbox_id, attempt_number) index across batches and retries.
+      const dispatchAttempt = await db.transaction(async (tx) => {
+        await assertJobOwnership(tx, jobId, activeWorkerId, attemptStartTime);
 
-      // Attach currentAttemptId to outbox row
-      await db
-        .update(emailOutbox)
-        .set({
-          currentAttemptId: dispatchAttempt!.id,
-          leaseExpiresAt: leaseExpires,
-          lastHeartbeatAt: attemptStartTime,
-          updatedAt: attemptStartTime,
-        })
-        .where(eq(emailOutbox.id, jobId));
+        const maxRows = await tx
+          .select({
+            maxAttempt: sql<number>`coalesce(max(${emailDispatchAttempts.attemptNumber}), 0)`,
+          })
+          .from(emailDispatchAttempts)
+          .where(eq(emailDispatchAttempts.outboxId, jobId));
 
-      // 4B. Submit to Postal
+        const attemptNumber = Number(maxRows[0]?.maxAttempt || 0) + 1;
+
+        const inserted = await tx
+          .insert(emailDispatchAttempts)
+          .values({
+            gymId,
+            emailMessageId,
+            outboxId: jobId,
+            attemptNumber,
+            attemptStatus: 'DISPATCHING',
+            provider: config.EMAIL_DELIVERY_PROVIDER === 'brevo' ? 'BREVO' : 'POSTAL',
+            recipientCount: activeRecipients.length,
+            recipientBatchIds: activeRecipients.map((r) => r.id),
+            workerId: activeWorkerId,
+            requestStartedAt: attemptStartTime,
+            leaseExpiresAt: leaseExpires,
+            lastHeartbeatAt: attemptStartTime,
+          })
+          .returning();
+
+        const attempt = inserted[0];
+        if (!attempt) throw new Error('Failed to create dispatch attempt.');
+
+        await tx
+          .update(emailOutbox)
+          .set({
+            currentAttemptId: attempt.id,
+            leaseExpiresAt: leaseExpires,
+            lastHeartbeatAt: attemptStartTime,
+            updatedAt: attemptStartTime,
+          })
+          .where(eq(emailOutbox.id, jobId));
+
+        return attempt;
+      });
+
+      // 4B. Submit to Postal only while still holding the owned lease.
+      if (leaseLost || !(await renewWorkerLease(jobId, activeWorkerId))) {
+        throw new LeaseOwnershipLostError(jobId);
+      }
+
+      // 4B. Dispatch through the provider router (Brevo or Postal), keyed by
+      // the snapshot provider recorded on the dispatch attempt.
+      type DeliverySendInput = {
+        gymId: string;
+        emailMessageId: string;
+        to: string[];
+        htmlContent: string;
+        textContent?: string;
+        senderName?: string;
+        senderEmail?: string;
+        batchIndex: number;
+        recipientBatchIds: string[];
+      };
+      const dispatchInput: DeliverySendInput = {
+        gymId,
+        emailMessageId,
+        to: activeRecipients.map((r) => r.recipientEmail),
+        htmlContent: message.bodyHtml,
+        textContent: message.bodyText || undefined,
+        senderName: message.senderDisplayName || 'GymDeck',
+        senderEmail: message.fromAddress,
+        batchIndex: dispatchAttempt.attemptNumber - 1,
+        recipientBatchIds: activeRecipients.map((r) => r.id),
+      };
+
       let sendResult: any;
       try {
-        sendResult = await postalClient.sendMessage({
-          to: activeRecipients.map((r) => r.recipientEmail),
-          from: `${message.senderDisplayName || 'GymDeck'} <${message.fromAddress}>`,
-          replyTo: message.replyToAddress || undefined,
-          subject: message.subject,
-          htmlBody: message.bodyHtml,
-          plainBody: message.bodyText || undefined,
-          tag: `gym_${gymId}`,
-          customHeaders: {
-            'X-GymDeck-Tenant': gymId,
-            'X-GymDeck-Message-Id': emailMessageId,
-            'X-GymDeck-Attempt-Id': dispatchAttempt!.id,
-          },
-        });
-      } catch (postalErr: any) {
-        const isPostalApiError = postalErr instanceof PostalApiError;
-        const errorMsg = postalErr instanceof Error ? postalErr.message : String(postalErr);
-        const isAmbiguous = isPostalApiError ? postalErr.isAmbiguous : true;
-        const category = isPostalApiError ? postalErr.category : 'AMBIGUOUS_TIMEOUT';
-        const httpStatus = isPostalApiError ? postalErr.httpStatus : undefined;
-        const errorCode = isPostalApiError ? postalErr.code : undefined;
+        const dispatchResult = await providerRouter.dispatch(dispatchInput);
+        if (!dispatchResult.ok) {
+          throw new Error(`Provider dispatch failed: ${JSON.stringify(dispatchResult.result)}`);
+        }
+        sendResult = dispatchResult.result;
+      } catch (providerErr: any) {
+        if (leaseLost || !(await renewWorkerLease(jobId, activeWorkerId))) {
+          throw new LeaseOwnershipLostError(jobId);
+        }
 
-        // Determine terminal versus retryable status
-        // CLIENT_REJECTED (400, 422) & AUTH_FAILED (401, 403) are permanent failure: retrying will never succeed
-        // AMBIGUOUS_TIMEOUT: Must transition to UNKNOWN_OUTCOME / RECONCILIATION_REQUIRED (no blind retry)
-        // SERVER_ERROR (5xx) & CONNECTION_FAILED (ECONNREFUSED before sending): Definite retryable non-dispatch
+        const errorMsg = providerErr instanceof Error ? providerErr.message : String(providerErr);
         let attemptStatus: 'UNKNOWN_OUTCOME' | 'REJECTED' | 'FAILED' = 'UNKNOWN_OUTCOME';
-        if (isAmbiguous) {
-          attemptStatus = 'UNKNOWN_OUTCOME';
-        } else if (category === 'CLIENT_REJECTED' || category === 'AUTH_FAILED') {
-          attemptStatus = 'REJECTED';
+        let category = 'AMBIGUOUS_TIMEOUT';
+        let httpStatus: number | null = null;
+        let errorCode: string | null = null;
+
+        if (providerErr && typeof providerErr === 'object') {
+          if ('isAmbiguous' in providerErr && Boolean((providerErr as any)?.isAmbiguous)) {
+            attemptStatus = 'UNKNOWN_OUTCOME';
+            category = (providerErr as any).category || 'AMBIGUOUS_TIMEOUT';
+            httpStatus = (providerErr as any)?.httpStatus || null;
+            errorCode = (providerErr as any)?.code || null;
+          } else if ('category' in providerErr && Boolean((providerErr as any)?.category)) {
+            attemptStatus = (providerErr as any).category === 'CLIENT_REJECTED' || (providerErr as any).category === 'AUTH_FAILED'
+              ? 'REJECTED'
+              : 'FAILED';
+            category = (providerErr as any).category;
+            httpStatus = (providerErr as any)?.httpStatus || null;
+            errorCode = (providerErr as any)?.code || null;
+          } else {
+            attemptStatus = 'FAILED';
+          }
         } else {
           attemptStatus = 'FAILED';
         }
@@ -314,106 +842,155 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
             errorMessage: errorMsg,
             requestCompletedAt: new Date(),
             updatedAt: new Date(),
-            reconciliationNotes: isAmbiguous ? 'Network timeout or ambiguous provider state. Blind retry blocked.' : undefined,
+            reconciliationNotes: (providerErr as any)?.isAmbiguous
+              ? 'Network timeout or ambiguous provider state. Blind retry blocked.'
+              : undefined,
           })
-          .where(eq(emailDispatchAttempts.id, dispatchAttempt!.id));
+          .where(
+            and(
+              eq(emailDispatchAttempts.id, dispatchAttempt.id),
+              eq(emailDispatchAttempts.workerId, activeWorkerId)
+            )
+          );
 
-        throw postalErr;
+        throw providerErr;
       }
 
       const providerData = sendResult.data;
       const providerMessages = providerData?.messages || {};
       const completedTime = new Date();
 
-      // 4C. Update dispatch attempt to ACCEPTED
-      await db
-        .update(emailDispatchAttempts)
-        .set({
-          attemptStatus: 'ACCEPTED',
-          providerMessageId: providerData?.message_id ? String(providerData.message_id) : null,
-          httpStatus: 200,
-          providerResponse: providerData,
-          requestCompletedAt: completedTime,
-          updatedAt: completedTime,
-        })
-        .where(eq(emailDispatchAttempts.id, dispatchAttempt!.id));
-
-      // 4D. Update recipients
-      for (const rec of activeRecipients) {
-        const pMsg = providerMessages[rec.recipientEmail];
-        await db
-          .update(emailRecipients)
-          .set({
-            deliveryStatus: 'SENT',
-            providerMessageId: pMsg ? String(pMsg.id) : (providerData?.message_id ? String(providerData.message_id) : undefined),
-            providerToken: pMsg ? pMsg.token : undefined,
-            attempts: rec.attempts + 1,
-            lastAttemptAt: completedTime,
-            updatedAt: completedTime,
-          })
-          .where(eq(emailRecipients.id, rec.id));
+      // 4C. Persist acceptance, recipient state and quota in one transaction.
+      // A crash cannot leave ACCEPTED persisted without the batch application.
+      if (leaseLost || !(await renewWorkerLease(jobId, activeWorkerId))) {
+        throw new LeaseOwnershipLostError(jobId);
       }
 
-      // Update message counts & billing
-      const billingPeriod = emailQuotaService.getCurrentBillingPeriod(message.createdAt);
-      await emailQuotaService.commitQuota(gymId, billingPeriod, activeRecipients.length, activeRecipients.length);
+      await db.transaction(async (tx) => {
+        await assertJobOwnership(tx, jobId, activeWorkerId, completedTime);
 
-      await db
-        .update(emailMessages)
-        .set({
-          status: 'SENDING',
-          updatedAt: completedTime,
-        })
-        .where(eq(emailMessages.id, emailMessageId));
-    }
+        await tx
+          .update(emailDispatchAttempts)
+          .set({
+            attemptStatus: 'ACCEPTED',
+            providerMessageId: providerData?.message_id ? String(providerData.message_id) : null,
+            httpStatus: 200,
+            providerResponse: providerData,
+            requestCompletedAt: completedTime,
+            updatedAt: completedTime,
+          })            .where(
+              and(
+                eq(emailDispatchAttempts.id, dispatchAttempt.id),
+                eq(emailDispatchAttempts.workerId, activeWorkerId),
+                eq(emailDispatchAttempts.attemptStatus, 'DISPATCHING')
+              )
+            );
 
-    // 5. Check if more recipients remain
-    const remainingCountRows = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(emailRecipients)
-      .where(
-        and(
-          eq(emailRecipients.emailMessageId, emailMessageId),
-          eq(emailRecipients.gymId, gymId),
-          eq(emailRecipients.deliveryStatus, 'QUEUED')
-        )
-      );
+        const acceptedRecipients: RecipientRow[] = [];
+        const rejectedRecipients: RecipientRow[] = [];
 
-    const remaining = Number(remainingCountRows[0]?.count || 0);
+        for (const rec of activeRecipients) {
+          const pMsg = providerMessages[rec.recipientEmail];
+          if (pMsg || providerData?.message_id) {
+            acceptedRecipients.push(rec);
+            await tx
+              .update(emailRecipients)
+              .set({
+                deliveryStatus: 'SENT',
+                providerMessageId: pMsg
+                  ? String(pMsg.id)
+                  : providerData?.message_id
+                    ? String(providerData.message_id)
+                    : undefined,
+                providerToken: pMsg ? pMsg.token : undefined,
+                attempts: rec.attempts + 1,
+                lastAttemptAt: completedTime,
+                updatedAt: completedTime,
+              })
+              .where(
+                and(
+                  eq(emailRecipients.id, rec.id),
+                  eq(emailRecipients.deliveryStatus, 'QUEUED')
+                )
+              );
+          } else {
+            rejectedRecipients.push(rec);
+          }
+        }
 
-    if (remaining === 0) {
-      await db
-        .update(emailMessages)
-        .set({ status: 'COMPLETED', completedAt: new Date(), updatedAt: new Date() })
-        .where(eq(emailMessages.id, emailMessageId));
+        if (rejectedRecipients.length > 0) {
+          await tx
+            .update(emailRecipients)
+            .set({
+              deliveryStatus: 'FAILED',
+              failureReason: 'Provider accepted the request but returned no recipient record.',
+              updatedAt: completedTime,
+            })
+            .where(
+              and(
+                eq(emailRecipients.gymId, gymId),
+                inArray(
+                  emailRecipients.id,
+                  rejectedRecipients.map((r) => r.id)
+                ),
+                eq(emailRecipients.deliveryStatus, 'QUEUED')
+              )
+            );
+        }
 
-      await db
-        .update(emailOutbox)
-        .set({ jobStatus: 'COMPLETED', completedAt: new Date(), updatedAt: new Date(), currentAttemptId: null })
-        .where(eq(emailOutbox.id, jobId));
+        // Subtract the full reserved batch and consume only confirmed accepts.
+        await emailQuotaService.commitQuota(
+          gymId,
+          billingPeriod,
+          acceptedRecipients.length,
+          activeRecipients.length,
+          tx
+        );
+
+        await tx
+          .update(emailMessages)
+          .set({ status: 'SENDING', updatedAt: completedTime })
+          .where(eq(emailMessages.id, emailMessageId));
+
+        await finalizeJob(tx, jobId, emailMessageId, gymId, completedTime);
+      });
     } else {
-      // Re-queue next slice immediately
-      await db
-        .update(emailOutbox)
-        .set({
-          jobStatus: 'PENDING',
-          nextAttemptAt: new Date(),
-          updatedAt: new Date(),
-          currentAttemptId: null,
-        })
-        .where(eq(emailOutbox.id, jobId));
+      // Only suppressed recipients were in this slice; quota was released above.
+      await db.transaction(async (tx) => {
+        await assertJobOwnership(tx, jobId, activeWorkerId, new Date());
+        await finalizeJob(tx, jobId, emailMessageId, gymId, new Date());
+      });
     }
   } catch (err: any) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
+    if (err instanceof LeaseOwnershipLostError || leaseLost) {
+      logger.warn('[emailWorker] Lease ownership lost; no state was committed by this worker', {
+        jobId,
+        workerId: activeWorkerId,
+      });
+      return;
+    }
+
+    if (!(await renewWorkerLease(jobId, activeWorkerId))) {
+      logger.warn('[emailWorker] Lease could not be renewed after error; no state was committed', {
+        jobId,
+        workerId: activeWorkerId,
+      });
+      return;
+    }
+
+    let errorMsg = err instanceof Error ? err.message : String(err);
     logger.warn('[emailWorker] Delivery error for outbox job', { jobId, error: errorMsg });
+    let isAmbiguous = false;
+    let category = 'AMBIGUOUS_TIMEOUT';
+    let retryAfterSeconds: number | undefined = undefined;
 
-    const isPostalApiError = err instanceof PostalApiError;
-    const isAmbiguous = isPostalApiError ? err.isAmbiguous : true;
-    const category = isPostalApiError ? err.category : 'AMBIGUOUS_TIMEOUT';
-    const retryAfterSeconds = isPostalApiError ? err.retryAfterSeconds : undefined;
+    if (err && typeof err === 'object' && 'isAmbiguous' in err) {
+      isAmbiguous = Boolean((err as any)?.isAmbiguous);
+      category = (err as any).category || 'AMBIGUOUS_TIMEOUT';
+      retryAfterSeconds = (err as any)?.retryAfterSeconds;
+    }
 
-    // If ambiguous (timeout / unknown outcome), STOP automated retries immediately!
-    // Transition job to RECONCILIATION_REQUIRED so operators or probe reconciliation can verify.
+    // Ambiguous outcome: keep the reservation and attempt for reconciliation.
     if (isAmbiguous) {
       await db
         .update(emailOutbox)
@@ -422,60 +999,85 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
           lastError: `Ambiguous dispatch outcome: ${errorMsg}. Automated retry blocked to prevent duplicate send.`,
           updatedAt: new Date(),
         })
-        .where(eq(emailOutbox.id, jobId));
+        .where(
+          and(
+            eq(emailOutbox.id, jobId),
+            eq(emailOutbox.jobStatus, 'PROCESSING'),
+            eq(emailOutbox.lockedBy, activeWorkerId)
+          )
+        );
       return;
     }
 
-    // If permanent client error or auth failed, fail permanently without retrying
+    // Permanent rejection/auth failure before acceptance: release the batch.
     if (category === 'CLIENT_REJECTED' || category === 'AUTH_FAILED') {
-      await db
-        .update(emailOutbox)
-        .set({
-          jobStatus: 'FAILED',
-          lastError: `Permanent provider rejection: ${errorMsg}`,
-          completedAt: new Date(),
-          updatedAt: new Date(),
-          currentAttemptId: null,
-        })
-        .where(eq(emailOutbox.id, jobId));
-
-      await db
-        .update(emailMessages)
-        .set({ status: 'FAILED', updatedAt: new Date() })
-        .where(eq(emailMessages.id, emailMessageId));
+      await db.transaction(async (tx) => {
+        await failQueuedBatch(
+          tx,
+          jobId,
+          emailMessageId,
+          gymId,
+          batchRecipients.map((r) => r.id),
+          billingPeriod,
+          `Permanent provider rejection: ${errorMsg}`,
+          new Date(),
+          activeWorkerId
+        );
+      });
       return;
     }
 
-    // For definite transient failures (SERVER_ERROR 5xx, RATE_LIMITED 429, CONNECTION_FAILED before sending):
+    // Definite transient failure: retry with bounded backoff.
     const newAttempts = (job.attempts || 0) + 1;
     const isTerminal = newAttempts >= (job.maxAttempts || 5);
 
-    // Compute backoff: respect Retry-After header if provided, otherwise exponential backoff with jitter
     let backoffSec = Math.min(1800, Math.pow(2, newAttempts) * 10 + Math.floor(Math.random() * 5));
     if (retryAfterSeconds && retryAfterSeconds > 0) {
       backoffSec = Math.min(1800, retryAfterSeconds);
     }
     const nextAttempt = new Date(Date.now() + backoffSec * 1000);
 
+    if (isTerminal) {
+      await db.transaction(async (tx) => {
+        await failQueuedBatch(
+          tx,
+          jobId,
+          emailMessageId,
+          gymId,
+          batchRecipients.map((r) => r.id),
+          billingPeriod,
+          `Delivery retries exhausted: ${errorMsg}`,
+          new Date(),
+          activeWorkerId
+        );
+      });
+      return;
+    }
+
     await db
       .update(emailOutbox)
       .set({
-        jobStatus: isTerminal ? 'FAILED' : 'PENDING',
+        jobStatus: 'PENDING',
         attempts: newAttempts,
         nextAttemptAt: nextAttempt,
         lastError: errorMsg,
-        completedAt: isTerminal ? new Date() : null,
+        completedAt: null,
         updatedAt: new Date(),
         currentAttemptId: null,
+        lockedAt: null,
+        lockedBy: null,
+        leaseExpiresAt: null,
+        lastHeartbeatAt: null,
       })
-      .where(eq(emailOutbox.id, jobId));
-
-    if (isTerminal) {
-      await db
-        .update(emailMessages)
-        .set({ status: 'FAILED', updatedAt: new Date() })
-        .where(eq(emailMessages.id, emailMessageId));
-    }
+      .where(
+        and(
+          eq(emailOutbox.id, jobId),
+          eq(emailOutbox.jobStatus, 'PROCESSING'),
+          eq(emailOutbox.lockedBy, activeWorkerId)
+        )
+      );
+  } finally {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
   }
 }
 
@@ -493,4 +1095,3 @@ export function stopEmailWorker(): void {
     logger.info('[emailWorker] Email delivery background worker stopped');
   }
 }
-

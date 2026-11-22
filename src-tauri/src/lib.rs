@@ -81,6 +81,7 @@ use commands::inventory_commands::{
     list_inventory_products_command, get_inventory_product_command, create_inventory_product_command,
     update_inventory_product_command, archive_inventory_product_command, unarchive_inventory_product_command,
     upload_inventory_product_image_command, delete_inventory_product_image_command, set_primary_inventory_product_image_command,
+    read_inventory_product_image_data_command,
     receive_inventory_stock_command, adjust_inventory_stock_command, list_inventory_stock_movements_command,
     list_inventory_batches_command, get_inventory_overview_stats_command
 };
@@ -293,6 +294,7 @@ pub fn run() {
         upload_inventory_product_image_command,
         delete_inventory_product_image_command,
         set_primary_inventory_product_image_command,
+        read_inventory_product_image_data_command,
         receive_inventory_stock_command,
         adjust_inventory_stock_command,
         list_inventory_stock_movements_command,

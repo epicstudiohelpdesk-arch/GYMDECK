@@ -56,8 +56,7 @@ const stageRegistry = [
   { stages: ["trainers"], load: () => import("./AllTrainers.jsx"), mount: "mountAllTrainers" },
   { stages: ["assign-trainer"], load: () => import("./AssignTrainer.jsx"), mount: "mountAssignTrainer" },
   { stages: ["staff-roles"], load: () => import("./StaffRoles.jsx"), mount: "mountStaffRoles" },
-  { stages: ["inventory"], load: () => import("./Inventory.jsx"), mount: "mountInventory" },
-  { stages: ["personal-training"], load: () => import("./PTClients.jsx"), mount: "mountPTClients" },
+  { stages: ["inventory"], load: () => import("./Inventory.jsx"), mount: "mountInventory", argKey: "inventoryStage" },
   { stages: ["pt-packages"], load: () => import("./PTPackages.jsx"), mount: "mountPTPackages" },
   { stages: ["notify-members", "whatsapp-hub"], load: () => import("./CommunicationHub.jsx"), mount: "mountWhatsAppHub" },
   { stages: ["email-hub"], load: () => import("./EmailHub.jsx"), mount: "mountEmailHub" },
@@ -725,7 +724,6 @@ const DOM = {
   get assignTrainerStage() { return document.querySelector('[data-stage="assign-trainer"]'); },
   get staffRolesStage() { return document.querySelector('[data-stage="staff-roles"]'); },
   get inventoryStage() { return document.querySelector('[data-stage="inventory"]'); },
-  get ptClientsStage() { return document.querySelector('[data-stage="personal-training"]'); },
   get ptPackagesStage() { return document.querySelector('[data-stage="pt-packages"]'); },
   get notifyMembersStage() { return document.querySelector('[data-stage="notify-members"]'); },
   get whatsappHubStage() { return document.querySelector('[data-stage="whatsapp-hub"]'); },
@@ -743,7 +741,6 @@ const viewLabels = {
   dashboard: "Dashboard",
   members: "All Members",
   "leads-prospects": "Leads & Prospects",
-  "personal-training": "PT Clients",
   "add-new-member": "Add New Member",
   "past-members": "Past Members",
   "membership-plans": "Membership Plans",
@@ -2203,6 +2200,22 @@ const prefillMemberForm = (row) => {
     if (circleEl) circleEl.classList.add("has-photo");
     const changePhotoBtn = document.querySelector("[data-photo-change-btn]");
     if (changePhotoBtn) changePhotoBtn.classList.add("is-visible");
+  }
+
+  // Sync WhatsApp consent checkbox for member
+  const rawMemberStr = row.dataset.rawMember;
+  let isOptedIn = true;
+  if (rawMemberStr) {
+    try {
+      const parsed = JSON.parse(rawMemberStr);
+      if (parsed.whatsapp_opt_in === false || parsed.whatsappOptIn === false || (parsed.notes && parsed.notes.includes("WhatsApp Consent: Opted-Out"))) {
+        isOptedIn = false;
+      }
+    } catch (_) {}
+  }
+  const consentCheckbox = document.getElementById("member-whatsapp-consent");
+  if (consentCheckbox) {
+    consentCheckbox.checked = isOptedIn;
   }
 };
 
@@ -3886,7 +3899,6 @@ const stageVisibilityConfig = [
   { key: "assign-trainer", el: () => DOM.assignTrainerStage },
   { key: "staff-roles", el: () => DOM.staffRolesStage },
   { key: "inventory", el: () => DOM.inventoryStage },
-  { key: "personal-training", el: () => DOM.ptClientsStage },
   { key: "pt-packages", el: () => DOM.ptPackagesStage },
   { key: "notify-members", el: () => DOM.notifyMembersStage },
   { key: "whatsapp-hub", el: () => DOM.whatsappHubStage },
@@ -5060,7 +5072,9 @@ const saveUploadedDocuments = async (submitButton) => {
             const docList = uploadedDocs.map(d => d.label).join(", ");
             const addonsList = typeof getSelectedAddons === "function" ? getSelectedAddons() : [];
             const addonsSummary = addonsList.length > 0 ? `Add-ons: ${addonsList.map(a => `${a.name} (₹${a.fee})`).join(", ")}` : "";
+            const isWhatsappOptedIn = pendingMemberData.whatsappOptIn !== false;
             let parts = [`Joining Fee: ₹${joiningFeeVal}`];
+            parts.push(isWhatsappOptedIn ? "WhatsApp Consent: Opted-In (Registration Modal)" : "WhatsApp Consent: Opted-Out (Registration Modal)");
             if (addonsSummary) parts.push(addonsSummary);
             if (docList) parts.push(docList);
             return parts.join(" | ");
@@ -5072,6 +5086,12 @@ const saveUploadedDocuments = async (submitButton) => {
           deleted_at: null,
           deleted_by_user_id: null
         };
+
+        const isWhatsappOptedIn = pendingMemberData.whatsappOptIn !== false;
+        rustMember.whatsapp_opt_in = isWhatsappOptedIn;
+        rustMember.whatsappOptIn = isWhatsappOptedIn;
+        rustMember.whatsappConsentSource = "REGISTRATION_CHECKBOX";
+        rustMember.whatsappConsentTimestamp = new Date().toISOString();
 
         const rustDocs = uploadedDocs.map(d => {
           const fileBytes = dataUrlToBytes(d.base64);
@@ -5125,6 +5145,14 @@ const saveUploadedDocuments = async (submitButton) => {
 
         // Broadcast member addition event so Communication Hub & other modules refresh instantly
         window.dispatchEvent(new CustomEvent('gymdeck:member-added', { detail: rustMember }));
+
+        // Sync explicit consent state to WhatsApp Engine
+        if (window.whatsappApi?.setConsent) {
+          const consentStatus = rustMember.whatsapp_opt_in ? 'GRANTED' : 'WITHDRAWN';
+          window.whatsappApi.setConsent(memberId, consentStatus, 'REGISTRATION_CHECKBOX').catch((err) => {
+            console.warn("Could not sync member consent to WhatsApp service:", err);
+          });
+        }
 
         // 4. Asynchronously persist to SQLite in background (non-blocking)
         (async () => {

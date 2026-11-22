@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Boxes,
   IndianRupee,
@@ -47,8 +47,8 @@ const normalizeVariants = (product) =>
   }));
 
 const EditorSection = ({ icon, title, description, aside, children }) => (
-  <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-    <SectionHeading icon={icon} title={title} description={description} aside={aside} className="mb-3.5" />
+  <section className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-5 shadow-xs transition-colors hover:border-slate-300">
+    <SectionHeading icon={icon} title={title} description={description} aside={aside} className="mb-4" />
     {children}
   </section>
 );
@@ -104,6 +104,45 @@ export const ProductEditorDrawer = ({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Sync state whenever drawer is opened or target product changes
+  useEffect(() => {
+    if (isOpen) {
+      setName(product?.name || "");
+      setBrand(product?.brand || "");
+      setCategoryId(product?.category_id || "");
+      setSku(product?.sku || "");
+      setBarcode(product?.barcode || "");
+      setShortDescription(product?.short_description || "");
+      setDescription(product?.description || "");
+      setUnitOfMeasure(product?.unit_of_measure || "pcs");
+      setStatus(product?.status || "ACTIVE");
+      setStoreVisibility(product?.store_visibility || "VISIBLE");
+      setCostPrice(
+        product?.cost_price_minor_units != null ? String(product.cost_price_minor_units / 100) : ""
+      );
+      setSellingPrice(
+        product?.selling_price_minor_units != null ? String(product.selling_price_minor_units / 100) : ""
+      );
+      setMrp(product?.mrp_minor_units != null ? String(product.mrp_minor_units / 100) : "");
+      setTaxConfiguration(product?.tax_configuration || "EXEMPT");
+      setTaxRate(product?.tax_rate ? String(product.tax_rate) : "0");
+      setInitialStock(
+        product?.available_quantity != null ? String(product.available_quantity) : "0"
+      );
+      setLowStockThreshold(
+        product?.low_stock_threshold != null ? String(product.low_stock_threshold) : "5"
+      );
+      setBatchTracking(Boolean(product?.batch_tracking_enabled));
+      setExpiryTracking(Boolean(product?.expiry_tracking_enabled));
+      setHasVariants(Boolean(product?.has_variants));
+      setVariants(normalizeVariants(product));
+      setExistingImages(product?.images || []);
+      setStagedUploads([]);
+      setPrimaryImageId(product?.primary_image?.id || null);
+      setError("");
+    }
+  }, [isOpen, product]);
 
   if (!isOpen) return null;
 

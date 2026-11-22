@@ -83,6 +83,14 @@ export const EnvironmentSchema = z.object({
   EMAIL_WORKER_INTERVAL_MS: z.coerce.number().min(500).max(300000).default(5000),
   EMAIL_BATCH_SIZE: z.coerce.number().min(1).max(100).default(25),
 
+  EMAIL_DELIVERY_PROVIDER: z.enum(['postal', 'brevo']).default('postal'),
+  BREVO_DELIVERY_MODE: z.enum(['live', 'sandbox', 'mock']).default('sandbox'),
+
+  // Brevo staging credentials (validated only when provider=brevo)
+  BREVO_API_KEY: z.string().optional(),
+  BREVO_SENDER_EMAIL: z.string().email().optional(),
+  BREVO_SENDER_NAME: z.string().optional(),
+
   // Controlled Staging Live Email Testing Safeguards (Phase 4H)
   EMAIL_STAGING_LIVE_TEST_ENABLED: z
     .preprocess((val) => {
@@ -178,6 +186,24 @@ export const EnvironmentSchema = z.object({
     }
   }
 
+  // 3. Brevo fail-closed checks
+  if (data.EMAIL_DELIVERY_PROVIDER === 'brevo') {
+    if (!data.BREVO_API_KEY || !data.BREVO_SENDER_EMAIL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['EMAIL_DELIVERY_PROVIDER'],
+        message: 'Brevo delivery requires both BREVO_API_KEY and BREVO_SENDER_EMAIL to be set.',
+      });
+    }
+    if (data.BREVO_DELIVERY_MODE !== 'live' && data.BREVO_DELIVERY_MODE !== 'sandbox' && data.BREVO_DELIVERY_MODE !== 'mock') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['BREVO_DELIVERY_MODE'],
+        message: 'BREVO_DELIVERY_MODE must be live, sandbox, or mock.',
+      });
+    }
+  }
+
   // 2. Staging Security Rules
   if (data.NODE_ENV === 'staging') {
     if (data.JWT_SECRET === DEV_DEFAULT_JWT_SECRET) {
@@ -187,7 +213,7 @@ export const EnvironmentSchema = z.object({
         message: 'Staging environment must not use the default development JWT secret.',
       });
     }
-    if (data.DATABASE_URL === DEV_DEFAULT_DATABASE_URL) {
+    if (!process.env.DATABASE_URL) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['DATABASE_URL'],

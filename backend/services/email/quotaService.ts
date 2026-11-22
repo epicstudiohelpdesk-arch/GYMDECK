@@ -39,10 +39,10 @@ export class EmailQuotaService {
   /**
    * Retrieve or initialize this gym's quota row for the billing period.
    */
-  public async getQuotaStatus(gymId: string, targetPeriod?: string): Promise<QuotaStatus> {
+  public async getQuotaStatus(gymId: string, targetPeriod?: string, executor: any = db): Promise<QuotaStatus> {
     const billingPeriod = targetPeriod || this.getCurrentBillingPeriod();
 
-    let rows = await db
+    let rows = await executor
       .select()
       .from(emailMonthlyUsage)
       .where(and(eq(emailMonthlyUsage.gymId, gymId), eq(emailMonthlyUsage.billingPeriod, billingPeriod)))
@@ -50,7 +50,7 @@ export class EmailQuotaService {
 
     if (rows.length === 0) {
       const defaultQuota = config.EMAIL_MONTHLY_QUOTA_DEFAULT || 300;
-      await db
+      await executor
         .insert(emailMonthlyUsage)
         .values({
           gymId,
@@ -61,7 +61,7 @@ export class EmailQuotaService {
         })
         .onConflictDoNothing();
 
-      rows = await db
+      rows = await executor
         .select()
         .from(emailMonthlyUsage)
         .where(and(eq(emailMonthlyUsage.gymId, gymId), eq(emailMonthlyUsage.billingPeriod, billingPeriod)))
@@ -90,18 +90,18 @@ export class EmailQuotaService {
    * Atomically reserve quota units for an outgoing email batch.
    * Throws 429 if requested count exceeds remaining allowance.
    */
-  public async reserveQuota(gymId: string, recipientCount: number): Promise<QuotaStatus> {
+  public async reserveQuota(gymId: string, recipientCount: number, executor: any = db): Promise<QuotaStatus> {
     if (recipientCount <= 0) {
       throw AppError.validation('Recipient count must be greater than zero.');
     }
 
     const billingPeriod = this.getCurrentBillingPeriod();
 
-    // Ensure record exists
-    await this.getQuotaStatus(gymId, billingPeriod);
+    // Ensure record exists in the same transaction/connection.
+    await this.getQuotaStatus(gymId, billingPeriod, executor);
 
     // Conditional atomic update
-    const result = await db
+    const result = await executor
       .update(emailMonthlyUsage)
       .set({
         reservedCount: sql`${emailMonthlyUsage.reservedCount} + ${recipientCount}`,
@@ -117,7 +117,7 @@ export class EmailQuotaService {
       .returning();
 
     if (result.length === 0 || !result[0]) {
-      const status = await this.getQuotaStatus(gymId, billingPeriod);
+      const status = await this.getQuotaStatus(gymId, billingPeriod, executor);
       throw AppError.rateLimited(
         `Email quota exceeded. This broadcast requires ${recipientCount} units, but only ${status.remainingQuota} remaining for this month (${billingPeriod}).`
       );
@@ -143,12 +143,13 @@ export class EmailQuotaService {
     gymId: string,
     billingPeriod: string,
     actualSentCount: number,
-    originalReservedCount: number
+    originalReservedCount: number,
+    executor: any = db
   ): Promise<void> {
     const unreserveDelta = originalReservedCount;
     const consumedDelta = actualSentCount;
 
-    await db
+    await executor
       .update(emailMonthlyUsage)
       .set({
         reservedCount: sql`GREATEST(0, ${emailMonthlyUsage.reservedCount} - ${unreserveDelta})`,
@@ -164,9 +165,12 @@ export class EmailQuotaService {
   public async releaseReservedQuota(
     gymId: string,
     billingPeriod: string,
-    releaseCount: number
+    releaseCount: number,
+    executor: any = db
   ): Promise<void> {
-    await db
+    if (releaseCount <= 0) return;
+
+    await executor
       .update(emailMonthlyUsage)
       .set({
         reservedCount: sql`GREATEST(0, ${emailMonthlyUsage.reservedCount} - ${releaseCount})`,

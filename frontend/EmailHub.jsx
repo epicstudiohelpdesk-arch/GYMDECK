@@ -15,6 +15,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
+import BrandFooter from './BrandFooter.jsx';
 import {
   Mail,
   Send,
@@ -1153,6 +1154,7 @@ export default function EmailHub() {
             document.body
           )
         : null}
+      <BrandFooter />
     </div>
   );
 }

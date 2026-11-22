@@ -383,7 +383,7 @@ const AssignTrainer = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/90">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-            <span>Trainers &amp; Staff</span>
+            <span>Personal Training</span>
             <ChevronRight size={13} className="text-slate-300" />
             <span className="text-indigo-600 font-black">Assign Trainer</span>
           </div>

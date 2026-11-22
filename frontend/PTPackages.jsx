@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import {
@@ -13,6 +14,7 @@ import {
   Clock,
   Activity,
   CheckCircle2,
+  Check,
   AlertCircle,
   BarChart3,
   Shield,
@@ -148,59 +150,81 @@ const KPICard = ({ label, value, subtext, icon: Icon, tone = "indigo" }) => {
 // ─────────────────────────────────────────
 // CUSTOM SELECT COMPONENT
 // ─────────────────────────────────────────
-function CustomSelect({ label, value, onChange, options }) {
+function CustomSelect({ value, onChange, placeholder, options, grid = "", label }) {
   const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (selectRef.current && !selectRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const selectedItem = options.find((opt) =>
+    typeof opt === "string" ? opt === value : opt.value === value
+  );
+  const displayLabel = selectedItem
+    ? typeof selectedItem === "string"
+      ? selectedItem
+      : selectedItem.label
+    : (placeholder || label || "Select option");
 
   return (
-    <div className="space-y-1.5 relative">
-      {label && <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between hover:bg-slate-100 transition-all text-left cursor-pointer"
+    <div ref={selectRef} className={`custom-select-wrapper ${isOpen ? "is-open" : ""}`}>
+      <div
+        className="custom-dropdown-trigger cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+        tabIndex={0}
+      >
+        <span className={`custom-dropdown-value ${!value ? "placeholder" : ""}`}>
+          {displayLabel}
+        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <span>{value}</span>
-          <ChevronDown size={14} className={cn("text-slate-400 transition-transform", isOpen && "rotate-180")} />
-        </button>
-
-        <AnimatePresence>
-          {isOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.12, ease: "easeOut" }}
-                className="absolute left-0 right-0 top-[48px] bg-white rounded-xl border border-slate-200 shadow-xl py-1 z-50 overflow-hidden max-h-48 overflow-y-auto"
-              >
-                {options.map((option) => {
-                  const isSelected = value === option;
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        onChange(option);
-                        setIsOpen(false);
-                      }}
-                      className={cn(
-                        "w-full px-4 py-2.5 text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer",
-                        isSelected
-                          ? "bg-slate-900 text-white"
-                          : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                      )}
-                    >
-                      <span>{option}</span>
-                      {isSelected && <CheckCircle2 size={12} className="text-emerald-400" />}
-                    </button>
-                  );
-                })}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+      <div className={`custom-dropdown-menu ${grid}`}>
+        {placeholder && (
+          <div
+            className={`custom-dropdown-item placeholder ${!value ? "is-selected" : ""}`}
+            onClick={() => {
+              onChange("");
+              setIsOpen(false);
+            }}
+          >
+            {placeholder}
+          </div>
+        )}
+        {options.map((opt) => {
+          const val = typeof opt === "string" ? opt : opt.value;
+          const lbl = typeof opt === "string" ? opt : opt.label;
+          const isSelected = value === val;
+          return (
+            <div
+              key={val}
+              className={`custom-dropdown-item ${isSelected ? "is-selected" : ""}`}
+              onClick={() => {
+                onChange(val);
+                setIsOpen(false);
+              }}
+            >
+              {lbl}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -641,7 +665,12 @@ function PackageDetailsModal({ pkg, isOpen, onClose, onEdit, onDelete }) {
 // CREATE / EDIT PACKAGE MODAL
 // ─────────────────────────────────────────
 function CreatePackageModal({ isOpen, onClose, onSave, editingPackage }) {
+  const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState(1);
+  const [errors, setErrors] = useState({});
+  const [alertMessage, setAlertMessage] = useState("");
+  const [whatsappConsent, setWhatsappConsent] = useState(true);
+
   const [formData, setFormData] = useState({
     name: "",
     category: "Transformation",
@@ -652,6 +681,10 @@ function CreatePackageModal({ isOpen, onClose, onSave, editingPackage }) {
     frequency: "3 sessions/week",
     validity: "90 Days",
     price: "",
+    commissionSplit: "60% Trainer / 40% Gym",
+    commitment: "Standard Commitment",
+    intensityFocus: "High Intensity Transformation",
+    status: "active",
     features: [
       "1-on-1 Personal Training Sessions",
       "Customized Nutrition Plan",
@@ -662,60 +695,112 @@ function CreatePackageModal({ isOpen, onClose, onSave, editingPackage }) {
 
   const [featureInput, setFeatureInput] = useState("");
 
+  const PRESET_INCLUSIONS = [
+    "Customized Nutrition Plan",
+    "Weekly Body Composition Scans",
+    "1-on-1 Lifestyle Consultation",
+    "WhatsApp Trainer Support",
+    "Posture & Mobility Screenings",
+    "App Workout & Log Tracking",
+    "Supplement Guidance Protocol",
+    "Post-Workout Recovery Protocol"
+  ];
+
   useEffect(() => {
-    if (editingPackage) {
-      setFormData({
-        name: editingPackage.name || "",
-        category: editingPackage.category || "Transformation",
-        description: editingPackage.description || "",
-        trainerType: editingPackage.trainerType || "Elite Coaches",
-        duration: editingPackage.duration || "90 Days",
-        sessions: editingPackage.sessions || 36,
-        frequency: editingPackage.frequency || "3 sessions/week",
-        validity: editingPackage.validity || "90 Days",
-        price: editingPackage.price?.toString() || "",
-        features: editingPackage.features || [
-          "1-on-1 Personal Training Sessions",
-          "Customized Nutrition Plan",
-          "Weekly Progress Assessments"
-        ]
-      });
+    if (isOpen) {
+      setMounted(true);
       setStep(1);
+      setErrors({});
+      setAlertMessage("");
+
+      if (editingPackage) {
+        setFormData({
+          name: editingPackage.name || "",
+          category: editingPackage.category || "Transformation",
+          description: editingPackage.description || "",
+          trainerType: editingPackage.trainerType || "Elite Coaches",
+          duration: editingPackage.duration || "90 Days",
+          sessions: editingPackage.sessions || 36,
+          frequency: editingPackage.frequency || "3 sessions/week",
+          validity: editingPackage.validity || "90 Days",
+          price: editingPackage.price?.toString() || "",
+          commissionSplit: editingPackage.commissionSplit || "60% Trainer / 40% Gym",
+          commitment: editingPackage.commitment || "Standard Commitment",
+          intensityFocus: editingPackage.intensityFocus || "High Intensity Transformation",
+          status: editingPackage.status || "active",
+          features: editingPackage.features && editingPackage.features.length > 0
+            ? [...editingPackage.features]
+            : [
+                "1-on-1 Personal Training Sessions",
+                "Customized Nutrition Plan",
+                "Weekly Progress Assessments"
+              ]
+        });
+      } else {
+        setFormData({
+          name: "",
+          category: "Transformation",
+          description: "",
+          trainerType: "Elite Coaches",
+          duration: "90 Days",
+          sessions: 36,
+          frequency: "3 sessions/week",
+          validity: "90 Days",
+          price: "",
+          commissionSplit: "60% Trainer / 40% Gym",
+          commitment: "Standard Commitment",
+          intensityFocus: "High Intensity Transformation",
+          status: "active",
+          features: [
+            "1-on-1 Personal Training Sessions",
+            "Customized Nutrition Plan",
+            "Weekly Progress Assessments",
+            "App Workout & Log Tracking"
+          ]
+        });
+      }
+
+      const raf = requestAnimationFrame(() => {
+        document.body.classList.add("member-form-open");
+        document.body.style.overflow = "hidden";
+      });
+      return () => cancelAnimationFrame(raf);
     } else {
-      setFormData({
-        name: "",
-        category: "Transformation",
-        description: "",
-        trainerType: "Elite Coaches",
-        duration: "90 Days",
-        sessions: 36,
-        frequency: "3 sessions/week",
-        validity: "90 Days",
-        price: "",
-        features: [
-          "1-on-1 Personal Training Sessions",
-          "Customized Nutrition Plan",
-          "Weekly Progress Assessments",
-          "App Workout & Log Tracking"
-        ]
-      });
-      setStep(1);
+      document.body.classList.remove("member-form-open");
+      document.body.style.overflow = "";
+      const timer = setTimeout(() => {
+        setMounted(false);
+      }, 600);
+      return () => clearTimeout(timer);
     }
   }, [editingPackage, isOpen]);
 
-  if (!isOpen) return null;
+  if (!mounted && !isOpen) return null;
+
+  const handleClose = () => {
+    document.body.classList.remove("member-form-open");
+    document.body.style.overflow = "";
+    setTimeout(() => {
+      onClose();
+      setStep(1);
+    }, 600);
+  };
 
   const handleChange = (field, val) => {
     setFormData((prev) => ({ ...prev, [field]: val }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: null }));
+    }
   };
 
-  const addFeature = () => {
-    if (featureInput.trim() && !formData.features.includes(featureInput.trim())) {
+  const addFeature = (featToAdd) => {
+    const text = (featToAdd || featureInput).trim();
+    if (text && !formData.features.includes(text)) {
       setFormData((prev) => ({
         ...prev,
-        features: [...prev.features, featureInput.trim()]
+        features: [...prev.features, text]
       }));
-      setFeatureInput("");
+      if (!featToAdd) setFeatureInput("");
     }
   };
 
@@ -726,9 +811,46 @@ function CreatePackageModal({ isOpen, onClose, onSave, editingPackage }) {
     }));
   };
 
+  const validateStep = (currentStep) => {
+    const errs = {};
+    if (currentStep === 1) {
+      if (!formData.name.trim()) errs.name = "Please enter the PT package title.";
+      if (!formData.category) errs.category = "Please select specialty category.";
+      if (!formData.trainerType) errs.trainerType = "Please select trainer assignment tier.";
+    } else if (currentStep === 2) {
+      if (!formData.sessions || parseInt(formData.sessions) <= 0) {
+        errs.sessions = "Please specify total number of 1-on-1 sessions.";
+      }
+      const p = parseFloat(formData.price.toString().replace(/[^\d.]/g, ""));
+      if (!p || p <= 0) {
+        errs.price = "Please specify a valid base price in INR.";
+      }
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setAlertMessage("Please complete all mandatory package fields marked with an asterisk (*).");
+      return false;
+    }
+    setAlertMessage("");
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!validateStep(step)) return;
+    setStep((s) => Math.min(3, s + 1));
+  };
+
+  const handleBack = () => {
+    setAlertMessage("");
+    setStep((s) => Math.max(1, s - 1));
+  };
+
   const handleFinish = (e) => {
     e?.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!validateStep(1) || !validateStep(2)) {
+      setStep(1);
+      return;
+    }
 
     const basePriceNum = parseFloat(formData.price.toString().replace(/[^\d.]/g, "")) || 0;
     const sessionsNum = parseInt(formData.sessions) || 12;
@@ -742,8 +864,11 @@ function CreatePackageModal({ isOpen, onClose, onSave, editingPackage }) {
       sessions: sessionsNum,
       frequency: formData.frequency,
       validity: formData.validity,
+      commissionSplit: formData.commissionSplit,
+      commitment: formData.commitment,
+      intensityFocus: formData.intensityFocus,
       activeClients: editingPackage?.activeClients || 0,
-      status: editingPackage?.status || "active",
+      status: formData.status || "active",
       trainerType: formData.trainerType,
       description: formData.description,
       features: formData.features,
@@ -751,285 +876,650 @@ function CreatePackageModal({ isOpen, onClose, onSave, editingPackage }) {
     };
 
     onSave(savedItem);
-    onClose();
+    handleClose();
   };
 
-  const calculatedPerSession = formData.price && formData.sessions > 0
-    ? Math.round(parseFloat(formData.price.toString().replace(/[^\d.]/g, "")) / formData.sessions)
+  const basePriceNum = parseFloat(formData.price?.toString().replace(/[^\d.]/g, "")) || 0;
+  const sessionsNum = parseInt(formData.sessions) || 1;
+  const calculatedPerSession = basePriceNum > 0 && sessionsNum > 0
+    ? Math.round(basePriceNum / sessionsNum)
     : 0;
 
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-        onClick={onClose}
+  const splitPercent = formData.commissionSplit?.includes("70%")
+    ? 70
+    : formData.commissionSplit?.includes("50%")
+    ? 50
+    : formData.commissionSplit?.includes("40%")
+    ? 40
+    : 60; // 60/40 standard
+
+  const trainerPayout = Math.round((basePriceNum * splitPercent) / 100);
+  const gymRevenue = Math.max(0, basePriceNum - trainerPayout);
+
+  const visual = getPackageVisual(formData);
+  const { gradient, IconComponent } = visual;
+
+  return createPortal(
+    <>
+      <div className="member-form-backdrop" onClick={handleClose} />
+
+      <section
+        className={`member-form-modal ${step > 1 ? `is-page-${step}` : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pt-package-form-title"
+        aria-describedby="pt-package-form-copy"
       >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0, y: 15 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 15 }}
-          onClick={(e) => e.stopPropagation()}
-          className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        <div className="drawer-handle" />
+
+        <button
+          className="member-modal-close-btn cursor-pointer"
+          type="button"
+          aria-label="Close modal form"
+          onClick={handleClose}
         >
-          {/* Header */}
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-900 text-white">
-                  Step {step} of 3
-                </span>
-                <h3 className="text-base font-black text-slate-900">
-                  {editingPackage ? "Edit PT Package" : "Create PT Package"}
-                </h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <div className="member-form-modal-container">
+          {/* PAGE 1: PACKAGE IDENTITY & CURRICULUM */}
+          <div className="member-form-page" data-member-form-page="1">
+            <div className="member-form-top">
+              <div>
+                <p className="member-form-kicker">STEP 1 • PT PACKAGE CURRICULUM</p>
+                <h2 id="pt-package-form-title">
+                  {editingPackage ? "Edit Personal Training Package" : "Create Personal Training Package"}
+                </h2>
               </div>
-              <p className="text-xs text-slate-400 font-semibold">
-                {step === 1 && "Basic Package Details & Classification"}
-                {step === 2 && "Sessions, Frequency & Commercials"}
-                {step === 3 && "Inclusions & Features Checklist"}
-              </p>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Form Content */}
-          <div className="p-6 overflow-y-auto space-y-5">
-            {step === 1 && (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Package Name *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 12-Week Transformation Pro"
-                    value={formData.name}
-                    onChange={(e) => handleChange("name", e.target.value)}
-                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <CustomSelect
-                    label="Category"
-                    value={formData.category}
-                    onChange={(val) => handleChange("category", val)}
-                    options={PT_PACKAGE_CATEGORIES}
-                  />
-
-                  <CustomSelect
-                    label="Trainer Assignment Tier"
-                    value={formData.trainerType}
-                    onChange={(val) => handleChange("trainerType", val)}
-                    options={["Elite Coaches", "Master Coaches", "Senior Coaches", "Specialist Coaches", "General Trainers"]}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Description &amp; Target Goal
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Describe program goals, target clientele, and curriculum..."
-                    value={formData.description}
-                    onChange={(e) => handleChange("description", e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all resize-none"
-                  />
-                </div>
-              </div>
+            <p id="pt-package-form-copy" className="member-form-copy">
+              Define the core program identity, specialty category, designated coach tier, and fitness objectives.
+            </p>
+            {alertMessage && (
+              <p className="member-form-alert" style={{ display: "block" }}>
+                {alertMessage}
+              </p>
             )}
 
-            {step === 2 && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <CustomSelect
-                    label="Package Duration"
-                    value={formData.duration}
-                    onChange={(val) => handleChange("duration", val)}
-                    options={["30 Days", "45 Days", "60 Days", "90 Days", "180 Days", "365 Days"]}
-                  />
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Total 1-on-1 Sessions *
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 36"
-                      value={formData.sessions}
-                      onChange={(e) => handleChange("sessions", e.target.value)}
-                      className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
-                      min="1"
-                    />
+            <div className="plans-empty-state-card registration-engine-card">
+              <div className="plans-empty-grid-pattern"></div>
+              <div className="plans-empty-content-wrap">
+                <div className="plans-empty-topbar">
+                  <div className="plans-status-pill">
+                    <span className="plans-status-dot"></span>
+                    <span className="plans-status-sub">{formData.category} Curriculum</span>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Session Frequency
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 3 sessions/week"
-                      value={formData.frequency}
-                      onChange={(e) => handleChange("frequency", e.target.value)}
-                      className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Package Validity
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 90 Days"
-                      value={formData.validity}
-                      onChange={(e) => handleChange("validity", e.target.value)}
-                      className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Base Package Price (₹ INR) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
-                    <input
-                      type="number"
-                      placeholder="e.g. 45000"
-                      value={formData.price}
-                      onChange={(e) => handleChange("price", e.target.value)}
-                      className="w-full h-11 pl-8 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-400 transition-all"
-                      min="0"
-                    />
-                  </div>
-                  {calculatedPerSession > 0 && (
-                    <small className="text-[11px] text-slate-500 font-medium mt-1 block">
-                      Equivalent to <strong className="text-slate-800">₹{calculatedPerSession.toLocaleString("en-IN")}</strong> per individual session.
-                    </small>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Features &amp; Client Inclusions
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Add feature (e.g. Weekly Body Composition Scans)..."
-                      value={featureInput}
-                      onChange={(e) => setFeatureInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addFeature();
-                        }
-                      }}
-                      className="flex-1 h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
-                    />
-                    <button
-                      type="button"
-                      onClick={addFeature}
-                      className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-800 transition-colors"
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 mt-3 max-h-40 overflow-y-auto">
-                    {formData.features.map((feat, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-2 border border-slate-200/80"
-                      >
-                        {feat}
-                        <button
-                          type="button"
-                          onClick={() => removeFeature(i)}
-                          className="hover:text-rose-600 transition-colors cursor-pointer"
-                        >
-                          <X size={12} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-slate-900">Summary Preview</span>
-                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
-                      {formData.category}
+                  <div className="plans-tags-group">
+                    <span className="plans-tag-item">
+                      <Dumbbell size={13} strokeWidth={2.2} className="inline mr-1 text-indigo-600" />
+                      Training Specialty
+                    </span>
+                    <span className="plans-tag-divider">•</span>
+                    <span className="plans-tag-item">
+                      <Award size={13} strokeWidth={2.2} className="inline mr-1 text-emerald-600" />
+                      Coach Tier
+                    </span>
+                    <span className="plans-tag-divider">•</span>
+                    <span className="plans-tag-item">
+                      <Sparkles size={13} strokeWidth={2.2} className="inline mr-1 text-blue-600" />
+                      Program Goals
                     </span>
                   </div>
-                  <p className="text-sm font-black text-slate-900">{formData.name || "Untitled PT Package"}</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {formData.sessions} Sessions • {formData.duration} • ₹{Number(formData.price || 0).toLocaleString("en-IN")}
-                  </p>
+                </div>
+
+                <div className="registration-engine-grid">
+                  <form className="member-form-grid registration-form-grid" noValidate onSubmit={(e) => { e.preventDefault(); handleNext(); }}>
+                    {/* Row 1: Package Title & Classification */}
+                    <label className="member-field" data-field-label="Package Name">
+                      <span>Package Title <em>*</em></span>
+                      <input
+                        type="text"
+                        placeholder="e.g. 12-Week Transformation Pro"
+                        value={formData.name}
+                        onChange={(e) => handleChange("name", e.target.value)}
+                        required
+                        style={{
+                          borderColor: errors.name ? "#ef4444" : undefined,
+                          backgroundColor: errors.name ? "#fff5f5" : undefined
+                        }}
+                      />
+                      {errors.name && <small className="member-field-error" style={{ display: "block", color: "#e11d48" }}>{errors.name}</small>}
+                    </label>
+
+                    <div className="member-field" data-field-label="Specialty Category">
+                      <span>Specialty Category <em>*</em></span>
+                      <CustomSelect
+                        value={formData.category}
+                        onChange={(val) => handleChange("category", val)}
+                        options={PT_PACKAGE_CATEGORIES}
+                      />
+                      {errors.category && <small className="member-field-error" style={{ display: "block", color: "#e11d48" }}>{errors.category}</small>}
+                    </div>
+
+                    <div className="member-field" data-field-label="Coach Tier">
+                      <span>Trainer Assignment Tier <em>*</em></span>
+                      <CustomSelect
+                        value={formData.trainerType}
+                        onChange={(val) => handleChange("trainerType", val)}
+                        options={["Elite Coaches", "Master Coaches", "Senior Coaches", "Specialist Coaches", "General Trainers"]}
+                      />
+                    </div>
+
+                    {/* Row 2: Frequency, Intensity & Status */}
+                    <div className="member-field" data-field-label="Weekly Frequency">
+                      <span>Weekly Session Cadence <em>*</em></span>
+                      <CustomSelect
+                        value={formData.frequency}
+                        onChange={(val) => handleChange("frequency", val)}
+                        options={["3 sessions/week", "4 sessions/week", "5 sessions/week", "2 sessions/week", "Daily 1-on-1", "Flexible Schedule"]}
+                      />
+                    </div>
+
+                    <div className="member-field" data-field-label="Program Focus">
+                      <span>Primary Fitness Focus</span>
+                      <CustomSelect
+                        value={formData.intensityFocus}
+                        onChange={(val) => handleChange("intensityFocus", val)}
+                        options={["High Intensity Transformation", "Hypertrophy & Bulking", "Fat Loss & Conditioning", "Active Rehab & Posture", "Athletic Performance"]}
+                      />
+                    </div>
+
+                    <div className="member-field" data-field-label="Catalog Status">
+                      <span>Catalog Status</span>
+                      <CustomSelect
+                        value={formData.status}
+                        onChange={(val) => handleChange("status", val)}
+                        options={["active", "inactive"]}
+                      />
+                    </div>
+
+                    {/* Row 3: Description & Program Objectives */}
+                    <label className="member-field member-field-span-3" data-field-label="Curriculum Description">
+                      <span>Curriculum Description &amp; Client Objectives</span>
+                      <textarea
+                        rows={2}
+                        placeholder="Describe program goals, target clientele, assessment milestones, and fitness outcomes..."
+                        value={formData.description}
+                        onChange={(e) => handleChange("description", e.target.value)}
+                        style={{ resize: "none" }}
+                      />
+                    </label>
+                  </form>
+                </div>
+
+                {/* Integrated Card Footer */}
+                <div className="registration-card-integrated-footer">
+                  <div className="registration-footnote-item">
+                    <span className="registration-footnote-star">*</span>
+                    <span className="registration-footnote-text">Fields with an asterisk are required. Session quotas and commercials are set in the next step.</span>
+                  </div>
+
+                  <label className="registration-whatsapp-consent-toggle" htmlFor="pt-whatsapp-consent">
+                    <input
+                      type="checkbox"
+                      id="pt-whatsapp-consent"
+                      checked={whatsappConsent}
+                      onChange={(e) => setWhatsappConsent(e.target.checked)}
+                    />
+                    <span className="custom-consent-checkbox" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </span>
+                    <img className="whatsapp-official-badge-icon" src="/whatsapp-logo.png" alt="WhatsApp" width="16" height="16" />
+                    <span className="consent-text-wrap">
+                      <span className="consent-headline">WhatsApp client booking &amp; enrollment alerts</span>
+                    </span>
+                  </label>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Footer Navigation */}
-          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-            <button
-              type="button"
-              disabled={step === 1}
-              onClick={() => setStep((s) => Math.max(1, s - 1))}
-              className="px-4 py-2 text-xs font-bold text-slate-600 disabled:opacity-30 cursor-pointer hover:bg-slate-200/60 rounded-xl transition-colors"
-            >
-              ← Back
-            </button>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              {step < 3 ? (
-                <button
-                  type="button"
-                  onClick={() => setStep((s) => Math.min(3, s + 1))}
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
-                >
-                  Next →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleFinish}
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
-                >
-                  {editingPackage ? "Save Changes" : "Create Package"}
-                </button>
-              )}
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+
+          {/* PAGE 2: SESSIONS, DURATION & COMMERCIALS */}
+          <div className="member-form-page" data-member-form-page="2">
+            <div className="member-form-top">
+              <div>
+                <p className="member-form-kicker">STEP 2 • SESSIONS &amp; COMMERCIALS</p>
+                <h2 id="sessions-pricing-title">Sessions, Duration &amp; Commercials</h2>
+              </div>
+            </div>
+            <p className="member-form-copy">
+              Configure package duration, total personal training sessions, price, and trainer commission structure.
+            </p>
+
+            <div className="plans-empty-state-card registration-engine-card">
+              <div className="plans-empty-grid-pattern"></div>
+              <div className="plans-empty-content-wrap">
+                <div className="plans-empty-topbar">
+                  <div className="plans-status-pill">
+                    <span className="plans-status-dot"></span>
+                    <span className="plans-status-sub">Commercial Engine Active</span>
+                  </div>
+                  <div className="plans-tags-group">
+                    <span className="plans-tag-item">
+                      <Clock size={13} strokeWidth={2.2} className="inline mr-1 text-indigo-600" />
+                      {formData.duration} Tenure
+                    </span>
+                    <span className="plans-tag-divider">•</span>
+                    <span className="plans-tag-item">
+                      <CheckCircle2 size={13} strokeWidth={2.2} className="inline mr-1 text-emerald-600" />
+                      {formData.sessions} 1-on-1 Sessions
+                    </span>
+                    <span className="plans-tag-divider">•</span>
+                    <span className="plans-tag-item">
+                      <IndianRupee size={13} strokeWidth={2.2} className="inline mr-1 text-amber-600" />
+                      INR Commercials
+                    </span>
+                  </div>
+                </div>
+
+                <div className="registration-engine-grid">
+                  <div className="member-form-grid registration-form-grid">
+                    <div className="member-field" data-field-label="Duration">
+                      <span>Package Duration <em>*</em></span>
+                      <CustomSelect
+                        value={formData.duration}
+                        onChange={(val) => handleChange("duration", val)}
+                        options={["30 Days", "45 Days", "60 Days", "90 Days", "180 Days", "365 Days"]}
+                      />
+                    </div>
+
+                    <label className="member-field" data-field-label="Sessions">
+                      <span>Total 1-on-1 Sessions <em>*</em></span>
+                      <input
+                        type="number"
+                        placeholder="e.g. 36"
+                        value={formData.sessions}
+                        onChange={(e) => handleChange("sessions", e.target.value)}
+                        min="1"
+                        required
+                        style={{
+                          borderColor: errors.sessions ? "#ef4444" : undefined,
+                          backgroundColor: errors.sessions ? "#fff5f5" : undefined
+                        }}
+                      />
+                      {errors.sessions && <small className="member-field-error" style={{ display: "block", color: "#e11d48" }}>{errors.sessions}</small>}
+                    </label>
+
+                    <div className="member-field" data-field-label="Validity">
+                      <span>Package Validity Window</span>
+                      <CustomSelect
+                        value={formData.validity}
+                        onChange={(val) => handleChange("validity", val)}
+                        options={["30 Days", "45 Days", "60 Days", "90 Days", "120 Days (Buffer)", "180 Days", "365 Days"]}
+                      />
+                    </div>
+
+                    <label className="member-field" data-field-label="Base Price">
+                      <span>Base Package Price (₹ INR) <em>*</em></span>
+                      <div className="relative mt-1">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                        <input
+                          type="number"
+                          placeholder="e.g. 45000"
+                          value={formData.price}
+                          onChange={(e) => handleChange("price", e.target.value)}
+                          className="!pl-8 !min-h-[42px] !rounded-xl"
+                          min="0"
+                          required
+                          style={{
+                            borderColor: errors.price ? "#ef4444" : undefined,
+                            backgroundColor: errors.price ? "#fff5f5" : undefined
+                          }}
+                        />
+                      </div>
+                      {errors.price && <small className="member-field-error" style={{ display: "block", color: "#e11d48" }}>{errors.price}</small>}
+                    </label>
+
+                    <div className="member-field" data-field-label="Commission Model">
+                      <span>Trainer Commission Model</span>
+                      <CustomSelect
+                        value={formData.commissionSplit}
+                        onChange={(val) => handleChange("commissionSplit", val)}
+                        options={["60% Trainer / 40% Gym", "70% Trainer / 30% Gym", "50% Trainer / 50% Gym", "40% Trainer / 60% Gym", "Flat Retainer Per Session"]}
+                      />
+                    </div>
+
+                    <div className="member-field" data-field-label="Client Commitment">
+                      <span>Client Commitment Level</span>
+                      <CustomSelect
+                        value={formData.commitment}
+                        onChange={(val) => handleChange("commitment", val)}
+                        options={["High Intensity / Competitive", "Standard Commitment", "Beginner Friendly", "Maintenance & Rehab"]}
+                      />
+                    </div>
+
+                    {/* Commercials Calculation Dossier Card with Dotted Theme */}
+                    <div className="member-field member-field-span-3 member-field-wide">
+                      <div className="relative rounded-2xl border-2 border-dotted border-slate-300 bg-slate-50/80 p-4 shadow-2xs mt-2 overflow-hidden">
+                        <div
+                          className="absolute inset-0 opacity-[0.25] pointer-events-none"
+                          style={{
+                            backgroundImage: "radial-gradient(#94a3b8 1px, transparent 1px)",
+                            backgroundSize: "14px 14px"
+                          }}
+                        />
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between border-b border-dashed border-slate-200/90 pb-2.5 mb-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-xs font-bold text-slate-700">Projected Commercials &amp; Split Breakdown</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                              {formData.commissionSplit}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Per-Session Rate</p>
+                              <p className="text-xl font-black text-slate-900 mt-0.5">
+                                ₹{calculatedPerSession.toLocaleString("en-IN")}
+                                <span className="text-xs font-bold text-slate-400 ml-1">/session</span>
+                              </p>
+                              <p className="text-[10.5px] text-slate-500 mt-0.5">{sessionsNum} total appointments</p>
+                            </div>
+
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Est. Coach Payout</p>
+                              <p className="text-xl font-black text-emerald-600 mt-0.5">
+                                ₹{trainerPayout.toLocaleString("en-IN")}
+                              </p>
+                              <p className="text-[10.5px] text-slate-500 mt-0.5">{splitPercent}% coach payout share</p>
+                            </div>
+
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gym Net Retained</p>
+                              <p className="text-xl font-black text-indigo-600 mt-0.5">
+                                ₹{gymRevenue.toLocaleString("en-IN")}
+                              </p>
+                              <p className="text-[10.5px] text-slate-500 mt-0.5">{100 - splitPercent}% facility revenue</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Integrated Card Footer */}
+                <div className="registration-card-integrated-footer">
+                  <div className="registration-footnote-item">
+                    <span className="registration-footnote-star">*</span>
+                    <span className="registration-footnote-text">Calculated rates update live. Commissions are tracked automatically upon session completion.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* PAGE 3: INCLUSIONS, PERKS & LIVE SUMMARY */}
+          <div className="member-form-page" data-member-form-page="3">
+            <div className="member-form-top">
+              <div>
+                <p className="member-form-kicker">STEP 3 • INCLUSIONS &amp; LIVE DOSSIER</p>
+                <h2 id="inclusions-title">Inclusions, Perks &amp; Live Summary</h2>
+              </div>
+            </div>
+            <p className="member-form-copy">
+              Curate value-added client inclusions and inspect the live dossier card before saving the PT package.
+            </p>
+
+            <div className="plans-empty-state-card registration-engine-card">
+              <div className="plans-empty-grid-pattern"></div>
+              <div className="plans-empty-content-wrap">
+                <div className="plans-empty-topbar">
+                  <div className="plans-status-pill">
+                    <span className="plans-status-dot"></span>
+                    <span className="plans-status-sub">{formData.features.length} Value Perks Attached</span>
+                  </div>
+                  <div className="plans-tags-group">
+                    <span className="plans-tag-item">
+                      <Shield size={13} strokeWidth={2.2} className="inline mr-1 text-emerald-600" />
+                      Verified Amenities
+                    </span>
+                    <span className="plans-tag-divider">•</span>
+                    <span className="plans-tag-item">
+                      <CheckCircle2 size={13} strokeWidth={2.2} className="inline mr-1 text-indigo-600" />
+                      Catalog Ready
+                    </span>
+                  </div>
+                </div>
+
+                <div className="registration-engine-grid">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left Column: Manage Features */}
+                    <div className="lg:col-span-7 flex flex-col gap-3">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-0.5">
+                        Client Inclusions &amp; Amenities
+                      </span>
+
+                      {/* Custom Input */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Add custom inclusion (e.g. Weekly Body Composition Scans)..."
+                          value={featureInput}
+                          onChange={(e) => setFeatureInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addFeature();
+                            }
+                          }}
+                          className="flex-1 h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-indigo-500 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addFeature()}
+                          className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-800 transition-colors shrink-0"
+                        >
+                          <Plus size={14} className="inline mr-1" /> Add
+                        </button>
+                      </div>
+
+                      {/* Quick Add Presets */}
+                      <div>
+                        <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                          Quick-Add Standard Perks
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {PRESET_INCLUSIONS.map((preset) => {
+                            const isAdded = formData.features.includes(preset);
+                            return (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => isAdded ? setFormData(p => ({ ...p, features: p.features.filter(f => f !== preset) })) : addFeature(preset)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 border ${
+                                  isAdded
+                                    ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                    : "bg-white border-dashed border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+                                }`}
+                              >
+                                {isAdded ? <Check size={11} strokeWidth={3} /> : <Plus size={11} />}
+                                <span>{preset}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Current Active Features */}
+                      <div className="mt-2">
+                        <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                          Current Active Inclusions ({formData.features.length})
+                        </span>
+                        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50/70 border-2 border-dotted border-slate-200 rounded-xl">
+                          {formData.features.length === 0 ? (
+                            <span className="text-xs text-slate-400 font-medium p-2">No inclusions added yet. Select from presets above.</span>
+                          ) : (
+                            formData.features.map((feat, i) => (
+                              <span
+                                key={i}
+                                className="px-3 py-1.5 rounded-lg bg-white text-slate-700 text-xs font-bold flex items-center gap-2 border border-slate-200 shadow-2xs"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span>{feat}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFeature(i)}
+                                  className="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                  title="Remove"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Live PT Package Dossier Preview */}
+                    <div className="lg:col-span-5">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
+                        Live Package Dossier Preview
+                      </span>
+
+                      <div className="relative rounded-2xl border-2 border-dotted border-slate-300 bg-white p-5 shadow-xs overflow-hidden">
+                        <div
+                          className="absolute inset-0 opacity-[0.25] pointer-events-none"
+                          style={{
+                            backgroundImage: "radial-gradient(#94a3b8 1px, transparent 1px)",
+                            backgroundSize: "14px 14px"
+                          }}
+                        />
+                        <div className="relative z-10">
+                          <div className="flex items-start justify-between mb-3">
+                            <div
+                              className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
+                              style={{ background: gradient }}
+                            >
+                              <IconComponent size={20} strokeWidth={2.2} />
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              {formData.status || "active"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wider">
+                              {formData.category}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400">
+                              {formData.duration}
+                            </span>
+                          </div>
+
+                          <h3 className="text-base font-bold text-slate-900 leading-snug">
+                            {formData.name.trim() || "Untitled PT Package"}
+                          </h3>
+
+                          {formData.description && (
+                            <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
+                              {formData.description}
+                            </p>
+                          )}
+
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mt-3 mb-3">
+                            <div className="flex items-baseline justify-between">
+                              <span className="text-lg font-black text-slate-900">
+                                ₹{basePriceNum.toLocaleString("en-IN")}
+                              </span>
+                              <span className="text-[11px] text-slate-400 font-medium">
+                                ₹{calculatedPerSession.toLocaleString("en-IN")}/sess
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200/60 text-xs text-slate-600">
+                              <span className="font-bold text-indigo-600">{formData.sessions} Sessions</span>
+                              <span>•</span>
+                              <span className="truncate">{formData.trainerType}</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                              Included Perks ({formData.features.length})
+                            </span>
+                            <div className="space-y-1">
+                              {formData.features.slice(0, 3).map((feat, i) => (
+                                <div key={i} className="flex items-center gap-1.5 text-xs text-slate-700">
+                                  <Check size={11} className="text-emerald-500 shrink-0" strokeWidth={3} />
+                                  <span className="truncate">{feat}</span>
+                                </div>
+                              ))}
+                              {formData.features.length > 3 && (
+                                <p className="text-[10.5px] text-slate-400 font-medium mt-1">
+                                  +{formData.features.length - 3} more client amenities included
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="doc-upload-disclaimer" role="note">
+              <div className="doc-upload-disclaimer-icon" aria-hidden="true">
+                <Shield size={18} strokeWidth={2} />
+              </div>
+              <div className="doc-upload-disclaimer-copy">
+                <strong>Personal training catalog compliance</strong>
+                <p>
+                  PT packages published to the catalog are instantly available for trainer assignment, client enrollment, and automated invoice calculation. Commissions are credited upon attendance logging.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SHARED FOOTER ACTIONS */}
+        <div className="member-form-actions-footer">
+          <div className="member-form-page-actions" data-for-page="1">
+            <button className="dialog-btn dialog-btn-muted cursor-pointer" type="button" onClick={handleClose}>
+              Cancel
+            </button>
+            <button className="dialog-btn dialog-btn-danger cursor-pointer" type="button" onClick={handleNext}>
+              <span>NEXT</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="btn-arrow-icon">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="member-form-page-actions" data-for-page="2">
+            <button className="dialog-btn dialog-btn-muted cursor-pointer" type="button" onClick={handleBack}>
+              ← Back
+            </button>
+            <button className="dialog-btn dialog-btn-danger cursor-pointer" type="button" onClick={handleNext}>
+              <span>NEXT</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="btn-arrow-icon">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="member-form-page-actions" data-for-page="3">
+            <button className="dialog-btn dialog-btn-muted cursor-pointer" type="button" onClick={handleBack}>
+              ← Back
+            </button>
+            <button className="dialog-btn dialog-btn-danger cursor-pointer" type="button" onClick={handleFinish}>
+              {editingPackage ? "Save Package Changes" : "Create PT Package"}
+            </button>
+          </div>
+        </div>
+      </section>
+    </>,
+    document.body
   );
 }
 

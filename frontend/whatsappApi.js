@@ -135,4 +135,8 @@ export function openExternalUrl(url) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+if (typeof window !== 'undefined') {
+  window.whatsappApi = whatsappApi;
+}
+
 export default whatsappApi;

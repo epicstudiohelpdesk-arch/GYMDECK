@@ -6,6 +6,7 @@
 
 import { Router, Request } from 'express';
 import { z } from 'zod';
+import { requireAuth } from '../middleware/authMiddleware';
 import { requirePermission } from '../middleware/rbacMiddleware';
 import { AppError } from '../../../shared/errors';
 import { emailService } from '../../../services/email/emailService';
@@ -49,6 +50,28 @@ const ComposeEmailSchema = z.object({
 
 /* ------------------------------------------------------------------ routes */
 
+// Inbound Postal webhook (backward-compatible alias; canonical route is
+// /v1/webhooks/postal). It is defined before requireAuth because Postal
+// authenticates with its RSA signature, not a GymDeck JWT.
+router.post('/webhooks/postal', async (req, res, next) => {
+  try {
+    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+    const authResult = verifyPostalWebhookSignature(rawBody, req.headers);
+
+    if (!authResult.valid) {
+      throw AppError.unauthorized(`Postal webhook verification failed: ${authResult.reason || 'Invalid signature'}`);
+    }
+
+    await postalWebhookService.handleWebhook(req.body);
+    res.json({ status: 'ok', verifiedVia: authResult.algorithm });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Every remaining email endpoint requires an authenticated GymDeck user.
+router.use(requireAuth);
+
 // 1. Overview Dashboard Stats & Monthly Quota
 router.get('/overview', requirePermission('communications.read'), async (req, res, next) => {
   try {
@@ -76,7 +99,7 @@ router.get('/recipients', requirePermission('communications.read'), async (req, 
 });
 
 // 3. Compose & Send Email Broadcast
-router.post('/send', requirePermission('communications.write'), sendLimiter, async (req, res, next) => {
+router.post('/send', requirePermission('communications.send'), sendLimiter, async (req, res, next) => {
   try {
     const { gymId, userId } = tenantContext(req);
     const dto = ComposeEmailSchema.parse(req.body);
@@ -97,7 +120,7 @@ router.get('/drafts', requirePermission('communications.read'), async (req, res,
   }
 });
 
-router.post('/drafts', requirePermission('communications.write'), async (req, res, next) => {
+router.post('/drafts', requirePermission('communications.send'), async (req, res, next) => {
   try {
     const { gymId, userId } = tenantContext(req);
     const result = await emailService.saveDraft(gymId, userId, req.body);
@@ -107,7 +130,7 @@ router.post('/drafts', requirePermission('communications.write'), async (req, re
   }
 });
 
-router.delete('/drafts/:id', requirePermission('communications.write'), async (req, res, next) => {
+router.delete('/drafts/:id', requirePermission('communications.send'), async (req, res, next) => {
   try {
     const { gymId } = tenantContext(req);
     await emailService.deleteDraft(gymId, String(req.params.id));
@@ -152,27 +175,10 @@ router.get('/templates', requirePermission('communications.read'), async (req, r
   }
 });
 
-router.post('/templates', requirePermission('communications.write'), async (req, res, next) => {
+router.post('/templates', requirePermission('communications.send'), async (req, res, next) => {
   try {
     const { gymId, userId } = tenantContext(req);
     res.json({ data: await emailService.createTemplate(gymId, userId, req.body) });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// 8. Inbound Postal Webhook (Backward compatibility alias; canonical route is /v1/webhooks/postal)
-router.post('/webhooks/postal', async (req, res, next) => {
-  try {
-    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-    const authResult = verifyPostalWebhookSignature(rawBody, req.headers);
-
-    if (!authResult.valid) {
-      throw AppError.unauthorized(`Postal webhook verification failed: ${authResult.reason || 'Invalid signature'}`);
-    }
-
-    await postalWebhookService.handleWebhook(req.body);
-    res.json({ status: 'ok', verifiedVia: authResult.algorithm });
   } catch (err) {
     next(err);
   }

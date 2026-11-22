@@ -73,7 +73,7 @@ export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdat
       <div className="space-y-4">
         {error ? <InlineAlert title="Category action failed">{error}</InlineAlert> : null}
 
-        <form onSubmit={handleAdd} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
+        <form onSubmit={handleAdd} className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3.5 shadow-xs">
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
             <TextField
               label="Category name"
@@ -105,7 +105,7 @@ export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdat
             <h3 className="text-[11px] font-bold uppercase tracking-[0.07em] text-slate-500">
               Existing categories
             </h3>
-            <span className="text-[10.5px] font-semibold text-slate-400 tabular-nums">
+            <span className="text-[10.5px] font-bold text-slate-400 tabular-nums">
               {categories.length} total
             </span>
           </div>
@@ -118,9 +118,9 @@ export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdat
               className="py-8"
             />
           ) : (
-            <ul className="max-h-72 divide-y divide-slate-100 overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+            <ul className="max-h-72 divide-y divide-slate-100 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
               {categories.map((category) => (
-                <li key={category.id} className="flex items-center gap-2 px-3 py-2.5">
+                <li key={category.id} className="flex items-center gap-2 px-3.5 py-3 hover:bg-slate-50/60 transition-colors">
                   {editingId === category.id ? (
                     <>
                       <TextField
@@ -146,11 +146,11 @@ export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdat
                   ) : (
                     <>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[12px] font-bold text-slate-800">{category.name}</p>
+                        <p className="truncate text-[12px] font-black text-slate-900">{category.name}</p>
                         {category.description ? (
-                          <p className="truncate text-[10.5px] text-slate-400">{category.description}</p>
+                          <p className="truncate text-[10.5px] font-medium text-slate-500">{category.description}</p>
                         ) : (
-                          <p className="text-[10.5px] italic text-slate-300">No description</p>
+                          <p className="text-[10.5px] italic text-slate-400">No description</p>
                         )}
                       </div>
                       <IconButton
@@ -160,7 +160,7 @@ export const CategoryManagerModal = ({ isOpen, onClose, categories = [], onUpdat
                           setEditingId(category.id);
                           setEditName(category.name);
                         }}
-                        className="text-slate-400 hover:text-orange-600"
+                        className="text-slate-400 hover:text-indigo-600"
                       />
                     </>
                   )}

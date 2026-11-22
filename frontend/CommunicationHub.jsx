@@ -1,22 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
+import BrandFooter from './BrandFooter.jsx';
 import {
   Activity,
   AlertCircle,
   ArrowUpRight,
   BarChart3,
   Bell,
+  Calendar,
   Check,
   CheckCheck,
   CheckCircle2,
+  CheckSquare,
   ChevronDown,
   ChevronRight,
   Clock,
   Database,
   ExternalLink,
+  Eye,
   FileCheck,
   FileText,
+  Filter,
   History,
   Info,
   Layers,
@@ -27,6 +32,9 @@ import {
   MessageCircle,
   MessageSquare,
   Network,
+  Pencil,
+  Play,
+  Plus,
   Radio,
   RefreshCcw,
   RefreshCw,
@@ -37,12 +45,17 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Sliders,
   Smartphone,
+  Sparkles,
+  Target,
   Trash2,
   Type,
   UserCheck,
   Users,
+  UserX,
   X,
+  XCircle,
   Zap,
 } from 'lucide-react';
 import { whatsappApi } from './whatsappApi.js';
@@ -94,6 +107,79 @@ const VARIABLES = [
   '{{trainer_name}}',
   '{{class_time}}',
 ];
+
+const VARIABLE_CONFIGS = [
+  { token: '{{member_name}}', label: 'Member Name', example: 'Rahul Sharma', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  { token: '{{gym_name}}', label: 'Gym Name', example: 'GymDeck Fitness', color: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
+  { token: '{{membership_plan}}', label: 'Plan Name', example: 'Gold Annual Pro', color: 'bg-amber-50 text-amber-800 border-amber-200' },
+  { token: '{{membership_expiry}}', label: 'Expiry Date', example: '31 Dec 2026', color: 'bg-rose-50 text-rose-800 border-rose-200' },
+  { token: '{{payment_amount}}', label: 'Fee Amount', example: '₹2,500', color: 'bg-teal-50 text-teal-800 border-teal-200' },
+  { token: '{{payment_due_date}}', label: 'Due Date', example: '05 Dec 2026', color: 'bg-blue-50 text-blue-800 border-blue-200' },
+  { token: '{{trainer_name}}', label: 'Trainer Name', example: 'Vikram Singh', color: 'bg-purple-50 text-purple-800 border-purple-200' },
+  { token: '{{class_time}}', label: 'Session Time', example: '07:30 AM', color: 'bg-cyan-50 text-cyan-800 border-cyan-200' },
+];
+
+function getGymBrandName() {
+  if (typeof localStorage !== 'undefined') {
+    return (
+      localStorage.getItem('gymdeck_gym_name') ||
+      localStorage.getItem('gymdeck_gym_brand_name') ||
+      'GymDeck Fitness'
+    );
+  }
+  return 'GymDeck Fitness';
+}
+
+function renderVisualMessageText(templateText, selectedMember = null) {
+  if (!templateText) return '';
+  const gymName = getGymBrandName();
+  const memberName = selectedMember
+    ? (selectedMember.fullName || selectedMember.name || selectedMember.full_name || 'Rahul Sharma')
+    : 'Rahul Sharma';
+  const plan = selectedMember?.planName || selectedMember?.membership_plan || 'Gold Annual Pro';
+  const expiry = selectedMember?.membershipExpiry || selectedMember?.expires_at
+    ? new Date(selectedMember.membershipExpiry || selectedMember.expires_at).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '31 Dec 2026';
+
+  const replacers = {
+    '{{member_name}}': memberName,
+    '{{gym_name}}': gymName,
+    '{{membership_plan}}': plan,
+    '{{membership_expiry}}': expiry,
+    '{{payment_amount}}': '₹2,500',
+    '{{payment_due_date}}': '05 Dec 2026',
+    '{{trainer_name}}': selectedMember?.trainerName || 'Vikram Singh',
+    '{{class_time}}': '07:30 AM',
+  };
+
+  return String(templateText).replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (match, key) => {
+    const full = `{{${key.toLowerCase()}}}`;
+    return replacers[full] !== undefined ? replacers[full] : match;
+  });
+}
+
+function convertVisualTextToTemplateTokens(text, selectedMember = null) {
+  if (!text) return '';
+  let converted = String(text);
+  const gymName = getGymBrandName();
+  if (selectedMember?.fullName) {
+    converted = converted.split(selectedMember.fullName).join('{{member_name}}');
+  }
+  if (gymName) {
+    converted = converted.split(gymName).join('{{gym_name}}');
+  }
+  if (selectedMember?.planName) {
+    converted = converted.split(selectedMember.planName).join('{{membership_plan}}');
+  }
+  if (selectedMember?.trainerName) {
+    converted = converted.split(selectedMember.trainerName).join('{{trainer_name}}');
+  }
+  return converted;
+}
 
 function resolveMemberPhoto(photo) {
   if (!photo || typeof photo !== 'string') return null;
@@ -303,7 +389,11 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
   const [templateId, setTemplateId] = useState('');
   const [intent, setIntent] = useState('ATTENDANCE');
   const [messageTitle, setMessageTitle] = useState('');
+  const [rawTemplatePattern, setRawTemplatePattern] = useState(
+    'Hi {{member_name}}, your visit to {{gym_name}} was recorded successfully.'
+  );
   const [body, setBody] = useState('');
+  const isUserCustomEditRef = useRef(false);
 
   // Audience
   const [activeSegment, setActiveSegment] = useState('all');
@@ -330,6 +420,15 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
     [templates]
   );
 
+  // Currently focused / active selected member for visual live preview
+  const selectedMember = useMemo(() => {
+    if (selectedIds.length > 0) {
+      const match = audienceRows.find((m) => m.id === selectedIds[0]);
+      if (match) return match;
+    }
+    return audienceRows.length > 0 ? audienceRows[0] : null;
+  }, [selectedIds, audienceRows]);
+
   // Sync selected campaign intent to template
   useEffect(() => {
     const matched = NOTIFICATION_TYPES.find((t) => t.id === selectedType);
@@ -338,12 +437,22 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
       const tmpl = approvedTemplates.find((t) => t.intent === matched.intent);
       if (tmpl) {
         setTemplateId(tmpl.id);
-        if (!body) setBody(tmpl.body || '');
+        const templatePattern = tmpl.body || '';
+        setRawTemplatePattern(templatePattern);
+        isUserCustomEditRef.current = false;
+        setBody(renderVisualMessageText(templatePattern, selectedMember));
       } else {
         setTemplateId('');
       }
     }
   }, [selectedType, approvedTemplates]);
+
+  // When selectedMember changes, update the body with this member's credentials if not custom edited
+  useEffect(() => {
+    if (!isUserCustomEditRef.current && rawTemplatePattern) {
+      setBody(renderVisualMessageText(rawTemplatePattern, selectedMember));
+    }
+  }, [selectedMember, rawTemplatePattern]);
 
   // Load audience
   const loadAudience = useCallback(async () => {
@@ -471,12 +580,21 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
   };
 
   const buildPayload = () => {
+    // When sending to multiple or single recipients, if body has been personalized with a previewed member's name,
+    // convert it back to generic template placeholders like {{member_name}} and {{gym_name}} so backend evaluates each recipient properly
+    let finalBody = body.trim() || undefined;
+    if (finalBody && !isUserCustomEditRef.current && rawTemplatePattern) {
+      finalBody = rawTemplatePattern;
+    } else if (finalBody && isUserCustomEditRef.current) {
+      finalBody = convertVisualTextToTemplateTokens(finalBody, selectedMember);
+    }
+
     return {
       audience: {
         mode: selectedIds.length > 0 ? 'SELECTED' : 'ALL',
         memberIds: selectedIds.length > 0 ? selectedIds : undefined,
       },
-      body: body.trim() || undefined,
+      body: finalBody,
       intent: intent || undefined,
       templateId: templateId || undefined,
     };
@@ -636,7 +754,10 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
               if (tmpl) {
                 setTemplateId(tmpl.id);
                 setIntent(tmpl.intent);
-                setBody(tmpl.body || '');
+                const pattern = tmpl.body || '';
+                setRawTemplatePattern(pattern);
+                isUserCustomEditRef.current = false;
+                setBody(renderVisualMessageText(pattern, selectedMember));
               } else {
                 setTemplateId('');
                 setIntent(val);
@@ -656,30 +777,44 @@ function ComposeTab({ templates, onSent, connection, onNavigateTab }) {
             ]}
           />
 
-          {/* Message Body */}
-          <div className="border border-slate-200/90 rounded-xl bg-white overflow-hidden focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all">
-            <textarea
-              ref={textareaRef}
-              rows={5}
-              value={body}
-              onChange={(e) => setBody(e.target.value.slice(0, 2000))}
-              placeholder="Type notification message here or choose an active template above..."
-              className="w-full p-3.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
-            />
-            <div className="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => setBody('')}
-                disabled={!body}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-xs ${
-                  body
-                    ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white cursor-pointer border border-rose-600'
-                    : 'bg-rose-300 text-white/90 border border-rose-300 cursor-not-allowed opacity-60'
-                }`}
-              >
-                <Trash2 size={12} strokeWidth={2.4} />
-                <span>Clear Message</span>
-              </button>
+          {/* Message Body directly showing real member & gym credentials */}
+          <div className="space-y-2">
+            <div className="border border-slate-200/90 rounded-xl bg-white overflow-hidden focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all">
+              <textarea
+                ref={textareaRef}
+                rows={4}
+                value={body}
+                onChange={(e) => {
+                  isUserCustomEditRef.current = true;
+                  setBody(e.target.value.slice(0, 2000));
+                }}
+                placeholder="Type notification message here or choose an active template above..."
+                className="w-full p-3.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed"
+              />
+              <div className="px-3 py-2 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span>
+                    Viewing details for: <strong className="text-slate-800">{selectedMember ? selectedMember.fullName : 'Select a member from directory'}</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    isUserCustomEditRef.current = true;
+                    setBody('');
+                  }}
+                  disabled={!body}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-xs ${
+                    body
+                      ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white cursor-pointer border border-rose-600'
+                      : 'bg-rose-300 text-white/90 border border-rose-300 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <Trash2 size={12} strokeWidth={2.4} />
+                  <span>Clear Message</span>
+                </button>
+              </div>
             </div>
           </div>
         </Card>
@@ -2203,14 +2338,97 @@ function HistoryTab({ onChanged }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   4. AUTOMATION TAB
+   4. AUTOMATION TAB (PRO DOTTED STUDIO WITH CUSTOM FLOW BUILDER)
 ════════════════════════════════════════════════════════════ */
+const CUSTOM_AUTOMATIONS_STORAGE_KEY = 'gymdeck_whatsapp_custom_automations_v1';
+
+const DEFAULT_CUSTOM_FLOWS = [
+  {
+    id: 'flow-welcome-onboard',
+    name: 'Day 1 Member Welcome & Locker Guidelines',
+    category: 'ONBOARDING',
+    targetSegment: 'active',
+    targetSegmentLabel: 'Active Members',
+    sendTime: '10:30',
+    scheduleType: 'DAILY',
+    scheduleDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
+    isEnabled: true,
+    messageBody: 'Hello {{member_name}}! 🏋️ Welcome to {{gym_name}}. Your {{membership_plan}} plan is active. Please remember to bring a gym towel and clean indoor sneakers. See you on the floor!',
+    lastTriggeredAt: null,
+    dispatchedCount: 18,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'flow-weekend-bootcamp',
+    name: 'Saturday Strength & HIIT Workout Reminder',
+    category: 'CLASS_REMINDER',
+    targetSegment: 'all',
+    targetSegmentLabel: 'All Members',
+    sendTime: '08:00',
+    scheduleType: 'WEEKLY',
+    scheduleDays: ['SAT'],
+    isEnabled: true,
+    messageBody: 'Rise & Grind, {{member_name}}! 🌅 Weekend HIIT & Core Conditioning starts today at 09:00 AM at {{gym_name}}. Book your slot with {{trainer_name}} to lock in your spot.',
+    lastTriggeredAt: null,
+    dispatchedCount: 42,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'flow-pending-dues-warning',
+    name: 'Pending Fee Follow-up Notice',
+    category: 'PAYMENT_FOLLOWUP',
+    targetSegment: 'dues',
+    targetSegmentLabel: 'Pending Dues',
+    sendTime: '11:00',
+    scheduleType: 'DAILY',
+    scheduleDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
+    isEnabled: false,
+    messageBody: 'Dear {{member_name}}, this is a friendly reminder that an outstanding payment of {{payment_amount}} is due on {{payment_due_date}}. Tap the front desk to settle via UPI or card.',
+    lastTriggeredAt: null,
+    dispatchedCount: 0,
+    createdAt: new Date().toISOString(),
+  },
+];
+
 function AutomationTab({ templates }) {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+
+  // Sub-navigation view: 'system' (event triggers) vs 'custom' (user custom flows)
+  const [subView, setSubView] = useState('custom'); // Default to custom as requested
+
+  // Custom Automations state
+  const [customFlows, setCustomFlows] = useState(() => {
+    try {
+      const stored = localStorage.getItem(CUSTOM_AUTOMATIONS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return DEFAULT_CUSTOM_FLOWS;
+  });
+
+  // Modal editor state for custom flow
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingFlow, setEditingFlow] = useState(null);
+  const [testingFlow, setTestingFlow] = useState(null);
+  const [testingMemberId, setTestingMemberId] = useState('');
+  const [testSendBusy, setTestSendBusy] = useState(false);
+
+  // Audience preview state inside builder modal
+  const [audienceList, setAudienceList] = useState([]);
+  const [audienceLoading, setAudienceLoading] = useState(false);
+
+  // Save custom flows to local storage whenever updated
+  useEffect(() => {
+    try {
+      localStorage.setItem(CUSTOM_AUTOMATIONS_STORAGE_KEY, JSON.stringify(customFlows));
+    } catch (_) {}
+  }, [customFlows]);
 
   const approvedTemplates = useMemo(
     () => (templates || []).filter((template) => template.isUsable),
@@ -2234,12 +2452,12 @@ function AutomationTab({ templates }) {
     load();
   }, [load]);
 
-  const update = (id, patch) => {
+  const updateSystemRule = (id, patch) => {
     setRules((current) => current.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
     setNotice('');
   };
 
-  const save = async () => {
+  const saveSystemRules = async () => {
     setSaving(true);
     setError('');
     setNotice('');
@@ -2254,7 +2472,7 @@ function AutomationTab({ templates }) {
         }))
       );
       setRules(result?.rules || rules);
-      setNotice('Automation schedules saved successfully. Reminders dispatch automatically via background worker.');
+      setNotice('Automation rules saved successfully. Background workers evaluate schedule every hour.');
     } catch (err) {
       setError(err.message || 'Could not save automation rules.');
     } finally {
@@ -2262,147 +2480,859 @@ function AutomationTab({ templates }) {
     }
   };
 
-  if (loading) return <Spinner label="Loading automation rules…" />;
+  const handleToggleCustomFlow = (id) => {
+    setCustomFlows((prev) =>
+      prev.map((flow) => (flow.id === id ? { ...flow, isEnabled: !flow.isEnabled } : flow))
+    );
+    setNotice('Custom automation updated.');
+  };
 
-  const activeRulesCount = rules.filter((r) => r.isEnabled).length;
+  const handleDeleteCustomFlow = (id) => {
+    if (!window.confirm('Delete this custom message automation flow?')) return;
+    setCustomFlows((prev) => prev.filter((flow) => flow.id !== id));
+    setNotice('Automation flow deleted.');
+  };
+
+  const handleOpenNewFlow = () => {
+    setEditingFlow({
+      id: `flow-${Date.now()}`,
+      name: '',
+      category: 'CUSTOM',
+      targetSegment: 'all',
+      targetSegmentLabel: 'All Members',
+      sendTime: '10:00',
+      scheduleType: 'DAILY',
+      scheduleDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
+      isEnabled: true,
+      messageBody: 'Hello {{member_name}}! This is an automated update from {{gym_name}}.',
+      lastTriggeredAt: null,
+      dispatchedCount: 0,
+      createdAt: new Date().toISOString(),
+    });
+    setEditorOpen(true);
+  };
+
+  const handleEditFlow = (flow) => {
+    setEditingFlow({ ...flow });
+    setEditorOpen(true);
+  };
+
+  const handleSaveFlowModal = (savedFlow) => {
+    if (!savedFlow.name?.trim()) {
+      alert('Please provide a name for this automation.');
+      return;
+    }
+    if (!savedFlow.messageBody?.trim()) {
+      alert('Please provide message content for this automation.');
+      return;
+    }
+
+    setCustomFlows((prev) => {
+      const exists = prev.some((f) => f.id === savedFlow.id);
+      if (exists) {
+        return prev.map((f) => (f.id === savedFlow.id ? savedFlow : f));
+      }
+      return [savedFlow, ...prev];
+    });
+
+    setEditorOpen(false);
+    setEditingFlow(null);
+    setNotice(`Automation "${savedFlow.name}" saved successfully.`);
+  };
+
+  const handleTestDispatch = async (flow) => {
+    setTestingFlow(flow);
+  };
+
+  const handleExecuteTestSend = async (targetMemberId) => {
+    if (!targetMemberId || !testingFlow) return;
+    setTestSendBusy(true);
+    try {
+      await whatsappApi.send({
+        audience: { mode: 'SELECTED', memberIds: [targetMemberId] },
+        body: testingFlow.messageBody,
+        intent: 'SERVICE_ANNOUNCEMENT',
+        confirm: true,
+      });
+      setCustomFlows((prev) =>
+        prev.map((f) =>
+          f.id === testingFlow.id
+            ? {
+                ...f,
+                lastTriggeredAt: new Date().toISOString(),
+                dispatchedCount: (f.dispatchedCount || 0) + 1,
+              }
+            : f
+        )
+      );
+      setNotice(`Test message sent successfully for "${testingFlow.name}".`);
+      setTestingFlow(null);
+    } catch (err) {
+      alert(err.message || 'Failed to dispatch test message.');
+    } finally {
+      setTestSendBusy(false);
+    }
+  };
+
+  if (loading) return <Spinner label="Loading automation dispatchers…" />;
+
+  const activeSystemCount = rules.filter((r) => r.isEnabled).length;
+  const activeCustomCount = customFlows.filter((f) => f.isEnabled).length;
 
   return (
-    <div className="space-y-5">
-      {/* ─── BANNER / ACTION HEADER ─── */}
-      <Card className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 border border-purple-100">
-            <Radio size={18} strokeWidth={2.4} />
+    <div className="space-y-6">
+      {/* ─── PRO TOP BAR: STUDIO HEADER & STATS ─── */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/80 shadow-2xs">
+            <Radio size={20} strokeWidth={2.4} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                Automated Event Dispatchers
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-black text-slate-900 tracking-tight">
+                WhatsApp Automation &amp; Schedule Studio
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-purple-50 text-purple-700 border border-purple-200/80">
-                {activeRulesCount} Active Rules
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                {activeCustomCount + activeSystemCount} Active Pipelines
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-xl">
-              Background event workers automatically evaluate check-ins, impending membership expiries, and payment dues every hour.
+              Create customizable scheduled workflows, member audience targeting, and automated event dispatchers.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider hover:bg-indigo-600 transition-all cursor-pointer shadow-md disabled:opacity-50 shrink-0"
-        >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCheck size={14} strokeWidth={2.4} />}
-          <span>Save Automation</span>
-        </button>
-      </Card>
+        {/* View Switcher & Action Controls */}
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSubView('custom')}
+              className={`h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                subView === 'custom'
+                  ? 'bg-white text-emerald-700 shadow-2xs font-black'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles size={13} className={subView === 'custom' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>Custom Workflows ({customFlows.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSubView('system')}
+              className={`h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                subView === 'system'
+                  ? 'bg-white text-indigo-700 shadow-2xs font-black'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Layers size={13} className={subView === 'system' ? 'text-indigo-600' : 'text-slate-400'} />
+              <span>System Trigger Rules ({rules.length})</span>
+            </button>
+          </div>
+
+          {subView === 'custom' ? (
+            <button
+              type="button"
+              onClick={handleOpenNewFlow}
+              style={{ backgroundColor: '#128C7E', color: '#ffffff' }}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-white text-xs font-bold hover:brightness-105 transition-all cursor-pointer shadow-md shadow-emerald-700/20 active:scale-95 shrink-0"
+            >
+              <Plus size={15} strokeWidth={2.8} />
+              <span>Create Automation</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={saveSystemRules}
+              disabled={saving}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider hover:bg-indigo-600 transition-all cursor-pointer shadow-md disabled:opacity-50 shrink-0"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCheck size={14} strokeWidth={2.4} />}
+              <span>Save Rules</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       <ErrorNote message={error} onRetry={load} />
       {notice && (
-        <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 shadow-2xs">
-          <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-          <span>{notice}</span>
+        <div className="flex items-center justify-between text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+            <span>{notice}</span>
+          </div>
+          <button type="button" onClick={() => setNotice('')} className="text-slate-400 hover:text-slate-700">
+            <X size={14} />
+          </button>
         </div>
       )}
 
-      {/* ─── RULES GRID ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {rules.map((rule) => {
-          const isEnabled = Boolean(rule.isEnabled);
-          return (
-            <Card
-              key={rule.id}
-              className={`p-5 flex flex-col justify-between space-y-4 transition-all shadow-2xs ${
-                isEnabled ? 'border-slate-200/90' : 'opacity-70 bg-slate-50/50'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-slate-300'}`} />
-                    <span className="text-xs font-black text-slate-900">{rule.label || rule.ruleType}</span>
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={isEnabled}
-                      onChange={(e) => update(rule.id, { isEnabled: e.target.checked })}
-                      className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+      {/* ─── TAB CONTENT 1: CUSTOM MESSAGE AUTOMATION FLOWS (DOTTED CARDS) ─── */}
+      {subView === 'custom' && (
+        <div className="space-y-5">
+          {customFlows.length === 0 ? (
+            /* DOTTED EMPTY DROPZONE CARD */
+            <div className="relative rounded-3xl border-2 border-dashed border-slate-300 hover:border-emerald-400/80 bg-slate-50/60 p-7 w-full mx-auto transition-colors overflow-hidden">
+              <div
+                className="absolute inset-0 opacity-[0.45] pointer-events-none"
+                style={{
+                  backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
+                  backgroundSize: '20px 20px',
+                }}
+              />
+              <div className="relative z-10 flex flex-col items-center justify-center text-center py-6 gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-emerald-600">
+                  <Sparkles size={24} />
+                </div>
+                <h3 className="text-base font-bold text-slate-800">No Custom Automations Created Yet</h3>
+                <p className="text-xs text-slate-500 max-w-md">
+                  Design automated messages for target member groups, set dispatch times, and schedule recurring days.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenNewFlow}
+                  className="mt-2 inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95"
+                >
+                  <Plus size={15} />
+                  <span>Build First Automation</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+              {customFlows.map((flow) => {
+                const isEnabled = Boolean(flow.isEnabled);
+                return (
+                  <div
+                    key={flow.id}
+                    className={`relative rounded-3xl border transition-all duration-200 overflow-hidden flex flex-col justify-between p-5 gap-4 shadow-xs ${
+                      isEnabled
+                        ? 'border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-md'
+                        : 'border-slate-200/60 bg-slate-50/60 opacity-75'
+                    }`}
+                  >
+                    {/* Subtle dotted canvas background for card */}
+                    <div
+                      className="absolute inset-0 opacity-[0.25] pointer-events-none"
+                      style={{
+                        backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
+                        backgroundSize: '16px 16px',
+                      }}
                     />
-                    <span className={`text-[11px] font-bold ${isEnabled ? 'text-emerald-700' : 'text-slate-400'}`}>
-                      {isEnabled ? 'Active' : 'Disabled'}
-                    </span>
-                  </label>
+
+                    {/* Top Row: Category Pill, Status Badge & Toggle */}
+                    <div className="relative z-10 flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                          {flow.category || 'CUSTOM'}
+                        </span>
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            isEnabled ? 'bg-emerald-500 ring-4 ring-emerald-500/10' : 'bg-slate-300'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isEnabled}
+                            onChange={() => handleToggleCustomFlow(flow.id)}
+                            className="w-4 h-4 rounded text-emerald-600 accent-emerald-600 cursor-pointer"
+                          />
+                          <span
+                            className={`text-[11px] font-bold ${isEnabled ? 'text-emerald-700' : 'text-slate-400'}`}
+                          >
+                            {isEnabled ? 'Active' : 'Paused'}
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Middle: Flow Name & Target Metadata */}
+                    <div className="relative z-10 space-y-2.5 flex-1">
+                      <h3 className="font-extrabold text-sm text-slate-900 leading-snug line-clamp-1" title={flow.name}>
+                        {flow.name}
+                      </h3>
+
+                      {/* Schedule Chips & Audience */}
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-2 rounded-xl bg-white/80 border border-slate-200/80 shadow-2xs">
+                          <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                            Target Audience
+                          </span>
+                          <div className="font-bold text-slate-700 flex items-center gap-1 truncate">
+                            <Users size={12} className="text-indigo-600 shrink-0" />
+                            <span className="truncate">{flow.targetSegmentLabel || 'All Members'}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-2 rounded-xl bg-white/80 border border-slate-200/80 shadow-2xs">
+                          <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                            Dispatch Time
+                          </span>
+                          <div className="font-bold text-slate-700 flex items-center gap-1">
+                            <Clock size={12} className="text-amber-600 shrink-0" />
+                            <span className="font-mono">{flow.sendTime || '10:00'} IST</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Active Days Pills */}
+                      <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                        {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => {
+                          const active = flow.scheduleDays?.includes(day);
+                          return (
+                            <span
+                              key={day}
+                              className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold ${
+                                active
+                                  ? 'bg-slate-900 text-white'
+                                  : 'bg-slate-100 text-slate-400'
+                              }`}
+                            >
+                              {day}
+                            </span>
+                          );
+                        })}
+                      </div>
+
+                      {/* Visual Live Message Preview Box (Directly shows member & gym details) */}
+                      <div className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 text-[11px] text-slate-800 font-sans leading-relaxed space-y-1 shadow-2xs">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                          <span className="flex items-center gap-1">
+                            <Sparkles size={11} className="text-emerald-600" /> Member View
+                          </span>
+                          <span className="font-normal font-sans text-slate-400 capitalize">
+                            Auto-personalized
+                          </span>
+                        </div>
+                        <p className="line-clamp-3 whitespace-pre-wrap font-medium">
+                          {renderVisualMessageText(flow.messageBody)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Bottom: Metrics & Actions */}
+                    <div className="relative z-10 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        Sent <span className="font-bold text-slate-700">{flow.dispatchedCount || 0}</span> times
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleTestDispatch(flow)}
+                          className="h-7 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                          title="Test send to a sample member"
+                        >
+                          <Play size={10} strokeWidth={2.4} />
+                          <span>Test</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleEditFlow(flow)}
+                          className="h-7 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                          title="Edit flow"
+                        >
+                          <Pencil size={11} strokeWidth={2.2} />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomFlow(flow.id)}
+                          className="h-7 w-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-all cursor-pointer"
+                          title="Delete flow"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── TAB CONTENT 2: SYSTEM EVENT DISPATCHERS (EXISTING BACKEND RULES) ─── */}
+      {subView === 'system' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+            <p>
+              Pre-built system triggers linked directly to gym check-in hardware, membership expiration calendars, and payment status updates.
+            </p>
+            <span className="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+              Evaluated Hourly
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {rules.map((rule) => {
+              const isEnabled = Boolean(rule.isEnabled);
+              return (
+                <div
+                  key={rule.id}
+                  className={`relative p-5 rounded-3xl border transition-all shadow-xs flex flex-col justify-between space-y-4 overflow-hidden ${
+                    isEnabled
+                      ? 'border-slate-200/90 bg-white hover:shadow-md'
+                      : 'border-slate-200/60 opacity-70 bg-slate-50/50'
+                  }`}
+                >
+                  <div
+                    className="absolute inset-0 opacity-[0.25] pointer-events-none"
+                    style={{
+                      backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
+                      backgroundSize: '16px 16px',
+                    }}
+                  />
+
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            isEnabled ? 'bg-indigo-500 ring-4 ring-indigo-500/10' : 'bg-slate-300'
+                          }`}
+                        />
+                        <span className="text-xs font-black text-slate-900">{rule.label || rule.ruleType}</span>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={(e) => updateSystemRule(rule.id, { isEnabled: e.target.checked })}
+                          className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                        />
+                        <span className={`text-[11px] font-bold ${isEnabled ? 'text-indigo-700' : 'text-slate-400'}`}>
+                          {isEnabled ? 'Active' : 'Disabled'}
+                        </span>
+                      </label>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed mt-2.5">
+                      {rule.ruleType === 'DAILY_CHECKIN'
+                        ? 'Dispatches immediate confirmation receipt upon barcode or manual front desk check-in.'
+                        : rule.ruleType === 'EXPIRY_REMINDER_3D'
+                        ? 'Alerts members 3 days prior to expiration with personalized renewal details.'
+                        : rule.ruleType === 'EXPIRY_REMINDER_TODAY'
+                        ? 'Notifies member on their final active day to avoid workout interruptions.'
+                        : 'Scheduled automated reminder triggered by background queue monitor.'}
+                    </p>
+                  </div>
+
+                  <div className="relative z-10 space-y-3 pt-2 border-t border-slate-100">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                          Dispatch Time
+                        </label>
+                        <input
+                          type="time"
+                          value={rule.sendTime}
+                          onChange={(e) => updateSystemRule(rule.id, { sendTime: e.target.value })}
+                          className="h-9 px-2.5 rounded-xl border border-slate-200/90 bg-white font-mono text-xs w-full font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                          Target Offset
+                        </label>
+                        <div className="h-9 px-2.5 rounded-xl border border-slate-200/80 bg-slate-100/70 font-mono text-xs flex items-center text-slate-700 font-bold">
+                          {rule.offsetDays ? `${rule.offsetDays} days prior` : 'Immediate event'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <CustomDropdown
+                        label="Assigned WhatsApp Template"
+                        value={rule.templateId || ''}
+                        onChange={(val) => updateSystemRule(rule.id, { templateId: val || null })}
+                        placeholder="Auto-select template"
+                        options={[
+                          { value: '', label: 'Auto-select template' },
+                          ...approvedTemplates.map((t) => ({
+                            value: t.id,
+                            label: `${t.label} (${t.templateName})`,
+                          })),
+                        ]}
+                        buttonClassName="h-9 px-3 rounded-xl border border-slate-200 text-xs font-semibold shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 1: CUSTOM AUTOMATION WORKFLOW BUILDER (PROFESSIONAL DESIGN) ─── */}
+      {editorOpen && editingFlow && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="fixed inset-0 z-[10050] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+              <div
+                className="fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity"
+                onClick={() => setEditorOpen(false)}
+              />
+
+              <div className="relative w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-7 space-y-5 z-10 animate-in fade-in-50 zoom-in-95 my-auto max-h-[92vh] overflow-y-auto custom-scrollbar">
+                {/* Header with Dotted Subhead */}
+                <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 shadow-2xs">
+                      <Sparkles size={18} strokeWidth={2.4} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900">
+                        {editingFlow.id.startsWith('flow-') && !customFlows.some((f) => f.id === editingFlow.id)
+                          ? 'Design New Message Automation'
+                          : 'Edit Automation Workflow'}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        Configure target member audience, recurring schedule days, and personalized message content.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditorOpen(false)}
+                    className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
 
-                <p className="text-[11px] text-slate-500 font-medium leading-relaxed mt-2.5">
-                  {rule.ruleType === 'DAILY_CHECKIN'
-                    ? 'Dispatches immediate confirmation receipt upon barcode or manual front desk check-in.'
-                    : rule.ruleType === 'EXPIRY_REMINDER_3D'
-                    ? 'Alerts members 3 days prior to expiration with personalized renewal details.'
-                    : rule.ruleType === 'EXPIRY_REMINDER_TODAY'
-                    ? 'Notifies member on their final active day to avoid workout interruptions.'
-                    : 'Scheduled automated reminder triggered by background queue monitor.'}
-                </p>
-              </div>
+                {/* Form Inputs Grid */}
+                <div className="space-y-4 text-xs">
+                  {/* Name & Category */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Automation Workflow Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editingFlow.name}
+                        onChange={(e) => setEditingFlow({ ...editingFlow, name: e.target.value })}
+                        placeholder="e.g. Weekly Workout Motivation, Personal Trainer Followup"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-200/90 text-xs font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-2xs"
+                      />
+                    </div>
 
-              <div className="space-y-3 pt-2 border-t border-slate-100">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                      Dispatch Time
-                    </label>
-                    <input
-                      type="time"
-                      value={rule.sendTime}
-                      onChange={(e) => update(rule.id, { sendTime: e.target.value })}
-                      className="h-9 px-2.5 rounded-xl border border-slate-200/90 bg-white font-mono text-xs w-full font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
-                    />
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">Category Tag</label>
+                      <select
+                        value={editingFlow.category}
+                        onChange={(e) => setEditingFlow({ ...editingFlow, category: e.target.value })}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-200/90 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:border-emerald-600 shadow-2xs"
+                      >
+                        <option value="CUSTOM">Custom Workflow</option>
+                        <option value="ONBOARDING">Onboarding</option>
+                        <option value="CLASS_REMINDER">Class Reminder</option>
+                        <option value="PAYMENT_FOLLOWUP">Payment Follow-up</option>
+                        <option value="RETENTION">Retention / Winback</option>
+                        <option value="MOTIVATION">Motivation</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                      Target Offset
+
+                  {/* Target Audience & Timing */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block flex items-center gap-1.5">
+                        <Users size={13} className="text-indigo-600" />
+                        <span>Target Member Audience</span>
+                      </label>
+                      <select
+                        value={editingFlow.targetSegment}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const seg = SEGMENT_CHIPS.find((s) => s.id === val);
+                          setEditingFlow({
+                            ...editingFlow,
+                            targetSegment: val,
+                            targetSegmentLabel: seg?.label || 'All Members',
+                          });
+                        }}
+                        className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:border-emerald-600"
+                      >
+                        {SEGMENT_CHIPS.map((seg) => (
+                          <option key={seg.id} value={seg.id}>
+                            {seg.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10.5px] text-slate-400">
+                        Automation evaluates members matching this filter.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block flex items-center gap-1.5">
+                        <Clock size={13} className="text-amber-600" />
+                        <span>Daily Dispatch Time (IST)</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={editingFlow.sendTime}
+                        onChange={(e) => setEditingFlow({ ...editingFlow, sendTime: e.target.value })}
+                        className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white font-mono text-xs font-bold text-slate-900 shadow-2xs focus:outline-none focus:border-emerald-600"
+                      />
+                      <p className="text-[10.5px] text-slate-400">
+                        Local Indian Standard Time for scheduled dispatch.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Schedule Days */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-700 block">
+                      Active Execution Days
                     </label>
-                    <div className="h-9 px-2.5 rounded-xl border border-slate-200/80 bg-slate-100/70 font-mono text-xs flex items-center text-slate-700 font-bold">
-                      {rule.offsetDays ? `${rule.offsetDays} days prior` : 'Immediate event'}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => {
+                        const isSelected = editingFlow.scheduleDays?.includes(day);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => {
+                              const current = editingFlow.scheduleDays || [];
+                              const next = current.includes(day)
+                                ? current.filter((d) => d !== day)
+                                : [...current, day];
+                              setEditingFlow({ ...editingFlow, scheduleDays: next });
+                            }}
+                            className={`h-8 px-3 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-slate-900 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {day}
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingFlow({
+                            ...editingFlow,
+                            scheduleDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+                          })
+                        }
+                        className="text-[11px] text-indigo-600 font-bold hover:underline ml-2"
+                      >
+                        Select All
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Message Body & Variables */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Custom WhatsApp Message Body <span className="text-rose-500">*</span>
+                      </label>
+                      <span className="text-[10.5px] text-slate-400 font-mono">
+                        {editingFlow.messageBody?.length || 0} / 1000
+                      </span>
+                    </div>
+
+                    <textarea
+                      rows={4}
+                      value={editingFlow.messageBody}
+                      onChange={(e) => setEditingFlow({ ...editingFlow, messageBody: e.target.value })}
+                      placeholder="Type your automated WhatsApp message. Insert tags below to auto-fill member details..."
+                      className="w-full p-3 rounded-2xl border border-slate-200/90 text-xs font-medium text-slate-900 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 shadow-2xs leading-relaxed"
+                    />
+
+                    {/* Quick Variable Tag Pills with Friendly Human Labels */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Insert Smart Field (Auto-fills for each member):
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {VARIABLE_CONFIGS.map((v) => (
+                          <button
+                            key={v.token}
+                            type="button"
+                            onClick={() =>
+                              setEditingFlow({
+                                ...editingFlow,
+                                messageBody: `${editingFlow.messageBody || ''} ${v.token}`.trim(),
+                              })
+                            }
+                            className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-1 hover:brightness-95 ${v.color}`}
+                            title={`Inserts ${v.label} (e.g. ${v.example})`}
+                          >
+                            <span>+ {v.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Visual Live Preview Box in Modal */}
+                    {editingFlow.messageBody?.trim() && (
+                      <div className="mt-2.5 p-3.5 rounded-2xl border border-emerald-200/90 bg-emerald-50/40 space-y-1.5 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10.5px] font-bold text-emerald-800 flex items-center gap-1">
+                            <Sparkles size={12} className="text-emerald-600" />
+                            Visual Message Preview (What members will receive):
+                          </span>
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200">
+                            Live Member View
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white rounded-xl border border-emerald-100 text-xs text-slate-800 leading-relaxed whitespace-pre-wrap shadow-2xs">
+                          {renderVisualMessageText(editingFlow.messageBody)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditorOpen(false)}
+                    className="h-10 px-4 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveFlowModal(editingFlow)}
+                      style={{ backgroundColor: '#128C7E', color: '#ffffff' }}
+                      className="h-10 px-5 rounded-xl text-white text-xs font-bold transition-all shadow-md hover:brightness-105 cursor-pointer active:scale-95"
+                    >
+                      Save Automation
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {/* ─── MODAL 2: TEST SEND TO MEMBER PREVIEW ─── */}
+      {testingFlow && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="fixed inset-0 z-[10050] flex items-center justify-center p-4">
+              <div
+                className="fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity"
+                onClick={() => setTestingFlow(null)}
+              />
+
+              <div className="relative w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 space-y-4 z-10 animate-in fade-in zoom-in-95 my-auto">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                      <Play size={14} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-extrabold text-slate-900">Test Message Dispatch</h3>
+                      <p className="text-[11px] text-slate-400">"{testingFlow.name}"</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setTestingFlow(null)} className="text-slate-400 hover:text-slate-700">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Select Test Member Recipient
+                    </label>
+                    <select
+                      id="test-member-select"
+                      value={testingMemberId}
+                      onChange={(e) => setTestingMemberId(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-semibold bg-white focus:outline-none focus:border-emerald-600 shadow-2xs"
+                    >
+                      <option value="">Select a member...</option>
+                      {Array.isArray(window.cachedMembers) &&
+                        window.cachedMembers.slice(0, 30).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name || m.full_name} ({m.phone})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Visual Rendered Message for the selected test recipient */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Personalized Message (Recipient View):
+                    </span>
+                    <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200 text-xs font-normal text-slate-800 leading-relaxed shadow-2xs whitespace-pre-wrap">
+                      {(() => {
+                        const testMember = Array.isArray(window.cachedMembers)
+                          ? window.cachedMembers.find((m) => m.id === testingMemberId)
+                          : null;
+                        return renderVisualMessageText(testingFlow.messageBody, testMember);
+                      })()}
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <CustomDropdown
-                    label="Assigned WhatsApp Template"
-                    value={rule.templateId || ''}
-                    onChange={(val) => update(rule.id, { templateId: val || null })}
-                    placeholder="Auto-select template"
-                    options={[
-                      { value: '', label: 'Auto-select template' },
-                      ...approvedTemplates.map((t) => ({
-                        value: t.id,
-                        label: `${t.label} (${t.templateName})`,
-                      })),
-                    ]}
-                    buttonClassName="h-9 px-3 rounded-xl border border-slate-200 text-xs font-semibold shadow-2xs"
-                  />
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTestingFlow(null);
+                      setTestingMemberId('');
+                    }}
+                    className="h-9 px-3 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={testSendBusy}
+                    onClick={() => {
+                      const sel = document.getElementById('test-member-select');
+                      const memId = testingMemberId || sel?.value;
+                      if (!memId) {
+                        alert('Please select a member to test dispatch.');
+                        return;
+                      }
+                      handleExecuteTestSend(memId);
+                    }}
+                    style={{ backgroundColor: '#128C7E', color: '#ffffff' }}
+                    className="h-9 px-4 rounded-xl text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    {testSendBusy ? 'Sending...' : 'Send Test WhatsApp'}
+                  </button>
                 </div>
               </div>
-            </Card>
-          );
-        })}
-      </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
 
 /* ════════════════════════════════════════════════════════════
-   5. SETTINGS & CONSENT TAB
+   5. SETTINGS & CONSENT TAB (MEMBER OPT-IN AUDIT REGISTRY)
 ════════════════════════════════════════════════════════════ */
 function SettingsTab({ templates, usage, onRefresh }) {
   const [consents, setConsents] = useState([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'granted' | 'withdrawn'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -2412,8 +3342,125 @@ function SettingsTab({ templates, usage, onRefresh }) {
     setLoading(true);
     setError('');
     try {
-      const result = await whatsappApi.getConsents(search);
-      setConsents(result?.members || []);
+      // 1. Fetch backend audience & consent registry
+      let backendMembers = [];
+      try {
+        const result = await whatsappApi.getConsents(search);
+        backendMembers = result?.members || [];
+      } catch (err) {
+        console.warn('Backend consent query note (will merge with local SQLite records):', err.message);
+      }
+
+      // 2. Fetch local members from Tauri SQLite / cachedMembers
+      let localMembers = [];
+      if (typeof window !== 'undefined' && Array.isArray(window.cachedMembers) && window.cachedMembers.length > 0) {
+        localMembers = window.cachedMembers;
+      } else if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
+        try {
+          localMembers = await window.__TAURI__.core.invoke('get_members_command', { limit: 5000, offset: 0 });
+          if (Array.isArray(localMembers)) {
+            window.cachedMembers = localMembers;
+          }
+        } catch (e) {
+          console.warn('Could not load local members via get_members_command:', e);
+        }
+      }
+
+      // 3. Unify / merge local records with backend records
+      const backendMap = new Map();
+      backendMembers.forEach((bm) => {
+        if (bm.id) backendMap.set(bm.id, bm);
+        if (bm.memberCode) backendMap.set(bm.memberCode, bm);
+      });
+
+      const unified = [];
+      const seenIds = new Set();
+
+      // Process local members first to reflect newly created members immediately
+      (localMembers || []).forEach((m) => {
+        if (!m || !m.id || seenIds.has(m.id)) return;
+        seenIds.add(m.id);
+
+        const backendMatch = backendMap.get(m.id) || (m.member_code ? backendMap.get(m.member_code) : null);
+
+        // Derive consent status:
+        // Priority 1: Backend explicit consent status
+        // Priority 2: Member object's whatsapp_opt_in / whatsappOptIn (from Add Member checkbox)
+        // Priority 3: Notes inspection ("WhatsApp Consent: Opted-Out" vs "Opted-In")
+        // Default: GRANTED (since the Add Member modal checkbox is checked by default)
+        let status = 'GRANTED';
+        let source = 'Registration Modal Checkbox';
+        let timestamp = m.whatsappConsentTimestamp || m.created_at || m.joined_at || new Date().toISOString();
+
+        if (backendMatch && backendMatch.consentStatus) {
+          status = backendMatch.consentStatus;
+          if (backendMatch.consentSource) {
+            source =
+              backendMatch.consentSource === 'REGISTRATION_CHECKBOX'
+                ? 'Registration Modal Checkbox'
+                : backendMatch.consentSource === 'OWNER_CONSOLE'
+                ? 'Owner Console Override'
+                : backendMatch.consentSource;
+          }
+          if (backendMatch.consentTimestamp) {
+            timestamp = backendMatch.consentTimestamp;
+          }
+        } else if (m.whatsapp_opt_in === false || m.whatsappOptIn === false) {
+          status = 'WITHDRAWN';
+          source = 'Registration Modal (Opted-Out)';
+        } else if (m.notes && m.notes.includes('WhatsApp Consent: Opted-Out')) {
+          status = 'WITHDRAWN';
+          source = 'Registration Modal (Opted-Out)';
+        } else if (m.notes && m.notes.includes('WhatsApp Consent: Opted-In')) {
+          status = 'GRANTED';
+          source = 'Registration Modal Checkbox';
+        }
+
+        const phoneVal = m.phone || m.contactNumber || backendMatch?.phoneMasked || '';
+        const phoneClean = typeof phoneVal === 'string' ? phoneVal.trim() : '';
+
+        unified.push({
+          id: m.id,
+          fullName: m.full_name || m.name || backendMatch?.fullName || 'Gym Member',
+          memberCode: m.member_code || m.code || backendMatch?.memberCode || 'GD-MEMBER',
+          phone: phoneClean,
+          phoneMasked: backendMatch?.phoneMasked || (phoneClean ? `•••••• ${phoneClean.slice(-4)}` : 'No phone registered'),
+          membershipStatus: m.membership_status || backendMatch?.membershipStatus || 'ACTIVE',
+          planName: m.planName || backendMatch?.planName || 'Standard Membership',
+          profilePhotoUrl: m.profile_photo_path || m.photoUrl || backendMatch?.profilePhotoUrl || null,
+          consentStatus: status,
+          consentSource: source,
+          consentTimestamp: timestamp,
+          notes: m.notes || '',
+          eligibleForWhatsApp: status === 'GRANTED' && Boolean(phoneClean),
+        });
+      });
+
+      // Append backend members that were not in local SQLite cache
+      backendMembers.forEach((bm) => {
+        if (!bm || !bm.id || seenIds.has(bm.id)) return;
+        seenIds.add(bm.id);
+        unified.push({
+          id: bm.id,
+          fullName: bm.fullName || 'Gym Member',
+          memberCode: bm.memberCode || 'GD-MEMBER',
+          phone: bm.phoneMasked || '',
+          phoneMasked: bm.phoneMasked || 'No phone registered',
+          membershipStatus: bm.membershipStatus || 'ACTIVE',
+          planName: bm.planName || 'Standard Membership',
+          profilePhotoUrl: bm.profilePhotoUrl || null,
+          consentStatus: bm.consentStatus || 'GRANTED',
+          consentSource:
+            bm.consentSource === 'REGISTRATION_CHECKBOX'
+              ? 'Registration Modal Checkbox'
+              : bm.consentSource || 'Registration Modal Checkbox',
+          consentTimestamp: bm.consentTimestamp || new Date().toISOString(),
+          notes: '',
+          eligibleForWhatsApp: bm.eligibleForWhatsApp ?? (bm.consentStatus === 'GRANTED'),
+        });
+      });
+
+      setConsents(unified);
     } catch (err) {
       setError(err.message || 'Could not load consent list.');
     } finally {
@@ -2423,6 +3470,17 @@ function SettingsTab({ templates, usage, onRefresh }) {
 
   useEffect(() => {
     load();
+    const handleMemberUpdate = () => load();
+    window.addEventListener('gymdeck:member-added', handleMemberUpdate);
+    window.addEventListener('gymdeck:member-consent-changed', handleMemberUpdate);
+    window.addEventListener('gymdeck:member-transferred', handleMemberUpdate);
+    window.addEventListener('gymdeck:member-deleted', handleMemberUpdate);
+    return () => {
+      window.removeEventListener('gymdeck:member-added', handleMemberUpdate);
+      window.removeEventListener('gymdeck:member-consent-changed', handleMemberUpdate);
+      window.removeEventListener('gymdeck:member-transferred', handleMemberUpdate);
+      window.removeEventListener('gymdeck:member-deleted', handleMemberUpdate);
+    };
   }, [load]);
 
   const toggleConsent = async (memberId, currentStatus) => {
@@ -2430,98 +3488,273 @@ function SettingsTab({ templates, usage, onRefresh }) {
     setError('');
     setNotice('');
     const nextStatus = currentStatus === 'GRANTED' ? 'WITHDRAWN' : 'GRANTED';
+
+    // 1. Optimistic instant UI update
+    setConsents((curr) =>
+      curr.map((m) =>
+        m.id === memberId
+          ? {
+              ...m,
+              consentStatus: nextStatus,
+              consentSource: 'Owner Console Override',
+              consentTimestamp: new Date().toISOString(),
+              eligibleForWhatsApp: nextStatus === 'GRANTED' && Boolean(m.phone && m.phone !== 'No phone registered'),
+            }
+          : m
+      )
+    );
+
+    // 2. Sync to cloud backend API
     try {
       await whatsappApi.setConsent(memberId, nextStatus, 'OWNER_CONSOLE');
-      setConsents((curr) =>
-        curr.map((m) => (m.id === memberId ? { ...m, consentStatus: nextStatus } : m))
-      );
-      setNotice('Member consent status updated.');
-      if (onRefresh) onRefresh();
     } catch (err) {
-      setError(err.message || 'Could not update consent.');
-    } finally {
-      setBusyId('');
+      console.warn('WhatsApp cloud backend consent sync notice:', err.message);
     }
+
+    // 3. Sync to in-memory cachedMembers
+    if (typeof window !== 'undefined' && Array.isArray(window.cachedMembers)) {
+      window.cachedMembers = window.cachedMembers.map((m) => {
+        if (m.id === memberId) {
+          const isGranted = nextStatus === 'GRANTED';
+          let updatedNotes = m.notes || '';
+          if (updatedNotes.includes('WhatsApp Consent:')) {
+            updatedNotes = updatedNotes.replace(/WhatsApp Consent:\s*[^|]+/, `WhatsApp Consent: ${isGranted ? 'Opted-In (Owner Override)' : 'Opted-Out (Owner Override)'}`);
+          } else {
+            updatedNotes = updatedNotes ? `${updatedNotes} | WhatsApp Consent: ${isGranted ? 'Opted-In (Owner Override)' : 'Opted-Out (Owner Override)'}` : `WhatsApp Consent: ${isGranted ? 'Opted-In (Owner Override)' : 'Opted-Out (Owner Override)'}`;
+          }
+          return {
+            ...m,
+            whatsapp_opt_in: isGranted,
+            whatsappOptIn: isGranted,
+            whatsappConsentSource: 'OWNER_CONSOLE',
+            whatsappConsentTimestamp: new Date().toISOString(),
+            notes: updatedNotes,
+          };
+        }
+        return m;
+      });
+
+      // 4. If Tauri desktop environment, persist updated notes & status to SQLite
+      if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
+        try {
+          const updatedM = window.cachedMembers.find((m) => m.id === memberId);
+          if (updatedM) {
+            await window.__TAURI__.core.invoke('update_member_command', { member: updatedM });
+          }
+        } catch (e) {
+          console.warn('Could not persist updated consent in SQLite:', e);
+        }
+      }
+    }
+
+    // 5. Broadcast global event so Composer and Audience recalculate
+    window.dispatchEvent(
+      new CustomEvent('gymdeck:member-consent-changed', {
+        detail: { memberId, status: nextStatus },
+      })
+    );
+
+    setNotice(`Member consent updated to ${nextStatus === 'GRANTED' ? 'Opted-In (Active)' : 'Opted-Out (Restricted)'}.`);
+    setBusyId('');
+    if (onRefresh) onRefresh();
   };
 
+  // Filtered members list
+  const filteredConsents = useMemo(() => {
+    let list = consents;
+    if (statusFilter === 'granted') {
+      list = list.filter((c) => c.consentStatus === 'GRANTED');
+    } else if (statusFilter === 'withdrawn') {
+      list = list.filter((c) => c.consentStatus !== 'GRANTED');
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.fullName.toLowerCase().includes(q) ||
+          c.memberCode.toLowerCase().includes(q) ||
+          c.phone.includes(q) ||
+          c.phoneMasked.includes(q)
+      );
+    }
+    return list;
+  }, [consents, statusFilter, search]);
+
   const grantedCount = consents.filter((c) => c.consentStatus === 'GRANTED').length;
-  const pendingCount = consents.filter((c) => c.consentStatus !== 'GRANTED').length;
+  const withdrawnCount = consents.filter((c) => c.consentStatus !== 'GRANTED').length;
+  const registrationCount = consents.filter(
+    (c) => c.consentSource && c.consentSource.toLowerCase().includes('registration')
+  ).length;
+  const optInRate = consents.length > 0 ? Math.round((grantedCount / consents.length) * 100) : 100;
 
   return (
     <div className="space-y-4">
+      {/* ─── COMPLIANCE POLICY & REGISTRATION CHECKBOX BANNER (DOTTED CARD) ─── */}
+      <div
+        className="relative overflow-hidden rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-2xs"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #cbd5e1 1.1px, transparent 1.1px)',
+          backgroundSize: '16px 16px',
+        }}
+      >
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+              <ShieldCheck size={20} strokeWidth={2.2} />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
+                  WhatsApp Opt-In & Compliance Consent Directory
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100/80 text-emerald-800 border border-emerald-300">
+                  <CheckSquare size={11} strokeWidth={2.2} />
+                  Add Member Modal Integrated
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                  TRAI / Meta Compliant
+                </span>
+              </div>
+              <p className="text-xs text-zinc-600 mt-1 max-w-3xl leading-relaxed">
+                During member onboarding, the <strong>"WhatsApp notifications & updates"</strong> checkbox records explicit opt-in consent (<code className="text-[11px] font-mono bg-zinc-100 px-1 py-0.5 rounded text-zinc-700">#member-whatsapp-consent</code>). Members with active consent are verified to receive automated attendance alerts, renewal reminders, digital fee receipts, and payment links.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+            <button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              className="h-8.5 px-3 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 text-zinc-700 text-xs font-semibold flex items-center gap-1.5 shadow-2xs hover:bg-zinc-50 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+              <span>Refresh Records</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* ─── SUMMARY KPI TILES (PREMIUM CLEAN STYLING) ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
               Opted-In Members
             </span>
-            <div className="text-2xl font-black text-emerald-700 font-mono tabular-nums">
-              {grantedCount}
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-emerald-700 font-mono tabular-nums">
+                {grantedCount}
+              </span>
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                {optInRate}% Rate
+              </span>
             </div>
-            <span className="text-[10.5px] font-medium text-zinc-500">Allowed automated alerts</span>
+            <span className="text-[10.5px] font-medium text-zinc-500">Allowed automated notifications</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/80 shadow-2xs">
-            <UserCheck size={16} strokeWidth={2.2} />
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/80 shadow-2xs">
+            <UserCheck size={18} strokeWidth={2.2} />
           </div>
         </div>
 
         <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
-              Pending / Revoked
+              Opted-Out / Revoked
             </span>
-            <div className="text-2xl font-black text-amber-700 font-mono tabular-nums">
-              {pendingCount}
+            <div className="text-2xl font-black text-rose-700 font-mono tabular-nums">
+              {withdrawnCount}
             </div>
-            <span className="text-[10.5px] font-medium text-zinc-500">Restricted to 24h window</span>
+            <span className="text-[10.5px] font-medium text-zinc-500">Excluded from automated sends</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200/80 shadow-2xs">
-            <ShieldAlert size={16} strokeWidth={2.2} />
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 border border-rose-200/80 shadow-2xs">
+            <UserX size={18} strokeWidth={2.2} />
           </div>
         </div>
 
         <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
-              Directory Records
+              Registration Consents
+            </span>
+            <div className="text-2xl font-black text-indigo-700 font-mono tabular-nums">
+              {registrationCount}
+            </div>
+            <span className="text-[10.5px] font-medium text-zinc-500">Captured via Add Member modal</span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 border border-indigo-200/80 shadow-2xs">
+            <CheckSquare size={18} strokeWidth={2.2} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
+              Total Mapped Members
             </span>
             <div className="text-2xl font-black text-zinc-900 font-mono tabular-nums">
               {consents.length}
             </div>
-            <span className="text-[10.5px] font-medium text-zinc-500">Registered members</span>
+            <span className="text-[10.5px] font-medium text-zinc-500">Registered member profiles</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0 border border-zinc-200/80 shadow-2xs">
-            <Users size={16} strokeWidth={2.2} />
+          <div className="w-10 h-10 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0 border border-zinc-200/80 shadow-2xs">
+            <Users size={18} strokeWidth={2.2} />
           </div>
         </div>
       </div>
 
-      {/* ─── CONSENT DIRECTORY REGISTRY ─── */}
+      {/* ─── CONSENT DIRECTORY REGISTRY TABLE ─── */}
       <div className="bg-white border border-zinc-200/90 rounded-2xl p-5 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3.5 border-b border-zinc-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/80 shadow-2xs">
-              <ShieldCheck size={17} strokeWidth={2.2} />
-            </div>
-            <div>
-              <h2 className="text-xs font-bold text-zinc-900 tracking-tight uppercase">
-                WhatsApp Opt-In Consent Registry
-              </h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Audit compliance records required for automated broadcast dispatch outside customer windows.
-              </p>
-            </div>
+        {/* Search, Filter & Tabs bar */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-3.5 border-b border-zinc-100">
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-zinc-100/80 rounded-xl border border-zinc-200/80 shrink-0">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`h-7.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                statusFilter === 'all'
+                  ? 'bg-white text-zinc-900 shadow-2xs'
+                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-white/50'
+              }`}
+            >
+              All Records ({consents.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('granted')}
+              className={`h-7.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                statusFilter === 'granted'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'text-emerald-800 hover:text-emerald-950 hover:bg-emerald-50/70'
+              }`}
+            >
+              <CheckCircle2 size={12} />
+              Opted In ({grantedCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('withdrawn')}
+              className={`h-7.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                statusFilter === 'withdrawn'
+                  ? 'bg-rose-600 text-white shadow-2xs'
+                  : 'text-rose-800 hover:text-rose-950 hover:bg-rose-50/70'
+              }`}
+            >
+              <XCircle size={12} />
+              Opted Out ({withdrawnCount})
+            </button>
           </div>
 
-          <div className="relative min-w-64 flex items-center">
+          {/* Search Box */}
+          <div className="relative min-w-72 flex items-center">
             <span className="absolute left-3.5 flex items-center pointer-events-none text-zinc-400">
               <Search size={14} />
             </span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search member name or phone..."
+              placeholder="Search by member name, phone or code…"
               className="h-9 pl-9.5 pr-8 rounded-xl border border-zinc-200 bg-zinc-50/70 hover:bg-zinc-50 focus:bg-white text-xs w-full font-medium focus:outline-none focus:border-emerald-600 transition-all shadow-2xs"
             />
             {search && (
@@ -2545,23 +3778,52 @@ function SettingsTab({ templates, usage, onRefresh }) {
         )}
 
         {loading ? (
-          <Spinner label="Loading consent directory…" />
-        ) : consents.length === 0 ? (
-          <EmptyState title="No members found" description="Add members to see their WhatsApp consent status." icon={Users} />
+          <Spinner label="Loading WhatsApp consent registry…" />
+        ) : filteredConsents.length === 0 ? (
+          <EmptyState
+            title="No matching members found"
+            description={
+              search
+                ? `No members found matching "${search}". Try clearing search.`
+                : 'No members found in this filter category.'
+            }
+            icon={Users}
+          />
         ) : (
-          <div className="divide-y divide-zinc-100 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
-            {consents.map((m) => {
+          <div className="divide-y divide-zinc-100 max-h-[580px] overflow-y-auto custom-scrollbar pr-1">
+            {filteredConsents.map((m) => {
               const isGranted = m.consentStatus === 'GRANTED';
               const photoSrc = resolveMemberPhoto(m.profilePhotoUrl);
               const avatar = getAvatarStyle(m.fullName);
+              const isBusy = busyId === m.id;
+
+              // Format consent date
+              let dateStr = 'At Registration';
+              try {
+                if (m.consentTimestamp) {
+                  const d = new Date(m.consentTimestamp);
+                  if (!isNaN(d.getTime())) {
+                    dateStr = d.toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    });
+                  }
+                }
+              } catch (_) {}
+
               return (
-                <div key={m.id} className="py-2.5 flex items-center justify-between gap-3 hover:bg-zinc-50/80 px-2.5 rounded-xl transition-colors">
+                <div
+                  key={m.id}
+                  className="py-3 px-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-zinc-50/80 rounded-xl transition-colors"
+                >
+                  {/* Left: Member Identity & Details */}
                   <div className="flex items-center gap-3 min-w-0">
                     {photoSrc ? (
                       <img
                         src={photoSrc}
                         alt={m.fullName || 'Member'}
-                        className="w-8 h-8 rounded-full object-cover shrink-0 border border-zinc-200/90 shadow-2xs"
+                        className="w-10 h-10 rounded-full object-cover shrink-0 border border-zinc-200/90 shadow-2xs"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                           if (e.currentTarget.nextElementSibling) {
@@ -2571,37 +3833,87 @@ function SettingsTab({ templates, usage, onRefresh }) {
                       />
                     ) : null}
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${avatar.bg} ${photoSrc ? 'hidden' : ''}`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border ${avatar.bg} ${photoSrc ? 'hidden' : ''}`}
                     >
                       {(m.fullName || 'M').charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-zinc-900 truncate leading-snug">{m.fullName}</p>
-                      <p className="text-[10px] font-mono text-zinc-400 mt-0.5">{m.phoneMasked || 'No phone'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-bold text-zinc-900 truncate leading-snug">
+                          {m.fullName}
+                        </p>
+                        <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
+                          {m.memberCode}
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {m.membershipStatus}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-zinc-500">
+                        <span className="font-mono text-zinc-600">{m.phoneMasked || m.phone}</span>
+                        <span>•</span>
+                        <span className="truncate">{m.planName}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 shrink-0">
+                  {/* Right: Consent Status Badge, Source, Timestamp & Toggle Button */}
+                  <div className="flex flex-wrap items-center gap-3 shrink-0 self-end sm:self-center">
+                    {/* Source & Timestamp Tag */}
+                    <div className="hidden lg:flex flex-col items-end text-right">
+                      <div className="flex items-center gap-1 text-[10.5px] font-semibold text-zinc-600">
+                        <CheckSquare size={11} className="text-indigo-600" />
+                        <span>{m.consentSource || 'Registration Modal Checkbox'}</span>
+                      </div>
+                      <span className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                        Logged: {dateStr}
+                      </span>
+                    </div>
+
+                    {/* Status Badge */}
                     <span
-                      className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider font-mono border ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-bold uppercase tracking-wider font-mono border ${
                         isGranted
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/90'
-                          : 'bg-amber-50 text-amber-700 border-amber-200/90'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200/90'
+                          : 'bg-rose-50 text-rose-800 border-rose-200/90'
                       }`}
                     >
-                      {m.consentStatus}
+                      {isGranted ? (
+                        <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                      ) : (
+                        <XCircle size={12} className="text-rose-600 shrink-0" />
+                      )}
+                      <span>{isGranted ? 'OPTED IN' : 'OPTED OUT'}</span>
                     </span>
+
+                    {/* Quick Toggle Button */}
                     <button
                       type="button"
-                      disabled={busyId === m.id}
+                      disabled={isBusy}
                       onClick={() => toggleConsent(m.id, m.consentStatus)}
-                      className={`h-7.5 px-3 rounded-lg border text-[11px] font-bold cursor-pointer shadow-2xs transition-all disabled:opacity-50 ${
+                      title={isGranted ? 'Click to revoke consent' : 'Click to grant consent'}
+                      className={`h-8 px-3 rounded-xl border text-[11px] font-bold cursor-pointer shadow-2xs transition-all disabled:opacity-50 flex items-center gap-1.5 ${
                         isGranted
                           ? 'bg-white hover:bg-rose-50 border-zinc-200 text-zinc-700 hover:text-rose-700 hover:border-rose-200'
-                          : 'bg-zinc-900 text-white hover:bg-emerald-600 border-zinc-900'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-600 shadow-emerald-600/20'
                       }`}
                     >
-                      {busyId === m.id ? 'Updating…' : isGranted ? 'Revoke Consent' : 'Grant Opt-In'}
+                      {isBusy ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          <span>Updating…</span>
+                        </>
+                      ) : isGranted ? (
+                        <>
+                          <UserX size={12} className="text-zinc-500 group-hover:text-rose-600" />
+                          <span>Revoke Consent</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck size={12} className="text-white" />
+                          <span>Grant Opt-In</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -2735,6 +4047,7 @@ export function CommunicationHub() {
           {tab === 'settings' && <SettingsTab templates={templates} usage={usage} onRefresh={refresh} />}
         </div>
       </div>
+      <BrandFooter />
     </div>
   );
 }

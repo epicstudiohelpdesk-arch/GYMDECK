@@ -3516,41 +3516,39 @@ body.doc-upload-open .doc-upload-modal {
   overflow-x: hidden;
   padding-right: 12px;
   scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .sidebar-menu-scroll::-webkit-scrollbar {
   display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 .sidebar-scroll-indicator {
-  position: absolute;
-  top: 8px;
-  right: 2px;
-  bottom: 8px;
-  width: 5px;
-  border-radius: 999px;
-  background: rgba(146, 154, 169, 0.16);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 160ms ease;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .sidebar.has-menu-scroll .sidebar-scroll-indicator {
-  opacity: 0;
+  opacity: 0 !important;
 }
 
 .page-shell.is-sidebar-expanded .sidebar.has-menu-scroll .sidebar-scroll-indicator,
 body.sidebar-open .sidebar.has-menu-scroll .sidebar-scroll-indicator {
-  opacity: 0.48;
+  opacity: 0 !important;
 }
 
 .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
-  opacity: 0;
+  opacity: 0 !important;
 }
 
 .page-shell.is-sidebar-expanded .sidebar.is-menu-scrolling .sidebar-scroll-indicator,
 body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
-  opacity: 0.78;
+  opacity: 0 !important;
 }
 
 .sidebar-scroll-indicator span {
@@ -9060,12 +9058,14 @@ body.sidebar-open .sidebar.is-menu-scrolling .sidebar-scroll-indicator {
 
   .sidebar:hover.has-menu-scroll .sidebar-scroll-indicator,
   .sidebar:focus-within.has-menu-scroll .sidebar-scroll-indicator {
-    opacity: 0.48;
+    display: none !important;
+    opacity: 0 !important;
   }
 
   .sidebar:hover.is-menu-scrolling .sidebar-scroll-indicator,
   .sidebar:focus-within.is-menu-scrolling .sidebar-scroll-indicator {
-    opacity: 0.78;
+    display: none !important;
+    opacity: 0 !important;
   }
 
   .sidebar-system {

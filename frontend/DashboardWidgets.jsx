@@ -26,7 +26,21 @@ import {
   Wifi,
   WifiOff,
   LayoutDashboard,
-  Plug
+  Plug,
+  TrendingUp,
+  Award,
+  BarChart3,
+  Check,
+  Filter,
+  ArrowRight,
+  Shield,
+  IndianRupee,
+  HeartPulse,
+  User,
+  PieChart,
+  AlertTriangle,
+  ArrowDownRight,
+  Compass
 } from "lucide-react";
 import BrandFooter from "./BrandFooter.jsx";
 
@@ -34,6 +48,8 @@ import BrandFooter from "./BrandFooter.jsx";
  * GYMDECK • EXECUTIVE COMMAND CENTER & DASHBOARD
  * 
  * Clean, modern, spacious, and 100% genuine data-driven dashboard.
+ * Features signature dotted-line card aesthetics, subtle technical grid texture,
+ * instant executive visual summary strip, and balanced multi-column layout.
  * Zero mock data: all metrics, rosters, plans, and feeds are loaded directly
  * from Tauri SQLite DB and real localStorage application state.
  */
@@ -45,16 +61,16 @@ import BrandFooter from "./BrandFooter.jsx";
 // WiFi signal indicator — reflects live internet connectivity (navigator.onLine)
 const WifiIndicator = ({ online }) => (
   <div
-    className={`h-[38px] px-3 rounded-xl border flex items-center gap-2 text-xs font-extrabold transition-colors ${
+    className={`h-[38px] px-3 rounded-xl border-2 border-dotted flex items-center gap-2 text-xs font-black transition-all ${
       online
-        ? "bg-emerald-50/80 border-emerald-200/90 text-emerald-700"
-        : "bg-rose-50/80 border-rose-200/90 text-rose-700"
+        ? "bg-emerald-50/90 border-emerald-300 text-emerald-800 shadow-xs"
+        : "bg-rose-50/90 border-rose-300 text-rose-800 shadow-xs"
     }`}
-    title={online ? "Internet connection active" : "No internet connection"}
+    title={online ? "Internet connection active (Online)" : "No internet connection (Offline)"}
   >
-    {online ? <Wifi size={15} strokeWidth={2.4} /> : <WifiOff size={15} strokeWidth={2.4} />}
+    {online ? <Wifi size={15} strokeWidth={2.5} /> : <WifiOff size={15} strokeWidth={2.5} />}
     <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
-    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${online ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+    <span className={`w-2 h-2 rounded-full shrink-0 ${online ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
   </div>
 );
 
@@ -63,10 +79,10 @@ const BatteryIndicator = ({ level, charging, supported }) => {
   if (!supported) {
     return (
       <div
-        className="h-[38px] px-3 rounded-xl border border-slate-200/90 bg-slate-50 flex items-center gap-2 text-xs font-extrabold text-slate-600"
+        className="h-[38px] px-3 rounded-xl border-2 border-dotted border-slate-300 bg-white/90 flex items-center gap-2 text-xs font-black text-slate-700 shadow-xs"
         title="Plugged in to mains power"
       >
-        <Plug size={15} strokeWidth={2.4} className="text-emerald-600" />
+        <Plug size={15} strokeWidth={2.5} className="text-emerald-600" />
         <span className="hidden sm:inline">Plugged In</span>
       </div>
     );
@@ -76,7 +92,7 @@ const BatteryIndicator = ({ level, charging, supported }) => {
   const fillWidth = Math.max(0, (pct / 100) * 18);
   return (
     <div
-      className="h-[38px] px-3 rounded-xl border border-slate-200/90 bg-slate-50 flex items-center gap-2 text-xs font-extrabold text-slate-700"
+      className="h-[38px] px-3 rounded-xl border-2 border-dotted border-slate-300 bg-white/90 flex items-center gap-2 text-xs font-black text-slate-700 shadow-xs"
       title={`Battery ${pct}%${charging ? " • Charging" : ""}`}
     >
       <svg width="26" height="14" viewBox="0 0 26 14" fill="none" aria-hidden="true">
@@ -89,7 +105,7 @@ const BatteryIndicator = ({ level, charging, supported }) => {
           <path d="M12 2 L8 7.5 H11 L10 12 L15.5 6.5 H12.5 Z" fill="#ffffff" stroke={color} strokeWidth="0.5" strokeLinejoin="round" />
         )}
       </svg>
-      <span className="tabular-nums" style={{ color }}>{pct}%</span>
+      <span className="tabular-nums font-mono" style={{ color }}>{pct}%</span>
     </div>
   );
 };
@@ -107,6 +123,9 @@ export const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchInputRef = useRef(null);
+
+  // Filter State for Recent Members Table
+  const [memberFilter, setMemberFilter] = useState("all"); // 'all' | 'active' | 'expired'
 
   // Live Date & Time
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -136,10 +155,6 @@ export const Dashboard = () => {
   }, []);
 
   // Real-time system indicators: REAL connectivity + REAL battery level.
-  // In the Tauri desktop app we poll the Rust backend (`get_system_status`) which
-  // performs a true TCP reachability probe and reads macOS battery telemetry via
-  // `pmset`. In a plain browser we fall back to navigator.onLine + the Battery API
-  // (genuinely real in Chromium-based browsers).
   useEffect(() => {
     const tauriInvoke =
       typeof window !== "undefined" &&
@@ -163,7 +178,6 @@ export const Dashboard = () => {
           });
         } catch (e) {
           if (!active) return;
-          // Backend unreachable — keep last known state, conservatively mark online/AC.
           setIsOnline(true);
           setBattery((prev) => (prev.supported ? prev : { level: 1, charging: true, supported: false }));
         }
@@ -347,7 +361,7 @@ export const Dashboard = () => {
   }, []);
 
   // ─────────────────────────────────────────────────────────────
-  // DERIVED GENUINE METRICS
+  // DERIVED GENUINE METRICS & EXECUTIVE HEALTH GAUGES
   // ─────────────────────────────────────────────────────────────
   const memberMetrics = useMemo(() => {
     const total = members.length;
@@ -369,6 +383,44 @@ export const Dashboard = () => {
     return Object.keys(ptAssignments).length;
   }, [ptAssignments]);
 
+  // Executive Visual Health Indicators
+  const executiveVitality = useMemo(() => {
+    const total = memberMetrics.total || 0;
+    const active = memberMetrics.active || 0;
+    
+    // 1. Retention Vitality (%)
+    const retentionRate = total > 0 ? Math.round((active / total) * 100) : 100;
+    
+    // 2. 1-on-1 PT Coverage (%)
+    const ptAdoptionRate = active > 0 ? Math.min(100, Math.round((assignedPtCount / active) * 100)) : 0;
+    
+    // 3. Coach Floor Workload Ratio (Clients per trainer)
+    const coachCount = trainers.length;
+    const coachLoadRatio = coachCount > 0 ? (assignedPtCount / coachCount).toFixed(1) : "0.0";
+    
+    // 4. Plan Catalog Saturation
+    const topPlan = plans.length > 0
+      ? plans.reduce((prev, curr) => {
+          const prevCount = members.filter(m => m.membership_plan_id === prev.id || m.membership_plan_id === prev.plan_name).length;
+          const currCount = members.filter(m => m.membership_plan_id === curr.id || m.membership_plan_id === curr.plan_name).length;
+          return currCount > prevCount ? curr : prev;
+        }, plans[0])
+      : null;
+
+    const topPlanCount = topPlan ? members.filter(m => m.membership_plan_id === topPlan.id || m.membership_plan_id === topPlan.plan_name).length : 0;
+    const topPlanPct = total > 0 ? Math.round((topPlanCount / total) * 100) : 0;
+
+    return {
+      retentionRate,
+      ptAdoptionRate,
+      coachLoadRatio,
+      coachCount,
+      topPlanName: topPlan ? topPlan.plan_name : "General Tier",
+      topPlanPct,
+      topPlanCount
+    };
+  }, [memberMetrics, assignedPtCount, trainers, plans, members]);
+
   // Trainer client counts
   const trainerClientCounts = useMemo(() => {
     const counts = {};
@@ -385,16 +437,22 @@ export const Dashboard = () => {
     return counts;
   }, [trainers, ptAssignments]);
 
-  // Most recent members
-  const recentMembers = useMemo(() => {
-    return [...members]
+  // Filtered recent members based on tab selection
+  const filteredRecentMembers = useMemo(() => {
+    let list = [...members];
+    if (memberFilter === "active") {
+      list = list.filter((m) => (m.membership_status || "").toUpperCase() === "ACTIVE");
+    } else if (memberFilter === "expired") {
+      list = list.filter((m) => (m.membership_status || "").toUpperCase() === "EXPIRED");
+    }
+    return list
       .sort((a, b) => {
         const dateA = new Date(a.joined_at || a.created_at || 0).getTime();
         const dateB = new Date(b.joined_at || b.created_at || 0).getTime();
         return dateB - dateA;
       })
-      .slice(0, 4);
-  }, [members]);
+      .slice(0, 5);
+  }, [members, memberFilter]);
 
   // Plan Distribution Breakdown
   const planDistribution = useMemo(() => {
@@ -502,20 +560,27 @@ export const Dashboard = () => {
   ];
 
   return (
-    <div className="w-full min-h-screen bg-[#f4f7fb] text-slate-800 font-sans selection:bg-blue-600 selection:text-white flex flex-col">
+    <div 
+      className="w-full min-h-screen text-slate-800 font-sans selection:bg-indigo-600 selection:text-white flex flex-col relative"
+      style={{
+        backgroundColor: "#f8fafc",
+        backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)",
+        backgroundSize: "20px 20px"
+      }}
+    >
       
       {/* ─────────────────────────────────────────────────────────────
           STICKY TOP OPERATIONS & SEARCH BAR
       ───────────────────────────────────────────────────────────── */}
-      <header className="h-[64px] px-6 sm:px-8 border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between gap-4 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.03)]">
+      <header className="h-[68px] px-6 sm:px-8 border-b-2 border-dotted border-slate-300 bg-white/95 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between gap-4 shadow-xs">
         
         {/* Left: Global Interactive Instant Search */}
         <div className="relative flex-1 max-w-lg">
-          <div className="flex items-center w-full h-[42px] bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-500/15 focus-within:shadow-[0_8px_20px_-4px_rgba(37,99,235,0.14)] transition-all duration-200 px-3.5 gap-2.5 group">
+          <div className="flex items-center w-full h-[42px] bg-slate-50/90 hover:bg-slate-100/90 focus-within:bg-white rounded-xl border-2 border-dotted border-slate-300 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all duration-200 px-3.5 gap-2.5 group shadow-2xs">
             <Search 
               size={16} 
               strokeWidth={2.4} 
-              className="text-slate-400 group-focus-within:text-blue-600 transition-colors shrink-0" 
+              className="text-slate-400 group-focus-within:text-indigo-600 transition-colors shrink-0" 
             />
             <input
               ref={searchInputRef}
@@ -524,19 +589,19 @@ export const Dashboard = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setTimeout(() => setIsSearchFocused(false), 250)}
-              placeholder="Search members, trainers, plans..."
+              placeholder="Instant Search: Members, Phone, Coaches, Plans..."
               className="w-full h-full bg-transparent border-0 outline-none text-xs font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
             />
             {searchQuery ? (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="w-5 h-5 rounded-md hover:bg-slate-200/80 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+                className="w-5 h-5 rounded-md hover:bg-slate-200/80 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
               >
                 <X size={12} strokeWidth={2.5} />
               </button>
             ) : (
-              <kbd className="h-5 px-1.5 flex items-center justify-center text-[10px] font-mono font-bold rounded bg-slate-200/70 text-slate-500 border border-slate-300/70 select-none shrink-0 group-focus-within:bg-blue-50 group-focus-within:text-blue-600 group-focus-within:border-blue-200">
+              <kbd className="h-5 px-1.5 flex items-center justify-center text-[10px] font-mono font-bold rounded bg-slate-200/80 text-slate-500 border border-slate-300 select-none shrink-0 group-focus-within:bg-indigo-50 group-focus-within:text-indigo-600 group-focus-within:border-indigo-200">
                 /
               </kbd>
             )}
@@ -550,7 +615,7 @@ export const Dashboard = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 4 }}
                 transition={{ duration: 0.15 }}
-                className="absolute top-[48px] left-0 w-full bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50 max-h-[380px] overflow-y-auto divide-y divide-slate-100"
+                className="absolute top-[48px] left-0 w-full bg-white rounded-2xl border-2 border-dotted border-slate-300 shadow-2xl overflow-hidden z-50 max-h-[380px] overflow-y-auto divide-y divide-slate-100"
               >
                 {!searchResults.hasResults ? (
                   <div className="p-4 text-center text-xs font-semibold text-slate-400">
@@ -568,20 +633,20 @@ export const Dashboard = () => {
                           <div
                             key={m.id}
                             onMouseDown={() => navigateTo("members")}
-                            className="flex items-center justify-between p-2 rounded-xl hover:bg-blue-50/70 cursor-pointer transition-colors"
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-indigo-50/70 cursor-pointer transition-colors"
                           >
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black text-[10px] flex items-center justify-center">
                                 {getInitials(m.full_name)}
                               </div>
                               <div>
                                 <p className="text-xs font-bold text-slate-900 leading-tight">{m.full_name}</p>
-                                <p className="text-[10px] text-slate-500 font-medium">
+                                <p className="text-[10px] text-slate-500 font-mono font-medium">
                                   {m.member_code || "GD-Member"} • {m.phone || "No phone"}
                                 </p>
                               </div>
                             </div>
-                            <span className="text-[10px] font-black text-blue-600 flex items-center gap-1">
+                            <span className="text-[10px] font-black text-indigo-600 flex items-center gap-1">
                               View <ChevronRight size={12} />
                             </span>
                           </div>
@@ -653,7 +718,7 @@ export const Dashboard = () => {
           </AnimatePresence>
         </div>
 
-        {/* Right: System Connectivity, Power & Refresh */}
+        {/* Right: System Connectivity, Power & Manual Refresh */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <WifiIndicator online={isOnline} />
           <BatteryIndicator level={battery.level} charging={battery.charging} supported={battery.supported} />
@@ -663,10 +728,10 @@ export const Dashboard = () => {
             type="button"
             onClick={() => loadDashboardData(true)}
             disabled={refreshing}
-            className="w-[38px] h-[38px] rounded-xl bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
-            title="Refresh Dashboard Data"
+            className="w-[38px] h-[38px] rounded-xl bg-white/90 hover:bg-slate-100 border-2 border-dotted border-slate-300 text-slate-700 hover:text-indigo-600 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+            title="Synchronize Dashboard with Database"
           >
-            <RefreshCw size={14} strokeWidth={2.4} className={refreshing ? "animate-spin text-blue-600" : ""} />
+            <RefreshCw size={15} strokeWidth={2.4} className={refreshing ? "animate-spin text-indigo-600" : ""} />
           </button>
         </div>
       </header>
@@ -674,62 +739,218 @@ export const Dashboard = () => {
       {/* ─────────────────────────────────────────────────────────────
           MAIN EXECUTIVE DASHBOARD WORKSPACE
       ───────────────────────────────────────────────────────────── */}
-      <main className="flex-1 p-5 sm:p-6 lg:p-8 max-w-[1560px] w-full mx-auto space-y-6">
+      <main className="flex-1 p-5 sm:p-6 lg:p-8 max-w-[1580px] w-full mx-auto space-y-6">
 
         {/* ══════════════════════════════════════════════════════════
-            COMMAND CENTER PAGE HEADER
+            COMMAND CENTER PAGE HEADER & FACILITY VITALITY
         ══════════════════════════════════════════════════════════ */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <LayoutDashboard size={16} className="text-indigo-600" />
-              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.25em] leading-none">
+              <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+              <span className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.25em] leading-none">
                 Live Operational Command Center
               </span>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-none">
               Operations Dashboard
             </h1>
             <p className="mt-2.5 text-xs font-semibold text-slate-500 max-w-2xl leading-relaxed">
-              Real-time intelligence across members, certified trainers, PT allocations, and membership plans across your fitness ecosystem.
+              Real-time telemetry across membership cohorts, floor trainers, 1-on-1 personal training coverage, and catalog distribution.
             </p>
           </div>
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="flex items-center gap-2 h-11 px-3.5 rounded-xl border border-slate-200/90 bg-white shadow-xs">
+
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 h-11 px-4 rounded-xl border-2 border-dotted border-slate-300 bg-white/95 shadow-xs">
               <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-600">
-                {isOnline ? "System Live" : "Offline"}
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                {isOnline ? "Engine Operational" : "Offline Storage"}
               </span>
             </div>
+
             <button
               type="button"
               onClick={handleOpenAddMember}
-              className="h-11 px-5 bg-slate-950 hover:bg-slate-850 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors flex items-center gap-2 shadow-md shadow-slate-950/10 active:scale-[0.98] cursor-pointer"
+              className="h-11 px-5 bg-slate-950 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer"
             >
-              <UserPlus size={14} strokeWidth={2.4} />
-              Add Member
+              <UserPlus size={15} strokeWidth={2.4} />
+              <span>Add Member</span>
             </button>
           </div>
         </div>
 
+        {/* ══════════════════════════════════════════════════════════
+            EXECUTIVE VITALITY & OPERATIONAL HEALTH SUMMARY STRIP
+            Visual gauge meters providing instant operational summary
+        ══════════════════════════════════════════════════════════ */}
+        <section className="border-2 border-dotted border-slate-300 hover:border-indigo-400 bg-white/95 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden group transition-all duration-300">
+          {/* Subtle Technical Corner Accents */}
+          <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
+          <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
+          <div className="absolute bottom-2 left-2 w-2.5 h-2.5 border-b-2 border-l-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
+          <div className="absolute bottom-2 right-2 w-2.5 h-2.5 border-b-2 border-r-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
+
+          {/* Section Sub-Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b-2 border-dotted border-slate-200">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <HeartPulse size={16} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-slate-900 tracking-tight uppercase">
+                  Facility Vitality & Operational Health Meters
+                </h2>
+                <p className="text-[11px] font-semibold text-slate-500">
+                  Instant visual summary calculated dynamically from active floor telemetry
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-500">Facility Health:</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center gap-1">
+                <CheckCircle2 size={11} strokeWidth={2.5} />
+                Prime Vitality
+              </span>
+            </div>
+          </div>
+
+          {/* 4 Visual Gauge Columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            
+            {/* Visual Gauge 1: Retention Vitality */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border-2 border-dotted border-slate-200/90 hover:border-emerald-300 transition-all">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-black text-slate-700">
+                  <UserCheck size={14} className="text-emerald-600" />
+                  <span>Retention Vitality</span>
+                </div>
+                <span className="text-xs font-black font-mono text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                  {executiveVitality.retentionRate}%
+                </span>
+              </div>
+
+              {/* Progress Bar Gauge */}
+              <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-2">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${executiveVitality.retentionRate}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                <span>{memberMetrics.active} Active</span>
+                <span className="text-slate-400">vs {memberMetrics.expired} Expired</span>
+              </div>
+            </div>
+
+            {/* Visual Gauge 2: 1-on-1 PT Coverage */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border-2 border-dotted border-slate-200/90 hover:border-indigo-300 transition-all">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-black text-slate-700">
+                  <Dumbbell size={14} className="text-indigo-600" />
+                  <span>1-on-1 PT Coverage</span>
+                </div>
+                <span className="text-xs font-black font-mono text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-md">
+                  {executiveVitality.ptAdoptionRate}%
+                </span>
+              </div>
+
+              {/* Progress Bar Gauge */}
+              <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-2">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${executiveVitality.ptAdoptionRate}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                <span>{assignedPtCount} PT Clients</span>
+                <span className="text-slate-400">of {memberMetrics.active} Active</span>
+              </div>
+            </div>
+
+            {/* Visual Gauge 3: Floor Coach Workload Ratio */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border-2 border-dotted border-slate-200/90 hover:border-amber-300 transition-all">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-black text-slate-700">
+                  <Activity size={14} className="text-amber-600" />
+                  <span>Coach Workload Ratio</span>
+                </div>
+                <span className="text-xs font-black font-mono text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
+                  {executiveVitality.coachLoadRatio} : 1
+                </span>
+              </div>
+
+              {/* Progress Bar Gauge (Cap visual at 10 clients per coach = 100%) */}
+              <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-2">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.round(parseFloat(executiveVitality.coachLoadRatio) * 10))}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                <span>{executiveVitality.coachCount} Floor Coaches</span>
+                <span className="text-slate-400">{assignedPtCount} Total Allocations</span>
+              </div>
+            </div>
+
+            {/* Visual Gauge 4: Top Tier Plan Dominance */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border-2 border-dotted border-slate-200/90 hover:border-blue-300 transition-all">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-black text-slate-700">
+                  <PieChart size={14} className="text-blue-600" />
+                  <span>Catalog Dominance</span>
+                </div>
+                <span className="text-xs font-black font-mono text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md">
+                  {executiveVitality.topPlanPct}%
+                </span>
+              </div>
+
+              {/* Progress Bar Gauge */}
+              <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mb-2">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${executiveVitality.topPlanPct}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                <span className="truncate max-w-[120px]">{executiveVitality.topPlanName}</span>
+                <span className="text-slate-400">{plans.length} Tiers</span>
+              </div>
+            </div>
+
+          </div>
+        </section>
 
         {/* ══════════════════════════════════════════════════════════
-            HERO STATS KPI STRIP (4 Modern Executive Metric Cards)
+            HERO STATS KPI STRIP (4 Refined Technical Dotted Cards)
         ══════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
 
           {/* KPI 1: Active Members */}
           <div 
             onClick={() => navigateTo("members")}
-            className="group bg-white border border-slate-200/80 hover:border-blue-300 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+            className="group bg-white/95 border-2 border-dotted border-slate-300 hover:border-blue-500 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden"
           >
+            <div className="absolute top-2 right-2 w-2 h-2 border-t-2 border-r-2 border-slate-300 group-hover:border-blue-500 transition-colors pointer-events-none" />
             <div className="flex items-start justify-between gap-3">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block mb-1">
                   Active Members
                 </span>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className="text-3xl font-black text-slate-900 tracking-tight font-mono">
                     {memberMetrics.active}
                   </h3>
                   <span className="text-xs font-bold text-slate-400">
@@ -737,14 +958,14 @@ export const Dashboard = () => {
                   </span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Users size={19} strokeWidth={2.4} />
+              <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <Users size={20} strokeWidth={2.4} />
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div className="mt-4 pt-3 border-t-2 border-dotted border-slate-200 flex items-center justify-between text-xs">
               <span className="text-[11px] font-bold text-slate-500">
-                {memberMetrics.expired > 0 ? `${memberMetrics.expired} Expired` : "All Members Valid"}
+                {memberMetrics.expired > 0 ? `${memberMetrics.expired} Members Expired` : "All Rosters Valid"}
               </span>
               <span className="text-blue-600 font-black text-[11px] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
                 Directory <ChevronRight size={13} />
@@ -752,33 +973,34 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {/* KPI 2: Floor Coaches & Staff */}
+          {/* KPI 2: Certified Trainers */}
           <div 
             onClick={() => navigateTo("trainers")}
-            className="group bg-white border border-slate-200/80 hover:border-violet-300 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+            className="group bg-white/95 border-2 border-dotted border-slate-300 hover:border-violet-500 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden"
           >
+            <div className="absolute top-2 right-2 w-2 h-2 border-t-2 border-r-2 border-slate-300 group-hover:border-violet-500 transition-colors pointer-events-none" />
             <div className="flex items-start justify-between gap-3">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
-                  Certified Trainers
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                  Floor Trainers
                 </span>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className="text-3xl font-black text-slate-900 tracking-tight font-mono">
                     {trainers.length}
                   </h3>
                   <span className="text-xs font-bold text-slate-400">
-                    Floor Coaches
+                    Certified Staff
                   </span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <UserCheck size={19} strokeWidth={2.4} />
+              <div className="w-11 h-11 rounded-xl bg-violet-50 text-violet-600 border border-violet-200 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-violet-600 group-hover:text-white transition-all">
+                <UserCheck size={20} strokeWidth={2.4} />
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div className="mt-4 pt-3 border-t-2 border-dotted border-slate-200 flex items-center justify-between text-xs">
               <span className="text-[11px] font-bold text-slate-500">
-                {assignedPtCount > 0 ? `${assignedPtCount} Active PTs` : "Roster Ready"}
+                {assignedPtCount > 0 ? `${assignedPtCount} Active PT Clients` : "Floor Ready"}
               </span>
               <span className="text-violet-600 font-black text-[11px] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
                 Roster <ChevronRight size={13} />
@@ -786,18 +1008,19 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {/* KPI 3: PT Allocations */}
+          {/* KPI 3: PT 1-on-1 Allocations */}
           <div 
             onClick={() => navigateTo("assign-trainer")}
-            className="group bg-white border border-slate-200/80 hover:border-amber-300 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+            className="group bg-white/95 border-2 border-dotted border-slate-300 hover:border-amber-500 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden"
           >
+            <div className="absolute top-2 right-2 w-2 h-2 border-t-2 border-r-2 border-slate-300 group-hover:border-amber-500 transition-colors pointer-events-none" />
             <div className="flex items-start justify-between gap-3">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block mb-1">
                   PT Allocations
                 </span>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className="text-3xl font-black text-slate-900 tracking-tight font-mono">
                     {assignedPtCount}
                   </h3>
                   <span className="text-xs font-bold text-slate-400">
@@ -805,12 +1028,12 @@ export const Dashboard = () => {
                   </span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Dumbbell size={19} strokeWidth={2.4} />
+              <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                <Dumbbell size={20} strokeWidth={2.4} />
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div className="mt-4 pt-3 border-t-2 border-dotted border-slate-200 flex items-center justify-between text-xs">
               <span className="text-[11px] font-bold text-slate-500">
                 {trainers.length > 0 ? `${trainers.length} Assigned Coaches` : "No Coaches Yet"}
               </span>
@@ -823,15 +1046,16 @@ export const Dashboard = () => {
           {/* KPI 4: Active Membership Plans */}
           <div 
             onClick={() => navigateTo("membership-plans")}
-            className="group bg-white border border-slate-200/80 hover:border-emerald-300 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+            className="group bg-white/95 border-2 border-dotted border-slate-300 hover:border-emerald-500 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden"
           >
+            <div className="absolute top-2 right-2 w-2 h-2 border-t-2 border-r-2 border-slate-300 group-hover:border-emerald-500 transition-colors pointer-events-none" />
             <div className="flex items-start justify-between gap-3">
               <div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block mb-1">
                   Active Plans
                 </span>
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h3 className="text-3xl font-black text-slate-900 tracking-tight font-mono">
                     {plans.length}
                   </h3>
                   <span className="text-xs font-bold text-slate-400">
@@ -839,12 +1063,12 @@ export const Dashboard = () => {
                   </span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Layers size={19} strokeWidth={2.4} />
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                <Layers size={20} strokeWidth={2.4} />
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div className="mt-4 pt-3 border-t-2 border-dotted border-slate-200 flex items-center justify-between text-xs">
               <span className="text-[11px] font-bold text-slate-500">
                 {plans.length > 0 ? "Plans Configured" : "Create First Plan"}
               </span>
@@ -857,80 +1081,127 @@ export const Dashboard = () => {
         </div>
 
         {/* ══════════════════════════════════════════════════════════
-            BALANCED 2-COLUMN WORKSPACE
+            BALANCED 12-COLUMN WORKSPACE
             Left (8 Cols): Recent Registrations & Plan Breakdown
             Right (4 Cols): Quick Operations & Floor Coaches
         ══════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
           {/* ─────────────────────────────────────────────────────────────
               LEFT COLUMN (Span 8)
           ───────────────────────────────────────────────────────────── */}
           <div className="lg:col-span-8 space-y-6">
 
-            {/* PANEL 1: RECENT REGISTERED MEMBERS (Live Table) */}
-            <section className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)]">
+            {/* PANEL 1: RECENT REGISTERED MEMBERS (Live Table with Filters) */}
+            <section className="border-2 border-dotted border-slate-300 hover:border-indigo-400 bg-white/95 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden group transition-all duration-300">
+              <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
               
-              {/* Card Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              {/* Card Header & Filter Tabs */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b-2 border-dotted border-slate-200">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Users size={16} strokeWidth={2.4} />
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
+                    <Users size={17} strokeWidth={2.4} />
                   </div>
                   <div>
                     <h3 className="text-base font-black text-slate-900 tracking-tight">
                       Recent Member Registrations
                     </h3>
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-slate-500 font-semibold">
                       Latest members enrolled in the active gym database
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => navigateTo("members")}
-                  className="text-xs font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
-                >
-                  <span>View All Directory</span>
-                  <ChevronRight size={14} />
-                </button>
+                {/* Filter Pills + Directory Link */}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-[11px] font-black">
+                    <button
+                      type="button"
+                      onClick={() => setMemberFilter("all")}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        memberFilter === "all"
+                          ? "bg-white text-slate-900 shadow-2xs"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      All ({members.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMemberFilter("active")}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        memberFilter === "active"
+                          ? "bg-white text-emerald-700 shadow-2xs"
+                          : "text-slate-500 hover:text-emerald-700"
+                      }`}
+                    >
+                      Active ({memberMetrics.active})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMemberFilter("expired")}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        memberFilter === "expired"
+                          ? "bg-white text-rose-700 shadow-2xs"
+                          : "text-slate-500 hover:text-rose-700"
+                      }`}
+                    >
+                      Expired ({memberMetrics.expired})
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateTo("members")}
+                    className="p-1.5 text-xs font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Open Full Members Directory"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Members Table */}
-              {recentMembers.length === 0 ? (
-                <div className="py-12 px-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center text-center">
+              {filteredRecentMembers.length === 0 ? (
+                <div className="py-12 px-4 rounded-xl border-2 border-dotted border-slate-300 bg-slate-50/70 flex flex-col items-center justify-center text-center">
                   <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mb-3 shadow-xs">
                     <Users size={22} strokeWidth={2} />
                   </div>
-                  <h4 className="text-sm font-bold text-slate-800 mb-1">No Members Registered Yet</h4>
+                  <h4 className="text-sm font-bold text-slate-800 mb-1">
+                    {memberFilter === "all" ? "No Members Registered Yet" : `No ${memberFilter} Members Found`}
+                  </h4>
                   <p className="text-xs text-slate-500 max-w-sm mb-4">
-                    Get started by onboarding your first gym member. Records will automatically appear here in real time.
+                    {memberFilter === "all"
+                      ? "Get started by onboarding your first gym member. Records will automatically appear here in real time."
+                      : `There are currently no members tagged under the ${memberFilter} cohort.`}
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleOpenAddMember}
-                    className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                  >
-                    <UserPlus size={14} strokeWidth={2.4} />
-                    <span>Register First Member</span>
-                  </button>
+                  {memberFilter === "all" && (
+                    <button
+                      type="button"
+                      onClick={handleOpenAddMember}
+                      className="h-9 px-4 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                    >
+                      <UserPlus size={14} strokeWidth={2.4} />
+                      <span>Register First Member</span>
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="overflow-x-auto -mx-6 sm:mx-0">
-                  <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto -mx-5 sm:mx-0">
+                  <table className="w-full text-left border-collapse min-w-[620px]">
                     <thead>
-                      <tr className="border-b border-slate-100 text-[10.5px] font-black uppercase tracking-wider text-slate-400">
-                        <th className="pb-3 pl-6 sm:pl-2 font-black">Member Profile</th>
+                      <tr className="border-b-2 border-dotted border-slate-200 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                        <th className="pb-3 pl-5 sm:pl-2 font-black">Member Profile</th>
                         <th className="pb-3 px-3 font-black">Phone</th>
-                        <th className="pb-3 px-3 font-black">Plan</th>
+                        <th className="pb-3 px-3 font-black">Plan Tier</th>
                         <th className="pb-3 px-3 font-black">Joined</th>
                         <th className="pb-3 px-3 font-black">Status</th>
-                        <th className="pb-3 pr-6 sm:pr-2 text-right font-black">Action</th>
+                        <th className="pb-3 pr-5 sm:pr-2 text-right font-black">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
-                      {recentMembers.map((m, idx) => {
+                      {filteredRecentMembers.map((m, idx) => {
                         const status = (m.membership_status || "ACTIVE").toUpperCase();
                         const isExpired = status === "EXPIRED";
                         const isActive = status === "ACTIVE";
@@ -938,10 +1209,10 @@ export const Dashboard = () => {
                         const grad = avatarGradients[idx % avatarGradients.length];
 
                         return (
-                          <tr key={m.id} className="hover:bg-slate-50/70 transition-colors group">
+                          <tr key={m.id} className="hover:bg-slate-50/80 transition-colors group">
                             
                             {/* Member Name & Code */}
-                            <td className="py-3 pl-6 sm:pl-2">
+                            <td className="py-3 pl-5 sm:pl-2">
                               <div className="flex items-center gap-3">
                                 {(() => {
                                   const memberPhoto = m.profile_photo_path || (window.getDefaultAvatar ? window.getDefaultAvatar(m.gender, m.full_name) : "");
@@ -957,8 +1228,8 @@ export const Dashboard = () => {
                                     </div>
                                   );
                                 })()}
-                                <div>
-                                  <h4 className="font-extrabold text-slate-900 leading-tight">
+                                <div className="min-w-0">
+                                  <h4 className="font-black text-slate-900 leading-tight truncate max-w-[160px]">
                                     {m.full_name || "Unnamed Member"}
                                   </h4>
                                   <span className="text-[10px] font-mono font-bold text-slate-500">
@@ -969,41 +1240,41 @@ export const Dashboard = () => {
                             </td>
 
                             {/* Contact Phone */}
-                            <td className="py-3 px-3 text-slate-600 font-semibold font-mono text-[11px]">
+                            <td className="py-3 px-3 text-slate-700 font-semibold font-mono text-[11px] whitespace-nowrap">
                               {m.phone || "—"}
                             </td>
 
-                            {/* Plan */}
+                            {/* Plan Tier */}
                             <td className="py-3 px-3">
-                              <span className="inline-block max-w-[130px] truncate text-slate-700 font-bold" title={planName}>
+                              <span className="inline-block max-w-[140px] truncate text-slate-800 font-bold px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/90" title={planName}>
                                 {planName}
                               </span>
                             </td>
 
                             {/* Joined Date */}
-                            <td className="py-3 px-3 text-slate-500 font-medium whitespace-nowrap">
+                            <td className="py-3 px-3 text-slate-500 font-medium whitespace-nowrap font-mono text-[11px]">
                               {formatDateDisplay(m.joined_at || m.created_at)}
                             </td>
 
                             {/* Status Badge */}
                             <td className="py-3 px-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider border ${
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                                 isActive 
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/80" 
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-300" 
                                   : isExpired 
-                                  ? "bg-rose-50 text-rose-700 border-rose-200/80" 
-                                  : "bg-slate-100 text-slate-700 border-slate-200/80"
+                                  ? "bg-rose-50 text-rose-700 border-rose-300" 
+                                  : "bg-slate-100 text-slate-700 border-slate-300"
                               }`}>
                                 {status}
                               </span>
                             </td>
 
                             {/* Row Action */}
-                            <td className="py-3 pr-6 sm:pr-2 text-right">
+                            <td className="py-3 pr-5 sm:pr-2 text-right">
                               <button
                                 type="button"
                                 onClick={() => navigateTo("members")}
-                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 text-[11px] font-bold transition-colors cursor-pointer"
+                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 border border-slate-200 text-slate-700 hover:text-indigo-700 text-[11px] font-bold transition-all cursor-pointer"
                               >
                                 View
                               </button>
@@ -1019,18 +1290,20 @@ export const Dashboard = () => {
             </section>
 
             {/* PANEL 2: MEMBERSHIP PLAN ENROLLMENT BREAKDOWN */}
-            <section className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)]">
+            <section className="border-2 border-dotted border-slate-300 hover:border-emerald-400 bg-white/95 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden group transition-all duration-300">
+              <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-slate-300 group-hover:border-emerald-500 transition-colors pointer-events-none" />
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-slate-300 group-hover:border-emerald-500 transition-colors pointer-events-none" />
               
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b-2 border-dotted border-slate-200">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Layers size={16} strokeWidth={2.4} />
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Layers size={17} strokeWidth={2.4} />
                   </div>
                   <div>
                     <h3 className="text-base font-black text-slate-900 tracking-tight">
                       Membership Plan Distribution
                     </h3>
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-slate-500 font-semibold">
                       Real enrollment allocation across created membership tiers
                     </p>
                   </div>
@@ -1039,7 +1312,7 @@ export const Dashboard = () => {
                 <button
                   type="button"
                   onClick={() => navigateTo("membership-plans")}
-                  className="text-xs font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                  className="text-xs font-black text-emerald-700 hover:text-emerald-800 flex items-center gap-1 self-start sm:self-auto cursor-pointer"
                 >
                   <span>Manage Plans</span>
                   <ChevronRight size={14} />
@@ -1047,7 +1320,7 @@ export const Dashboard = () => {
               </div>
 
               {planDistribution.length === 0 ? (
-                <div className="py-8 px-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center text-center">
+                <div className="py-8 px-4 rounded-xl border-2 border-dotted border-slate-300 bg-slate-50/70 flex flex-col items-center justify-center text-center">
                   <Layers size={22} className="text-slate-400 mb-2" />
                   <p className="text-xs font-bold text-slate-700 mb-1">No Membership Plans Created</p>
                   <p className="text-[11px] text-slate-500 mb-3">Define membership plans to see enrollment analytics.</p>
@@ -1062,28 +1335,28 @@ export const Dashboard = () => {
               ) : (
                 <div className="space-y-4">
                   {planDistribution.map((plan) => (
-                    <div key={plan.id} className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/70">
+                    <div key={plan.id} className="p-3.5 rounded-xl bg-slate-50/80 border-2 border-dotted border-slate-200/90 hover:border-emerald-300 transition-all">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black text-slate-900">
                             {plan.plan_name}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 px-2 py-0.5 rounded-md">
                             {plan.duration_days || 30} Days
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-extrabold text-slate-800">
+                          <span className="text-xs font-extrabold text-slate-800 font-mono">
                             {plan.enrolledCount} {plan.enrolledCount === 1 ? "Member" : "Members"}
                           </span>
-                          <span className="text-[11px] font-black text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                          <span className="text-[11px] font-black text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 rounded-full font-mono">
                             {plan.percentage}%
                           </span>
                         </div>
                       </div>
 
                       {/* Percentage Bar */}
-                      <div className="w-full h-2 rounded-full bg-slate-200/70 overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
                         <motion.div
                           className="h-full bg-emerald-500 rounded-full"
                           initial={{ width: 0 }}
@@ -1106,17 +1379,19 @@ export const Dashboard = () => {
           <div className="lg:col-span-4 space-y-6">
 
             {/* PANEL 3: QUICK OPERATIONS COMMAND LAUNCHER */}
-            <section className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)]">
+            <section className="border-2 border-dotted border-slate-300 hover:border-indigo-400 bg-white/95 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden group transition-all duration-300">
+              <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-slate-300 group-hover:border-indigo-500 transition-colors pointer-events-none" />
               
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-dotted border-slate-200">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0">
                   <Activity size={16} strokeWidth={2.4} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900 tracking-tight">
-                    Quick Operations
+                  <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">
+                    Quick Operations Hub
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-500 font-semibold">
                     Fast access to daily front-desk routines
                   </p>
                 </div>
@@ -1129,96 +1404,98 @@ export const Dashboard = () => {
                 <button
                   type="button"
                   onClick={handleOpenAddMember}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200/80 hover:border-blue-200 text-left transition-all group cursor-pointer active:scale-[0.98]"
+                  className="p-3 rounded-xl bg-slate-50/80 hover:bg-blue-50/80 border-2 border-dotted border-slate-200 hover:border-blue-300 text-left transition-all group/btn cursor-pointer active:scale-[0.98]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-blue-100/80 text-blue-700 flex items-center justify-center mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center mb-2 group-hover/btn:bg-blue-600 group-hover/btn:text-white transition-colors">
                     <UserPlus size={14} strokeWidth={2.4} />
                   </div>
                   <h4 className="text-xs font-black text-slate-900 leading-tight">Add Member</h4>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Onboard profile</p>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Onboard profile</p>
                 </button>
 
                 {/* Collect Fees */}
                 <button
                   type="button"
                   onClick={() => navigateTo("payments")}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-emerald-50/70 border border-slate-200/80 hover:border-emerald-200 text-left transition-all group cursor-pointer active:scale-[0.98]"
+                  className="p-3 rounded-xl bg-slate-50/80 hover:bg-emerald-50/80 border-2 border-dotted border-slate-200 hover:border-emerald-300 text-left transition-all group/btn cursor-pointer active:scale-[0.98]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-emerald-100/80 text-emerald-700 flex items-center justify-center mb-2 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2 group-hover/btn:bg-emerald-600 group-hover/btn:text-white transition-colors">
                     <CreditCard size={14} strokeWidth={2.4} />
                   </div>
                   <h4 className="text-xs font-black text-slate-900 leading-tight">Collect Fees</h4>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Payments & dues</p>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Payments & dues</p>
                 </button>
 
                 {/* Daily Check-in */}
                 <button
                   type="button"
                   onClick={() => navigateTo("daily-checkin")}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group cursor-pointer active:scale-[0.98]"
+                  className="p-3 rounded-xl bg-slate-50/80 hover:bg-purple-50/80 border-2 border-dotted border-slate-200 hover:border-purple-300 text-left transition-all group/btn cursor-pointer active:scale-[0.98]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-purple-100/80 text-purple-700 flex items-center justify-center mb-2 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center mb-2 group-hover/btn:bg-purple-600 group-hover/btn:text-white transition-colors">
                     <Clock size={14} strokeWidth={2.4} />
                   </div>
                   <h4 className="text-xs font-black text-slate-900 leading-tight">Daily Check-in</h4>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Standee & QR code</p>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Standee & QR check</p>
                 </button>
 
                 {/* Assign PT */}
                 <button
                   type="button"
                   onClick={() => navigateTo("assign-trainer")}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-amber-50/70 border border-slate-200/80 hover:border-amber-200 text-left transition-all group cursor-pointer active:scale-[0.98]"
+                  className="p-3 rounded-xl bg-slate-50/80 hover:bg-amber-50/80 border-2 border-dotted border-slate-200 hover:border-amber-300 text-left transition-all group/btn cursor-pointer active:scale-[0.98]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-amber-100/80 text-amber-700 flex items-center justify-center mb-2 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center mb-2 group-hover/btn:bg-amber-600 group-hover/btn:text-white transition-colors">
                     <Dumbbell size={14} strokeWidth={2.4} />
                   </div>
                   <h4 className="text-xs font-black text-slate-900 leading-tight">Assign Trainer</h4>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Pair PT client</p>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Pair PT client</p>
                 </button>
 
                 {/* Membership Plans */}
                 <button
                   type="button"
                   onClick={() => navigateTo("membership-plans")}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-sky-50/70 border border-slate-200/80 hover:border-sky-200 text-left transition-all group cursor-pointer active:scale-[0.98]"
+                  className="p-3 rounded-xl bg-slate-50/80 hover:bg-sky-50/80 border-2 border-dotted border-slate-200 hover:border-sky-300 text-left transition-all group/btn cursor-pointer active:scale-[0.98]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-sky-100/80 text-sky-700 flex items-center justify-center mb-2 group-hover:bg-sky-600 group-hover:text-white transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center mb-2 group-hover/btn:bg-sky-600 group-hover/btn:text-white transition-colors">
                     <Layers size={14} strokeWidth={2.4} />
                   </div>
                   <h4 className="text-xs font-black text-slate-900 leading-tight">Plans Catalog</h4>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Durations & rates</p>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Durations & rates</p>
                 </button>
 
-                {/* Whatsapp Line */}
+                {/* Whatsapp Alerts */}
                 <button
                   type="button"
                   onClick={() => navigateTo("whatsapp-hub")}
-                  className="p-3 rounded-xl bg-slate-50 hover:bg-rose-50/70 border border-slate-200/80 hover:border-rose-200 text-left transition-all group cursor-pointer active:scale-[0.98]"
+                  className="p-3 rounded-xl bg-slate-50/80 hover:bg-rose-50/80 border-2 border-dotted border-slate-200 hover:border-rose-300 text-left transition-all group/btn cursor-pointer active:scale-[0.98]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-rose-100/80 text-rose-700 flex items-center justify-center mb-2 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center mb-2 group-hover/btn:bg-rose-600 group-hover/btn:text-white transition-colors">
                     <Bell size={14} strokeWidth={2.4} />
                   </div>
-                  <h4 className="text-xs font-black text-slate-900 leading-tight">Whatsapp Line</h4>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">Automated WhatsApp</p>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">WhatsApp Hub</h4>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Automated alerts</p>
                 </button>
 
               </div>
             </section>
 
             {/* PANEL 4: FLOOR COACHES & PT ROSTER (Live LocalStorage) */}
-            <section className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)]">
+            <section className="border-2 border-dotted border-slate-300 hover:border-violet-400 bg-white/95 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden group transition-all duration-300">
+              <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-slate-300 group-hover:border-violet-500 transition-colors pointer-events-none" />
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-slate-300 group-hover:border-violet-500 transition-colors pointer-events-none" />
               
-              <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b-2 border-dotted border-slate-200">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-violet-50 text-violet-600 border border-violet-200 flex items-center justify-center shrink-0">
                     <UserCheck size={16} strokeWidth={2.4} />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 tracking-tight">
-                      Floor Trainers
+                    <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">
+                      Floor Trainers & Coaches
                     </h3>
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-slate-500 font-semibold">
                       Active certified coach roster
                     </p>
                   </div>
@@ -1227,7 +1504,7 @@ export const Dashboard = () => {
                 <button
                   type="button"
                   onClick={() => navigateTo("trainers")}
-                  className="text-xs font-black text-violet-600 hover:text-violet-700 flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-black text-violet-700 hover:text-violet-800 flex items-center gap-1 cursor-pointer"
                 >
                   <span>All</span>
                   <ChevronRight size={14} />
@@ -1235,7 +1512,7 @@ export const Dashboard = () => {
               </div>
 
               {trainers.length === 0 ? (
-                <div className="py-8 px-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center text-center">
+                <div className="py-8 px-4 rounded-xl border-2 border-dotted border-slate-300 bg-slate-50/70 flex flex-col items-center justify-center text-center">
                   <UserCheck size={22} className="text-slate-400 mb-2" />
                   <p className="text-xs font-bold text-slate-700 mb-1">No Trainers Registered</p>
                   <p className="text-[11px] text-slate-500 mb-3">Add certified trainers to allocate personal coaching sessions.</p>
@@ -1252,30 +1529,41 @@ export const Dashboard = () => {
                   {trainers.slice(0, 4).map((t, idx) => {
                     const clientCount = trainerClientCounts[t.id] || 0;
                     const grad = avatarGradients[idx % avatarGradients.length];
+                    const capacityPct = Math.min(100, Math.round((clientCount / 10) * 100));
 
                     return (
                       <div 
                         key={t.id || idx}
                         onClick={() => navigateTo("trainers")}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 hover:bg-violet-50/60 border border-slate-100 transition-colors cursor-pointer group"
+                        className="p-3 rounded-xl bg-slate-50/80 hover:bg-violet-50/70 border-2 border-dotted border-slate-200 hover:border-violet-300 transition-all cursor-pointer group/tr"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${grad} text-white font-black text-[11px] flex items-center justify-center shrink-0 shadow-xs`}>
-                            {getInitials(t.name)}
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${grad} text-white font-black text-[11px] flex items-center justify-center shrink-0 shadow-xs`}>
+                              {getInitials(t.name)}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-extrabold text-slate-900 leading-tight group-hover/tr:text-violet-700 transition-colors truncate">
+                                {t.name}
+                              </h4>
+                              <p className="text-[10px] text-slate-500 font-semibold truncate">
+                                {t.specialization || "Floor Coach"}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-xs font-extrabold text-slate-900 leading-tight group-hover:text-violet-700 transition-colors">
-                              {t.name}
-                            </h4>
-                            <p className="text-[10px] text-slate-500 font-medium">
-                              {t.specialization || "Floor Coach"}
-                            </p>
-                          </div>
+
+                          <span className="text-[10px] font-black font-mono text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
+                            {clientCount} {clientCount === 1 ? "Client" : "Clients"}
+                          </span>
                         </div>
 
-                        <span className="text-[10px] font-black text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                          {clientCount} {clientCount === 1 ? "Client" : "Clients"}
-                        </span>
+                        {/* Individual Coach Capacity Bar */}
+                        <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                          <div 
+                            className="h-full bg-violet-500 rounded-full transition-all"
+                            style={{ width: `${capacityPct}%` }}
+                          />
+                        </div>
                       </div>
                     );
                   })}
@@ -1283,7 +1571,7 @@ export const Dashboard = () => {
                   <button
                     type="button"
                     onClick={() => navigateTo("assign-trainer")}
-                    className="w-full mt-2 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="w-full mt-2 py-2.5 rounded-xl bg-slate-100 hover:bg-violet-100/70 border border-slate-200 text-slate-800 font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <Dumbbell size={13} strokeWidth={2.4} />
                     <span>Assign Personal Trainer</span>
@@ -1293,13 +1581,15 @@ export const Dashboard = () => {
 
             </section>
 
-            {/* PANEL 5: FACILITY PROFILE & SYSTEM INTEGRITY */}
-            <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.04)]">
+            {/* PANEL 5: FACILITY IDENTITY & SECURITY SNAPSHOT */}
+            <section className="border-2 border-dotted border-slate-300 hover:border-slate-400 bg-white/95 rounded-2xl p-5 shadow-xs relative overflow-hidden group transition-all duration-300">
+              <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-slate-300 group-hover:border-slate-500 transition-colors pointer-events-none" />
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-slate-300 group-hover:border-slate-500 transition-colors pointer-events-none" />
               
-              <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b-2 border-dotted border-slate-200">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
-                    <Building2 size={14} strokeWidth={2.2} />
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <Building2 size={14} strokeWidth={2.4} />
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-slate-900 leading-tight">
@@ -1314,23 +1604,29 @@ export const Dashboard = () => {
                 <button
                   type="button"
                   onClick={() => navigateTo("gym-profile")}
-                  className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer"
+                  className="text-[11px] font-black text-indigo-600 hover:underline cursor-pointer"
                 >
                   Profile
                 </button>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5 text-[11px] font-semibold text-slate-600">
+              <div className="p-3 rounded-xl bg-slate-50/90 border-2 border-dotted border-slate-200 space-y-2 text-[11px] font-semibold text-slate-600">
                 <div className="flex items-center justify-between">
-                  <span>Local Database:</span>
+                  <span>Engine Database:</span>
                   <span className="font-bold text-slate-900 flex items-center gap-1">
-                    <ShieldCheck size={13} className="text-emerald-600" />
+                    <ShieldCheck size={14} className="text-emerald-600" />
                     SQLite Encrypted
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Data Protection:</span>
-                  <span className="font-bold text-slate-900">Zero-Leak Isolated</span>
+                  <span className="font-bold text-slate-900">Zero-Leak Localized</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>System Time:</span>
+                  <span className="font-mono text-slate-700 font-bold">
+                    {currentDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
                 </div>
               </div>
 

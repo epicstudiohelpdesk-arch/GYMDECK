@@ -81,6 +81,10 @@ export class WhatsAppMessageService {
       return {
         ...dto,
         consentStatus: consent?.status ?? 'PENDING',
+        consentSource: consent?.source ?? (consent?.status === 'GRANTED' ? 'REGISTRATION_CHECKBOX' : null),
+        consentTimestamp: consent?.consentTimestamp ?? null,
+        withdrawalTimestamp: consent?.withdrawalTimestamp ?? null,
+        explicit: consent?.explicit ?? false,
         eligibleForWhatsApp: Boolean(member.normalizedPhone) && consent?.status === 'GRANTED',
       };
     });

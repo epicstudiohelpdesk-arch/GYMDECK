@@ -402,6 +402,38 @@ pub async fn delete_inventory_product_image_command(
 }
 
 #[tauri::command]
+pub async fn read_inventory_product_image_data_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    storage_key: String,
+) -> Result<Value, AppError> {
+    let ctx = get_auth_context(&state).await?;
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| AppError::Database(format!("Failed to resolve app data dir: {}", e)))?;
+
+    let path = ImageStorageService::resolve_image_path(&app_data_dir, &ctx.gym_id, &storage_key)?;
+    if !path.exists() {
+        return Err(AppError::Configuration("Image file not found on disk".into()));
+    }
+
+    let bytes = std::fs::read(&path)
+        .map_err(|e| AppError::Database(format!("Failed to read image file: {}", e)))?;
+
+    use base64::Engine;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    let mime = if path.extension().and_then(|e| e.to_str()) == Some("png") {
+        "image/png"
+    } else if path.extension().and_then(|e| e.to_str()) == Some("webp") {
+        "image/webp"
+    } else {
+        "image/jpeg"
+    };
+
+    let data_url = format!("data:{};base64,{}", mime, b64);
+    Ok(json!({ "success": true, "data": data_url }))
+}
+
+#[tauri::command]
 pub async fn set_primary_inventory_product_image_command(
     state: State<'_, AppState>,
     image_id: Uuid,

@@ -17,13 +17,13 @@ export const cx = (...values) => values.filter(Boolean).join(" ");
  * ------------------------------------------------------------------ */
 
 const BUTTON_BASE =
-  "inline-flex select-none items-center justify-center gap-1.5 rounded-xl font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex select-none items-center justify-center gap-1.5 rounded-xl font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95";
 
 const BUTTON_VARIANTS = {
   primary:
-    "bg-orange-500 text-white shadow-sm hover:bg-orange-600 active:bg-orange-700",
+    "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 hover:bg-indigo-700 active:bg-indigo-800",
   secondary:
-    "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100",
+    "border border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100",
   subtle:
     "border border-transparent bg-slate-100 text-slate-700 hover:bg-slate-200/80",
   ghost:
@@ -33,7 +33,9 @@ const BUTTON_VARIANTS = {
   "danger-solid":
     "bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:bg-rose-800",
   emerald:
-    "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:bg-emerald-800",
+    "bg-emerald-600 text-white shadow-sm shadow-emerald-600/25 hover:bg-emerald-700 active:bg-emerald-800",
+  slate:
+    "bg-slate-900 text-white shadow-sm hover:bg-slate-800 active:bg-slate-950",
 };
 
 const BUTTON_SIZES = {
@@ -247,15 +249,15 @@ export const Segmented = ({ value, onChange, options = [], ariaLabel, className 
  * ------------------------------------------------------------------ */
 
 const CONTROL_BASE =
-  "w-full rounded-xl border bg-white px-3 text-[12.5px] text-slate-800 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 disabled:bg-slate-100 disabled:text-slate-500";
+  "w-full rounded-xl border bg-slate-50/80 px-3.5 text-xs text-slate-800 shadow-2xs outline-none transition-all placeholder:text-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-500/10 disabled:bg-slate-100 disabled:text-slate-400 font-semibold";
 
 export const FieldLabel = ({ htmlFor, required, children }) => (
   <label
     htmlFor={htmlFor}
-    className="mb-1.5 flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.07em] text-slate-500"
+    className="mb-1.5 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-500"
   >
     {children}
-    {required ? <span className="text-orange-500">*</span> : null}
+    {required ? <span className="text-indigo-600">*</span> : null}
   </label>
 );
 
@@ -506,9 +508,9 @@ export const Dropdown = ({
   };
 
   const triggerClasses = cx(
-    "inline-flex w-full items-center justify-between gap-2 rounded-xl border bg-white font-semibold text-slate-700 shadow-sm outline-none transition-colors focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400",
+    "inline-flex w-full items-center justify-between gap-2 rounded-xl border bg-slate-50/80 font-bold text-slate-800 shadow-2xs outline-none transition-all focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-500/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400",
     DROPDOWN_SIZES[size] || DROPDOWN_SIZES.md,
-    invalid ? "border-rose-300" : "border-slate-200 hover:border-slate-300",
+    invalid ? "border-rose-300" : "border-slate-200 hover:border-slate-300 hover:bg-slate-100/50",
     className
   );
 
@@ -737,23 +739,30 @@ const useDialog = (isOpen, onClose) => {
 };
 
 const DialogHeader = ({ icon: Icon, title, description, titleId, onClose }) => (
-  <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-    <div className="flex min-w-0 items-start gap-3">
+  <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 px-6 pt-5">
+    <div className="flex min-w-0 items-center gap-3">
       {Icon ? (
-        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-50 text-orange-600">
-          <Icon size={17} strokeWidth={2.1} aria-hidden="true" />
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-2xs">
+          <Icon size={18} strokeWidth={2.2} aria-hidden="true" />
         </span>
       ) : null}
       <div className="min-w-0">
-        <h2 id={titleId} className="truncate text-[14px] font-bold tracking-tight text-slate-900">
+        <h2 id={titleId} className="truncate text-base font-black tracking-tight text-slate-900">
           {title}
         </h2>
         {description ? (
-          <p className="mt-0.5 text-[11.5px] leading-5 text-slate-500">{description}</p>
+          <p className="text-xs text-slate-500 font-medium leading-relaxed">{description}</p>
         ) : null}
       </div>
     </div>
-    <IconButton label="Close dialog" icon={X} onClick={onClose} />
+    <button
+      type="button"
+      onClick={onClose}
+      className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+      aria-label="Close dialog"
+    >
+      <X size={16} strokeWidth={2.4} />
+    </button>
   </div>
 );
 
@@ -780,9 +789,9 @@ export const Modal = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9000] flex items-end justify-center sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[10050] flex items-center justify-center p-4 sm:p-6">
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm inventory-anim-fade"
+        className="fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -793,14 +802,14 @@ export const Modal = ({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cx(
-          "relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl outline-none sm:rounded-2xl inventory-anim-pop",
+          "relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-3xl bg-white border border-slate-200/90 shadow-2xl outline-none animate-in fade-in zoom-in-95 duration-150",
           MODAL_SIZES[size] || MODAL_SIZES.lg
         )}
       >
         <DialogHeader icon={icon} title={title} description={description} titleId={titleId} onClose={onClose} />
-        <div className={cx("min-h-0 flex-1 overflow-y-auto px-5 py-5", bodyClassName)}>{children}</div>
+        <div className={cx("min-h-0 flex-1 overflow-y-auto px-6 py-5", bodyClassName)}>{children}</div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/50 px-6 py-3.5">
             {footer}
           </div>
         ) : null}
@@ -833,9 +842,9 @@ export const Drawer = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9000] flex justify-end">
+    <div className="fixed inset-0 z-[10050] flex justify-end">
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm inventory-anim-fade"
+        className="fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -846,16 +855,16 @@ export const Drawer = ({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cx(
-          "relative flex h-full w-full flex-col overflow-hidden bg-slate-50 shadow-2xl outline-none inventory-anim-slide",
+          "relative z-10 flex h-full w-full flex-col overflow-hidden bg-slate-50 border-l border-slate-200 shadow-2xl outline-none animate-in slide-in-from-right duration-200",
           DRAWER_SIZES[size] || DRAWER_SIZES.lg
         )}
       >
         <div className="border-b border-slate-200/80 bg-white">
           <DialogHeader icon={icon} title={title} description={description} titleId={titleId} onClose={onClose} />
         </div>
-        <div className={cx("min-h-0 flex-1 overflow-y-auto p-4 sm:p-5", bodyClassName)}>{children}</div>
+        <div className={cx("min-h-0 flex-1 overflow-y-auto p-5 sm:p-6", bodyClassName)}>{children}</div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/80 bg-white px-4 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-slate-200/80 bg-white px-6 py-4">
             {footer}
           </div>
         ) : null}
@@ -910,35 +919,35 @@ export const EmptyState = ({ icon: Icon, title, description, action, className }
 
 export const StatCard = ({ label, value, hint, icon: Icon, tone = "slate", badge }) => {
   const tones = {
-    slate: "border-slate-200 bg-slate-50 text-slate-500",
-    orange: "border-orange-100 bg-orange-50 text-orange-500",
-    emerald: "border-emerald-100 bg-emerald-50 text-emerald-600",
-    amber: "border-amber-100 bg-amber-50 text-amber-600",
-    rose: "border-rose-100 bg-rose-50 text-rose-600",
+    slate: "border-slate-200/80 bg-slate-100/70 text-slate-600 group-hover:bg-slate-200/70",
+    orange: "border-orange-200/80 bg-orange-50 text-orange-600 group-hover:bg-orange-100/80",
+    emerald: "border-emerald-200/80 bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100/80",
+    amber: "border-amber-200/80 bg-amber-50 text-amber-600 group-hover:bg-amber-100/80",
+    rose: "border-rose-200/80 bg-rose-50 text-rose-600 group-hover:bg-rose-100/80",
   };
   const alert = (tone === "amber" || tone === "rose") && Number(value) > 0;
   return (
     <div
       className={cx(
-        "rounded-2xl border bg-white p-4 shadow-sm",
-        alert ? (tone === "rose" ? "border-rose-200" : "border-amber-200") : "border-slate-200/80"
+        "group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-white p-4 sm:p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        alert ? (tone === "rose" ? "border-rose-300 ring-2 ring-rose-500/10" : "border-amber-300 ring-2 ring-amber-500/10") : "border-slate-200/90"
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-slate-500">{label}</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">{label}</p>
         {Icon ? (
-          <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-lg border", tones[tone] || tones.slate)}>
-            <Icon size={14} strokeWidth={2.1} aria-hidden="true" />
+          <span className={cx("grid h-9 w-9 shrink-0 place-items-center rounded-xl border transition-colors", tones[tone] || tones.slate)}>
+            <Icon size={16} strokeWidth={2.2} aria-hidden="true" />
           </span>
         ) : null}
       </div>
-      <div className="mt-2.5 flex items-baseline gap-2">
-        <span className="text-[26px] font-extrabold leading-none tracking-tight text-slate-900 tabular-nums">
+      <div className="mt-3.5 flex items-baseline gap-2.5">
+        <span className="text-[28px] sm:text-[30px] font-black leading-none tracking-tight text-slate-900 tabular-nums">
           {value}
         </span>
         {badge ? <Badge tone={tone}>{badge}</Badge> : null}
       </div>
-      {hint ? <p className="mt-1.5 text-[11px] font-medium leading-4 text-slate-400">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-[11.5px] font-medium leading-4 text-slate-400">{hint}</p> : null}
     </div>
   );
 };

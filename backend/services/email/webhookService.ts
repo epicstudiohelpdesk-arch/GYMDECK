@@ -16,11 +16,11 @@ import { db } from '../../shared/database';
 import {
   emailRecipients,
   emailMessages,
-  emailSuppressions,
   emailDeliveryEvents,
   emailWebhookQuarantine,
 } from '../../shared/database/schema';
 import { logger } from '../../shared/logging';
+import { addEmailSuppressionTx } from './suppressionService';
 
 export interface PostalWebhookPayload {
   event:
@@ -193,16 +193,13 @@ export class PostalWebhookService {
             })
             .where(eq(emailMessages.id, messageId));
 
-          // Register in suppression list
-          await tx
-            .insert(emailSuppressions)
-            .values({
-              gymId,
-              emailAddress: recipient.recipientEmail.toLowerCase(),
-              suppressionReason: 'HARD_BOUNCE',
-              source: 'POSTAL_BOUNCE_WEBHOOK',
-            })
-            .onConflictDoNothing();
+          // Register in suppression list (normalized, deduplicated by address).
+          await addEmailSuppressionTx(tx, {
+            gymId,
+            emailAddress: recipient.recipientEmail,
+            suppressionReason: 'HARD_BOUNCE',
+            source: 'POSTAL_BOUNCE_WEBHOOK',
+          });
           break;
 
         case 'MessageDeliveryFailed':

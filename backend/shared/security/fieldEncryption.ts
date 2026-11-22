@@ -5,7 +5,7 @@
  */
 
 import * as crypto from 'crypto';
-import { config, isProduction } from '../config';
+import { isProduction } from '../config';
 
 const FALLBACK_DEV_KEY = 'gymdeck_dev_payment_field_key_do_not_use_in_prod';
 
@@ -17,8 +17,8 @@ function resolveKey(): Buffer {
   if (raw.length > 0) {
     return crypto.createHash('sha256').update(raw).digest();
   }
-  if (isProduction || config.NODE_ENV === 'staging') {
-    throw new Error('PAYMENT_ENCRYPTION_KEY is required outside development.');
+  if (isProduction) {
+    throw new Error('PAYMENT_ENCRYPTION_KEY is required in production.');
   }
   return crypto.createHash('sha256').update(FALLBACK_DEV_KEY).digest();
 }

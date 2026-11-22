@@ -45,14 +45,50 @@ async function invokeCommand(command, args = {}) {
   return null;
 }
 
-// Convert native file path to webview-safe asset URL
+// In-memory cache for resolved base64 images so we don't re-invoke repeatedly
+const imageCache = new Map();
+
+// Convert native file path or storage key to webview-safe URL
 export function getProductImageUrl(image) {
   if (!image) return null;
   if (image.dataUrl) return image.dataUrl;
-  if (image.local_path && typeof window !== "undefined" && window.__TAURI__?.core?.convertFileSrc) {
-    return window.__TAURI__.core.convertFileSrc(image.local_path);
+  if (image.storage_key && imageCache.has(image.storage_key)) {
+    return imageCache.get(image.storage_key);
+  }
+  if (image.local_path) {
+    if (typeof window !== "undefined" && window.__TAURI__?.core?.convertFileSrc) {
+      try {
+        const url = window.__TAURI__.core.convertFileSrc(image.local_path);
+        if (url) return url;
+      } catch (e) {
+        console.warn("Failed to convertFileSrc:", e);
+      }
+    }
+    return image.local_path;
   }
   return null;
+}
+
+export async function fetchProductImageDataUrl(image) {
+  if (!image) return null;
+  if (image.dataUrl) return image.dataUrl;
+  if (image.storage_key && imageCache.has(image.storage_key)) {
+    return imageCache.get(image.storage_key);
+  }
+  if (isTauri() && image.storage_key) {
+    try {
+      const dataUrl = await invokeCommand("read_inventory_product_image_data_command", {
+        storageKey: image.storage_key,
+      });
+      if (dataUrl) {
+        imageCache.set(image.storage_key, dataUrl);
+        return dataUrl;
+      }
+    } catch (e) {
+      console.warn("Failed to read image via Tauri command:", e);
+    }
+  }
+  return getProductImageUrl(image);
 }
 
 // ==========================================

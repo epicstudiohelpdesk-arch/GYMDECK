@@ -470,13 +470,23 @@ async function runPhase3CTests() {
   const nowLock = new Date();
   const worker1Promise = db
     .update(emailOutbox)
-    .set({ jobStatus: 'PROCESSING', lockedBy: 'worker_alpha', lockedAt: nowLock })
+    .set({
+      jobStatus: 'PROCESSING',
+      lockedBy: 'worker_alpha',
+      lockedAt: nowLock,
+      leaseExpiresAt: new Date(nowLock.getTime() + 5 * 60 * 1000),
+    })
     .where(and(eq(emailOutbox.id, outboxRace!.id), eq(emailOutbox.jobStatus, 'PENDING')))
     .returning();
 
   const worker2Promise = db
     .update(emailOutbox)
-    .set({ jobStatus: 'PROCESSING', lockedBy: 'worker_beta', lockedAt: nowLock })
+    .set({
+      jobStatus: 'PROCESSING',
+      lockedBy: 'worker_beta',
+      lockedAt: nowLock,
+      leaseExpiresAt: new Date(nowLock.getTime() + 5 * 60 * 1000),
+    })
     .where(and(eq(emailOutbox.id, outboxRace!.id), eq(emailOutbox.jobStatus, 'PENDING')))
     .returning();
 

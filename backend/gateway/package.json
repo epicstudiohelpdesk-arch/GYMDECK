@@ -1,0 +1,6 @@
+{
+  "name": "@gymdeck/cloud-gateway",
+  "private": true,
+  "main": "src/server.ts",
+  "types": "src/server.ts"
+}
