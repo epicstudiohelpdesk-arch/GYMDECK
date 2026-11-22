@@ -213,7 +213,7 @@ export const EnvironmentSchema = z.object({
         message: 'Staging environment must not use the default development JWT secret.',
       });
     }
-    if (!process.env.DATABASE_URL) {
+    if (data.DATABASE_URL === DEV_DEFAULT_DATABASE_URL) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['DATABASE_URL'],
