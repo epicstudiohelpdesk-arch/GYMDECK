@@ -317,6 +317,7 @@ pub async fn cloud_communications_request_command(
     }
     if !(request.path.starts_with("/v1/owner/communications")
         || request.path.starts_with("/v1/owner/whatsapp")
+        || request.path.starts_with("/v1/owner/email")
         || request.path.starts_with("/v1/owner/payment-accounts")
         || request.path.starts_with("/v1/owner/payment-reconciliation")
         || request.path.starts_with("/v1/payments"))

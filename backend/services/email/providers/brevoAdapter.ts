@@ -1,13 +1,21 @@
-/** Provider-neutral adapter for Brevo. */
-import { config } from '../../../shared/config';
-import { brevoClient } from './brevoClient';
+/**
+ * Provider-neutral adapter for Brevo.
+ * Translates application email requests to Brevo transactional API calls
+ * and maps provider outcomes to unified delivery results.
+ */
 
+import { config } from '../../../shared/config';
+import { brevoClient, BrevoApiError } from './brevoClient';
 
 export type Provider = 'postal' | 'brevo';
 
 export interface ProviderSendOptions {
   recipientBatchCount: number;
   recipientBatchIds: string[];
+  replyTo?: string;
+  subject?: string;
+  senderName?: string;
+  senderEmail?: string;
 }
 
 export interface ProviderSendResult {
@@ -19,6 +27,9 @@ export interface ProviderSendResult {
   provider: Provider;
   providerMessageId?: string;
   providerResponse?: any;
+  httpStatus?: number;
+  isAmbiguous?: boolean;
+  code?: string;
 }
 
 export class BrevoAdapter {
@@ -26,15 +37,15 @@ export class BrevoAdapter {
     to: string[],
     htmlContent: string,
     textContent?: string,
-    options: ProviderSendOptions = { recipientBatchCount: 1, recipientBatchIds: [] },
+    _options: ProviderSendOptions = { recipientBatchCount: 1, recipientBatchIds: [] }
   ): Promise<ProviderSendResult> {
     if (config.BREVO_DELIVERY_MODE === 'mock') {
-      const acceptedCount = Math.max(0, to.length - 1);
-      const accepted = to.slice(0, acceptedCount).map((email, index) => ({
+      const mockId = `<mock_brevo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}@mail.epic-studio.in>`;
+      const accepted = to.map((email) => ({
         email,
         status: 'accepted',
-        id: `mock_brevo_${index + 1}`,
-        token: `tok_bot_${Date.now()}_${index}`,
+        id: mockId,
+        token: `tok_${Date.now()}`,
       }));
       return {
         ok: true,
@@ -42,109 +53,112 @@ export class BrevoAdapter {
         rejectedRecipients: [],
         ambiguousRecipients: [],
         provider: 'brevo',
-        providerMessageId: `mock_brevo_${Date.now()}_batch_${options.recipientBatchCount}`,
+        providerMessageId: mockId,
+        providerResponse: { messageId: mockId },
+        httpStatus: 201,
       };
     }
 
-    const recipients = to.map((email) => ({ email }));
-
-    let httpStatus: number | undefined;
-    let responseBody: any;
-    let error: unknown;
-
+    let response: any;
     try {
-      responseBody = await brevoClient.send({
-        to: recipients,
-        subject: 'GymDeck Notification',
+      response = await brevoClient.send({
+        to: to.map((email) => ({ email })),
+        subject: _options.subject || 'GymDeck Notification',
         htmlContent,
         textContent,
+        replyTo: _options.replyTo,
         sender: {
-          name: 'GymDeck',
-          email: config.BREVO_SENDER_EMAIL || 'notifications@mail.epic-studio.in',
+          name: _options.senderName || config.BREVO_SENDER_NAME || 'GymDeck',
+          email: _options.senderEmail || config.BREVO_SENDER_EMAIL || 'notifications@mail.epic-studio.in',
         },
       });
-      httpStatus = 201;
-    } catch (err) {
-      error = err;
-      const apiError = err as { httpStatus?: number };
-      httpStatus = apiError.httpStatus || httpStatus || 500;
-      responseBody = (err as any)?.response?.body ?? null;
+    } catch (err: any) {
+      const isBrevoError = err instanceof BrevoApiError;
+      const isAmbiguous = isBrevoError ? err.isAmbiguous : true;
+      const httpStatus = isBrevoError ? err.httpStatus : 500;
+      const code = isBrevoError ? err.code : 'UNKNOWN_ERROR';
+      const errMsg = err?.message || 'Brevo dispatch failed';
+
+      return {
+        ok: false,
+        acceptedRecipients: [],
+        rejectedRecipients: !isAmbiguous
+          ? to.map((email) => ({ email, status: 'refused', error: errMsg }))
+          : [],
+        ambiguousRecipients: isAmbiguous
+          ? to.map((email) => ({ email, status: 'ambiguous', error: errMsg }))
+          : [],
+        errorMessage: errMsg,
+        provider: 'brevo',
+        providerMessageId: undefined,
+        providerResponse: isBrevoError ? err.responseBody : null,
+        httpStatus,
+        isAmbiguous,
+        code,
+      };
     }
 
-    if (error || !responseBody) {
+    // Response succeeded with 2xx. Validate messageId existence.
+    const messageId = response.messageId || response.data?.messageId;
+    if (!messageId || typeof messageId !== 'string' || messageId.trim().length === 0) {
       return {
         ok: false,
         acceptedRecipients: [],
         rejectedRecipients: [],
         ambiguousRecipients: to.map((email) => ({
           email,
-          status: 'refused',
-          error: error ? (error as Error).message : 'No provider response',
+          status: 'ambiguous',
+          error: 'Brevo returned HTTP 2xx but response body lacked a valid messageId',
         })),
-        errorMessage: error ? (error as Error).message : 'No provider response',
-        providerMessageId: undefined,
-        providerResponse: null,
+        errorMessage: 'Brevo returned HTTP 2xx but response body lacked a valid messageId',
         provider: 'brevo',
+        providerMessageId: undefined,
+        providerResponse: response.data,
+        httpStatus: response.httpStatus || 200,
+        isAmbiguous: true,
+        code: 'MISSING_PROVIDER_MESSAGE_ID',
       };
     }
 
-    const data = responseBody.data ?? responseBody;
-    const messageId = responseBody.messageId || data?.messageId;
-
-    const acceptedSet = new Set<string>();
+    const data = response.data || {};
     const acceptedRecipients: ProviderSendResult['acceptedRecipients'] = [];
     const rejectedRecipients: ProviderSendResult['rejectedRecipients'] = [];
     const ambiguousRecipients: ProviderSendResult['ambiguousRecipients'] = [];
 
-    if (httpStatus >= 500 || (data?.Reject && data.Reject.length > 0)) {
-      return {
-        ok: false,
-        acceptedRecipients: [],
-        rejectedRecipients: to.map((email) => ({ email, status: 'refused', id: messageId })),
-        ambiguousRecipients: [],
-        errorMessage: 'Provider rejected the message',
-        provider: 'brevo',
-        providerMessageId: messageId,
-        providerResponse: responseBody,
-      };
-    }
-
-    const record = (email: string, status: string, extra?: any) => {
-      if (acceptedSet.has(email)) return;
-      acceptedSet.add(email);
-      acceptedRecipients.push({ email, status, ...extra });
-    };
-
-    if (data?.Accept && Array.isArray(data.Accept)) {
-      for (const email of data.Accept) {
-        record(email, 'accepted', { id: messageId });
-      }
-    } else {
-      for (const email of to) record(email, 'accepted', { id: messageId });
-    }
-
-    if (data?.Reject && Array.isArray(data.Reject)) {
+    // Check for explicit per-recipient rejection arrays from Brevo
+    if (Array.isArray(data.Reject) && data.Reject.length > 0) {
       for (const email of data.Reject) {
         rejectedRecipients.push({ email, status: 'refused', id: messageId });
       }
     }
-
-    if (data?.Neutral && Array.isArray(data.Neutral)) {
+    if (Array.isArray(data.Neutral) && data.Neutral.length > 0) {
       for (const email of data.Neutral) {
         ambiguousRecipients.push({ email, status: 'neutral', id: messageId });
       }
     }
 
-    const ok = ambiguousRecipients.length === 0 && rejectedRecipients.length === 0;
+    const rejectedSet = new Set(rejectedRecipients.map((r) => r.email.toLowerCase()));
+    const neutralSet = new Set(ambiguousRecipients.map((r) => r.email.toLowerCase()));
+
+    for (const email of to) {
+      if (!rejectedSet.has(email.toLowerCase()) && !neutralSet.has(email.toLowerCase())) {
+        acceptedRecipients.push({ email, status: 'accepted', id: messageId });
+      }
+    }
+
+    const ok = acceptedRecipients.length > 0 && rejectedRecipients.length === 0 && ambiguousRecipients.length === 0;
+
     return {
       ok,
       acceptedRecipients,
       rejectedRecipients,
       ambiguousRecipients,
-      errorMessage: ok ? undefined : 'Partial acceptance or ambiguity detected',
+      errorMessage: ok ? undefined : 'Partial recipient acceptance or ambiguity detected from Brevo',
       provider: 'brevo',
       providerMessageId: messageId,
-      providerResponse: responseBody,
+      providerResponse: response.data,
+      httpStatus: response.httpStatus || 201,
+      isAmbiguous: ambiguousRecipients.length > 0,
     };
   }
 }

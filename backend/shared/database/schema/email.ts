@@ -86,6 +86,7 @@ export const emailOutbox = pgTable(
     gymId: uuid('gym_id').notNull().references(() => gyms.id, { onDelete: 'cascade' }),
     emailMessageId: uuid('email_message_id').notNull().references(() => emailMessages.id, { onDelete: 'cascade' }),
     jobStatus: varchar('job_status', { length: 32 }).notNull().default('PENDING'), // PENDING | PROCESSING | COMPLETED | FAILED | RECONCILIATION_REQUIRED
+    provider: varchar('provider', { length: 32 }).notNull().default('POSTAL'),
     attempts: integer('attempts').notNull().default(0),
     maxAttempts: integer('max_attempts').notNull().default(5),
     nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),

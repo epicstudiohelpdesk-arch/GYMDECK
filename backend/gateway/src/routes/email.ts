@@ -12,6 +12,7 @@ import { AppError } from '../../../shared/errors';
 import { emailService } from '../../../services/email/emailService';
 import { postalWebhookService } from '../../../services/email/webhookService';
 import { verifyPostalWebhookSignature } from '../../../services/email/postalWebhookAuth';
+import { brevoWebhookService, verifyBrevoWebhookAuth } from '../../../services/email/brevoWebhookService';
 import { createRateLimiter } from '../../../shared/security/rateLimiter';
 
 const router: Router = Router();
@@ -64,6 +65,22 @@ router.post('/webhooks/postal', async (req, res, next) => {
 
     await postalWebhookService.handleWebhook(req.body);
     res.json({ status: 'ok', verifiedVia: authResult.algorithm });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Inbound Brevo webhook (backward-compatible alias; canonical route is
+// /v1/webhooks/brevo).
+router.post('/webhooks/brevo', async (req, res, next) => {
+  try {
+    const authResult = verifyBrevoWebhookAuth(req);
+    if (!authResult.valid) {
+      throw AppError.unauthorized(`Brevo webhook verification failed: ${authResult.reason || 'Invalid secret token'}`);
+    }
+
+    await brevoWebhookService.handleWebhook(req.body);
+    res.json({ status: 'ok' });
   } catch (err) {
     next(err);
   }

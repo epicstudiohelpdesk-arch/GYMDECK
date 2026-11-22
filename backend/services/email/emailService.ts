@@ -37,6 +37,11 @@ export interface EmailOverview {
     successRate: number;
   };
   recentMessages: any[];
+  relayInfo?: {
+    provider: string;
+    senderEmail: string;
+    senderName: string;
+  };
 }
 
 export interface ComposeEmailDto {
@@ -97,6 +102,14 @@ export class EmailService {
       .orderBy(desc(emailMessages.createdAt))
       .limit(5);
 
+    const activeProvider = config.EMAIL_DELIVERY_PROVIDER === 'brevo' ? 'brevo' : 'postal';
+    const senderEmail = activeProvider === 'brevo' 
+      ? (config.BREVO_SENDER_EMAIL || 'notifications@mail.epic-studio.in')
+      : config.POSTAL_DEFAULT_FROM_EMAIL;
+    const senderName = activeProvider === 'brevo'
+      ? (config.BREVO_SENDER_NAME || 'GymDeck')
+      : config.POSTAL_DEFAULT_FROM_NAME;
+
     return {
       quota,
       metrics: {
@@ -108,6 +121,11 @@ export class EmailService {
         successRate,
       },
       recentMessages,
+      relayInfo: {
+        provider: activeProvider,
+        senderEmail,
+        senderName,
+      },
     };
   }
 
@@ -281,6 +299,7 @@ export class EmailService {
         emailMessageId: created.id,
         jobStatus: 'PENDING',
         nextAttemptAt: new Date(),
+        provider: config.EMAIL_DELIVERY_PROVIDER === 'brevo' ? 'BREVO' : 'POSTAL',
       });
 
       return created;

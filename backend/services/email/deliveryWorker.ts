@@ -13,7 +13,7 @@
  * of calling the provider again.
  */
 
-import { eq, and, sql, lte, inArray, lt, gt } from 'drizzle-orm';
+import { eq, and, sql, lte, inArray, lt, gt, desc } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import {
   emailOutbox,
@@ -731,6 +731,40 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
 
         const attemptNumber = Number(maxRows[0]?.maxAttempt || 0) + 1;
 
+        // --- IMMUTABLE PROVIDER LOCKING INVARIANT ---
+        // Prior attempts pin the provider for this outbox job permanently.
+        const priorAttempts = await tx
+          .select({ provider: emailDispatchAttempts.provider })
+          .from(emailDispatchAttempts)
+          .where(eq(emailDispatchAttempts.outboxId, jobId))
+          .orderBy(desc(emailDispatchAttempts.attemptNumber))
+          .limit(1);
+
+        const outboxRows = await tx
+          .select({ provider: emailOutbox.provider })
+          .from(emailOutbox)
+          .where(eq(emailOutbox.id, jobId))
+          .limit(1);
+
+        const prior = priorAttempts[0];
+        const outbox = outboxRows[0];
+
+        let pinnedProvider: 'BREVO' | 'POSTAL';
+        if (prior && (prior.provider === 'BREVO' || prior.provider === 'POSTAL')) {
+          pinnedProvider = prior.provider as 'BREVO' | 'POSTAL';
+        } else if (outbox && (outbox.provider === 'BREVO' || outbox.provider === 'POSTAL')) {
+          pinnedProvider = outbox.provider as 'BREVO' | 'POSTAL';
+        } else {
+          pinnedProvider = config.EMAIL_DELIVERY_PROVIDER === 'brevo' ? 'BREVO' : 'POSTAL';
+        }
+
+        if (outbox && outbox.provider !== pinnedProvider) {
+          await tx
+            .update(emailOutbox)
+            .set({ provider: pinnedProvider })
+            .where(eq(emailOutbox.id, jobId));
+        }
+
         const inserted = await tx
           .insert(emailDispatchAttempts)
           .values({
@@ -739,7 +773,7 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
             outboxId: jobId,
             attemptNumber,
             attemptStatus: 'DISPATCHING',
-            provider: config.EMAIL_DELIVERY_PROVIDER === 'brevo' ? 'BREVO' : 'POSTAL',
+            provider: pinnedProvider,
             recipientCount: activeRecipients.length,
             recipientBatchIds: activeRecipients.map((r) => r.id),
             workerId: activeWorkerId,
@@ -775,9 +809,13 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
       type DeliverySendInput = {
         gymId: string;
         emailMessageId: string;
+        outboxId?: string;
+        provider?: 'postal' | 'brevo';
         to: string[];
         htmlContent: string;
         textContent?: string;
+        subject?: string;
+        replyTo?: string;
         senderName?: string;
         senderEmail?: string;
         batchIndex: number;
@@ -786,9 +824,13 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
       const dispatchInput: DeliverySendInput = {
         gymId,
         emailMessageId,
+        outboxId: jobId,
+        provider: dispatchAttempt.provider.toLowerCase() as 'postal' | 'brevo',
         to: activeRecipients.map((r) => r.recipientEmail),
         htmlContent: message.bodyHtml,
         textContent: message.bodyText || undefined,
+        subject: message.subject,
+        replyTo: message.replyToAddress || undefined,
         senderName: message.senderDisplayName || 'GymDeck',
         senderEmail: message.fromAddress,
         batchIndex: dispatchAttempt.attemptNumber - 1,
@@ -799,7 +841,15 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
       try {
         const dispatchResult = await providerRouter.dispatch(dispatchInput);
         if (!dispatchResult.ok) {
-          throw new Error(`Provider dispatch failed: ${JSON.stringify(dispatchResult.result)}`);
+          const res = dispatchResult.result;
+          const isAmbiguous = Boolean((res?.ambiguousRecipients && res.ambiguousRecipients.length > 0) || res?.isAmbiguous);
+          const errMsg = res?.errorMessage || 'Provider rejected dispatch request';
+          const err: any = new Error(errMsg);
+          err.isAmbiguous = isAmbiguous;
+          err.category = isAmbiguous ? 'AMBIGUOUS_TIMEOUT' : (res?.code === 'AUTH_FAILED' ? 'AUTH_FAILED' : 'CLIENT_REJECTED');
+          err.httpStatus = res?.httpStatus;
+          err.code = res?.code;
+          throw err;
         }
         sendResult = dispatchResult.result;
       } catch (providerErr: any) {
@@ -856,9 +906,10 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
         throw providerErr;
       }
 
-      const providerData = sendResult.data;
+      const providerData = sendResult.data || sendResult.providerResponse;
       const providerMessages = providerData?.messages || {};
       const completedTime = new Date();
+      const resolvedProviderMessageId = sendResult.providerMessageId || (providerData?.message_id ? String(providerData.message_id) : null);
 
       // 4C. Persist acceptance, recipient state and quota in one transaction.
       // A crash cannot leave ACCEPTED persisted without the batch application.
@@ -873,36 +924,49 @@ export async function processSingleJob(job: any, workerId?: string): Promise<voi
           .update(emailDispatchAttempts)
           .set({
             attemptStatus: 'ACCEPTED',
-            providerMessageId: providerData?.message_id ? String(providerData.message_id) : null,
-            httpStatus: 200,
-            providerResponse: providerData,
+            providerMessageId: resolvedProviderMessageId,
+            httpStatus: sendResult.httpStatus || 200,
+            providerResponse: sendResult.providerResponse || providerData || null,
             requestCompletedAt: completedTime,
             updatedAt: completedTime,
-          })            .where(
-              and(
-                eq(emailDispatchAttempts.id, dispatchAttempt.id),
-                eq(emailDispatchAttempts.workerId, activeWorkerId),
-                eq(emailDispatchAttempts.attemptStatus, 'DISPATCHING')
-              )
-            );
+          })
+          .where(
+            and(
+              eq(emailDispatchAttempts.id, dispatchAttempt.id),
+              eq(emailDispatchAttempts.workerId, activeWorkerId),
+              eq(emailDispatchAttempts.attemptStatus, 'DISPATCHING')
+            )
+          );
 
         const acceptedRecipients: RecipientRow[] = [];
         const rejectedRecipients: RecipientRow[] = [];
+        const acceptedMap = new Map<string, any>();
+        if (Array.isArray(sendResult.acceptedRecipients)) {
+          for (const item of sendResult.acceptedRecipients) {
+            acceptedMap.set(item.email.toLowerCase(), item);
+          }
+        }
 
         for (const rec of activeRecipients) {
           const pMsg = providerMessages[rec.recipientEmail];
-          if (pMsg || providerData?.message_id) {
+          const brevoAccepted = acceptedMap.get(rec.recipientEmail.toLowerCase());
+          const isAccepted = Boolean(
+            pMsg ||
+            brevoAccepted ||
+            (resolvedProviderMessageId && acceptedMap.size === 0 && !sendResult.rejectedRecipients?.some((r: any) => r.email.toLowerCase() === rec.recipientEmail.toLowerCase()))
+          );
+
+          if (isAccepted) {
             acceptedRecipients.push(rec);
+            const assignedId = pMsg ? String(pMsg.id) : (brevoAccepted?.id || resolvedProviderMessageId || undefined);
+            const assignedToken = pMsg ? String(pMsg.token) : (brevoAccepted?.token || undefined);
+
             await tx
               .update(emailRecipients)
               .set({
                 deliveryStatus: 'SENT',
-                providerMessageId: pMsg
-                  ? String(pMsg.id)
-                  : providerData?.message_id
-                    ? String(providerData.message_id)
-                    : undefined,
-                providerToken: pMsg ? pMsg.token : undefined,
+                providerMessageId: assignedId,
+                providerToken: assignedToken,
                 attempts: rec.attempts + 1,
                 lastAttemptAt: completedTime,
                 updatedAt: completedTime,

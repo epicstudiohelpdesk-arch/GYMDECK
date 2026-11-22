@@ -10,6 +10,7 @@ import { openwaWebhookProcessor } from '../../../services/whatsapp/openwaWebhook
 import { resourceRateLimiter } from '../../../shared/security/rateLimiter';
 import { verifyPostalWebhookSignature } from '../../../services/email/postalWebhookAuth';
 import { postalWebhookService } from '../../../services/email/webhookService';
+import { verifyBrevoWebhookAuth, brevoWebhookService } from '../../../services/email/brevoWebhookService';
 import { AppError } from '../../../shared/errors';
 
 const router: Router = Router();
@@ -56,6 +57,30 @@ router.post(
 
       await postalWebhookService.handleWebhook(req.body);
       res.status(200).json({ status: 'ok', verifiedVia: authResult.algorithm });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * Brevo delivery engine webhook callback (POST).
+ *
+ * Canonical endpoint: POST /v1/webhooks/brevo
+ * Authenticated via secret token comparison against BREVO_WEBHOOK_SECRET.
+ */
+router.post(
+  '/brevo',
+  resourceRateLimiter.webhookIngress,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authResult = verifyBrevoWebhookAuth(req);
+      if (!authResult.valid) {
+        throw AppError.unauthorized(`Brevo webhook verification failed: ${authResult.reason || 'Invalid secret token'}`);
+      }
+
+      await brevoWebhookService.handleWebhook(req.body);
+      res.status(200).json({ status: 'ok' });
     } catch (err) {
       next(err);
     }

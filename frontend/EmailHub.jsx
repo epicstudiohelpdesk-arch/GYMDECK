@@ -121,18 +121,73 @@ export default function EmailHub() {
   // Fetch Member Directory for Recipient Selection
   const loadRecipients = useCallback(async (status, search) => {
     setLoadingMembers(true);
+    let membersList = [];
+
+    // 1. Primary: Try fetching from Cloud Backend (when connected)
     try {
       const data = await emailApi.getRecipients({
         status: status === 'ALL' ? undefined : status,
         search: search || undefined,
         limit: 150,
       });
-      setAvailableMembers(data.members || []);
+      if (Array.isArray(data?.members) && data.members.length > 0) {
+        membersList = data.members;
+      }
     } catch (err) {
-      console.warn('Could not load member recipients:', err);
-    } finally {
-      setLoadingMembers(false);
+      console.warn('Cloud email recipients query note (will check local store):', err?.message || err);
     }
+
+    // 2. Hybrid / Offline-First Fallback: Fetch from local SQLite DB or cachedMembers
+    if (membersList.length === 0) {
+      let localMembers = [];
+      if (typeof window !== 'undefined' && Array.isArray(window.cachedMembers) && window.cachedMembers.length > 0) {
+        localMembers = window.cachedMembers;
+      } else if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
+        try {
+          const res = await window.__TAURI__.core.invoke('get_members_command', { limit: 5000, offset: 0 });
+          if (Array.isArray(res)) {
+            localMembers = res;
+            window.cachedMembers = res;
+          }
+        } catch (e) {
+          console.warn('Local SQLite get_members_command fallback warning:', e);
+        }
+      }
+
+      // Normalize snake_case / camelCase properties for EmailHub
+      const normalized = localMembers.map((m) => ({
+        id: m.id,
+        memberCode: m.member_code || m.memberCode,
+        fullName: m.full_name || m.fullName || 'Member',
+        email: m.email || '',
+        phone: m.phone || '',
+        membershipStatus: m.membership_status || m.membershipStatus || 'ACTIVE',
+        expiresAt: m.expires_at || m.expiresAt,
+      }));
+
+      // Apply status and search filters on local records
+      membersList = normalized.filter((m) => {
+        if (status && status !== 'ALL') {
+          if (String(m.membershipStatus).toUpperCase() !== String(status).toUpperCase()) {
+            return false;
+          }
+        }
+        if (search && search.trim()) {
+          const q = search.trim().toLowerCase();
+          const matchName = (m.fullName || '').toLowerCase().includes(q);
+          const matchEmail = (m.email || '').toLowerCase().includes(q);
+          const matchPhone = (m.phone || '').toLowerCase().includes(q);
+          const matchCode = (m.memberCode || '').toLowerCase().includes(q);
+          if (!matchName && !matchEmail && !matchPhone && !matchCode) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    setAvailableMembers(membersList);
+    setLoadingMembers(false);
   }, []);
 
   useEffect(() => {
@@ -198,6 +253,8 @@ export default function EmailHub() {
 
   // Send Email Action
   const handleConfirmSend = async () => {
+    if (isSending) return;
+
     const recipientsToSend = validEmailMembers
       .filter((m) => selectedMemberIds.has(m.id))
       .map((m) => ({
@@ -305,7 +362,7 @@ export default function EmailHub() {
               <h1 className="text-base font-bold tracking-tight text-slate-900">Email Line Workspace</h1>
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Postal Relay Online
+                {overview?.relayInfo?.provider ? `${String(overview.relayInfo.provider).toUpperCase()} Relay Online` : 'Mail Relay Online'}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-normal">
@@ -436,9 +493,9 @@ export default function EmailHub() {
                 </div>
                 <div className="mt-3 flex items-baseline gap-2">
                   <span className="text-2xl font-black tracking-tight text-emerald-600">
-                    {overview?.metrics?.successRate ?? 100}%
+                    {overview?.metrics?.totalSentThisMonth > 0 ? `${overview.metrics.successRate}%` : 'N/A'}
                   </span>
-                  <span className="text-xs text-slate-400 font-semibold">inbox placement</span>
+                  <span className="text-xs text-slate-400 font-semibold">delivery confirmation</span>
                 </div>
               </div>
               <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -452,19 +509,23 @@ export default function EmailHub() {
               <div>
                 <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Server size={13} className="text-slate-500" /> Relay Node
+                    <Server size={13} className="text-slate-500" /> Active Relay
                   </span>
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/70">
-                    <ShieldCheck size={11} className="text-emerald-600" /> DKIM Verified
+                    <ShieldCheck size={11} className="text-emerald-600" /> Authenticated
                   </span>
                 </div>
                 <div className="mt-3">
-                  <span className="text-xs font-bold text-slate-900 block truncate">notifications@mail.gymdeck.com</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Automated Postal tenant dispatch</p>
+                  <span className="text-xs font-bold text-slate-900 block truncate">
+                    {overview?.relayInfo?.senderEmail || 'notifications@mail.epic-studio.in'}
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {overview?.relayInfo?.provider ? `Managed ${String(overview.relayInfo.provider).toUpperCase()} Gateway` : 'Managed Cloud Gateway'}
+                  </p>
                 </div>
               </div>
               <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] text-slate-400">Automatic DMARC</span>
+                <span className="text-[11px] text-slate-400 font-mono text-[10px]">SPF/DKIM Signed at Relay</span>
                 <button
                   type="button"
                   onClick={() => setActiveTab('compose')}
@@ -1024,7 +1085,7 @@ export default function EmailHub() {
                   </div>
 
                   <p className="text-[10px] text-slate-500 leading-normal">
-                    This message will be queued into the durable outbox and dispatched through the Postal relay.
+                    This message will be queued into the durable outbox and dispatched via the configured transactional mail relay.
                   </p>
                 </div>
 

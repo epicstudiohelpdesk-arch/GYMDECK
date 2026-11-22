@@ -90,6 +90,7 @@ export const EnvironmentSchema = z.object({
   BREVO_API_KEY: z.string().optional(),
   BREVO_SENDER_EMAIL: z.string().email().optional(),
   BREVO_SENDER_NAME: z.string().optional(),
+  BREVO_WEBHOOK_SECRET: z.string().optional(),
 
   // Controlled Staging Live Email Testing Safeguards (Phase 4H)
   EMAIL_STAGING_LIVE_TEST_ENABLED: z
