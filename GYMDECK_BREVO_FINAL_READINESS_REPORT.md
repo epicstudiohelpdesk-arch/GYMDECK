@@ -179,3 +179,5 @@ Executed with mocked provider HTTP responses:
 2. **Readiness for Controlled Brevo Live Test:**
    - The codebase is now prepared to parse real Brevo API responses, extract `messageId`, lock retries to Brevo, and process inbound Brevo webhooks.
    - **Next Action:** Await explicit user authorization before performing the single controlled live transactional email send or switching staging configuration to Brevo.
+
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.

@@ -95,3 +95,5 @@ The cross-platform React Native member-facing mobile client repository.
   * **`assets/`**: Splash screens, app icons, typography.
   * **`src/`**: TSX React Native codebase files.
   * **`app.json`**: Core Expo config settings.
+
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.

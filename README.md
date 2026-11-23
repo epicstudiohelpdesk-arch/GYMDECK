@@ -487,3 +487,4 @@ cd backend/gateway && pnpm run dev
 **GymDeck Engineering Team** • [Report Issues](https://github.com/epicstudiohelpdesk-arch/GYMDECK/issues) • [View Architecture Docs](docs/architecture/SYSTEM-SPECIFICATION.md)
 
 </div>
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.

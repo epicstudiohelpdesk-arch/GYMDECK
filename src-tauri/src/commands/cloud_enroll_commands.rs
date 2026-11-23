@@ -50,14 +50,8 @@ pub struct CloudEnrollmentStatusResponse {
     pub local_member_count: i64,
 }
 
-fn get_effective_cloud_url(override_url: Option<String>) -> String {
-    if let Some(ref url) = override_url {
-        if !url.trim().is_empty() {
-            return url.trim().to_string();
-        }
-    }
-    std::env::var("GYMDECK_CLOUD_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string())
+fn get_effective_cloud_url_safe(override_url: Option<String>) -> Result<String, AppError> {
+    crate::config::resolve_cloud_url(override_url.as_deref())
 }
 
 /// Command to enroll Desktop into a Cloud Gym Tenant using owner credentials.
@@ -66,7 +60,7 @@ pub async fn cloud_enroll_command(
     state: State<'_, AppState>,
     payload: CloudEnrollPayload,
 ) -> Result<CloudEnrollResponse, AppError> {
-    let cloud_url = get_effective_cloud_url(payload.cloud_url);
+    let cloud_url = get_effective_cloud_url_safe(payload.cloud_url)?;
     let client = CloudAuthClient::build_http_client();
 
     state.cloud_session.set_state(EnrollmentState::Authenticating).await;
@@ -251,7 +245,7 @@ pub async fn cloud_sync_now_command(
         None => return Err(AppError::Unauthorized),
     };
 
-    let cloud_url = get_effective_cloud_url(None);
+    let cloud_url = get_effective_cloud_url_safe(None)?;
     let client = CloudAuthClient::build_http_client();
     let token = match state.cloud_session.get_access_token().await {
         Some(t) if !t.is_empty() => t,
@@ -278,7 +272,7 @@ pub async fn cloud_unenroll_command(
     state: State<'_, AppState>,
 ) -> Result<bool, AppError> {
     if let Some(refresh_tok) = state.cloud_session.get_stored_refresh_token() {
-        let cloud_url = get_effective_cloud_url(None);
+        let cloud_url = get_effective_cloud_url_safe(None)?;
         let client = CloudAuthClient::build_http_client();
         let _ = CloudAuthClient::logout(&client, &cloud_url, &refresh_tok).await;
     }
@@ -328,7 +322,7 @@ pub async fn cloud_communications_request_command(
         return Err(AppError::Unauthorized);
     }
 
-    let cloud_url = get_effective_cloud_url(None);
+    let cloud_url = get_effective_cloud_url_safe(None)?;
     let mut token = match state.cloud_session.get_access_token().await {
         Some(t) if !t.is_empty() => t,
         _ => {

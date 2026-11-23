@@ -135,3 +135,5 @@ The GymDeck Email Line Subsystem has met all architectural and security gates:
 - [x] Clear, truthful delivery terminology across frontend and backend.
 
 **Verdict: READY FOR CONTROLLED STAGING DEPLOYMENT WITH LIVE POSTAL INSTANCE.**
+
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.

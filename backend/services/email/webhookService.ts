@@ -13,6 +13,7 @@
 
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../shared/database';
+import { config } from '../../shared/config';
 import {
   emailRecipients,
   emailMessages,
@@ -131,6 +132,8 @@ export class PostalWebhookService {
           emailMessageId: messageId,
           emailRecipientId: recipient.id,
           providerEventId: uuid,
+          provider: 'POSTAL',
+          providerInstanceId: config.POSTAL_INSTANCE_ID || 'default',
           eventType: event,
           eventTimestamp: eventDate,
           details: eventData.details || eventData.output || null,

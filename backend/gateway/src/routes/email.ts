@@ -13,7 +13,7 @@ import { emailService } from '../../../services/email/emailService';
 import { postalWebhookService } from '../../../services/email/webhookService';
 import { verifyPostalWebhookSignature } from '../../../services/email/postalWebhookAuth';
 import { brevoWebhookService, verifyBrevoWebhookAuth } from '../../../services/email/brevoWebhookService';
-import { createRateLimiter } from '../../../shared/security/rateLimiter';
+import { createRateLimiter, resourceRateLimiter } from '../../../shared/security/rateLimiter';
 
 const router: Router = Router();
 
@@ -54,7 +54,7 @@ const ComposeEmailSchema = z.object({
 // Inbound Postal webhook (backward-compatible alias; canonical route is
 // /v1/webhooks/postal). It is defined before requireAuth because Postal
 // authenticates with its RSA signature, not a GymDeck JWT.
-router.post('/webhooks/postal', async (req, res, next) => {
+router.post('/webhooks/postal', resourceRateLimiter.webhookIngress, async (req, res, next) => {
   try {
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
     const authResult = verifyPostalWebhookSignature(rawBody, req.headers);
@@ -72,7 +72,7 @@ router.post('/webhooks/postal', async (req, res, next) => {
 
 // Inbound Brevo webhook (backward-compatible alias; canonical route is
 // /v1/webhooks/brevo).
-router.post('/webhooks/brevo', async (req, res, next) => {
+router.post('/webhooks/brevo', resourceRateLimiter.webhookIngress, async (req, res, next) => {
   try {
     const authResult = verifyBrevoWebhookAuth(req);
     if (!authResult.valid) {

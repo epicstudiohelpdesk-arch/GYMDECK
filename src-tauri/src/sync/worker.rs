@@ -102,7 +102,9 @@ impl SyncWorker {
         cloud_url: Option<String>,
     ) -> Self {
         let worker_id = format!("desktop-node-{}", Uuid::new_v4().to_string()[..8].to_string());
-        let url = cloud_url.unwrap_or_else(|| "http://localhost:8080".to_string());
+        let url = cloud_url.unwrap_or_else(|| {
+            crate::config::resolve_cloud_url(None).unwrap_or_else(|_| crate::config::DEV_CLOUD_URL.to_string())
+        });
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .build()

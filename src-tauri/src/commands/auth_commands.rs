@@ -116,8 +116,7 @@ pub async fn login_command(
         Ok((user_id, gym_id)) => {
             state.session_manager.create_and_bind_session(user_id, gym_id).await?;
 
-            let cloud_url = std::env::var("GYMDECK_CLOUD_URL")
-                .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
+            let cloud_url = crate::config::resolve_cloud_url(None)?;
             let http_client = crate::auth::cloud_auth::CloudAuthClient::build_http_client();
 
             let is_enrolled = if let Some(meta) = state.cloud_session.get_metadata().await {
@@ -207,8 +206,7 @@ pub async fn login_command(
         },
         Err(local_err) => {
             // If local auth fails, attempt seamless Cloud Gateway Owner Login
-            let cloud_url = std::env::var("GYMDECK_CLOUD_URL")
-                .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
+            let cloud_url = crate::config::resolve_cloud_url(None)?;
             let http_client = crate::auth::cloud_auth::CloudAuthClient::build_http_client();
 
             match crate::auth::cloud_auth::CloudAuthClient::login(

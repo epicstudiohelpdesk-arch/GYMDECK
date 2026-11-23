@@ -1448,7 +1448,7 @@ export const Dashboard = () => {
                   <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center mb-2 group-hover/btn:bg-amber-600 group-hover/btn:text-white transition-colors">
                     <Dumbbell size={14} strokeWidth={2.4} />
                   </div>
-                  <h4 className="text-xs font-black text-slate-900 leading-tight">Assign Trainer</h4>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">PT Clients</h4>
                   <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Pair PT client</p>
                 </button>
 

@@ -140,7 +140,6 @@ export class PostalClient {
         headers: {
           'Content-Type': 'application/json',
           'X-Server-API-Key': this.serverApiKey,
-          'Host': 'localhost:5000',
         },
         body: JSON.stringify({
           id: Number(id),
@@ -220,7 +219,6 @@ export class PostalClient {
         headers: {
           'Content-Type': 'application/json',
           'X-Server-API-Key': this.serverApiKey,
-          'Host': 'localhost:5000',
         },
         body: JSON.stringify(payload),
         signal: controller.signal,

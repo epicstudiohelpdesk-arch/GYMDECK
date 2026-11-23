@@ -200,6 +200,7 @@ export const emailDeliveryEvents = pgTable(
     emailMessageId: uuid('email_message_id').notNull().references(() => emailMessages.id, { onDelete: 'cascade' }),
     emailRecipientId: uuid('email_recipient_id').references(() => emailRecipients.id, { onDelete: 'set null' }),
     providerEventId: varchar('provider_event_id', { length: 128 }).notNull(),
+    provider: varchar('provider', { length: 32 }).notNull().default('UNKNOWN'),
     providerInstanceId: varchar('provider_instance_id', { length: 128 }).default('default'),
     eventType: varchar('event_type', { length: 64 }).notNull(),
     eventTimestamp: timestamp('event_timestamp', { withTimezone: true }).notNull(),
@@ -208,7 +209,7 @@ export const emailDeliveryEvents = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    uqEventId: uniqueIndex('uq_provider_event_id').on(table.providerEventId),
+    uqScopedEventId: uniqueIndex('uq_scoped_provider_event_id').on(table.provider, table.providerInstanceId, table.providerEventId),
     msgIdx: index('idx_email_events_message').on(table.emailMessageId),
   })
 );

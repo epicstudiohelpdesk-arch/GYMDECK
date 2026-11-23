@@ -10,6 +10,19 @@
 import { config } from '../../shared/config';
 import { logger } from '../../shared/logging';
 
+/** GymDeck sends `linkPreview`, which OpenWA only accepts from v0.30.3. */
+export const MIN_OPENWA_VERSION = '0.30.3';
+
+export function assertOpenwaCompatible(version: string): void {
+  const parse = (v: string) => v.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
+  const v = parse(version);
+  const r = parse(MIN_OPENWA_VERSION);
+  const [maj, min, patch] = [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0];
+  const [reqMaj, reqMin, reqPatch] = [r[0] ?? 0, r[1] ?? 0, r[2] ?? 0];
+  const ok = maj > reqMaj || (maj === reqMaj && (min > reqMin || (min === reqMin && patch >= reqPatch)));
+  if (!ok) throw new Error(`OpenWA ${version} is incompatible; GymDeck requires >= ${MIN_OPENWA_VERSION} (linkPreview).`);
+}
+
 export interface OpenWASession {
   id: string;
   name: string;

@@ -752,7 +752,7 @@ const viewLabels = {
   payments: "Collect Fees",
   "payment-history": "Payment History",
   trainers: "All Trainers",
-  "assign-trainer": "Assign Trainer",
+  "assign-trainer": "PT Clients",
   "staff-roles": "Staff Roles",
   inventory: "Inventory",
   "pt-packages": "PT Packages",

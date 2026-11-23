@@ -25,3 +25,5 @@ graph LR
 ## 3. Template Architecture
 * **Email Verification**: Renders 6-digit OTP in high-contrast card, 10-minute expiry warning, and GymDeck header.
 * **Password Reset**: Renders 24-byte secure reset token with 15-minute expiration notice.
+
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.

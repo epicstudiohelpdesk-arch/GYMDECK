@@ -4,6 +4,7 @@
  * and maps provider outcomes to unified delivery results.
  */
 
+import { createHash } from 'node:crypto';
 import { config } from '../../../shared/config';
 import { brevoClient, BrevoApiError } from './brevoClient';
 
@@ -67,6 +68,13 @@ export class BrevoAdapter {
         htmlContent,
         textContent,
         replyTo: _options.replyTo,
+        // Stable per (batch, recipients, subject) so a retry of an ambiguous
+        // outcome cannot create a duplicate send.
+        headers: {
+          'idempotency-key': createHash('sha256')
+            .update([...(_options.recipientBatchIds || []), ...to, _options.subject || ''].join('|'))
+            .digest('hex'),
+        },
         sender: {
           name: _options.senderName || config.BREVO_SENDER_NAME || 'GymDeck',
           email: _options.senderEmail || config.BREVO_SENDER_EMAIL || 'notifications@mail.epic-studio.in',

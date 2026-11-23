@@ -39,3 +39,5 @@
    - Verify Resend status page (status.resend.com) and API quota.
    - If Resend is degraded, enable secondary SMTP relay fallback in `backend/services/auth/email/`.
 3. **Member Communication**: Mobile UI displays standard user-safe banner: *"Email delivery temporarily delayed. Please retry in a few moments."*
+
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.

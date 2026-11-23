@@ -120,8 +120,32 @@ export function verifyBrevoWebhookAuth(req: Request): { valid: boolean; reason?:
   return { valid: true };
 }
 
+/** Pure helpers (exported for regression tests; no database or network). */
+export function normalizeBrevoPayloads(payload: BrevoWebhookPayload | BrevoWebhookPayload[]): BrevoWebhookPayload[] {
+  return Array.isArray(payload) ? payload : [payload];
+}
+
+export function brevoEventFingerprint(
+  providerMessageId: string,
+  recipientEmail: string,
+  event: string,
+  eventDate: Date
+): string {
+  return crypto
+    .createHash('sha256')
+    .update(`brevo_${providerMessageId}_${recipientEmail.toLowerCase()}_${event}_${eventDate.getTime()}`)
+    .digest('hex')
+    .slice(0, 64);
+}
+
 export class BrevoWebhookService {
-  public async handleWebhook(payload: BrevoWebhookPayload): Promise<void> {
+  public async handleWebhook(payload: BrevoWebhookPayload | BrevoWebhookPayload[]): Promise<void> {
+    for (const item of normalizeBrevoPayloads(payload)) {
+      await this.processSingle(item);
+    }
+  }
+
+  private async processSingle(payload: BrevoWebhookPayload): Promise<void> {
     const event = payload?.event;
     const recipientEmail = payload?.email?.trim();
     const rawMessageId = payload?.['message-id'] || payload?.messageId;
@@ -207,15 +231,9 @@ export class BrevoWebhookService {
     }
 
     // Deterministic event fingerprint / UUID for deduplication
-    const rawFingerprint = payload.id
-      ? `brevo_evt_${payload.id}`
-      : `brevo_${providerMessageId}_${recipientEmail.toLowerCase()}_${event}_${eventDate.getTime()}`;
-
-    const eventFingerprint = crypto
-      .createHash('sha256')
-      .update(rawFingerprint)
-      .digest('hex')
-      .slice(0, 64);
+    // Brevo's top-level `id` is the webhook configuration id, not an event id,
+    // so it must never be used as a dedupe key (it would collapse distinct events).
+    const eventFingerprint = brevoEventFingerprint(providerMessageId, recipientEmail, event, eventDate);
 
     await db.transaction(async (tx) => {
       // Step A: Deduplication via unique providerEventId in emailDeliveryEvents
@@ -226,6 +244,8 @@ export class BrevoWebhookService {
           emailMessageId: messageId,
           emailRecipientId: recipient.id,
           providerEventId: eventFingerprint,
+          provider: 'BREVO',
+          providerInstanceId: config.POSTAL_INSTANCE_ID || 'default',
           eventType: event,
           eventTimestamp: eventDate,
           details: payload.reason || payload.subject || null,

@@ -791,4 +791,17 @@ export async function bootstrapDatabaseSchema(): Promise<void> {
       break;
     }
   }
+
+  // Scoped webhook event uniqueness (additive; safe to re-run). Must follow 0009/0010.
+  const scopedWebhookCandidates = [
+    path.join(process.cwd(), 'shared', 'database', 'migrations', '0011_scoped_webhook_event_uniqueness.sql'),
+    path.join(process.cwd(), 'backend', 'shared', 'database', 'migrations', '0011_scoped_webhook_event_uniqueness.sql'),
+    path.join(__dirname, 'migrations', '0011_scoped_webhook_event_uniqueness.sql'),
+  ];
+  for (const file of scopedWebhookCandidates) {
+    if (fs.existsSync(file)) {
+      await pool.query(fs.readFileSync(file, 'utf8'));
+      break;
+    }
+  }
 }

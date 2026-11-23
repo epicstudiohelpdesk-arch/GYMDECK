@@ -37,3 +37,5 @@
 2. Update `DATABASE_URL` in server secret manager.
 3. Restart backend application pool.
 4. Validate `GET /ready` returns 200 OK.
+
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.

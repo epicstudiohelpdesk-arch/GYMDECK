@@ -184,8 +184,13 @@ pub fn run() {
       let cloud_session_clone = cloud_session.clone();
       tauri::async_runtime::spawn(async move {
           if let Ok(Some(meta)) = cloud_session_clone.restore_enrollment().await {
-              let cloud_url = std::env::var("GYMDECK_CLOUD_URL")
-                  .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
+              let cloud_url = match crate::config::resolve_cloud_url(None) {
+                  Ok(url) => url,
+                  Err(err) => {
+                      tracing::error!(error = %err, "Cloud sync worker cannot start: invalid production cloud configuration");
+                      return;
+                  }
+              };
               let worker = sync::worker::SyncWorker::new(db_pool_clone, Some(cloud_url));
               worker.start_with_session(meta.gym_id, cloud_session_clone);
               tracing::info!("Autonomous sync worker started for restored enrollment: {:?}", meta.gym_name);

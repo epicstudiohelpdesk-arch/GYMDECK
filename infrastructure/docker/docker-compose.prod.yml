@@ -1,9 +1,12 @@
-version: '3.8'
+# GymDeck production stack — single Google Compute Engine e2-standard-2 (8 GB).
+# Plain `docker compose` (no Swarm). All secrets come from the root-only .env
+# file populated from the secret manager; no credentials are stored here.
+name: gymdeck-prod
 
 services:
-  # ----------------------------------------------------------------------------
-  # PostgreSQL 16 Enterprise Production Database
-  # ----------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — internal only. Never published to the host or internet.
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: gymdeck-postgres-prod
@@ -11,7 +14,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-gymdeck_cloud_prod}
       POSTGRES_USER: ${POSTGRES_USER:-gymdeck_prod_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?FATAL: Database password must be set}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?FATAL: POSTGRES_PASSWORD must be set}"
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
@@ -20,25 +23,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    cpus: 1.0
+    mem_limit: 2048m
+    mem_reservation: 768m
     networks:
       - gymdeck_internal
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4096M
-        reservations:
-          cpus: '0.5'
-          memory: 1024M
     logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "5"
+      driver: json-file
+      options: { max-size: "50m", max-file: "5" }
+    security_opt:
+      - no-new-privileges:true
 
-  # ----------------------------------------------------------------------------
-  # GymDeck Cloud Backend API Gateway
-  # ----------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Backend gateway + all in-process workers (one instance on a single VM)
+  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ../../backend
@@ -46,52 +45,75 @@ services:
     container_name: gymdeck-api-prod
     restart: always
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres: { condition: service_healthy }
+      openwa: { condition: service_healthy }
     environment:
       NODE_ENV: production
       PORT: 8080
+      HOST: 0.0.0.0
       DATABASE_URL: postgres://${POSTGRES_USER:-gymdeck_prod_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gymdeck_cloud_prod}
-      JWT_SECRET: ${JWT_SECRET:?FATAL: JWT_SECRET must be set}
-      JWT_ACCESS_EXPIRATION_SECONDS: 900
-      JWT_REFRESH_EXPIRATION_SECONDS: 604800
-      RESEND_API_KEY: ${RESEND_API_KEY:?FATAL: RESEND_API_KEY must be set}
-      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-GymDeck <no-reply@gymdeck.com>}
+      DATABASE_POOL_MAX: 10
+      DATABASE_SSL_MODE: ${DATABASE_SSL_MODE:-verify}
+      DATABASE_SSL_CA: /etc/gymdeck/db-ca.pem
+      CORS_ORIGINS: "${CORS_ORIGINS:?FATAL: CORS_ORIGINS must be explicit in production}"
+      JWT_SECRET: "${JWT_SECRET:?FATAL: JWT_SECRET must be set}"
+      PAYMENT_ENCRYPTION_KEY: "${PAYMENT_ENCRYPTION_KEY:?FATAL: PAYMENT_ENCRYPTION_KEY must be set}"
       STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-https://vault.r2.cloudflarestorage.com}
       STORAGE_BUCKET: ${STORAGE_BUCKET:-gymdeck-vault-prod}
-      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-}
-      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-}
+      STORAGE_ACCESS_KEY: "${STORAGE_ACCESS_KEY:?FATAL: STORAGE_ACCESS_KEY must be set}"
+      STORAGE_SECRET_KEY: "${STORAGE_SECRET_KEY:?FATAL: STORAGE_SECRET_KEY must be set}"
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-GymDeck <no-reply@gymdeck.com>}
+      COMMUNICATION_TIMEZONE: ${COMMUNICATION_TIMEZONE:-Asia/Kolkata}
       WHATSAPP_PROVIDER: openwa
       OPENWA_API_URL: http://openwa:2785/api
-      OPENWA_API_KEY: ${OPENWA_API_KEY:?FATAL: OPENWA_API_KEY must be set}
-      OPENWA_WEBHOOK_SECRET: ${OPENWA_WEBHOOK_SECRET:?FATAL: OPENWA_WEBHOOK_SECRET must be set}
+      OPENWA_API_KEY: "${OPENWA_API_KEY:?FATAL: OPENWA_API_KEY must be set}"
+      OPENWA_WEBHOOK_SECRET: "${OPENWA_WEBHOOK_SECRET:?FATAL: OPENWA_WEBHOOK_SECRET must be set}"
       OPENWA_WEBHOOK_URL: http://backend:8080/v1/webhooks/openwa
-    networks:
-      - gymdeck_internal
-      - gymdeck_ingress
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          cpus: '1.5'
-          memory: 2048M
-        reservations:
-          cpus: '0.25'
-          memory: 512M
+      EMAIL_DELIVERY_PROVIDER: ${EMAIL_DELIVERY_PROVIDER:-postal}
+      EMAIL_LIVE_SEND_ENABLED: ${EMAIL_LIVE_SEND_ENABLED:-false}
+      BREVO_DELIVERY_MODE: ${BREVO_DELIVERY_MODE:-mock}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-notifications@mail.epic-studio.in}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-GymDeck}
+      BREVO_WEBHOOK_SECRET: ${BREVO_WEBHOOK_SECRET:-}
+      POSTAL_API_URL: ${POSTAL_API_URL:-http://postal-relay.invalid/api/v1}
+      POSTAL_SERVER_API_KEY: ${POSTAL_SERVER_API_KEY:-}
+      POSTAL_SIGNING_PUBLIC_KEY: ${POSTAL_SIGNING_PUBLIC_KEY:-}
+      POSTAL_SIGNING_KEY_ID: ${POSTAL_SIGNING_KEY_ID:-}
+      POSTAL_INSTANCE_ID: ${POSTAL_INSTANCE_ID:-default}
+      POSTAL_DELIVERY_MODE: ${POSTAL_DELIVERY_MODE:-mock}
+      EMAIL_MONTHLY_QUOTA_DEFAULT: 300
+      EMAIL_WORKER_INTERVAL_MS: 5000
+      EMAIL_BATCH_SIZE: 25
+      TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:-}
+    volumes:
+      - ${DATABASE_SSL_CA_SOURCE:-/etc/gymdeck/db-ca.pem}:/etc/gymdeck/db-ca.pem:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    cpus: 1.0
+    mem_limit: 1024m
+    mem_reservation: 384m
+    networks: [gymdeck_internal, gymdeck_ingress]
     logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "5"
+      driver: json-file
+      options: { max-size: "50m", max-file: "5" }
+    security_opt:
+      - no-new-privileges:true
 
-  # ----------------------------------------------------------------------------
-  # OpenWA WhatsApp Gateway (single instance: sessions live on its local volume)
-  # ----------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # OpenWA v0.30.3 — single instance, session state on a persistent volume
+  # ---------------------------------------------------------------------------
   openwa:
     build:
       context: ../../services/openwa
     container_name: gymdeck-openwa-prod
     restart: always
+    stop_grace_period: 75s
     environment:
       NODE_ENV: production
       PORT: 2785
@@ -108,35 +130,80 @@ services:
       QUEUE_ENABLED: "false"
       CACHE_ENABLED: "false"
       AUTO_START_SESSIONS: "true"
+      MAX_CONCURRENT_SESSIONS: 8
+      WWEBJS_AUTH_TIMEOUT_MS: 120000
+      WEBHOOK_TIMEOUT: 10000
+      WEBHOOK_RETRY_DELAY: 5000
       PUPPETEER_HEADLESS: "true"
       PUPPETEER_ARGS: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
-      API_MASTER_KEY: ${OPENWA_API_KEY:?FATAL: OPENWA_API_KEY must be set}
+      API_MASTER_KEY: "${OPENWA_API_KEY:?FATAL: OPENWA_API_KEY must be set}"
       WEBHOOK_SSRF_PROTECT: "true"
       SSRF_ALLOWED_HOSTS: backend
     volumes:
       - openwa_prod_data:/app/data
-    networks:
-      - gymdeck_internal
-      - gymdeck_ingress
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4096M
-        reservations:
-          cpus: '0.5'
-          memory: 1024M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:2785/api/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    cpus: 1.5
+    mem_limit: 2560m
+    mem_reservation: 768m
+    networks: [gymdeck_internal, gymdeck_ingress]
     logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "5"
+      driver: json-file
+      options: { max-size: "50m", max-file: "5" }
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # TLS ingress — only service publishing host ports
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: gymdeck-nginx-prod
+    restart: always
+    depends_on: [backend]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot_etc:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    cpus: 0.25
+    mem_limit: 96m
+    networks: [gymdeck_ingress]
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "3" }
+
+  # Renewal loop: renew every 12h, reload nginx on success.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: gymdeck-certbot-prod
+    restart: always
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; kill -HUP 1 2>/dev/null || true; sleep 12h & wait $${!}; done"
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    mem_limit: 48m
+    networks: [gymdeck_ingress]
 
 volumes:
   postgres_prod_data:
     driver: local
   openwa_prod_data:
+    driver: local
+  certbot_etc:
+    driver: local
+  certbot_www:
     driver: local
 
 networks:

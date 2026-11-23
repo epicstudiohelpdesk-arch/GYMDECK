@@ -90,12 +90,14 @@ export class EmailQuotaService {
    * Atomically reserve quota units for an outgoing email batch.
    * Throws 429 if requested count exceeds remaining allowance.
    */
-  public async reserveQuota(gymId: string, recipientCount: number, executor: any = db): Promise<QuotaStatus> {
+  public async reserveQuota(gymId: string, recipientCount: number, executor: any = db, at: Date = new Date()): Promise<QuotaStatus> {
     if (recipientCount <= 0) {
       throw AppError.validation('Recipient count must be greater than zero.');
     }
 
-    const billingPeriod = this.getCurrentBillingPeriod();
+    // Use the caller's single timestamp so reserve and later commit agree even
+    // across a billing-period boundary.
+    const billingPeriod = this.getCurrentBillingPeriod(at);
 
     // Ensure record exists in the same transaction/connection.
     await this.getQuotaStatus(gymId, billingPeriod, executor);
@@ -148,6 +150,10 @@ export class EmailQuotaService {
   ): Promise<void> {
     const unreserveDelta = originalReservedCount;
     const consumedDelta = actualSentCount;
+
+    // Ensure the target period row exists. A job enqueued before a billing
+    // boundary can be committed after it; without this the update is a no-op.
+    await this.getQuotaStatus(gymId, billingPeriod, executor);
 
     await executor
       .update(emailMonthlyUsage)

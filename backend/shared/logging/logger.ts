@@ -20,17 +20,28 @@ const SENSITIVE_PATTERNS = [
   /resend/i,
   /database_url/i,
   /signed_?url/i,
+  /webhook[_-]?secret/i,
+  /signature/i,
+  /credential/i,
+  /private[_-]?key/i,
 ];
 
+/** Redact credential-like content embedded in free-form log messages. */
+export function redactMessage(message: string): string {
+  return String(message)
+    .replace(/(Bearer\s+)\S+/gi, '$1[REDACTED]')
+    .replace(/([?&](?:token|secret|api[_-]?key|password|authorization|signature)=)[^&\s]+/gi, '$1[REDACTED]')
+    .replace(/\b(token|secret|api[_-]?key|password|authorization|signature|credential)\s*[:=]\s*([^\s,;}]+)/gi, '$1=[REDACTED]');
+}
+
 function redactValue(key: string, value: unknown): unknown {
-  if (typeof value === 'string') {
-    for (const pattern of SENSITIVE_PATTERNS) {
-      if (pattern.test(key)) {
-        return '[REDACTED]';
-      }
-    }
+  if (typeof value !== 'string') return value;
+  for (const pattern of SENSITIVE_PATTERNS) {
+    if (pattern.test(key)) return '[REDACTED]';
   }
-  return value;
+  // Free-form values (error messages, upstream response bodies) can carry
+  // credentials even when their key is innocuous.
+  return redactMessage(value);
 }
 
 export function redactSensitiveData(data: unknown): unknown {
@@ -61,7 +72,7 @@ class BackendLogger {
     const payload = {
       timestamp,
       level: level.toUpperCase(),
-      message,
+      message: redactMessage(message),
       ...(sanitizedContext ? { context: sanitizedContext } : {}),
     };
 
@@ -84,8 +95,8 @@ class BackendLogger {
 
   public error(message: string, error?: unknown, context?: Record<string, unknown>): void {
     const errorDetails = error instanceof Error
-      ? { errorName: error.name, errorMessage: error.message, stack: isDevelopment ? error.stack : undefined }
-      : { errorRaw: String(error) };
+      ? { errorName: error.name, errorMessage: redactMessage(error.message), stack: isDevelopment ? redactMessage(error.stack ?? '') : undefined }
+      : { errorRaw: redactMessage(String(error)) };
 
     console.error(this.formatLog('error', message, { ...errorDetails, ...context }));
   }

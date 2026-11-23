@@ -1,55 +1,47 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# GymDeck Staging Deployment & Migration Orchestration Script
-# ==============================================================================
+# Staging deploy: fail closed on validation, migration or health failure.
 set -euo pipefail
+set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="${SCRIPT_DIR}/../docker/docker-compose.staging.yml"
 API_URL="${API_URL:-http://localhost:8080}"
 
-echo "🚀 [Deploy Staging] Starting staging deployment pipeline..."
+compose() { "${DOCKER_BIN:-docker}" compose -f "${COMPOSE_FILE}" "$@"; }
+probe() { "${CURL_BIN:-curl}" -sf "${API_URL}/ready" >/dev/null 2>&1; }
 
-# 1. Pull / Build staging containers
-echo "🔨 [Deploy Staging] Building staging containers..."
-docker compose -f "${COMPOSE_FILE}" build
+echo "[deploy] validating compose configuration"
+compose config --quiet
 
-# 2. Start PostgreSQL staging service
-echo "🐘 [Deploy Staging] Starting PostgreSQL staging service..."
-docker compose -f "${COMPOSE_FILE}" up -d postgres_staging
+echo "[deploy] building images"
+compose build
 
-# 3. Wait for PostgreSQL healthcheck
-echo "⏳ [Deploy Staging] Waiting for PostgreSQL readiness..."
-for i in {1..30}; do
-  if docker compose -f "${COMPOSE_FILE}" exec postgres_staging pg_isready -U gymdeck_staging_user -d gymdeck_cloud_staging > /dev/null 2>&1; then
-    echo "✅ [Deploy Staging] PostgreSQL staging is ready."
-    break
-  fi
-  echo "   Waiting for database... ($i/30)"
+echo "[deploy] starting postgres"
+compose up -d postgres_staging
+
+echo "[deploy] waiting for postgres"
+ok=0
+for _ in $(seq 1 ${READINESS_ATTEMPTS:-30}); do
+  if compose exec -T postgres_staging pg_isready -U gymdeck_staging_user -d gymdeck_cloud_staging >/dev/null 2>&1; then ok=1; break; fi
   sleep 2
 done
+[ "$ok" = "1" ] || { echo "FATAL: postgres not ready"; exit 1; }
 
-# 4. Run Drizzle database migrations against staging
-echo "📜 [Deploy Staging] Running database migrations..."
-docker compose -f "${COMPOSE_FILE}" run --rm backend_staging npm run db:migrate || {
-  echo "⚠️ [Deploy Staging] Migration completed or up-to-date."
-}
+echo "[deploy] applying migrations (failure aborts deployment)"
+compose run --rm backend_staging npm run db:migrate
 
-# 5. Start Backend API service
-echo "⚡ [Deploy Staging] Starting Backend API service..."
-docker compose -f "${COMPOSE_FILE}" up -d backend_staging
+echo "[deploy] starting backend"
+compose up -d backend_staging
 
-# 6. Verify Health and Readiness
-echo "🏥 [Deploy Staging] Verifying health and readiness probes..."
-for i in {1..30}; do
-  if curl -sf "${API_URL}/ready" > /dev/null 2>&1; then
-    echo "🎉 [Deploy Staging] Staging API is HEALTHY and READY!"
-    exit 0
-  fi
-  echo "   Waiting for API readiness... ($i/30)"
+echo "[deploy] waiting for readiness"
+ok=0
+for _ in $(seq 1 ${READINESS_ATTEMPTS:-30}); do
+  if probe; then ok=1; break; fi
   sleep 2
 done
-
-echo "❌ [Deploy Staging] Timeout waiting for staging API readiness."
-docker compose -f "${COMPOSE_FILE}" logs backend_staging
-exit 1
+if [ "$ok" != "1" ]; then
+  compose logs backend_staging || true
+  echo "FATAL: readiness check failed"
+  exit 1
+fi
+echo "[deploy] staging healthy"

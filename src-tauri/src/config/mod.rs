@@ -106,3 +106,81 @@ impl AppConfig {
         self.environment == AppEnvironment::Development
     }
 }
+
+/// Local-development default, retained so local dev works unchanged.
+pub const DEV_CLOUD_URL: &str = "http://127.0.0.1:3001";
+
+/// Canonical production cloud API host (repository evidence: nginx.conf,
+/// root .env.example, rollback.sh, mobile configs).
+pub const CANONICAL_PRODUCTION_CLOUD_URL: &str = "https://api.gymdeck.com";
+
+/// Resolve the cloud API base URL.
+/// Order: payload override -> GYMDECK_CLOUD_URL -> local dev default.
+/// Staging/production require an explicit value; plaintext and loopback URLs
+/// are rejected there so shipped builds cannot silently use a dev API.
+pub fn resolve_cloud_url(override_url: Option<&str>) -> Result<String, AppError> {
+    let env_str = env::var("GYMDECK_ENV")
+        .or_else(|_| env::var("APP_ENV"))
+        .or_else(|_| env::var("NODE_ENV"))
+        .ok();
+    let environment = AppEnvironment::from_str_or_default(env_str.as_deref());
+    let url = match override_url.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(u) => u.to_string(),
+        None => match env::var("GYMDECK_CLOUD_URL") {
+            Ok(v) if !v.trim().is_empty() => v.trim().to_string(),
+            _ => match environment {
+                AppEnvironment::Development => DEV_CLOUD_URL.to_string(),
+                _ => return Err(AppError::Configuration(format!(
+                    "Security Configuration Error: GYMDECK_CLOUD_URL is required in {} environment.",
+                    environment.as_str()
+                ))),
+            },
+        },
+    };
+    validate_cloud_url(&url, &environment)?;
+    Ok(url)
+}
+
+pub fn validate_cloud_url(url: &str, environment: &AppEnvironment) -> Result<(), AppError> {
+    let error = |reason: &str| AppError::Configuration(format!(
+        "Invalid cloud URL for {} environment: {}", environment.as_str(), reason
+    ));
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err(error("scheme must be http or https"));
+    }
+    if matches!(environment, AppEnvironment::Production | AppEnvironment::Staging) {
+        if !url.starts_with("https://") {
+            return Err(error("https is required"));
+        }
+        let lower = url.to_ascii_lowercase();
+        for host in ["127.0.0.1", "localhost", "0.0.0.0", "[::1]"] {
+            if lower.contains(host) {
+                return Err(error("loopback hosts are forbidden"));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn development_allows_loopback_default() {
+        assert_eq!(DEV_CLOUD_URL, "http://127.0.0.1:3001");
+        assert!(validate_cloud_url(DEV_CLOUD_URL, &AppEnvironment::Development).is_ok());
+    }
+
+    #[test]
+    fn production_rejects_missing_https_and_loopback() {
+        assert!(validate_cloud_url("http://127.0.0.1:3001", &AppEnvironment::Production).is_err());
+        assert!(validate_cloud_url("http://api.gymdeck.com", &AppEnvironment::Production).is_err());
+        assert!(validate_cloud_url("https://localhost:3001", &AppEnvironment::Staging).is_err());
+    }
+
+    #[test]
+    fn production_accepts_canonical_host() {
+        assert!(validate_cloud_url(CANONICAL_PRODUCTION_CLOUD_URL, &AppEnvironment::Production).is_ok());
+    }
+}

@@ -1,0 +1,9 @@
+[Unit]
+Description=GymDeck paired PostgreSQL + OpenWA encrypted backup
+After=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/gymdeck/backup.env
+ExecStart=/opt/gymdeck/infrastructure/scripts/backup-db.sh
+ExecStart=/opt/gymdeck/infrastructure/scripts/backup-openwa.sh

@@ -75,6 +75,7 @@ export const EnvironmentSchema = z.object({
       return Boolean(val);
     }, z.boolean())
     .default(false),
+  POSTAL_INSTANCE_ID: z.string().optional().default('default'),
   POSTAL_FROM_DOMAIN: z.string().default('mail.epic-studio.in'),
   POSTAL_DEFAULT_FROM_NAME: z.string().default('GymDeck'),
   POSTAL_DEFAULT_FROM_EMAIL: z.string().default('notifications@mail.epic-studio.in'),
@@ -84,6 +85,13 @@ export const EnvironmentSchema = z.object({
   EMAIL_BATCH_SIZE: z.coerce.number().min(1).max(100).default(25),
 
   EMAIL_DELIVERY_PROVIDER: z.enum(['postal', 'brevo']).default('postal'),
+  // Explicit opt-in required for any real provider call in staging/production.
+  EMAIL_LIVE_SEND_ENABLED: z
+    .preprocess((val) => {
+      if (typeof val === 'string') return val.toLowerCase() === 'true';
+      return Boolean(val);
+    }, z.boolean())
+    .default(false),
   BREVO_DELIVERY_MODE: z.enum(['live', 'sandbox', 'mock']).default('sandbox'),
 
   // Brevo staging credentials (validated only when provider=brevo)
@@ -201,6 +209,28 @@ export const EnvironmentSchema = z.object({
         code: z.ZodIssueCode.custom,
         path: ['BREVO_DELIVERY_MODE'],
         message: 'BREVO_DELIVERY_MODE must be live, sandbox, or mock.',
+      });
+    }
+  }
+
+  // Live provider calls must be explicitly enabled outside dev/test. The
+  // `sandbox` Brevo mode is not a safety mode — it takes the live HTTP path.
+  if (data.NODE_ENV === 'staging' || data.NODE_ENV === 'production') {
+    const providerWillCallLive =
+      (data.EMAIL_DELIVERY_PROVIDER === 'brevo' && data.BREVO_DELIVERY_MODE !== 'mock') ||
+      (data.EMAIL_DELIVERY_PROVIDER === 'postal' && data.POSTAL_DELIVERY_MODE === 'live');
+    if (providerWillCallLive && !data.EMAIL_LIVE_SEND_ENABLED) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['EMAIL_LIVE_SEND_ENABLED'],
+        message: 'Real email dispatch requires EMAIL_LIVE_SEND_ENABLED=true; sandbox is not a safe mode.',
+      });
+    }
+    if (data.NODE_ENV === 'staging' && data.EMAIL_LIVE_SEND_ENABLED && data.EMAIL_STAGING_AUTHORIZED_RECIPIENTS.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['EMAIL_STAGING_AUTHORIZED_RECIPIENTS'],
+        message: 'Staging live sends require an explicit recipient allowlist.',
       });
     }
   }

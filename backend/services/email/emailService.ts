@@ -26,6 +26,13 @@ import { AppError } from '../../shared/errors';
 import { config } from '../../shared/config';
 import { processOutboxJobs } from './deliveryWorker';
 
+/** Single source of truth for the From address, matching the active provider. */
+export function defaultFromAddress(): string {
+  return config.EMAIL_DELIVERY_PROVIDER === 'brevo'
+    ? (config.BREVO_SENDER_EMAIL || config.POSTAL_DEFAULT_FROM_EMAIL)
+    : config.POSTAL_DEFAULT_FROM_EMAIL;
+}
+
 export interface EmailOverview {
   quota: QuotaStatus;
   metrics: {
@@ -251,14 +258,16 @@ export class EmailService {
         throw AppError.validation('All recipient addresses are suppressed.');
       }
 
-      // 4. Reserve quota inside the transaction.
-      await emailQuotaService.reserveQuota(gymId, deliverableRecipients.length, tx);
+      // 4. Reserve quota inside the transaction, using the same timestamp that
+      // will be persisted on the message so cross-month commit matches.
+      const enqueuedAt = new Date();
+      await emailQuotaService.reserveQuota(gymId, deliverableRecipients.length, tx, enqueuedAt);
 
       // 5. Resolve sender defaults from gym profile if needed.
       const gymRows = await tx.select().from(gyms).where(eq(gyms.id, gymId)).limit(1);
       const gym = gymRows[0];
       const senderName = dto.senderDisplayName?.trim() || gym?.name || config.POSTAL_DEFAULT_FROM_NAME;
-      const fromAddress = config.POSTAL_DEFAULT_FROM_EMAIL;
+      const fromAddress = defaultFromAddress();
       const replyTo = dto.replyToAddress?.trim() || gym?.contactEmail || undefined;
 
       // 6. Persist message, recipients and outbox atomically.
@@ -276,7 +285,8 @@ export class EmailService {
           status: 'QUEUED',
           idempotencyKey: dto.idempotencyKey || null,
           recipientCount: deliverableRecipients.length,
-          queuedAt: new Date(),
+          createdAt: enqueuedAt,
+          queuedAt: enqueuedAt,
         })
         .returning();
 
@@ -321,7 +331,7 @@ export class EmailService {
    * Save or update email draft.
    */
   public async saveDraft(gymId: string, userId: string, dto: ComposeEmailDto, draftId?: string): Promise<any> {
-    const fromAddress = config.POSTAL_DEFAULT_FROM_EMAIL;
+    const fromAddress = defaultFromAddress();
 
     if (draftId) {
       const [updated] = await db

@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: gymdeck_cloud_staging
       POSTGRES_USER: gymdeck_staging_user
-      POSTGRES_PASSWORD: ${POSTGRES_STAGING_PASSWORD:-staging_secure_pass_123}
+      POSTGRES_PASSWORD: "${POSTGRES_STAGING_PASSWORD:?FATAL: POSTGRES_STAGING_PASSWORD must be set}"
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_staging_data:/var/lib/postgresql/data
@@ -32,8 +32,8 @@ services:
     environment:
       NODE_ENV: staging
       PORT: 8080
-      DATABASE_URL: postgres://gymdeck_staging_user:${POSTGRES_STAGING_PASSWORD:-staging_secure_pass_123}@postgres_staging:5432/gymdeck_cloud_staging
-      JWT_SECRET: ${JWT_STAGING_SECRET:-staging_jwt_secret_must_be_rotated}
+      DATABASE_URL: "postgres://gymdeck_staging_user:${POSTGRES_STAGING_PASSWORD:?FATAL: POSTGRES_STAGING_PASSWORD must be set}@postgres_staging:5432/gymdeck_cloud_staging"
+      JWT_SECRET: "${JWT_STAGING_SECRET:?FATAL: JWT_STAGING_SECRET must be set}"
       JWT_ACCESS_EXPIRATION_SECONDS: 900
       JWT_REFRESH_EXPIRATION_SECONDS: 604800
       RESEND_API_KEY: ${RESEND_STAGING_API_KEY:-}
@@ -42,9 +42,27 @@ services:
       STORAGE_BUCKET: gymdeck-vault-staging
       WHATSAPP_PROVIDER: openwa
       OPENWA_API_URL: http://openwa_staging:2785/api
-      OPENWA_API_KEY: ${OPENWA_STAGING_API_KEY:?FATAL: OPENWA_STAGING_API_KEY must be set}
-      OPENWA_WEBHOOK_SECRET: ${OPENWA_STAGING_WEBHOOK_SECRET:?FATAL: OPENWA_STAGING_WEBHOOK_SECRET must be set}
+      OPENWA_API_KEY: "${OPENWA_STAGING_API_KEY:?FATAL: OPENWA_STAGING_API_KEY must be set}"
+      OPENWA_WEBHOOK_SECRET: "${OPENWA_STAGING_WEBHOOK_SECRET:?FATAL: OPENWA_STAGING_WEBHOOK_SECRET must be set}"
       OPENWA_WEBHOOK_URL: http://backend_staging:8080/v1/webhooks/openwa
+      CORS_ORIGINS: "${CORS_ORIGINS_STAGING:?FATAL: CORS_ORIGINS_STAGING must be explicit}"
+      PAYMENT_ENCRYPTION_KEY: "${PAYMENT_ENCRYPTION_KEY_STAGING:?FATAL: PAYMENT_ENCRYPTION_KEY_STAGING must be set}"
+      STORAGE_ACCESS_KEY: "${STORAGE_ACCESS_KEY_STAGING:?FATAL: STORAGE_ACCESS_KEY_STAGING must be set}"
+      STORAGE_SECRET_KEY: "${STORAGE_SECRET_KEY_STAGING:?FATAL: STORAGE_SECRET_KEY_STAGING must be set}"
+      EMAIL_DELIVERY_PROVIDER: ${EMAIL_DELIVERY_PROVIDER_STAGING:-postal}
+      EMAIL_LIVE_SEND_ENABLED: ${EMAIL_LIVE_SEND_ENABLED_STAGING:-false}
+      BREVO_DELIVERY_MODE: ${BREVO_DELIVERY_MODE_STAGING:-mock}
+      BREVO_API_KEY: ${BREVO_API_KEY_STAGING:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL_STAGING:-notifications@mail.epic-studio.in}
+      BREVO_WEBHOOK_SECRET: ${BREVO_WEBHOOK_SECRET_STAGING:-}
+      POSTAL_API_URL: ${POSTAL_API_URL_STAGING:-http://postal-relay.invalid/api/v1}
+      POSTAL_SERVER_API_KEY: ${POSTAL_SERVER_API_KEY_STAGING:-}
+      POSTAL_SIGNING_PUBLIC_KEY: ${POSTAL_SIGNING_PUBLIC_KEY_STAGING:-}
+      POSTAL_INSTANCE_ID: ${POSTAL_INSTANCE_ID_STAGING:-default}
+      POSTAL_DELIVERY_MODE: ${POSTAL_DELIVERY_MODE_STAGING:-mock}
+      EMAIL_STAGING_LIVE_TEST_ENABLED: ${EMAIL_LIVE_SEND_ENABLED_STAGING:-false}
+      EMAIL_STAGING_AUTHORIZED_RECIPIENTS: ${EMAIL_STAGING_AUTHORIZED_RECIPIENTS:-}
+      DATABASE_SSL_MODE: ${DATABASE_SSL_MODE_STAGING:-disable}
     ports:
       - "8080:8080"
     networks:
@@ -73,7 +91,7 @@ services:
       AUTO_START_SESSIONS: "true"
       PUPPETEER_HEADLESS: "true"
       PUPPETEER_ARGS: --no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu
-      API_MASTER_KEY: ${OPENWA_STAGING_API_KEY:?FATAL: OPENWA_STAGING_API_KEY must be set}
+      API_MASTER_KEY: "${OPENWA_STAGING_API_KEY:?FATAL: OPENWA_STAGING_API_KEY must be set}"
       WEBHOOK_SSRF_PROTECT: "true"
       SSRF_ALLOWED_HOSTS: backend_staging
     volumes:

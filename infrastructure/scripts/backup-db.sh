@@ -20,8 +20,11 @@ mkdir -p "${BACKUP_DIR}"
 echo "📦 [Backup] Starting encrypted backup for ${DB_NAME} at ${TIMESTAMP}..."
 
 # Execute logical dump with compression and AES-256-CBC encryption
-pg_dump -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -Fc | \
-  openssl enc -aes-256-cbc -salt -pbkdf2 -out "${BACKUP_FILE}" -pass pass:"${BACKUP_ENCRYPTION_KEY}"
+if [ -n "${DB_CONTAINER:-}" ]; then
+  docker exec "${DB_CONTAINER}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" -Fc
+else
+  pg_dump -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -Fc
+fi | openssl enc -aes-256-cbc -salt -pbkdf2 -out "${BACKUP_FILE}" -pass pass:"${BACKUP_ENCRYPTION_KEY}"
 
 echo "✅ [Backup] Encrypted backup created successfully: ${BACKUP_FILE}"
 echo "📊 [Backup] File size: $(ls -lh "${BACKUP_FILE}" | awk '{print $5}')"

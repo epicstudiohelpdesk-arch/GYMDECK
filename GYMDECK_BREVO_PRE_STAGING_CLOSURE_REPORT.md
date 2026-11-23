@@ -133,3 +133,5 @@ The system is now completely safe and technically prepared for an authorized Bre
 1. **Brevo Account API Key Provisioning:** When authorized to run a live Brevo staging acceptance send, a valid production/staging `BREVO_API_KEY` must be provisioned and `BREVO_DELIVERY_MODE=real` set specifically for that execution.
 2. **Brevo Webhook URL Configuration:** To test inbound Brevo delivery webhooks, an HTTPS endpoint must be configured in Brevo with the header `X-Webhook-Secret` or `Authorization: Bearer` matching the staging environment's `BREVO_WEBHOOK_SECRET`.
 3. **Controlled Single-Recipient Test:** When executing the live acceptance test, send exactly one test email to the designated authorized test recipient and inspect Brevo API acceptance before confirming inbox delivery.
+
+> **GCP remediation note (2026-11-22):** This document contains statements superseded by the current code and by `GYMDECK_GCP_REMEDIATION_REGISTER.md` (blockers 37-42). See `docs/gcp/PRODUCTION_OPERATIONS.md` for the authoritative baseline.
