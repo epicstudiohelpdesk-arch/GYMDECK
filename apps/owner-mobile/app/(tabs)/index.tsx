@@ -23,6 +23,7 @@ import {
   Wallet,
   UserPlus,
   UserCheck,
+  UserMinus,
   RotateCcw,
   Clock,
   AlertCircle,
@@ -34,6 +35,20 @@ import {
   Heart,
   Calendar,
   Sparkles,
+  PauseCircle,
+  BarChart3,
+  TrendingUp,
+  LineChart,
+  DollarSign,
+  Receipt,
+  ShieldCheck,
+  UserCog,
+  MessageSquare,
+  Mail,
+  Video,
+  Building,
+  Package,
+  User as UserIcon,
 } from 'lucide-react-native';
 
 import { useTheme } from '../../src/theme';
@@ -46,6 +61,7 @@ import { AttendanceItem, GymMemberSummary } from '../../src/types';
 import { formatCurrency } from '../../src/utils/currency';
 import { runMobileConvergenceAudit } from '../../src/utils/auditConvergence';
 import Svg, { Path, Rect, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { WhatsAppHubView } from '../../src/components/WhatsAppHubView';
 
 import {
   SearchBar,
@@ -561,13 +577,46 @@ function TwinRingsRefreshSpinner({
   );
 }
 
+// Render helper for Lucide icons inside categories
+const renderCategoryLucideIcon = (
+  IconComponent: any,
+  isDark: boolean,
+  active: boolean
+) => {
+  const strokeColor = active
+    ? isDark
+      ? '#F8FAFC'
+      : '#000000'
+    : isDark
+    ? '#CBD5E1'
+    : '#0F172A';
+  return (
+    <IconComponent
+      size={22}
+      color={strokeColor}
+      strokeWidth={active ? 2.3 : 1.8}
+    />
+  );
+};
+
 const CATEGORIES = [
-  { id: 'all', label: 'All', renderIcon: renderAllIcon },
-  { id: 'attendance', label: 'Attendance', renderIcon: renderAttendanceCategoryIcon },
   { id: 'members', label: 'Members', renderIcon: renderMembersCategoryIcon },
-  { id: 'finance', label: 'Dues & Fees', renderIcon: renderFinanceCategoryIcon },
-  { id: 'trainers', label: 'Trainers', renderIcon: renderTrainersCategoryIcon },
+  { id: 'past-members', label: 'Past Members', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(UserMinus, isDark, active) },
   { id: 'plans', label: 'Plans', renderIcon: renderPlansCategoryIcon },
+  { id: 'expiring-memberships', label: 'Expiring', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Clock, isDark, active) },
+  { id: 'freeze-pause', label: 'Freeze', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(PauseCircle, isDark, active) },
+  { id: 'daily-checkin', label: 'Check-in', renderIcon: renderAttendanceCategoryIcon },
+  { id: 'payments', label: 'Fees', renderIcon: renderFinanceCategoryIcon },
+  { id: 'payment-history', label: 'History', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Receipt, isDark, active) },
+  { id: 'trainers', label: 'Trainers', renderIcon: renderTrainersCategoryIcon },
+  { id: 'staff-roles', label: 'Staff Roles', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(UserCog, isDark, active) },
+  { id: 'assign-trainer', label: 'PT Clients', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Award, isDark, active) },
+  { id: 'pt-packages', label: 'PT Packages', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Dumbbell, isDark, active) },
+  { id: 'whatsapp-hub', label: 'WhatsApp', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(MessageSquare, isDark, active) },
+  { id: 'sms-hub', label: 'SMS', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Bell, isDark, active) },
+  { id: 'email-hub', label: 'Email', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Mail, isDark, active) },
+  { id: 'cctv', label: 'CCTV', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Video, isDark, active) },
+  { id: 'inventory', label: 'Inventory', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Package, isDark, active) },
 ];
 
 export default function OwnerHomeScreen() {
@@ -575,7 +624,7 @@ export default function OwnerHomeScreen() {
   const { user } = useAuthStore();
   const { colors, typography, radii, shadows, layout, isDark } = useTheme();
 
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const isAuthed = Boolean(user?.gymId);
@@ -681,11 +730,63 @@ export default function OwnerHomeScreen() {
 
   const handleCategoryPress = (catId: string) => {
     setActiveCategory(catId);
-    if (catId === 'attendance' || catId === 'floor') router.push('/attendance' as any);
-    else if (catId === 'members') router.push('/members' as any);
-    else if (catId === 'finance') router.push('/finance' as any);
-    else if (catId === 'trainers') router.push('/trainers' as any);
-    else if (catId === 'plans') router.push('/plans' as any);
+    switch (catId) {
+      case 'dashboard':
+        router.push('/(tabs)' as any);
+        break;
+      case 'members':
+      case 'past-members':
+      case 'expiring-memberships':
+      case 'freeze-pause':
+        router.push('/members' as any);
+        break;
+      case 'plans':
+        router.push('/plans' as any);
+        break;
+      case 'daily-checkin':
+        router.push('/attendance' as any);
+        break;
+      case 'attendance-reports':
+      case 'revenue-reports':
+      case 'attendance-analytics':
+      case 'member-growth':
+      case 'trainer-performance':
+        router.push('/reports' as any);
+        break;
+      case 'payments':
+      case 'payment-history':
+        router.push('/finance' as any);
+        break;
+      case 'trainers':
+      case 'staff-roles':
+        router.push('/trainers' as any);
+        break;
+      case 'assign-trainer':
+      case 'pt-packages':
+        router.push('/pt' as any);
+        break;
+      case 'whatsapp-hub':
+        // Display in-place on homepage directly below horizontal buttons
+        break;
+      case 'sms-hub':
+      case 'email-hub':
+        router.push('/notifications' as any);
+        break;
+      case 'cctv':
+        router.push('/security' as any);
+        break;
+      case 'gym-profile':
+        router.push('/settings' as any);
+        break;
+      case 'inventory':
+        router.push('/more' as any);
+        break;
+      case 'account':
+        router.push('/account' as any);
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -709,61 +810,44 @@ export default function OwnerHomeScreen() {
         ]}
       >
         <View style={styles.blinkitHeaderTopRow}>
-          {/* Left: Blinkit in / 24 minutes / HOME - House ▾ */}
-          <View style={styles.headerTitleCol}>
+          {/* Left: Gym Name & Owner Name */}
+          <View style={[styles.headerTitleCol, { flex: 1 }]}>
             <Text style={styles.headerSubtitleText}>GymDeck in</Text>
-            <Text style={styles.headerMainTitle}>
-              {currentlyInsideCount > 0 ? `${currentlyInsideCount} on Floor` : 'Floor Active'}
+            <Text style={styles.headerMainTitle} numberOfLines={1}>
+              {user?.gymName || 'My Gym'}
             </Text>
             <TouchableOpacity
               style={styles.locationSelectorRow}
-              onPress={() => router.push('/settings' as any)}
+              onPress={() => router.push('/account' as any)}
               activeOpacity={0.7}
             >
               <Text style={styles.locationSelectorText}>
-                {user?.gymName || 'Flagship Gym'} · {user?.gymCode || 'GD-HQ'}
+                {user?.fullName || 'Gym Owner'}
               </Text>
               <ChevronDown size={14} color="#0F172A" style={{ marginLeft: 2 }} />
             </TouchableOpacity>
           </View>
 
-            {/* Right: Cash Wallet Pill + Profile Avatar Button */}
-            <View style={styles.headerRightActions}>
-              {/* Cash Wallet Pill (₹2,222) */}
-              <TouchableOpacity
-                style={styles.cashWalletPill}
-                onPress={() => router.push('/finance' as any)}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel="View finance ledger"
-              >
-                <View style={styles.cashIconCircle}>
-                  <Wallet size={13} color="#15803D" />
-                </View>
-                <Text style={styles.cashAmountText}>
-                  {formatCurrency(totalRevenue)}
+          {/* Right: Profile Avatar Button (Positioned & fixed on top right) */}
+          <View style={styles.headerRightActions}>
+            <TouchableOpacity
+              style={styles.headerProfileBtn}
+              onPress={() => router.push('/account' as any)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Account and profile settings"
+            >
+              <View style={styles.profileAvatarCircle}>
+                <Text style={styles.profileAvatarInitial}>
+                  {(user?.fullName || 'Owner').charAt(0).toUpperCase()}
                 </Text>
-              </TouchableOpacity>
-
-              {/* Profile Avatar Button */}
-              <TouchableOpacity
-                style={styles.headerProfileBtn}
-                onPress={() => router.push('/more' as any)}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel="Account and settings"
-              >
-                <View style={styles.profileAvatarCircle}>
-                  <Text style={styles.profileAvatarInitial}>
-                    {(user?.fullName || 'Owner').charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-                {unreadCount > 0 && (
-                  <View style={styles.profileUnreadDot} />
-                )}
-              </TouchableOpacity>
-            </View>
+              </View>
+              {unreadCount > 0 && (
+                <View style={styles.profileUnreadDot} />
+              )}
+            </TouchableOpacity>
           </View>
+        </View>
 
           {/* Blinkit Search Bar Capsule */}
           <View style={styles.searchBarWrapper}>
@@ -859,6 +943,8 @@ export default function OwnerHomeScreen() {
                       {cat.renderIcon(isDark, isActive)}
                     </View>
                     <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                       style={[
                         styles.categoryTabText,
                         isActive
@@ -919,22 +1005,27 @@ export default function OwnerHomeScreen() {
               scrollY={scrollY}
             />
           </View>
-          {/* ============================================================ */}
-          {/* 2. CURATED HERO FEATURE GRID (Blinkit "CELEBRATE" Mosaic)     */}
-          {/* Seamlessly blended with header wash color (no card box)      */}
-          {/* ============================================================ */}
-          <View
-            style={[
-              styles.curatedHeroContainer,
-              { backgroundColor: isDark ? '#0F172A' : '#E6F8F9' },
-            ]}
-          >
+
+          {activeCategory === 'whatsapp-hub' ? (
+            /* In-place Desktop-grade WhatsApp Communication Hub */
+            <WhatsAppHubView isDark={isDark} />
+          ) : (
+            <>
+              {/* ============================================================ */}
+              {/* 2. CURATED HERO FEATURE GRID (Blinkit "CELEBRATE" Mosaic)     */}
+              {/* Seamlessly blended with header wash color (no card box)      */}
+              {/* ============================================================ */}
+              <View
+                style={[
+                  styles.curatedHeroContainer,
+                  { backgroundColor: isDark ? '#0F172A' : '#E6F8F9' },
+                ]}
+              >
           <View style={styles.curatedHeaderRow}>
             <View>
               <Text style={styles.curatedOverline}>TODAY'S OPERATIONS</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 <Text style={styles.curatedTitle}>Floor Command</Text>
-                <View style={styles.livePulseDot} />
               </View>
             </View>
           </View>
@@ -1133,159 +1224,6 @@ export default function OwnerHomeScreen() {
           </ScrollView>
         </View>
 
-        {/* ============================================================ */}
-        {/* 4. NEEDS ATTENTION (Blinkit-style High-Priority Action Cards) */}
-        {/* ============================================================ */}
-        <View style={styles.sectionBlock}>
-          <Text style={styles.sectionMainTitle}>Needs Attention</Text>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.attentionRail}
-          >
-            {expiringSoon > 0 && (
-              <TouchableOpacity
-                style={[styles.attentionCard, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}
-                onPress={() => router.push('/members' as any)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.attentionCardHeader}>
-                  <View style={[styles.attentionBadge, { backgroundColor: '#FEF3C7' }]}>
-                    <Clock size={12} color="#D97706" style={{ marginRight: 4 }} />
-                    <Text style={[styles.attentionBadgeText, { color: '#B45309' }]}>Expiring Soon</Text>
-                  </View>
-                </View>
-                <Text style={styles.attentionCardTitle}>
-                  {expiringSoon} Memberships Expiring
-                </Text>
-                <Text style={styles.attentionCardDesc}>
-                  Members nearing expiration require immediate renewal follow-up.
-                </Text>
-                <View style={styles.attentionCardActionRow}>
-                  <Text style={[styles.attentionCardActionText, { color: '#B45309' }]}>
-                    Review Renewals →
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            {expiredMembers > 0 && (
-              <TouchableOpacity
-                style={[styles.attentionCard, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
-                onPress={() => router.push('/members' as any)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.attentionCardHeader}>
-                  <View style={[styles.attentionBadge, { backgroundColor: '#FEE2E2' }]}>
-                    <AlertCircle size={12} color="#DC2626" style={{ marginRight: 4 }} />
-                    <Text style={[styles.attentionBadgeText, { color: '#991B1B' }]}>Expired Members</Text>
-                  </View>
-                </View>
-                <Text style={styles.attentionCardTitle}>
-                  {expiredMembers} Expired Memberships
-                </Text>
-                <Text style={styles.attentionCardDesc}>
-                  Members currently marked as expired pending renewal or archive.
-                </Text>
-                <View style={styles.attentionCardActionRow}>
-                  <Text style={[styles.attentionCardActionText, { color: '#DC2626' }]}>
-                    Review Expired →
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            {expiringSoon === 0 && expiredMembers === 0 && (
-              <View style={[styles.attentionCard, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', width: 280 }]}>
-                <View style={styles.attentionCardHeader}>
-                  <View style={[styles.attentionBadge, { backgroundColor: '#DCFCE7' }]}>
-                    <CheckCircle2 size={12} color="#166534" style={{ marginRight: 4 }} />
-                    <Text style={[styles.attentionBadgeText, { color: '#166534' }]}>All Caught Up</Text>
-                  </View>
-                </View>
-                <Text style={styles.attentionCardTitle}>No Pending Exceptions</Text>
-                <Text style={styles.attentionCardDesc}>
-                  All memberships are active and there are zero uncollected fee dues.
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-
-        {/* ============================================================ */}
-        {/* 5. 1-THUMB QUICK ACTION RAIL                                 */}
-        {/* ============================================================ */}
-        <View style={styles.sectionBlock}>
-          <Text style={styles.sectionMainTitle}>Quick Operational Actions</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.actionRailScroll}
-          >
-            {/* Action 1: Add Member */}
-            <TouchableOpacity
-              style={styles.actionRailItem}
-              onPress={() => router.push('/members/add' as any)}
-              activeOpacity={0.75}
-            >
-              <View style={[styles.actionIconSquircle, { backgroundColor: '#FFF4EE' }]}>
-                <UserPlus size={20} color="#EA4303" />
-              </View>
-              <Text style={styles.actionRailLabel}>+ Add Member</Text>
-            </TouchableOpacity>
-
-            {/* Action 2: Check In */}
-            <TouchableOpacity
-              style={styles.actionRailItem}
-              onPress={() => router.push('/attendance' as any)}
-              activeOpacity={0.75}
-            >
-              <View style={[styles.actionIconSquircle, { backgroundColor: '#ECFDF5' }]}>
-                <UserCheck size={20} color="#10B981" />
-              </View>
-              <Text style={styles.actionRailLabel}>Check In</Text>
-            </TouchableOpacity>
-
-            {/* Action 3: Collect Fees */}
-            <TouchableOpacity
-              style={styles.actionRailItem}
-              onPress={() => router.push('/finance' as any)}
-              activeOpacity={0.75}
-            >
-              <View style={[styles.actionIconSquircle, { backgroundColor: '#FEF3C7' }]}>
-                <Wallet size={20} color="#D97706" />
-              </View>
-              <Text style={styles.actionRailLabel}>Collect Fees</Text>
-            </TouchableOpacity>
-
-            {/* Action 4: Renewals */}
-            <TouchableOpacity
-              style={styles.actionRailItem}
-              onPress={() => router.push('/members' as any)}
-              activeOpacity={0.75}
-            >
-              <View style={[styles.actionIconSquircle, { backgroundColor: '#F5F3FF' }]}>
-                <RotateCcw size={20} color="#7C3AED" />
-              </View>
-              <Text style={styles.actionRailLabel}>Renewals</Text>
-            </TouchableOpacity>
-
-            {/* Action 5: Trainers */}
-            <TouchableOpacity
-              style={styles.actionRailItem}
-              onPress={() => router.push('/trainers' as any)}
-              activeOpacity={0.75}
-            >
-              <View style={[styles.actionIconSquircle, { backgroundColor: '#EFF6FF' }]}>
-                <Award size={20} color="#2563EB" />
-              </View>
-              <Text style={styles.actionRailLabel}>Coaches</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
 
         {/* ============================================================ */}
         {/* 6. RECENT ACTIVITY (Chronological Mobile Feed)               */}
@@ -1339,6 +1277,8 @@ export default function OwnerHomeScreen() {
           </View>
         </View>
         </View>
+        </>
+      )}
       </Animated.ScrollView>
     </SafeAreaView>
   );
@@ -1521,7 +1461,7 @@ const styles = StyleSheet.create({
   categoryRailScroll: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 32,
+    gap: 8,
     paddingTop: 4,
     paddingBottom: 0,
     paddingHorizontal: 16,
@@ -1529,7 +1469,7 @@ const styles = StyleSheet.create({
   categoryTabItem: {
     alignItems: 'center',
     paddingBottom: 7,
-    paddingHorizontal: 2,
+    width: 68,
     position: 'relative',
   },
   categoryIconWrap: {

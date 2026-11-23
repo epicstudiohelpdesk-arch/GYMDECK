@@ -19,11 +19,10 @@ import {
   Keyboard,
   Platform,
   Animated,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
-import { BlurView } from 'expo-blur';
 import { useFonts } from 'expo-font';
 import Svg, {
   Defs,
@@ -295,17 +294,13 @@ export const AppBottomNav: React.FC = () => {
   const router = useRouter();
   const segments = useSegments() as unknown as string[];
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { isDark } = useTheme();
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   const [fontsLoaded] = useFonts({
     'Ethnocentric-Regular': require('../../../assets/fonts/Ethnocentric-Regular.otf'),
   });
-
-  // Responsive navbar width fallback (leaving 14px left margin, 10px gap, 64px circular button, 14px right margin)
-  const screenWidth = Dimensions.get('window').width;
-  const initialRowWidth = Math.max(screenWidth - 102, 180);
-  const [rowWidth, setRowWidth] = useState(initialRowWidth);
 
   // Circular Action Button Press Spring Animation
   const pressScale = useRef(new Animated.Value(1)).current;
@@ -382,37 +377,6 @@ export const AppBottomNav: React.FC = () => {
     return 'home';
   })();
 
-  const activeIndex = activeTabId !== null ? TAB_INDEX_MAP[activeTabId] : -1;
-
-  // 1. Sliding Greenish Blob Native Spring Animation & Fade
-  const activeIndexAnim = useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
-  const pillOpacityAnim = useRef(new Animated.Value(activeIndex >= 0 ? 1 : 0)).current;
-
-  useEffect(() => {
-    if (activeIndex >= 0) {
-      Animated.parallel([
-        Animated.spring(activeIndexAnim, {
-          toValue: activeIndex,
-          damping: 24,
-          stiffness: 260,
-          mass: 0.85,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pillOpacityAnim, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.timing(pillOpacityAnim, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [activeIndex]);
-
   if (inAuthGroup || isKeyboardVisible) {
     return null;
   }
@@ -430,360 +394,260 @@ export const AppBottomNav: React.FC = () => {
     router.replace(item.route as any);
   };
 
-  const bottomMargin = Math.max(insets.bottom > 0 ? insets.bottom - 10 : 8, 6);
-  const fadeHeight = 125 + insets.bottom;
+  // Dimensions & Geometry for the Squared Cutout Navbar
+  const EXTRA_TOP = 24; // Headroom above navbar top edge allowing the GymDeck button to pop up cleanly without hit-test clipping
+  const TAB_BAR_HEIGHT = 60; // Standard ergonomic mobile bottom tab height
+  const totalHeight = TAB_BAR_HEIGHT + insets.bottom;
+  const containerHeight = totalHeight + EXTRA_TOP;
 
-  // Metrics for the gliding rounded blob
-  const tabCount = NAV_ITEMS.length;
-  const tabWidth = rowWidth / tabCount;
-  const blobMargin = 3;
-  const blobWidth = Math.max(tabWidth - blobMargin * 2, 40);
+  const buttonRadius = 29;
+  const buttonDiameter = 58;
+  const rightMargin = 18;
+  const cx = screenWidth - rightMargin - buttonRadius;
+  const cy = EXTRA_TOP + 12; // Button vertical center (17px pops above navbar top edge y0)
+  const y0 = EXTRA_TOP; // Top edge of the squared navbar
 
-  const translateX = activeIndexAnim.interpolate({
-    inputRange: NAV_ITEMS.map((_, i) => i),
-    outputRange: NAV_ITEMS.map((_, i) => tabWidth * i + blobMargin),
-  });
+  const flare = 48; // Left/right distance from center to notch shoulder start
+  const notchArcRadius = 36; // Cutout arc radius giving ~7px clean margin around the button
+
+  // SVG Cutout Notch Path Definition:
+  // Starts at top-left (0, y0), lines horizontally to left shoulder, curves into arc cutout around button,
+  // curves out of right shoulder, lines to top-right (screenWidth, y0).
+  const notchContourPath = `M 0,${y0} L ${(cx - flare).toFixed(1)},${y0} C ${(cx - 42).toFixed(1)},${y0} ${(cx - notchArcRadius).toFixed(1)},${y0 + 4} ${(cx - notchArcRadius).toFixed(1)},${y0 + 10} A ${notchArcRadius} ${notchArcRadius} 0 0 0 ${(cx + notchArcRadius).toFixed(1)},${y0 + 10} C ${(cx + notchArcRadius).toFixed(1)},${y0 + 4} ${(cx + 42).toFixed(1)},${y0} ${Math.min(cx + flare, screenWidth).toFixed(1)},${y0} L ${screenWidth},${y0}`;
+
+  // Complete filled background polygon covering full width down to bottom safe area
+  const navbarBgPath = `${notchContourPath} L ${screenWidth},${containerHeight} L 0,${containerHeight} Z`;
+
+  // Tabs width available to the left of the cutout notch
+  const tabsWidth = Math.max(cx - flare - 8, 160);
 
   return (
-    <>
-      {/* 1. Whitish Faded & Blurry Mist Backdrop (Content scrolling underneath dissolves softly) */}
-      <View
-        style={[styles.bottomFadeBackdrop, { height: fadeHeight }]}
+    <View
+      style={[
+        styles.outerDock,
+        {
+          height: containerHeight,
+        },
+      ]}
+      pointerEvents="box-none"
+    >
+      {/* 1. Squared Navbar Background with Cutout Notch & Top Border Stroke */}
+      <Svg
+        width={screenWidth}
+        height={containerHeight}
+        style={StyleSheet.absoluteFill}
         pointerEvents="none"
       >
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-          <Defs>
-            <LinearGradient id="whitishMist" x1="0" y1="0" x2="0" y2="1">
-              <Stop
-                offset="0%"
-                stopColor={isDark ? '#0B0F19' : '#FFFFFF'}
-                stopOpacity="0"
-              />
-              <Stop
-                offset="65%"
-                stopColor={isDark ? '#0B0F19' : '#FFFFFF'}
-                stopOpacity="0"
-              />
-              <Stop
-                offset="85%"
-                stopColor={isDark ? '#0B0F19' : '#FFFFFF'}
-                stopOpacity={isDark ? 0.30 : 0.35}
-              />
-              <Stop
-                offset="100%"
-                stopColor={isDark ? '#0B0F19' : '#FFFFFF'}
-                stopOpacity={isDark ? 0.90 : 0.95}
-              />
-            </LinearGradient>
-          </Defs>
-          <Rect width="100%" height="100%" fill="url(#whitishMist)" />
-        </Svg>
+        <Defs>
+          <LinearGradient id="navbarBgGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop
+              offset="0%"
+              stopColor={isDark ? '#0F172A' : '#FFFFFF'}
+              stopOpacity={1}
+            />
+            <Stop
+              offset="100%"
+              stopColor={isDark ? '#090D16' : '#FAFAFA'}
+              stopOpacity={1}
+            />
+          </LinearGradient>
+        </Defs>
+
+        {/* Solid squared navbar background with cutout notch */}
+        <Path
+          d={navbarBgPath}
+          fill="url(#navbarBgGrad)"
+        />
+
+        {/* Crisp continuous top hairline border following both flat edges and the scooped cutout notch */}
+        <Path
+          d={notchContourPath}
+          stroke={isDark ? '#334155' : '#E2E8F0'}
+          strokeWidth={1}
+          fill="none"
+        />
+      </Svg>
+
+      {/* 2. Tab Navigation Items (Left & Center Section) */}
+      <View
+        style={[
+          styles.tabsRow,
+          {
+            top: EXTRA_TOP,
+            width: tabsWidth,
+            height: TAB_BAR_HEIGHT,
+          },
+        ]}
+      >
+        {NAV_ITEMS.map((item) => {
+          const isActive = activeTabId === item.id;
+
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.tabItem}
+              onPress={() => handleTabPress(item)}
+              activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={`${item.label} tab`}
+            >
+              {/* Subtle active indicator accent at top of tab */}
+              {isActive && (
+                <View
+                  style={[
+                    styles.activeIndicatorPill,
+                    { backgroundColor: isDark ? '#FACC15' : '#0F172A' },
+                  ]}
+                />
+              )}
+
+              {/* Tab Icon */}
+              <View style={styles.iconContainer}>
+                {item.renderIcon(isDark, isActive)}
+              </View>
+
+              {/* Tab Label */}
+              <Text
+                style={[
+                  styles.tabLabel,
+                  isActive
+                    ? [
+                        styles.activeTabLabel,
+                        { color: isDark ? '#F8FAFC' : '#0F172A' },
+                      ]
+                    : [
+                        styles.inactiveTabLabel,
+                        { color: isDark ? '#94A3B8' : '#64748B' },
+                      ],
+                ]}
+                numberOfLines={1}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {/* 2. Floating Row: Liquid Transparent Capsule Navbar + Circular GymDeck Action Button */}
-      <View
-        style={[styles.bottomBarRow, { bottom: bottomMargin }]}
-        pointerEvents="box-none"
+      {/* 3. Popped Circular GymDeck Action Button in Cutout Socket */}
+      <Animated.View
+        style={[
+          styles.circularButtonWrapper,
+          {
+            top: cy - buttonRadius,
+            left: cx - buttonRadius,
+            width: buttonDiameter,
+            height: buttonDiameter,
+            borderRadius: buttonRadius,
+            transform: [{ scale: pressScale }],
+          },
+        ]}
       >
-        {/* Liquid Glass Capsule Navbar (Matches Reference Liquid Design & Shader) */}
-        <View
+        <TouchableOpacity
+          onPress={handleCircularPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={0.88}
           style={[
-            styles.capsuleWrapper,
+            styles.circularTouchable,
             {
-              shadowColor: isDark ? '#000000' : '#0F172A',
-              shadowOpacity: isDark ? 0.35 : 0.12,
+              width: buttonDiameter,
+              height: buttonDiameter,
+              borderRadius: buttonRadius,
             },
           ]}
-          pointerEvents="box-none"
+          accessibilityRole="button"
+          accessibilityLabel="GymDeck brand button"
         >
+          {/* Radiant Orange Gradient Surface */}
           <View
             style={[
-              styles.capsuleFrame,
+              styles.orangeCircleSurface,
               {
-                borderColor: isDark
-                  ? 'rgba(255, 255, 255, 0.25)'
-                  : 'rgba(255, 255, 255, 0.95)',
+                width: buttonDiameter,
+                height: buttonDiameter,
+                borderRadius: buttonRadius,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.45)' : '#FFFFFF',
               },
             ]}
           >
-            {/* 1. Native Real-Time Optical Blur View (Crisp, subtle blur for high clarity liquid glass) */}
-            <BlurView
-              intensity={Platform.OS === 'ios' ? 28 : 20}
-              tint={isDark ? 'systemUltraThinMaterialDark' : 'systemUltraThinMaterialLight'}
-              style={StyleSheet.absoluteFill}
-            />
-
-            {/* 2. Liquid Glass Translucent Refractive Base Tint (Clear optical clarity) */}
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  backgroundColor: isDark
-                    ? 'rgba(15, 23, 42, 0.12)'
-                    : 'rgba(255, 255, 255, 0.05)',
-                },
-              ]}
-              pointerEvents="none"
-            />
-
-            {/* 3. Shader-derived Directional Specular Sheen (rb1 * gradient + rb3 caustic bounce) */}
-            <Svg
-              width="100%"
-              height="100%"
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            >
+            <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
               <Defs>
-                <LinearGradient id="liquidGlassSheen" x1="0" y1="0" x2="0" y2="1">
-                  <Stop
-                    offset="0%"
-                    stopColor="#FFFFFF"
-                    stopOpacity={isDark ? 0.38 : 0.65}
-                  />
-                  <Stop
-                    offset="20%"
-                    stopColor="#FFFFFF"
-                    stopOpacity={isDark ? 0.08 : 0.18}
-                  />
-                  <Stop offset="45%" stopColor="#FFFFFF" stopOpacity="0" />
-                  <Stop offset="80%" stopColor="#FFFFFF" stopOpacity="0" />
-                  <Stop
-                    offset="100%"
-                    stopColor="#FFFFFF"
-                    stopOpacity={isDark ? 0.08 : 0.22}
-                  />
+                <LinearGradient id="gymdeckOrangeGrad" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor="#FF6224" />
+                  <Stop offset="100%" stopColor="#DC3600" />
                 </LinearGradient>
               </Defs>
-              <Rect width="100%" height="100%" fill="url(#liquidGlassSheen)" />
+              <Rect width="100%" height="100%" fill="url(#gymdeckOrangeGrad)" />
             </Svg>
 
-            {/* 4. Inner Liquid Glass Bezel (Double-Rim Caustic Refraction Contour - rb2 in shader) */}
-            <View
+            {/* Centered Compact Ethnocentric GYMDECK Wordmark */}
+            <Text
               style={[
-                styles.innerGlassBezel,
-                {
-                  borderColor: isDark
-                    ? 'rgba(255, 255, 255, 0.08)'
-                    : 'rgba(255, 255, 255, 0.45)',
-                },
+                styles.circularBrandText,
+                fontsLoaded ? { fontFamily: 'Ethnocentric-Regular' } : { fontWeight: '900' },
               ]}
-              pointerEvents="none"
-            />
-
-            {/* 5. Capsule Content & Tabs */}
-            <View
-              style={styles.capsuleContent}
-              onLayout={(e) => {
-                const width = e.nativeEvent.layout.width;
-                if (width > 0 && Math.abs(width - rowWidth) > 0.5) {
-                  setRowWidth(width);
-                }
-              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.65}
             >
-              {/* Smooth Gliding Liquid Water-Drop Cushion Pill (Native Driver) */}
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.slidingPill,
-                  {
-                    width: blobWidth,
-                    opacity: pillOpacityAnim,
-                    transform: [{ translateX }],
-                    backgroundColor: isDark
-                      ? 'rgba(255, 255, 255, 0.14)'
-                      : 'rgba(255, 255, 255, 0.52)',
-                    borderColor: isDark
-                      ? 'rgba(255, 255, 255, 0.22)'
-                      : 'rgba(255, 255, 255, 0.82)',
-                    shadowColor: isDark ? '#000000' : '#0F172A',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: isDark ? 0.28 : 0.08,
-                    shadowRadius: 6,
-                    elevation: 3,
-                  },
-                ]}
-              >
-                {/* Liquid Glass Pill Convex Gloss */}
-                <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-                  <Defs>
-                    <LinearGradient id="pillGloss" x1="0" y1="0" x2="0" y2="1">
-                      <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={isDark ? 0.25 : 0.50} />
-                      <Stop offset="50%" stopColor="#FFFFFF" stopOpacity="0" />
-                      <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={isDark ? 0.05 : 0.15} />
-                    </LinearGradient>
-                  </Defs>
-                  <Rect width="100%" height="100%" rx={28} fill="url(#pillGloss)" />
-                </Svg>
-              </Animated.View>
-
-              {/* Tab Items */}
-              {NAV_ITEMS.map((item) => {
-                const isActive = activeTabId === item.id;
-
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.tabItem}
-                    onPress={() => handleTabPress(item)}
-                    activeOpacity={0.7}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={`${item.label} tab`}
-                  >
-                    {/* Stationary Icon Container */}
-                    <View style={styles.iconContainer}>
-                      {item.renderIcon(isDark, isActive)}
-                    </View>
-
-                    {/* Label */}
-                    <Text
-                      style={[
-                        styles.tabLabel,
-                        isActive
-                          ? [
-                              styles.activeTabLabel,
-                              { color: isDark ? '#F8FAFC' : '#0F172A' },
-                            ]
-                          : [
-                              styles.inactiveTabLabel,
-                              { color: isDark ? '#94A3B8' : '#475569' },
-                            ],
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+              GYMDECK
+            </Text>
           </View>
-        </View>
-
-        {/* Circular Action Button (64px matching navbar height) */}
-        <Animated.View
-          style={[
-            styles.circularButtonWrapper,
-            { transform: [{ scale: pressScale }] },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={handleCircularPress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            activeOpacity={0.88}
-            style={styles.circularTouchable}
-            accessibilityRole="button"
-            accessibilityLabel="GymDeck brand button"
-          >
-            {/* Radiant Orange Gradient Surface */}
-            <View style={styles.orangeCircleSurface}>
-              <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-                <Defs>
-                  <LinearGradient id="gymdeckOrangeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0%" stopColor="#FF6224" />
-                    <Stop offset="100%" stopColor="#DC3600" />
-                  </LinearGradient>
-                </Defs>
-                <Rect width="100%" height="100%" fill="url(#gymdeckOrangeGrad)" />
-              </Svg>
-
-              {/* Perfectly Centered Compact Ethnocentric GYMDECK Wordmark */}
-              <Text
-                style={[
-                  styles.circularBrandText,
-                  fontsLoaded ? { fontFamily: 'Ethnocentric-Regular' } : { fontWeight: '900' },
-                ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.65}
-              >
-                GYMDECK
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    </>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  bottomFadeBackdrop: {
+  outerDock: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 90,
-  },
-  bottomBarRow: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
     zIndex: 100,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 12,
   },
-  capsuleWrapper: {
-    flex: 1,
-    height: 64,
-    marginRight: 10,
-    borderRadius: 32,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  capsuleFrame: {
-    flex: 1,
-    borderRadius: 32,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-  },
-  innerGlassBezel: {
+  tabsRow: {
     position: 'absolute',
-    top: 1.5,
-    left: 1.5,
-    right: 1.5,
-    bottom: 1.5,
-    borderRadius: 30.5,
-    borderWidth: 1,
-  },
-  capsuleContent: {
-    flex: 1,
+    left: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
-  },
-  slidingPill: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    borderRadius: 28,
-    borderWidth: 1,
-    zIndex: 0,
-    overflow: 'hidden',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
   },
   tabItem: {
     flex: 1,
-    height: 54,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
+    paddingTop: 4,
+    position: 'relative',
+  },
+  activeIndicatorPill: {
+    position: 'absolute',
+    top: 0,
+    width: 22,
+    height: 3,
+    borderRadius: 1.5,
   },
   iconContainer: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 9.5,
-    height: 12.5,
-    lineHeight: 12.5,
-    marginTop: 1.5,
+    fontSize: 10,
+    height: 13,
+    lineHeight: 13,
+    marginTop: 3,
     textAlign: 'center',
     letterSpacing: -0.1,
   },
@@ -794,30 +658,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   circularButtonWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    position: 'absolute',
+    shadowColor: '#EA4303',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.38,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 110,
   },
   circularTouchable: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
     overflow: 'hidden',
   },
   orangeCircleSurface: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
     backgroundColor: '#EA4303',
     overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.55)',
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
   circularBrandText: {
-    fontSize: 6.6,
+    fontSize: 6.2,
     lineHeight: 9,
     color: '#FFFFFF',
     letterSpacing: 0.6,
