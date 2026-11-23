@@ -63,6 +63,12 @@ jobs:
           ! grep -rn --exclude-dir=node_modules "PRIVATE_KEY_MATERIAL" backend/
 
       - name: Validate Deployment Gates (fail closed, no cloud access)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: gymdeck_user
+          PGPASSWORD: gymdeck_password
+          PGDATABASE: gymdeck_cloud
         run: |
           bash infrastructure/scripts/test-deploy-staging.sh
           bash infrastructure/scripts/test-backup-scripts.sh
