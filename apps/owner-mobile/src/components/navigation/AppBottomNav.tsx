@@ -20,6 +20,7 @@ import {
   Platform,
   Animated,
   useWindowDimensions,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
@@ -52,7 +53,7 @@ const renderHomeIcon = (isDark: boolean, focused: boolean) => {
   const strokeColor = isDark ? '#94A3B8' : '#334155';
   if (focused) {
     return (
-      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
         {/* House body & roof filled with warm yellow */}
         <Path
           d="M3.2 10.5L12 2.8l8.8 7.7v9a1.5 1.5 0 0 1-1.5 1.5H4.7a1.5 1.5 0 0 1-1.5-1.5v-9z"
@@ -80,7 +81,7 @@ const renderHomeIcon = (isDark: boolean, focused: boolean) => {
     );
   }
   return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Path
         d="M3 10.2L12 3l9 7.2v9.3a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5V10.2z"
         stroke={strokeColor}
@@ -104,7 +105,7 @@ const renderFinanceIcon = (isDark: boolean, focused: boolean) => {
   const strokeColor = isDark ? '#94A3B8' : '#334155';
   if (focused) {
     return (
-      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
         {/* Peeking bill / card */}
         <Path
           d="M6.5 6V4.5a1.5 1.5 0 0 1 1.5-1.5h8a1.5 1.5 0 0 1 1.5 1.5V6"
@@ -137,7 +138,7 @@ const renderFinanceIcon = (isDark: boolean, focused: boolean) => {
     );
   }
   return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Rect
         x="2.5"
         y="6"
@@ -171,7 +172,7 @@ const renderMoreIcon = (isDark: boolean, focused: boolean) => {
   const strokeColor = isDark ? '#94A3B8' : '#334155';
   if (focused) {
     return (
-      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
         <Rect
           x="3"
           y="3"
@@ -220,7 +221,7 @@ const renderMoreIcon = (isDark: boolean, focused: boolean) => {
     );
   }
   return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Rect
         x="3.5"
         y="3.5"
@@ -324,7 +325,7 @@ export const AppBottomNav: React.FC = () => {
   };
 
   const handleCircularPress = () => {
-    router.push('/members/add' as any);
+    DeviceEventEmitter.emit('OPEN_ADD_MEMBER_MODAL');
   };
 
   useEffect(() => {
@@ -353,12 +354,11 @@ export const AppBottomNav: React.FC = () => {
     if (first === '(tabs)') {
       if (second === 'finance') return 'finance';
       if (second === 'more') return 'more';
-      if (second === 'attendance' || second === 'members') return null;
-      return 'home';
+      if (!second || second === 'index') return 'home';
+      return null;
     }
 
     if (first === 'finance') return 'finance';
-    if (first === 'attendance' || first === 'members') return null;
 
     if (
       first === 'trainers' ||
@@ -374,7 +374,7 @@ export const AppBottomNav: React.FC = () => {
       return 'more';
     }
 
-    return 'home';
+    return null;
   })();
 
   if (inAuthGroup || isKeyboardVisible) {
@@ -382,10 +382,17 @@ export const AppBottomNav: React.FC = () => {
   }
 
   const handleTabPress = (item: NavItem) => {
+    if (item.id === 'home') {
+      DeviceEventEmitter.emit('NAVIGATE_TO_HOME_ROOT');
+      if (typeof (router as any).canDismiss === 'function' && (router as any).canDismiss()) {
+        (router as any).dismissAll();
+      }
+      router.replace('/(tabs)' as any);
+      return;
+    }
+
     const isCurrentlyActive = activeTabId === item.id;
-    const isAtTabRoot =
-      segments[0] === '(tabs)' &&
-      (segments[1] === item.id || (!segments[1] && item.id === 'home'));
+    const isAtTabRoot = segments[0] === '(tabs)' && segments[1] === item.id;
 
     if (isCurrentlyActive && isAtTabRoot) {
       return;
@@ -394,26 +401,26 @@ export const AppBottomNav: React.FC = () => {
     router.replace(item.route as any);
   };
 
-  // Dimensions & Geometry for the Squared Cutout Navbar
+  // Dimensions & Geometry for the Scaled Squared Cutout Navbar
   const EXTRA_TOP = 24; // Headroom above navbar top edge allowing the GymDeck button to pop up cleanly without hit-test clipping
-  const TAB_BAR_HEIGHT = 60; // Standard ergonomic mobile bottom tab height
+  const TAB_BAR_HEIGHT = 64; // Scaled ergonomic mobile bottom tab height
   const totalHeight = TAB_BAR_HEIGHT + insets.bottom;
   const containerHeight = totalHeight + EXTRA_TOP;
 
-  const buttonRadius = 29;
-  const buttonDiameter = 58;
-  const rightMargin = 18;
+  const buttonRadius = 31;
+  const buttonDiameter = 62;
+  const rightMargin = 16;
   const cx = screenWidth - rightMargin - buttonRadius;
-  const cy = EXTRA_TOP + 12; // Button vertical center (17px pops above navbar top edge y0)
+  const cy = EXTRA_TOP + 13; // Button vertical center (18px pops above navbar top edge y0)
   const y0 = EXTRA_TOP; // Top edge of the squared navbar
 
-  const flare = 48; // Left/right distance from center to notch shoulder start
-  const notchArcRadius = 36; // Cutout arc radius giving ~7px clean margin around the button
+  const flare = 50; // Left/right distance from center to notch shoulder start
+  const notchArcRadius = 38; // Cutout arc radius giving ~7px clean margin around the button
 
   // SVG Cutout Notch Path Definition:
   // Starts at top-left (0, y0), lines horizontally to left shoulder, curves into arc cutout around button,
   // curves out of right shoulder, lines to top-right (screenWidth, y0).
-  const notchContourPath = `M 0,${y0} L ${(cx - flare).toFixed(1)},${y0} C ${(cx - 42).toFixed(1)},${y0} ${(cx - notchArcRadius).toFixed(1)},${y0 + 4} ${(cx - notchArcRadius).toFixed(1)},${y0 + 10} A ${notchArcRadius} ${notchArcRadius} 0 0 0 ${(cx + notchArcRadius).toFixed(1)},${y0 + 10} C ${(cx + notchArcRadius).toFixed(1)},${y0 + 4} ${(cx + 42).toFixed(1)},${y0} ${Math.min(cx + flare, screenWidth).toFixed(1)},${y0} L ${screenWidth},${y0}`;
+  const notchContourPath = `M 0,${y0} L ${(cx - flare).toFixed(1)},${y0} C ${(cx - 44).toFixed(1)},${y0} ${(cx - notchArcRadius).toFixed(1)},${y0 + 4} ${(cx - notchArcRadius).toFixed(1)},${y0 + 10} A ${notchArcRadius} ${notchArcRadius} 0 0 0 ${(cx + notchArcRadius).toFixed(1)},${y0 + 10} C ${(cx + notchArcRadius).toFixed(1)},${y0 + 4} ${(cx + 44).toFixed(1)},${y0} ${Math.min(cx + flare, screenWidth).toFixed(1)},${y0} L ${screenWidth},${y0}`;
 
   // Complete filled background polygon covering full width down to bottom safe area
   const navbarBgPath = `${notchContourPath} L ${screenWidth},${containerHeight} L 0,${containerHeight} Z`;
@@ -633,20 +640,20 @@ const styles = StyleSheet.create({
   activeIndicatorPill: {
     position: 'absolute',
     top: 0,
-    width: 22,
-    height: 3,
-    borderRadius: 1.5,
+    width: 26,
+    height: 3.5,
+    borderRadius: 2,
   },
   iconContainer: {
-    width: 22,
-    height: 22,
+    width: 26,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 10,
-    height: 13,
-    lineHeight: 13,
+    fontSize: 10.5,
+    height: 14,
+    lineHeight: 14,
     marginTop: 3,
     textAlign: 'center',
     letterSpacing: -0.1,
@@ -678,10 +685,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   circularBrandText: {
-    fontSize: 6.2,
-    lineHeight: 9,
+    fontSize: 7.0,
+    lineHeight: 10,
     color: '#FFFFFF',
-    letterSpacing: 0.6,
+    letterSpacing: 0.7,
     textAlign: 'center',
     textAlignVertical: 'center',
     includeFontPadding: false,

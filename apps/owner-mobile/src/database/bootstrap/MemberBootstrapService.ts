@@ -167,6 +167,7 @@ export class MemberBootstrapService {
           membershipStatus: m.membershipStatus || 'ACTIVE',
           joinedAt: m.joinedAt || m.createdAt || new Date().toISOString(),
           expiresAt: m.expiresAt || null,
+          profilePhotoUrl: m.profilePhotoUrl || null,
           notes: m.notes || null,
         });
       }

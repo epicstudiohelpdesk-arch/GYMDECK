@@ -217,6 +217,7 @@ export class OwnerService {
         gender: gymMembers.gender,
         dob: gymMembers.dob,
         address: gymMembers.address,
+        profilePhotoUrl: gymMembers.profilePhotoUrl,
         membershipStatus: gymMembers.membershipStatus,
         joinedAt: gymMembers.joinedAt,
         expiresAt: gymMembers.expiresAt,

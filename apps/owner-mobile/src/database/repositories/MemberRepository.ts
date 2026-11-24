@@ -38,6 +38,7 @@ function mapRowToMember(row: Record<string, any>): GymMemberRecord {
     gender: (row.gender as string) || null,
     dob: (row.dob as string) || null,
     address: (row.address as string) || null,
+    profile_photo_url: (row.profile_photo_url as string) || (row.profilePhotoUrl as string) || null,
     membership_status: row.membership_status as MembershipStatusType,
     joined_at: row.joined_at as string,
     expires_at: (row.expires_at as string) || null,
@@ -65,6 +66,7 @@ function mapMemberToSummary(record: GymMemberRecord): GymMemberSummary {
     dob: record.dob,
     address: record.address,
     membershipStatus: record.membership_status,
+    profilePhotoUrl: record.profile_photo_url || null,
     joinedAt: record.joined_at,
     expiresAt: record.expires_at,
     notes: record.notes,
@@ -321,9 +323,9 @@ export class MemberRepository implements IMemberRepository {
         await tx.execute(
           `INSERT INTO gym_members (
             id, gym_id, member_code, full_name, phone, alternate_phone,
-            email, gender, dob, address, membership_status, joined_at,
+            email, gender, dob, address, profile_photo_url, membership_status, joined_at,
             expires_at, notes, created_at, updated_at, deleted_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
           ON CONFLICT(id) DO UPDATE SET
             gym_id = excluded.gym_id,
             member_code = excluded.member_code,
@@ -334,6 +336,7 @@ export class MemberRepository implements IMemberRepository {
             gender = excluded.gender,
             dob = excluded.dob,
             address = excluded.address,
+            profile_photo_url = excluded.profile_photo_url,
             membership_status = excluded.membership_status,
             joined_at = excluded.joined_at,
             expires_at = excluded.expires_at,
@@ -350,6 +353,7 @@ export class MemberRepository implements IMemberRepository {
             input.gender ?? null,
             input.dob ?? null,
             input.address ?? null,
+            input.profilePhotoUrl ?? null,
             status,
             joinedAt,
             input.expiresAt ?? null,

@@ -48,6 +48,7 @@ export interface AdmitMemberInput {
   planId?: string;
   initialPaymentAmount?: number; // In Rupees (will be converted to paise)
   initialPaymentMethod?: string;
+  profilePhotoUrl?: string;
 }
 
 export interface AdmitMemberResult {
@@ -131,6 +132,7 @@ export class LocalMutationService {
           address: input.address?.trim() || null,
           membershipStatus: 'ACTIVE',
           joinedAt: nowIso,
+          profilePhotoUrl: input.profilePhotoUrl || null,
           notes: input.notes?.trim() || null,
         },
         tx

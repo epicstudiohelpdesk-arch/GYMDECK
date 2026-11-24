@@ -44,6 +44,7 @@ export interface GymMemberRecord {
   dob: string | null;
   address: string | null;
   membership_status: MembershipStatusType;
+  profile_photo_url?: string | null;
   joined_at: string;
   expires_at: string | null;
   notes: string | null;

@@ -67,6 +67,12 @@
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
+	<key>NSCameraUsageDescription</key>
+	<string>GymDeck needs camera access to capture member profile photos for registration.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>GymDeck needs photo library access to upload member profile photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>GymDeck needs microphone access when recording videos.</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

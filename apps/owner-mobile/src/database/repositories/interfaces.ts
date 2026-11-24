@@ -49,6 +49,7 @@ export interface CreateGymMemberInput {
   membershipStatus?: MembershipStatusType;
   joinedAt?: string;
   expiresAt?: string | null;
+  profilePhotoUrl?: string | null;
   notes?: string | null;
 }
 
@@ -62,6 +63,7 @@ export interface UpdateGymMemberInput {
   address?: string | null;
   membershipStatus?: MembershipStatusType;
   expiresAt?: string | null;
+  profilePhotoUrl?: string | null;
   notes?: string | null;
 }
 

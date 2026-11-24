@@ -424,6 +424,8 @@ export class SyncService {
               .limit(1)
           )[0];
 
+          const photoUrl = payload.profilePhotoUrl || payload.profile_photo_url || payload.profile_photo_path || payload.photoUrl || payload.photoBase64;
+
           if (existing) {
             await tx
               .update(gymMembers)
@@ -432,6 +434,7 @@ export class SyncService {
                 fullName: payload.fullName || payload.full_name || existing.fullName,
                 phone: payload.phone || existing.phone,
                 email: payload.email !== undefined ? payload.email : existing.email,
+                profilePhotoUrl: photoUrl !== undefined ? photoUrl : existing.profilePhotoUrl,
                 membershipStatus: payload.membershipStatus || payload.membership_status || existing.membershipStatus,
                 expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : existing.expiresAt,
                 updatedAt: new Date(),
@@ -445,6 +448,7 @@ export class SyncService {
               fullName: payload.fullName || payload.full_name || 'Member',
               phone: payload.phone || '0000000000',
               email: payload.email || null,
+              profilePhotoUrl: photoUrl || null,
               membershipStatus: payload.membershipStatus || payload.membership_status || 'ACTIVE',
               joinedAt: payload.joinedAt ? new Date(payload.joinedAt) : new Date(),
               expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,

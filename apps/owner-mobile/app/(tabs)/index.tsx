@@ -12,6 +12,7 @@ import {
   Easing,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -33,6 +34,7 @@ import {
   ChevronDown,
   Dumbbell,
   Heart,
+  Eye,
   Calendar,
   Sparkles,
   PauseCircle,
@@ -45,6 +47,7 @@ import {
   UserCog,
   MessageSquare,
   Mail,
+  Smartphone,
   Video,
   Building,
   Package,
@@ -62,12 +65,14 @@ import { formatCurrency } from '../../src/utils/currency';
 import { runMobileConvergenceAudit } from '../../src/utils/auditConvergence';
 import Svg, { Path, Rect, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { WhatsAppHubView } from '../../src/components/WhatsAppHubView';
+import { InPlaceMembersView } from '../../src/components/InPlaceMembersView';
 
 import {
   SearchBar,
   StatusBadge,
   Avatar,
 } from '../../src/components/ui';
+import { BrandSignatureFooter } from '../../src/components/BrandSignatureFooter';
 
 // 1. All Icon (Sparkle star with warm yellow fill on active)
 const renderAllIcon = (isDark: boolean, active: boolean) => {
@@ -577,6 +582,18 @@ function TwinRingsRefreshSpinner({
   );
 }
 
+// Official WhatsApp vector icon
+function OfficialWhatsAppIcon({ size = 20, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
 // Render helper for Lucide icons inside categories
 const renderCategoryLucideIcon = (
   IconComponent: any,
@@ -606,15 +623,10 @@ const CATEGORIES = [
   { id: 'expiring-memberships', label: 'Expiring', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Clock, isDark, active) },
   { id: 'freeze-pause', label: 'Freeze', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(PauseCircle, isDark, active) },
   { id: 'daily-checkin', label: 'Check-in', renderIcon: renderAttendanceCategoryIcon },
-  { id: 'payments', label: 'Fees', renderIcon: renderFinanceCategoryIcon },
-  { id: 'payment-history', label: 'History', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Receipt, isDark, active) },
   { id: 'trainers', label: 'Trainers', renderIcon: renderTrainersCategoryIcon },
   { id: 'staff-roles', label: 'Staff Roles', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(UserCog, isDark, active) },
   { id: 'assign-trainer', label: 'PT Clients', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Award, isDark, active) },
   { id: 'pt-packages', label: 'PT Packages', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Dumbbell, isDark, active) },
-  { id: 'whatsapp-hub', label: 'WhatsApp', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(MessageSquare, isDark, active) },
-  { id: 'sms-hub', label: 'SMS', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Bell, isDark, active) },
-  { id: 'email-hub', label: 'Email', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Mail, isDark, active) },
   { id: 'cctv', label: 'CCTV', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Video, isDark, active) },
   { id: 'inventory', label: 'Inventory', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(Package, isDark, active) },
 ];
@@ -626,6 +638,19 @@ export default function OwnerHomeScreen() {
 
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const mainScrollRef = useRef<any>(null);
+
+  // When Home button in the bottom navbar is clicked, redirect cleanly to root Home screen
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('NAVIGATE_TO_HOME_ROOT', () => {
+      setActiveCategory(null);
+      setSearchQuery('');
+      mainScrollRef.current?.scrollTo?.({ y: 0, animated: true });
+    });
+    return () => {
+      sub.remove();
+    };
+  }, []);
 
   const isAuthed = Boolean(user?.gymId);
 
@@ -729,12 +754,18 @@ export default function OwnerHomeScreen() {
   const expiredMembers = overview?.metrics?.members?.expired ?? 0;
 
   const handleCategoryPress = (catId: string) => {
+    if (activeCategory === catId) {
+      setActiveCategory(null);
+      return;
+    }
     setActiveCategory(catId);
     switch (catId) {
       case 'dashboard':
-        router.push('/(tabs)' as any);
+        setActiveCategory(null);
         break;
       case 'members':
+        // Display in-place directly below the horizontal categories rail, keeping header & bottom bar fixed
+        break;
       case 'past-members':
       case 'expiring-memberships':
       case 'freeze-pause':
@@ -973,6 +1004,7 @@ export default function OwnerHomeScreen() {
         {/* SCROLLABLE BODY (Pull-to-refresh starts below fixed header)  */}
         {/* ============================================================ */}
         <Animated.ScrollView
+          ref={mainScrollRef}
           style={[
             styles.container,
             { backgroundColor: isDark ? '#0F172A' : '#E6F8F9' },
@@ -1008,7 +1040,10 @@ export default function OwnerHomeScreen() {
 
           {activeCategory === 'whatsapp-hub' ? (
             /* In-place Desktop-grade WhatsApp Communication Hub */
-            <WhatsAppHubView isDark={isDark} />
+            <WhatsAppHubView isDark={isDark} onClose={() => setActiveCategory(null)} />
+          ) : activeCategory === 'members' ? (
+            /* In-place Member Directory View replacing operations/recent admissions */
+            <InPlaceMembersView isDark={isDark} onClose={() => setActiveCategory(null)} />
           ) : (
             <>
               {/* ============================================================ */}
@@ -1146,93 +1181,113 @@ export default function OwnerHomeScreen() {
           ]}
         >
           {/* ============================================================ */}
-          {/* 3. ACTIVE ON GYM FLOOR (Mirroring Blinkit "Previously bought")*/}
+          {/* 3. COMMUNICATION HUB (WhatsApp, SMS, Email Channels)         */}
           {/* ============================================================ */}
           <View style={styles.sectionBlock}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionMainTitle}>Active on Gym Floor</Text>
-            <TouchableOpacity
-              onPress={() => router.push('/attendance' as any)}
-              activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.sectionActionLink}>See all ({currentlyInsideCount}) →</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionMainTitle}>Communication Hub</Text>
+                <Text style={styles.sectionSubtitle}>Broadcasts, alerts & client touchpoints</Text>
+              </View>
+            </View>
 
-          {/* Horizontal Product-Card Style Rail */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.productCardsRail}
-          >
-            {currentlyOnFloor.length > 0 ? (
-              currentlyOnFloor.map((member: AttendanceItem) => (
-                <View key={member.id} style={styles.productCard}>
-                  {/* Card Header: Live badge & Heart/Action icon */}
-                  <View style={styles.productCardTop}>
-                    <View style={styles.liveFloorChip}>
-                      <View style={styles.liveChipDot} />
-                      <Text style={styles.liveChipText}>In Gym</Text>
-                    </View>
-                    <Heart size={14} color="#CBD5E1" />
-                  </View>
-
-                  {/* Center: Member Avatar & Initial */}
-                  <View style={styles.productAvatarBox}>
-                    <Avatar name={member.fullName} size="md" />
-                  </View>
-
-                  {/* Member Name & Time */}
-                  <Text style={styles.productMemberName} numberOfLines={1}>
-                    {member.fullName}
-                  </Text>
-                  <Text style={styles.productMemberMeta}>
-                    In: {new Date(member.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-
-                  {/* 1-Tap Checkout Button */}
-                  <TouchableOpacity
-                    style={styles.productCardBtn}
-                    onPress={() => router.push('/attendance' as any)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={styles.productCardBtnText}>Check Out</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              /* If no one on floor: Fast check-in card */
+            {/* 3 Channel Cards Row: WhatsApp, SMS, Email */}
+            <View style={styles.commHubRow}>
+              {/* Card 1: WhatsApp (Official WhatsApp Green #25D366 & Official Vector Logo) */}
               <TouchableOpacity
-                style={[styles.productCard, styles.emptyFloorCard]}
-                onPress={() => router.push('/attendance' as any)}
-                activeOpacity={0.8}
+                style={[
+                  styles.commCard,
+                  {
+                    backgroundColor: '#25D366',
+                    borderColor: '#20BA5A',
+                  },
+                ]}
+                onPress={() => setActiveCategory('whatsapp-hub')}
+                activeOpacity={0.82}
               >
-                <View style={styles.emptyFloorIconBox}>
-                  <UserCheck size={24} color="#2563EB" />
+                <View style={styles.commCardTop}>
+                  <View style={[styles.commIconBox, { backgroundColor: 'rgba(255, 255, 255, 0.22)' }]}>
+                    <OfficialWhatsAppIcon size={22} color="#FFFFFF" />
+                  </View>
                 </View>
-                <Text style={styles.productMemberName}>Floor is clear</Text>
-                <Text style={[styles.productMemberMeta, { textAlign: 'center', marginTop: 2 }]}>
-                  0 members on floor
-                </Text>
-                <View style={[styles.productCardBtn, { backgroundColor: '#2563EB', borderColor: '#2563EB', marginTop: 8 }]}>
-                  <Text style={[styles.productCardBtnText, { color: '#FFFFFF' }]}>+ Check In</Text>
+                <View style={{ marginTop: 10 }}>
+                  <Text style={[styles.commCardTitle, { color: '#FFFFFF', fontWeight: '900' }]}>
+                    WhatsApp
+                  </Text>
+                  <Text style={[styles.commCardDesc, { color: 'rgba(255, 255, 255, 0.95)' }]} numberOfLines={1}>
+                    Instant Line
+                  </Text>
                 </View>
               </TouchableOpacity>
-            )}
-          </ScrollView>
-        </View>
+
+              {/* Card 2: SMS */}
+              <TouchableOpacity
+                style={[
+                  styles.commCard,
+                  {
+                    backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF',
+                    borderColor: isDark ? '#3B82F6' : '#BFDBFE',
+                  },
+                ]}
+                onPress={() => router.push('/notifications' as any)}
+                activeOpacity={0.82}
+              >
+                <View style={styles.commCardTop}>
+                  <View style={[styles.commIconBox, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#DBEAFE' }]}>
+                    <Smartphone size={20} color="#2563EB" strokeWidth={2.4} />
+                  </View>
+                </View>
+                <View style={{ marginTop: 10 }}>
+                  <Text style={[styles.commCardTitle, { color: isDark ? '#F8FAFC' : '#0F172A', fontWeight: '800' }]}>
+                    SMS
+                  </Text>
+                  <Text style={[styles.commCardDesc, { color: isDark ? '#BFDBFE' : '#1D4ED8' }]} numberOfLines={1}>
+                    DLT Gateway
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Card 3: Email */}
+              <TouchableOpacity
+                style={[
+                  styles.commCard,
+                  {
+                    backgroundColor: isDark ? '#4C1D95' : '#FAF5FF',
+                    borderColor: isDark ? '#8B5CF6' : '#E9D5FF',
+                  },
+                ]}
+                onPress={() => router.push('/notifications' as any)}
+                activeOpacity={0.82}
+              >
+                <View style={styles.commCardTop}>
+                  <View style={[styles.commIconBox, { backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : '#F3E8FF' }]}>
+                    <Mail size={20} color="#7C3AED" strokeWidth={2.4} />
+                  </View>
+                </View>
+                <View style={{ marginTop: 10 }}>
+                  <Text style={[styles.commCardTitle, { color: isDark ? '#F8FAFC' : '#0F172A', fontWeight: '800' }]}>
+                    Email
+                  </Text>
+                  <Text style={[styles.commCardDesc, { color: isDark ? '#DDD6FE' : '#6D28D9' }]} numberOfLines={1}>
+                    Postal Mail
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
 
 
         {/* ============================================================ */}
         {/* 6. RECENT ACTIVITY (Chronological Mobile Feed)               */}
         {/* ============================================================ */}
-        <View style={styles.sectionBlock}>
+        <View style={[styles.sectionBlock, { marginTop: 36 }]}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionMainTitle}>Recent Admissions</Text>
             <TouchableOpacity
-              onPress={() => router.push('/members' as any)}
+              onPress={() => {
+                setActiveCategory('members');
+                mainScrollRef.current?.scrollTo({ y: 0, animated: true });
+              }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.sectionActionLink}>Directory →</Text>
@@ -1251,11 +1306,17 @@ export default function OwnerHomeScreen() {
                   onPress={() => router.push(`/members/${member.id}` as any)}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.activityIconBox}>
-                    <UserPlus size={14} color="#EA4303" />
-                  </View>
+                  {/* Member Profile Avatar (Real Database Profile Pic or Desktop-Matching SVG Avatar) */}
+                  <Avatar
+                    name={member.fullName}
+                    photoUrl={member.profilePhotoUrl}
+                    gender={(member as any).gender}
+                    size="md"
+                    showStatusDot={member.membershipStatus === 'ACTIVE'}
+                    statusDotColor="#10B981"
+                  />
 
-                  <View style={{ flex: 1, marginLeft: 10 }}>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.activityTitle} numberOfLines={1}>
                       {member.fullName}
                     </Text>
@@ -1264,7 +1325,11 @@ export default function OwnerHomeScreen() {
                     </Text>
                   </View>
 
-                  <StatusBadge status={member.membershipStatus} />
+                  {/* Clean Modern View Action Button replacing the tabular */}
+                  <View style={styles.activityViewBtn}>
+                    <Eye size={13} color="#FFFFFF" strokeWidth={2.2} />
+                    <Text style={styles.activityViewBtnText}>View</Text>
+                  </View>
                 </TouchableOpacity>
               ))
             ) : (
@@ -1276,6 +1341,9 @@ export default function OwnerHomeScreen() {
             )}
           </View>
         </View>
+
+        {/* Elegant Brand Signature Footer (Matching Desktop App) */}
+        <BrandSignatureFooter isDark={isDark} />
         </View>
         </>
       )}
@@ -1341,11 +1409,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   headerMainTitle: {
-    fontSize: 27,
-    lineHeight: 32,
+    fontSize: 21,
+    lineHeight: 26,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.6,
+    letterSpacing: -0.4,
     marginTop: 1,
   },
   locationSelectorRow: {
@@ -1630,10 +1698,72 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     letterSpacing: -0.4,
   },
+  sectionSubtitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 1,
+  },
   sectionActionLink: {
     fontSize: 12,
     fontWeight: '700',
     color: '#EA4303',
+  },
+
+  /* Communication Hub 3-Card Row */
+  commHubRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  commCard: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    padding: 11,
+    justifyContent: 'space-between',
+    minHeight: 126,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  commCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  commIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commCardTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  commCardDesc: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 1,
+    marginBottom: 8,
+  },
+  commActionBtn: {
+    paddingVertical: 5,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commActionBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.1,
   },
 
   /* Horizontal Product-Card Rail (Active on Floor) */
@@ -1803,37 +1933,59 @@ const styles = StyleSheet.create({
   /* 6. Recent Activity Feed */
   activityFeedList: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   activityFeedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
   activityRowDivider: {
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   activityIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: '#FFF4EE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   activityTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: -0.2,
   },
   activityMeta: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#64748B',
-    marginTop: 1,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  activityViewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    backgroundColor: '#0F172A',
+    gap: 5,
+  },
+  activityViewBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   emptyActivityRow: {
     paddingVertical: 16,

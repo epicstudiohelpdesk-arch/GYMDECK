@@ -181,7 +181,6 @@ function RootNavigation() {
         <Stack.Screen name="(auth)" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="members/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="members/add" options={{ headerShown: false }} />
         <Stack.Screen name="members/edit" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="trainers" options={{ headerShown: false }} />

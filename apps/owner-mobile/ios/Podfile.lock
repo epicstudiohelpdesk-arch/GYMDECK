@@ -36,6 +36,10 @@ PODS:
     - ExpoModulesCore
   - ExpoBlur (58.0.5):
     - ExpoModulesCore
+  - ExpoCamera (58.0.14):
+    - ExpoModulesCore
+  - ExpoCameraBarcodeScanning (58.0.14):
+    - ExpoCamera
   - ExpoDomWebView (57.0.1):
     - ExpoModulesCore
   - ExpoFileSystem (58.0.13):
@@ -45,6 +49,8 @@ PODS:
   - ExpoGlassEffect (58.0.5):
     - ExpoModulesCore
   - ExpoImage (58.0.18):
+    - ExpoModulesCore
+  - ExpoImagePicker (58.0.10):
     - ExpoModulesCore
   - ExpoKeepAwake (58.0.3):
     - ExpoModulesCore
@@ -2310,11 +2316,14 @@ DEPENDENCIES:
   - "Expo (from `../../../node_modules/.pnpm/expo@58.0.21_@babel+core@7.29.7_@expo+dom-webview@57.0.1_@expo+metro-runtime@57.0.15_ex_f4f2d217020704e84e3d40ce51e419d2/node_modules/expo`)"
   - "ExpoAsset (from `../../../node_modules/.pnpm/expo-asset@58.0.19_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-native-co_f2cb1ccf9817e0996c35ac11d4eaf1a5/node_modules/expo-asset/ios`)"
   - "ExpoBlur (from `../../../node_modules/.pnpm/expo-blur@58.0.5_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-native-comm_30a99576c588cb5212150f1f7862dd4d/node_modules/expo-blur/ios`)"
+  - "ExpoCamera (from `../../../node_modules/.pnpm/expo-camera@58.0.14_@types+emscripten@1.41.6_expo@58.0.21_react-native-web@0.21.4_react_733a3c7798afe5fb16aa3bf5a7f158f1/node_modules/expo-camera/ios/ExpoCamera.podspec`)"
+  - "ExpoCameraBarcodeScanning (from `../../../node_modules/.pnpm/expo-camera@58.0.14_@types+emscripten@1.41.6_expo@58.0.21_react-native-web@0.21.4_react_733a3c7798afe5fb16aa3bf5a7f158f1/node_modules/expo-camera/ios/ExpoCameraBarcodeScanning.podspec`)"
   - "ExpoDomWebView (from `../../../node_modules/.pnpm/@expo+dom-webview@57.0.1_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-nat_b7fbf237aac29fe65ae591766d98f0dd/node_modules/@expo/dom-webview/ios`)"
   - "ExpoFileSystem (from `../../../node_modules/.pnpm/expo-file-system@58.0.13_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-nat_1b2bd91bba676c7ca4ca53479bd09c9d/node_modules/expo-file-system/ios/ExpoFileSystem.podspec`)"
   - "ExpoFont (from `../../../node_modules/.pnpm/expo-font@58.0.11_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-native-com_32fa55cbed15159129ac38ca7e8568dc/node_modules/expo-font/ios/ExpoFont.podspec`)"
   - "ExpoGlassEffect (from `../../../node_modules/.pnpm/expo-glass-effect@58.0.5_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-nat_070b2d0eeffe356addc3107d69e42061/node_modules/expo-glass-effect/ios`)"
   - "ExpoImage (from `../../../node_modules/.pnpm/expo-image@58.0.18_expo@58.0.21_react-native-web@0.21.4_react-dom@19.3.0_react@19.3.0___8b7d099463480ef7ecb74cf3321c22d3/node_modules/expo-image/ios/ExpoImage.podspec`)"
+  - "ExpoImagePicker (from `../../../node_modules/.pnpm/expo-image-picker@58.0.10_expo@58.0.21/node_modules/expo-image-picker/ios`)"
   - "ExpoKeepAwake (from `../../../node_modules/.pnpm/expo-keep-awake@58.0.3_expo@58.0.21_react@19.3.0/node_modules/expo-keep-awake/ios`)"
   - "ExpoLinking (from `../../../node_modules/.pnpm/expo-linking@58.0.15_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-native-_16bd4179bbe3517aa7e20b1e2fb774c5/node_modules/expo-linking/ios`)"
   - "ExpoLogBox (from `../../../node_modules/.pnpm/@expo+log-box@58.0.13_@expo+dom-webview@57.0.1_expo@58.0.21_react-native@0.88.1_@babel+_afe02e5a179f2c5f4e009a768371dca1/node_modules/@expo/log-box`)"
@@ -2439,6 +2448,10 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/expo-asset@58.0.19_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-native-co_f2cb1ccf9817e0996c35ac11d4eaf1a5/node_modules/expo-asset/ios"
   ExpoBlur:
     :path: "../../../node_modules/.pnpm/expo-blur@58.0.5_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-native-comm_30a99576c588cb5212150f1f7862dd4d/node_modules/expo-blur/ios"
+  ExpoCamera:
+    :podspec: "../../../node_modules/.pnpm/expo-camera@58.0.14_@types+emscripten@1.41.6_expo@58.0.21_react-native-web@0.21.4_react_733a3c7798afe5fb16aa3bf5a7f158f1/node_modules/expo-camera/ios/ExpoCamera.podspec"
+  ExpoCameraBarcodeScanning:
+    :podspec: "../../../node_modules/.pnpm/expo-camera@58.0.14_@types+emscripten@1.41.6_expo@58.0.21_react-native-web@0.21.4_react_733a3c7798afe5fb16aa3bf5a7f158f1/node_modules/expo-camera/ios/ExpoCameraBarcodeScanning.podspec"
   ExpoDomWebView:
     :path: "../../../node_modules/.pnpm/@expo+dom-webview@57.0.1_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-nat_b7fbf237aac29fe65ae591766d98f0dd/node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
@@ -2449,6 +2462,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/expo-glass-effect@58.0.5_expo@58.0.21_react-native@0.88.1_@babel+core@7.29.7_@react-nat_070b2d0eeffe356addc3107d69e42061/node_modules/expo-glass-effect/ios"
   ExpoImage:
     :podspec: "../../../node_modules/.pnpm/expo-image@58.0.18_expo@58.0.21_react-native-web@0.21.4_react-dom@19.3.0_react@19.3.0___8b7d099463480ef7ecb74cf3321c22d3/node_modules/expo-image/ios/ExpoImage.podspec"
+  ExpoImagePicker:
+    :path: "../../../node_modules/.pnpm/expo-image-picker@58.0.10_expo@58.0.21/node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
     :path: "../../../node_modules/.pnpm/expo-keep-awake@58.0.3_expo@58.0.21_react@19.3.0/node_modules/expo-keep-awake/ios"
   ExpoLinking:
@@ -2668,11 +2683,14 @@ SPEC CHECKSUMS:
   Expo: 5665040cd3f8ce6756cf487e36beb7afa86b1004
   ExpoAsset: 9c966d4d2c67a13de7d449561558f782df1c1787
   ExpoBlur: 68f7f85ae6584f0bec52a0a42ee5088b093d1473
+  ExpoCamera: 5d9ae8e9c52e102d9a21b2a903478dcd79ce3ddc
+  ExpoCameraBarcodeScanning: 31cb394606255ac478b9c33929e6b0a8f6c0925d
   ExpoDomWebView: beaec034e51bd028428b98bb1f2633ab79c6d095
   ExpoFileSystem: b619d80b490c53117a9a9c976021a4ce5a9da440
   ExpoFont: 77eaad26c6a7ef6be8d431963358def09d8e3a73
   ExpoGlassEffect: 6594e055df1e0b88d34cc189ba0b21589adec6bf
   ExpoImage: 1fea785e0480502eb9b5a7cf65257e0f5a3e2b75
+  ExpoImagePicker: a466134ec92fed0b38bbf9062c7eb5f3c8c49d94
   ExpoKeepAwake: fd18a5d233329013c578030ad399d8e10b252b5f
   ExpoLinking: c4c98c2c889e183ab2cdd95c5d0739a3e187e6c0
   ExpoLogBox: 624d64042d73abe0dc230a24b1a9f835adb2cec9

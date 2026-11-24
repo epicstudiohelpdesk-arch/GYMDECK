@@ -145,6 +145,7 @@ export interface GymMemberSummary {
   membershipStatus: 'ACTIVE' | 'EXPIRED' | 'FROZEN' | 'INACTIVE';
   joinedAt: string;
   expiresAt: string | null;
+  profilePhotoUrl?: string | null;
   notes?: string | null;
   createdAt: string;
 }

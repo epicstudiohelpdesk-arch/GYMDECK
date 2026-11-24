@@ -45,6 +45,7 @@ export const v1InitialSchema: Migration = {
         gender TEXT,
         dob TEXT,
         address TEXT,
+        profile_photo_url TEXT,
         membership_status TEXT NOT NULL DEFAULT 'ACTIVE',
         joined_at TEXT NOT NULL,
         expires_at TEXT,

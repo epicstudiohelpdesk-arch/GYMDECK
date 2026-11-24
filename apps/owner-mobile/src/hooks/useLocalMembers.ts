@@ -108,6 +108,7 @@ export function useLocalMembers(params?: UseLocalMembersParams): UseLocalMembers
         dob: r.dob,
         address: r.address,
         membershipStatus: r.membership_status,
+        profilePhotoUrl: r.profile_photo_url || null,
         joinedAt: r.joined_at,
         expiresAt: r.expires_at,
         notes: r.notes,
@@ -146,10 +147,10 @@ export function useLocalMembers(params?: UseLocalMembersParams): UseLocalMembers
     [gymId, isOffline, queryClient]
   );
 
-  // Trigger initial background bootstrap on mount
+  // Trigger background bootstrap on mount to ensure fresh photos & details
   useEffect(() => {
     if (gymId && !isOffline) {
-      runBackgroundBootstrap(false);
+      runBackgroundBootstrap(true);
     }
   }, [gymId, isOffline, runBackgroundBootstrap]);
 

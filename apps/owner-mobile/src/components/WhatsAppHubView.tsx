@@ -54,6 +54,7 @@ import {
   Trash2,
   XCircle,
   ChevronDown,
+  ArrowLeft,
 } from 'lucide-react-native';
 import {
   ownerWhatsAppService,
@@ -268,7 +269,13 @@ function PureAnimatedWifiIcon({ isConnected }: { isConnected: boolean }) {
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-export function WhatsAppHubView({ isDark }: { isDark: boolean }) {
+export function WhatsAppHubView({
+  isDark,
+  onClose,
+}: {
+  isDark: boolean;
+  onClose?: () => void;
+}) {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'compose' | 'overview' | 'history' | 'automation'>('compose');
 
@@ -526,8 +533,28 @@ export function WhatsAppHubView({ isDark }: { isDark: boolean }) {
       >
         <View style={styles.heroHeaderRow}>
           <View>
-            <Text style={styles.heroOverline}>COMMUNICATION ENGINE</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {onClose && (
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={[
+                    styles.backHomeBtn,
+                    {
+                      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)',
+                      borderColor: isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.25)',
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Back to Home Dashboard"
+                >
+                  <ArrowLeft size={13} color={isDark ? '#38BDF8' : '#0284C7'} />
+                  <Text style={[styles.backHomeBtnText, { color: isDark ? '#38BDF8' : '#0284C7' }]}>Home</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.heroOverline}>COMMUNICATION ENGINE</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
               <Text style={styles.heroTitle}>WhatsApp Line</Text>
             </View>
           </View>
@@ -1248,6 +1275,20 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#006064',
     letterSpacing: -0.4,
+  },
+  backHomeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  backHomeBtnText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
   /* Pure Fixed-Size Animated WiFi Signal Icon */

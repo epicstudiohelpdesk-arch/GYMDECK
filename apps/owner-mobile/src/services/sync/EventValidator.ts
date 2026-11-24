@@ -28,6 +28,8 @@ const SUPPORTED_ENTITY_TYPES = new Set([
   'trainer_assignment',
   'pt_package',
   'pt_session',
+  'payment_account',
+  'gym_checkin_qr',
 ]);
 
 const SUPPORTED_OPERATIONS = new Set(['CREATE', 'UPDATE', 'DELETE', 'VOID']);

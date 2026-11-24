@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   StyleSheet,
+  DeviceEventEmitter,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -130,7 +131,7 @@ export default function OwnerMembersScreen() {
               borderRadius: radii.full,
             },
           ]}
-          onPress={() => router.push('/members/add' as any)}
+          onPress={() => DeviceEventEmitter.emit('OPEN_ADD_MEMBER_MODAL')}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Add New Member"
@@ -264,7 +265,7 @@ export default function OwnerMembersScreen() {
                   title="No members yet"
                   description="Start building your gym directory by admitting your first member."
                   actionLabel="+ Add First Member"
-                  onActionPress={() => router.push('/members/add' as any)}
+                  onActionPress={() => DeviceEventEmitter.emit('OPEN_ADD_MEMBER_MODAL')}
                 />
               )
             }

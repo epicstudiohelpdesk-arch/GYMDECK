@@ -545,20 +545,6 @@ export default function OwnerAuthScreen({ initialTab }: AuthScreenProps) {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {__DEV__ && (
-            <TouchableOpacity
-              style={{ marginTop: 20, marginBottom: 12, paddingVertical: 8, alignItems: 'center' }}
-              onPress={() => {
-                allowDevVerificationNav();
-                router.push('/dev-verification' as any);
-              }}
-            >
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
-                ⚡ Native Verification Dashboard (DEV)
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
