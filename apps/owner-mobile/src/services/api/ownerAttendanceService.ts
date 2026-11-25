@@ -12,33 +12,7 @@ import {
   AttendanceItem,
 } from '../../types';
 
-const DEV_ATTENDANCE_ITEMS: any[] = [
-  {
-    id: 'att_01',
-    memberId: 'm1',
-    memberName: 'Marcus Vance',
-    membershipPlan: 'Elite VIP Access',
-    checkInTime: new Date(Date.now() - 35 * 60000).toISOString(),
-    status: 'ACTIVE',
-  },
-  {
-    id: 'att_02',
-    memberId: 'm2',
-    memberName: 'Elena Rostova',
-    membershipPlan: 'Annual Pro Strength',
-    checkInTime: new Date(Date.now() - 50 * 60000).toISOString(),
-    status: 'ACTIVE',
-  },
-  {
-    id: 'att_03',
-    memberId: 'm3',
-    memberName: 'David Chen',
-    membershipPlan: 'Functional Athlete Pass',
-    checkInTime: new Date(Date.now() - 95 * 60000).toISOString(),
-    checkOutTime: new Date(Date.now() - 10 * 60000).toISOString(),
-    status: 'CHECKED_OUT',
-  },
-];
+const DEV_ATTENDANCE_ITEMS: any[] = [];
 
 const DEV_ATTENDANCE_STATS: any = {
   activeNow: 42,
