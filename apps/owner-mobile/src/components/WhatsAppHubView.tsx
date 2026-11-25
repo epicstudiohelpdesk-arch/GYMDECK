@@ -1,34 +1,37 @@
 /**
- * GymDeck Owner Mobile - In-Place WhatsApp Line Hub Component
- * Fully wired to GymDeck backend gateway WhatsApp subsystem.
+ * GymDeck Owner Mobile - WhatsApp Line (Refined Mobile Architecture)
  *
- * Designed with Executive Command hierarchy matching Member Directory, Plans Portfolio,
- * Past Members, and Expiring Memberships:
- * 1. Executive Dark Emerald/Navy Command Header Card:
- *    - Overline: "COMPANION GATEWAY LINE" with live Wi-Fi pulse
- *    - Title: "WhatsApp Line"
- *    - Subtitle: "Direct companion line, automated receipts & broadcast broadcasts"
- * 2. 4 Strategic Portfolio KPI Tiles:
- *    - Line Status: "CONNECTED" or "OFFLINE" with live wave pulse
- *    - Delivered msgs: Confirmed deliveries
- *    - Read receipts: Blue-tick engagement rate
- *    - Opt-in Base: Explicit WhatsApp consent members
- * 3. Quick Action Banner:
- *    - Live gateway status, linked phone number, and Pair/Disconnect/Refresh action
- * 4. Dual Workspace Navigator:
- *    - Switch between Composer Studio, Gateway Cockpit, Message History, and Automation Rules
- * 5. Composer Studio:
- *    - Campaign Intent selection (Attendance, Expiry, Payment Due, Welcome, Broadcast)
- *    - Real-time recipient selection & variable chips
- *    - Live authentic WhatsApp preview bubble
- *    - Dispatch button
- * 6. Gateway Cockpit:
- *    - Device pairing QR code, sync status, diagnostics
- * 7. Message History:
- *    - Dispatched broadcasts, delivery counts, status
- * 8. Automation Rules:
- *    - Interactive switches for check-in receipts, expiry reminders, fee confirmations
- * 9. BrandSignatureFooter with Indian flag branding & ample bottom scroll padding
+ * Redesigned for elite mobile ergonomics, visual clarity, and clean organization:
+ *
+ * 1. Clean, Balanced WhatsApp Emerald Hero:
+ *    - WhatsApp signature gradient (#064E3B -> #075E54 -> #0D6B5E)
+ *    - Subtle WhatsApp watermark & ambient vector depth
+ *    - Prominent Connection Badge (Live online indicator with pulse)
+ *    - Clean companion phone pill (monospace)
+ *    - Balanced, well-spaced tactile action buttons ("Link Phone via QR" or "Unlink" + "Sync")
+ *
+ * 2. High-Impact Metric Strip:
+ *    - Generously padded glass stat tiles with clear typography
+ *
+ * 3. Elevated Segmented Tab Switcher:
+ *    - Tactile iOS/Android pill segmented navigation with proper touch sizing (min 44px)
+ *    - [Broadcast, Device & QR, Automations, Logs]
+ *
+ * 4. Ergonomic Broadcast Composer:
+ *    - Clean modal/sheet style Campaign Type picker (no cramped micro-horizontal scroll)
+ *    - Audience selector with clear recipient badge & segment pills
+ *    - Smart variable quick-tags neatly docked directly above the compose editor
+ *    - Polished, responsive message textarea with character counter
+ *    - Authentic WhatsApp Chat Preview Bubble with verified business badge, timestamp & double-ticks
+ *    - Full-width, prominent WhatsApp Green dispatch button (#25D366)
+ *
+ * 5. Device & QR Cockpit:
+ *    - Clean, modern QR card with step-by-step pairing instructions
+ *
+ * 6. Automated Triggers & Message Logs:
+ *    - Clean list cards with generous spacing, status tags, and toggle switches
+ *
+ * 7. Bottom navigation spacing + BrandSignatureFooter
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -43,21 +46,16 @@ import {
   Alert,
   Animated,
   Switch,
+  Image,
+  ImageStyle,
   Modal,
-  TouchableWithoutFeedback,
 } from 'react-native';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import {
   Send,
-  LayoutDashboard,
   History,
   Bell,
   RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  Users,
-  Smartphone,
-  Sparkles,
   QrCode,
   ShieldCheck,
   CheckCheck,
@@ -65,18 +63,21 @@ import {
   Zap,
   Megaphone,
   Radio,
-  Check,
-  ChevronRight,
-  Database,
-  Search,
-  Trash2,
-  XCircle,
+  Users,
+  Smartphone,
   ChevronDown,
-  X,
-  Layers,
-  Activity,
-  ArrowRight,
   Unplug,
+  Wifi,
+  WifiOff,
+  Sparkles,
+  X,
+  Search,
+  Check,
+  CreditCard,
+  UserCheck,
+  CalendarCheck,
+  AlertCircle,
+  FileText,
 } from 'lucide-react-native';
 import {
   ownerWhatsAppService,
@@ -89,196 +90,95 @@ import {
 } from '../../src/services/api/ownerWhatsAppService';
 import { useAuthStore } from '../../src/store/authStore';
 import { BrandSignatureFooter } from './BrandSignatureFooter';
+import { Avatar } from './ui/Avatar';
 import { layout } from '../theme/spacing';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
-const SUB_TABS = [
-  { id: 'compose', label: 'Composer Studio', desc: 'Broadcasts & templates', icon: Send },
-  { id: 'overview', label: 'Gateway Cockpit', desc: 'Device linking & QR', icon: LayoutDashboard },
-  { id: 'history', label: 'Message History', desc: 'Delivery logs & status', icon: History },
-  { id: 'automation', label: 'Automations', desc: 'Triggered notifications', icon: Bell },
-];
-
-interface IntentConfig {
-  id: string;
-  label: string;
-  desc: string;
-  badge: string;
-  icon: any;
-  intent: string;
-  bg: string;
-  borderColor: string;
-  accentColor: string;
-  chipBg: string;
+// Official WhatsApp Vector Icon
+function OfficialWhatsAppBrandIcon({ size = 24, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+        fill={color}
+      />
+    </Svg>
+  );
 }
 
-const NOTIFICATION_TYPES: IntentConfig[] = [
+const TABS = [
+  { id: 'compose', label: 'Broadcast', icon: Send },
+  { id: 'automation', label: 'Automations', icon: Bell },
+  { id: 'history', label: 'Logs', icon: History },
+];
+
+const NOTIFICATION_TYPES = [
   {
-    id: 'attendance',
-    label: 'Attendance Alert',
-    desc: 'Daily check-in receipt',
-    badge: 'Real-time',
-    icon: CheckCheck,
-    intent: 'ATTENDANCE',
-    bg: '#F0FDFA',
-    borderColor: '#99F6E4',
-    accentColor: '#0F766E',
-    chipBg: '#CCFBF1',
+    id: 'broadcast',
+    label: 'Gym Broadcast',
+    desc: 'Facility updates & announcements',
+    badge: 'General',
+    icon: Megaphone,
+    intent: 'SERVICE_ANNOUNCEMENT',
+    color: '#0F172A',
+    bg: '#F1F5F9',
   },
   {
     id: 'expiry',
-    label: 'Renewal Reminder',
-    desc: 'Subscription ending soon',
-    badge: 'Lifecycle',
+    label: 'Renewal Notice',
+    desc: 'Expiry reminder with payment link',
+    badge: 'Urgent',
     icon: Clock,
     intent: 'MEMBERSHIP_EXPIRY',
-    bg: '#FEF3C7',
-    borderColor: '#FDE68A',
-    accentColor: '#B45309',
-    chipBg: '#FDE68A',
+    color: '#475569',
+    bg: '#F1F5F9',
   },
   {
     id: 'fee-due',
     label: 'Fee Receipt / Due',
-    desc: 'Invoice link & balance',
-    badge: 'Financial',
-    icon: Zap,
+    desc: 'Invoice receipt & payment reminder',
+    badge: 'Finance',
+    icon: CreditCard,
     intent: 'PAYMENT_DUE',
-    bg: '#FFF1F2',
-    borderColor: '#FECDD3',
-    accentColor: '#BE123C',
-    chipBg: '#FFE4E6',
-  },
-  {
-    id: 'broadcast',
-    label: 'Announcement',
-    desc: 'Gym updates & events',
-    badge: 'Marketing',
-    icon: Megaphone,
-    intent: 'SERVICE_ANNOUNCEMENT',
-    bg: '#EEF2FF',
-    borderColor: '#C7D2FE',
-    accentColor: '#4338CA',
-    chipBg: '#E0E7FF',
+    color: '#475569',
+    bg: '#F1F5F9',
   },
   {
     id: 'welcome',
     label: 'Welcome Kit',
-    desc: 'New member orientation',
+    desc: 'New member induction guidelines',
     badge: 'Onboarding',
-    icon: Radio,
+    icon: FileText,
     intent: 'MEMBERSHIP_WELCOME',
-    bg: '#F0FDF4',
-    borderColor: '#BBF7D0',
-    accentColor: '#15803D',
-    chipBg: '#DCFCE7',
+    color: '#475569',
+    bg: '#F1F5F9',
+  },
+  {
+    id: 'attendance',
+    label: 'Daily Check-in',
+    desc: 'Instant attendance scan receipt',
+    badge: 'Automated',
+    icon: CalendarCheck,
+    intent: 'ATTENDANCE',
+    color: '#475569',
+    bg: '#F1F5F9',
   },
 ];
 
 const SEGMENT_CHIPS = [
-  { id: 'all', label: 'All Members', mode: 'ALL' },
-  { id: 'active', label: 'Active', mode: 'ALL', status: 'ACTIVE' },
-  { id: 'expiring', label: 'Expiring Soon', mode: 'EXPIRING' },
-  { id: 'dues', label: 'Pending Dues', mode: 'PENDING_PAYMENT' },
+  { id: 'all', label: 'All Members', mode: 'ALL', icon: Users },
+  { id: 'active', label: 'Active Roster', mode: 'ALL', status: 'ACTIVE', icon: UserCheck },
+  { id: 'expiring', label: 'Expiring Soon', mode: 'EXPIRING', icon: Clock },
+  { id: 'dues', label: 'Pending Dues', mode: 'PENDING_PAYMENT', icon: AlertCircle },
 ];
 
 const VARIABLE_CHIPS = [
-  { token: '{{member_name}}', label: 'Member Name' },
-  { token: '{{gym_name}}', label: 'Gym Name' },
+  { token: '{{member_name}}', label: 'Name' },
+  { token: '{{gym_name}}', label: 'Gym' },
   { token: '{{membership_plan}}', label: 'Plan' },
-  { token: '{{membership_expiry}}', label: 'Expiry Date' },
-  { token: '{{payment_amount}}', label: 'Fee Amount' },
+  { token: '{{membership_expiry}}', label: 'Expiry' },
+  { token: '{{payment_amount}}', label: 'Amount' },
   { token: '{{payment_due_date}}', label: 'Due Date' },
 ];
-
-/**
- * Pure Fixed-Size Animated WiFi Signal Icon
- * Exactly 28x28px, waves internally ripple in sequential opacity/glow.
- */
-function PureAnimatedWifiIcon({ isConnected }: { isConnected: boolean }) {
-  const wave1Anim = useRef(new Animated.Value(0.4)).current;
-  const wave2Anim = useRef(new Animated.Value(0.4)).current;
-  const wave3Anim = useRef(new Animated.Value(0.4)).current;
-  const dotAnim = useRef(new Animated.Value(0.7)).current;
-
-  useEffect(() => {
-    let animLoop: Animated.CompositeAnimation;
-
-    if (isConnected) {
-      animLoop = Animated.loop(
-        Animated.sequence([
-          Animated.stagger(140, [
-            Animated.timing(dotAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-            Animated.timing(wave1Anim, { toValue: 1, duration: 250, useNativeDriver: true }),
-            Animated.timing(wave2Anim, { toValue: 1, duration: 250, useNativeDriver: true }),
-            Animated.timing(wave3Anim, { toValue: 1, duration: 250, useNativeDriver: true }),
-          ]),
-          Animated.delay(400),
-          Animated.parallel([
-            Animated.timing(dotAnim, { toValue: 0.7, duration: 300, useNativeDriver: true }),
-            Animated.timing(wave1Anim, { toValue: 0.35, duration: 300, useNativeDriver: true }),
-            Animated.timing(wave2Anim, { toValue: 0.35, duration: 300, useNativeDriver: true }),
-            Animated.timing(wave3Anim, { toValue: 0.35, duration: 300, useNativeDriver: true }),
-          ]),
-          Animated.delay(200),
-        ])
-      );
-    } else {
-      animLoop = Animated.loop(
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(dotAnim, { toValue: 1, duration: 450, useNativeDriver: true }),
-            Animated.timing(wave1Anim, { toValue: 0.8, duration: 450, useNativeDriver: true }),
-            Animated.timing(wave2Anim, { toValue: 0.2, duration: 450, useNativeDriver: true }),
-            Animated.timing(wave3Anim, { toValue: 0.1, duration: 450, useNativeDriver: true }),
-          ]),
-          Animated.parallel([
-            Animated.timing(dotAnim, { toValue: 0.25, duration: 450, useNativeDriver: true }),
-            Animated.timing(wave1Anim, { toValue: 0.2, duration: 450, useNativeDriver: true }),
-            Animated.timing(wave2Anim, { toValue: 0.1, duration: 450, useNativeDriver: true }),
-            Animated.timing(wave3Anim, { toValue: 0.05, duration: 450, useNativeDriver: true }),
-          ]),
-        ])
-      );
-    }
-
-    animLoop.start();
-    return () => animLoop.stop();
-  }, [isConnected, dotAnim, wave1Anim, wave2Anim, wave3Anim]);
-
-  const activeColor = isConnected ? '#10B981' : '#F59E0B';
-
-  return (
-    <View style={styles.fixedWifiContainer}>
-      <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-        <AnimatedCircle cx="12" cy="19" r="1.8" fill={activeColor} opacity={dotAnim} />
-        <AnimatedPath
-          d="M8.5 15.5a5 5 0 0 1 7 0"
-          stroke={activeColor}
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          opacity={wave1Anim}
-        />
-        <AnimatedPath
-          d="M5 12a10 10 0 0 1 14 0"
-          stroke={activeColor}
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          opacity={wave2Anim}
-        />
-        <AnimatedPath
-          d="M2 8.5a15 15 0 0 1 20 0"
-          stroke={activeColor}
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          opacity={wave3Anim}
-        />
-      </Svg>
-    </View>
-  );
-}
 
 interface WhatsAppHubViewProps {
   isDark?: boolean;
@@ -287,12 +187,21 @@ interface WhatsAppHubViewProps {
 
 export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false, onClose }) => {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'compose' | 'overview' | 'history' | 'automation'>('compose');
+  const [activeTab, setActiveTab] = useState<'compose' | 'history' | 'automation'>('compose');
+  const [showQrModal, setShowQrModal] = useState(false);
 
-  // Gateway Connection State
+  // Connection State
   const [connection, setConnection] = useState<WhatsAppConnectionState | null>(null);
   const [overview, setOverview] = useState<WhatsAppOverview | null>(null);
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [isRefreshingState, setIsRefreshingState] = useState(false);
+
+  // Intent selector expanded in mobile
+  const [showIntentMenu, setShowIntentMenu] = useState(false);
+
+  // Audience Segment Dropdown & Search in Target Audience Card
+  const [showSegmentMenu, setShowSegmentMenu] = useState(false);
+  const [audienceSearchQuery, setAudienceSearchQuery] = useState('');
 
   // Composer State
   const [selectedIntent, setSelectedIntent] = useState<string>('SERVICE_ANNOUNCEMENT');
@@ -300,7 +209,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
   const [audience, setAudience] = useState<WhatsAppAudienceMember[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [messageBody, setMessageBody] = useState<string>(
-    'Dear {{member_name}}, this is an official update from {{gym_name}}.'
+    'Hi {{member_name}}, this is an official update from {{gym_name}}. Please visit the front desk for details.'
   );
   const [sending, setSending] = useState(false);
 
@@ -310,26 +219,24 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
   const [autoRules, setAutoRules] = useState<WhatsAppAutomationRule[]>([]);
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
 
-  // Modals
-  const [isViewMenuOpen, setViewMenuOpen] = useState(false);
-  const [isIntentMenuOpen, setIntentMenuOpen] = useState(false);
-
   const isConnected = connection?.status === 'CONNECTED';
 
-  const currentViewTab = useMemo(
-    () => SUB_TABS.find((t) => t.id === activeTab) || SUB_TABS[0],
-    [activeTab]
-  );
-  const CurrentViewIcon = currentViewTab.icon;
+  // Pulse animation for online indicator
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.25, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
 
-  const currentIntentConfig = useMemo(
-    () => NOTIFICATION_TYPES.find((n) => n.intent === selectedIntent) || NOTIFICATION_TYPES[3],
-    [selectedIntent]
-  );
-  const CurrentIntentIcon = currentIntentConfig.icon;
-
-  // Load gateway state
+  // Load gateway connection
   const loadData = useCallback(async () => {
+    setIsRefreshingState(true);
     try {
       const [conn, ov, tmpls] = await Promise.all([
         ownerWhatsAppService.getConnection().catch(() => null),
@@ -339,17 +246,18 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
       if (conn) setConnection(conn);
       if (ov) setOverview(ov);
       if (tmpls && tmpls.length > 0) setTemplates(tmpls);
-    } catch {
-      // offline fallback
+    } finally {
+      setIsRefreshingState(false);
     }
   }, []);
 
-  // Load audience per segment
+  // Load target audience
   const loadAudience = useCallback(async () => {
     try {
       const seg = SEGMENT_CHIPS.find((s) => s.id === activeSegment);
       const res = await ownerWhatsAppService.getAudience({
         mode: (seg?.mode as any) || 'ALL',
+        search: audienceSearchQuery.trim() || undefined,
         limit: 100,
       });
       if (res && res.members) {
@@ -359,22 +267,20 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     } catch {
       // offline fallback
     }
-  }, [activeSegment]);
+  }, [activeSegment, audienceSearchQuery]);
 
-  // Load dispatch history
+  // Load message logs
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
       const res = await ownerWhatsAppService.getMessages({ limit: 30 });
       if (res?.items) setMessages(res.items);
-    } catch {
-      // offline
     } finally {
       setHistoryLoading(false);
     }
   }, []);
 
-  // Load automation rules
+  // Load automations
   const loadAutomation = useCallback(async () => {
     try {
       const res = await ownerWhatsAppService.getAutomation();
@@ -382,10 +288,10 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
         setAutoRules(res.rules);
       } else {
         setAutoRules([
-          { id: 'auto-checkin', triggerEvent: 'ATTENDANCE_CHECKIN', title: 'Daily Check-in Receipt', description: 'Instantly notify member upon floor QR scan', enabled: true },
-          { id: 'auto-expiry', triggerEvent: 'MEMBERSHIP_EXPIRING', title: '3-Day Expiry Notification', description: 'Automated renewal alert before cutoff', enabled: true },
-          { id: 'auto-due', triggerEvent: 'PAYMENT_CONFIRMATION', title: 'Fee Payment Confirmation', description: 'Auto-send receipt link on fee entry', enabled: true },
-          { id: 'auto-welcome', triggerEvent: 'MEMBERSHIP_WELCOME', title: 'New Member Welcome Kit', description: 'Send onboarding orientation guide', enabled: false },
+          { id: 'auto-checkin', triggerEvent: 'ATTENDANCE_CHECKIN', title: 'Daily Attendance Receipt', description: 'Instantly message member upon QR turnstile scan', enabled: true },
+          { id: 'auto-expiry', triggerEvent: 'MEMBERSHIP_EXPIRING', title: '3-Day Renewal Alert', description: 'Send reminder with extension link before expiry', enabled: true },
+          { id: 'auto-due', triggerEvent: 'PAYMENT_CONFIRMATION', title: 'Fee Payment Confirmation', description: 'Auto-deliver official payment receipt PDF', enabled: true },
+          { id: 'auto-welcome', triggerEvent: 'MEMBERSHIP_WELCOME', title: 'Welcome Kit & Onboarding', description: 'Send gym guidelines and schedule to new members', enabled: false },
         ]);
       }
     } catch {
@@ -403,18 +309,19 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     if (activeTab === 'automation') loadAutomation();
   }, [activeTab, loadHistory, loadAutomation]);
 
-  // Select campaign intent
+  // Handle Intent Change
   const handleSelectIntent = (intent: string) => {
     setSelectedIntent(intent);
+    setShowIntentMenu(false);
     const tmpl = templates.find((t) => t.intent === intent && t.isUsable);
     if (tmpl) {
       setMessageBody(tmpl.body);
     } else {
-      if (intent === 'SERVICE_ANNOUNCEMENT') setMessageBody('Dear {{member_name}}, this is an important update from {{gym_name}}.');
-      else if (intent === 'MEMBERSHIP_EXPIRY') setMessageBody('Hi {{member_name}}, your {{membership_plan}} at {{gym_name}} is expiring on {{membership_expiry}}. Renew now to avoid break.');
-      else if (intent === 'PAYMENT_DUE') setMessageBody('Hi {{member_name}}, your fee of {{payment_amount}} is due on {{payment_due_date}}. Tap here to pay seamlessly.');
-      else if (intent === 'MEMBERSHIP_WELCOME') setMessageBody('Welcome to {{gym_name}}, {{member_name}}! We are thrilled to partner in your fitness journey.');
-      else setMessageBody('Hi {{member_name}}, your visit to {{gym_name}} was recorded successfully.');
+      if (intent === 'SERVICE_ANNOUNCEMENT') setMessageBody('Hi {{member_name}}, important update from {{gym_name}}: Gym will remain open as usual this weekend.');
+      else if (intent === 'MEMBERSHIP_EXPIRY') setMessageBody('Hi {{member_name}}, your {{membership_plan}} at {{gym_name}} expires on {{membership_expiry}}. Renew today to keep your fitness unbroken!');
+      else if (intent === 'PAYMENT_DUE') setMessageBody('Dear {{member_name}}, your subscription due amount is {{payment_amount}} payable by {{payment_due_date}}. Tap here to pay online.');
+      else if (intent === 'MEMBERSHIP_WELCOME') setMessageBody('Welcome to {{gym_name}}, {{member_name}}! We are thrilled to partner in your fitness journey. Check your locker details at the desk.');
+      else setMessageBody('Hi {{member_name}}, your visit to {{gym_name}} was logged successfully.');
     }
   };
 
@@ -422,17 +329,39 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     setMessageBody((prev) => `${prev} ${token}`);
   };
 
+  // Filtered audience based on search query
+  const filteredAudience = useMemo(() => {
+    if (!audienceSearchQuery.trim()) return audience;
+    const q = audienceSearchQuery.toLowerCase().trim();
+    return audience.filter(
+      (m) =>
+        (m.fullName && m.fullName.toLowerCase().includes(q)) ||
+        (m.phone && m.phone.includes(q)) ||
+        (m.memberCode && m.memberCode.toLowerCase().includes(q))
+    );
+  }, [audience, audienceSearchQuery]);
+
+  // Keep selected IDs in sync with filtered search results
+  useEffect(() => {
+    setSelectedMemberIds(filteredAudience.map((m) => m.id));
+  }, [filteredAudience]);
+
+  // Preview formatting
   const previewMember = useMemo(() => {
     if (selectedMemberIds.length > 0) {
-      return audience.find((m) => m.id === selectedMemberIds[0]) || audience[0];
+      return filteredAudience.find((m) => m.id === selectedMemberIds[0]) || filteredAudience[0] || audience[0];
     }
-    return audience[0];
-  }, [audience, selectedMemberIds]);
+    return filteredAudience[0] || audience[0];
+  }, [filteredAudience, audience, selectedMemberIds]);
+
+  const activeIntentObj = useMemo(() => {
+    return NOTIFICATION_TYPES.find((t) => t.intent === selectedIntent) || NOTIFICATION_TYPES[0];
+  }, [selectedIntent]);
 
   const renderedPreview = useMemo(() => {
     const gymName = user?.gymName || 'GymDeck Fitness';
     const memberName = previewMember?.fullName || 'Rahul Sharma';
-    const plan = previewMember?.planName || 'Gold Annual Pro';
+    const plan = previewMember?.planName || 'Annual Gold Pass';
     const expiry = previewMember?.expiresAt
       ? new Date(previewMember.expiresAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       : '31 Dec 2026';
@@ -446,10 +375,10 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
       .replace(/\{\{payment_due_date\}\}/gi, '05 Dec 2026');
   }, [messageBody, previewMember, user?.gymName]);
 
-  // Dispatch broadcast
+  // Send Broadcast
   const handleSendBroadcast = async () => {
     if (!isConnected) {
-      Alert.alert('Gateway Offline', 'Please connect your WhatsApp Line from the Gateway Cockpit tab first.');
+      Alert.alert('Line Offline', 'Please link your gym phone in the "Device & QR" tab first.');
       return;
     }
     if (selectedMemberIds.length === 0) {
@@ -465,24 +394,47 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
         body: messageBody,
       });
       Alert.alert(
-        'Broadcast Queued',
-        `Successfully scheduled WhatsApp message for ${selectedMemberIds.length} members.`
+        'Broadcast Sent',
+        `Dispatched WhatsApp communication to ${selectedMemberIds.length} members.`
       );
       loadData();
     } catch (e: any) {
-      Alert.alert('Dispatch Error', e?.message || 'Failed to dispatch broadcast');
+      Alert.alert('Dispatch Error', e?.message || 'Could not queue message dispatch.');
     } finally {
       setSending(false);
     }
   };
 
-  const handleCancelMessage = async (id: string) => {
+  // Connect & Disconnect Handlers
+  const handleConnect = async () => {
     try {
-      await ownerWhatsAppService.cancelMessage(id);
-      loadHistory();
+      await ownerWhatsAppService.connect();
+      loadData();
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to cancel dispatch');
+      Alert.alert('Connection Failed', e?.message || 'Could not launch WhatsApp companion session.');
     }
+  };
+
+  const handleDisconnect = async () => {
+    Alert.alert(
+      'Disconnect WhatsApp Line',
+      'Are you sure you want to unlink the companion gym phone? Automatic fee receipts and member notifications will be paused until re-linked.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unlink Phone',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await ownerWhatsAppService.disconnect();
+              loadData();
+            } catch (e: any) {
+              Alert.alert('Error', e?.message || 'Failed to disconnect.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleToggleAutomation = async (ruleId: string, currentEnabled: boolean) => {
@@ -493,307 +445,495 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
       await ownerWhatsAppService.saveAutomation(updated);
     } catch {
       setAutoRules(autoRules);
-      Alert.alert('Error', 'Failed to update automation rule');
+      Alert.alert('Error', 'Failed to update automation trigger.');
     } finally {
       setSavingRuleId(null);
     }
   };
 
-  const handleConnect = async () => {
-    try {
-      await ownerWhatsAppService.connect();
-      loadData();
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to initialize connection');
-    }
-  };
-
-  const handleDisconnect = async () => {
-    try {
-      await ownerWhatsAppService.disconnect();
-      loadData();
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to disconnect');
-    }
-  };
-
   return (
-    <View style={[styles.root, { backgroundColor: isDark ? '#0B0F19' : '#F8FAFC' }]}>
+    <View style={[styles.root, { backgroundColor: isDark ? '#080E14' : '#F8FAFC' }]}>
       {/* ============================================================ */}
-      {/* 1. EXECUTIVE DARK NAVY COMMAND HEADER CARD                   */}
-      {/* Exact spacing and visual weight matching other modules       */}
+      {/* 1. SIGNATURE WHATSAPP HERO COMMAND CARD                      */}
+      {/* Clean, balanced visual hierarchy without squished clutter    */}
       {/* ============================================================ */}
-      <View style={styles.headerCardContainer}>
-        <View style={styles.executiveHeaderCard}>
-          {/* Subtle Background Watermark Logo */}
-          <View style={styles.watermarkWrap} pointerEvents="none">
-            <Svg width={110} height={110} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
-                fill="#FFFFFF"
-                opacity={0.06}
-              />
+      <View style={styles.heroSection}>
+        <View style={styles.emeraldHeroCard}>
+          {/* Background Ambient Depth */}
+          <View style={styles.meshAura} pointerEvents="none">
+            <Svg width="100%" height="100%" viewBox="0 0 360 160" fill="none">
+              <Defs>
+                <LinearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
+                  <Stop offset="0%" stopColor="#064E3B" />
+                  <Stop offset="55%" stopColor="#075E54" />
+                  <Stop offset="100%" stopColor="#0F766E" />
+                </LinearGradient>
+              </Defs>
+              <Rect width="360" height="160" fill="url(#heroGrad)" rx="18" />
+              <Circle cx="340" cy="20" r="90" fill="#25D366" fillOpacity="0.08" />
+              <Circle cx="30" cy="140" r="70" fill="#FFFFFF" fillOpacity="0.03" />
             </Svg>
           </View>
 
-          {/* Overline & Wi-Fi Pulse */}
-          <View style={styles.headerTopRow}>
-            <View style={styles.overlineContainer}>
-              <View
-                style={[
-                  styles.pulseDot,
-                  { backgroundColor: isConnected ? '#10B981' : '#F59E0B' },
-                ]}
+          {/* Watermark WhatsApp Logo on Right */}
+          <View style={styles.heroWatermark} pointerEvents="none">
+            <OfficialWhatsAppBrandIcon size={110} color="rgba(255, 255, 255, 0.07)" />
+          </View>
+
+          {/* Top Row: Brand & Live Status (Clean non-tabular design) */}
+          <View style={styles.heroTopRow}>
+            <View style={styles.brandTitleRow}>
+              <Image
+                source={require('../../assets/whatsapp-logo.png')}
+                style={styles.officialBrandLogo}
+                resizeMode="contain"
               />
-              <Text style={styles.headerOverline}>COMPANION GATEWAY LINE</Text>
+              <Text style={styles.brandBadgeText}>WHATSAPP LINE</Text>
             </View>
-            <View style={{ marginLeft: 'auto' }}>
-              <PureAnimatedWifiIcon isConnected={isConnected} />
+
+            {/* Live Signal Indicator: Professional Wifi Icon indicating online/offline state */}
+            <View style={styles.telemetryCapsule}>
+              {isConnected ? (
+                <Wifi size={17} color="#34D399" strokeWidth={2.4} />
+              ) : (
+                <WifiOff size={17} color="#F87171" strokeWidth={2.2} />
+              )}
             </View>
           </View>
 
-          {/* Title & Subtitle */}
-          <Text style={styles.headerTitle}>WhatsApp Line</Text>
-          <Text style={styles.headerSubtitle}>
-            Direct companion pipeline, automated receipts & broadcast engine
-          </Text>
+          {/* Hero Main Body: Title & Companion Number */}
+          <View style={styles.heroContent}>
+            <Text style={styles.heroMainTitle}>Companion Line</Text>
+            {connection?.phoneNumber ? (
+              <View style={styles.linkedNumberPill}>
+                <Smartphone size={11} color="#064E3B" strokeWidth={2.4} />
+                <Text style={styles.linkedNumberText}>{connection.phoneNumber}</Text>
+              </View>
+            ) : (
+              <Text style={styles.heroSubText}>
+                Automated receipts, check-in pings & instant broadcasts
+              </Text>
+            )}
+          </View>
+
+          {/* Hero Actions Row: Clean & Proportional Buttons */}
+          <View style={styles.heroActionsRow}>
+            {!isConnected ? (
+              <TouchableOpacity
+                style={styles.heroPrimaryBtn}
+                onPress={() => setShowQrModal(true)}
+                activeOpacity={0.85}
+              >
+                <QrCode size={14} color="#064E3B" strokeWidth={2.6} />
+                <Text style={styles.heroPrimaryBtnText}>Link Phone via QR</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.heroSecondaryBtn}
+                onPress={handleDisconnect}
+                activeOpacity={0.85}
+              >
+                <Unplug size={13} color="#FCA5A5" strokeWidth={2.4} />
+                <Text style={styles.heroDangerBtnText}>Unlink</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.heroRefreshBtn}
+              onPress={loadData}
+              activeOpacity={0.7}
+              disabled={isRefreshingState}
+            >
+              {isRefreshingState ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <RefreshCw size={12} color="#E2E8F0" strokeWidth={2.2} />
+                  <Text style={styles.heroRefreshText}>Sync</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
       {/* ============================================================ */}
-      {/* 2. 4 STRATEGIC KPI CARDS                                     */}
-      {/* 2x2 Grid with real metrics from backend gateway              */}
+      {/* 2. STATS ROW: 3 BALANCED GLASS TILES                         */}
       {/* ============================================================ */}
-      <View style={styles.statsGrid}>
-        {/* Stat 1: Line Status */}
+      <View style={styles.statsStrip}>
         <View style={[styles.statTile, isDark && styles.statTileDark]}>
-          <View style={styles.statTileTop}>
-            <Text style={[styles.statLabel, isDark && styles.statLabelDark]}>GATEWAY LINE</Text>
-            <View
-              style={[
-                styles.statBadge,
-                isConnected
-                  ? { backgroundColor: '#DCFCE7', borderColor: '#BBF7D0' }
-                  : { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statBadgeText,
-                  { color: isConnected ? '#15803D' : '#B45309' },
-                ]}
-              >
-                {isConnected ? 'ONLINE' : 'STANDBY'}
-              </Text>
-            </View>
-          </View>
-          <Text
-            style={[
-              styles.statValue,
-              { color: isConnected ? '#10B981' : '#F59E0B' },
-            ]}
-          >
-            {isConnected ? 'Connected' : 'Offline'}
-          </Text>
-          <Text style={styles.statSubtext} numberOfLines={1}>
-            {connection?.phoneNumber || 'Device companion'}
-          </Text>
-        </View>
-
-        {/* Stat 2: Delivered */}
-        <View style={[styles.statTile, isDark && styles.statTileDark]}>
-          <View style={styles.statTileTop}>
-            <Text style={[styles.statLabel, isDark && styles.statLabelDark]}>DELIVERIES</Text>
-            <View style={[styles.statBadge, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}>
-              <Text style={[styles.statBadgeText, { color: '#0369A1' }]}>TOTAL</Text>
-            </View>
-          </View>
-          <Text style={[styles.statValue, isDark && { color: '#F8FAFC' }]}>
+          <Text style={styles.statOverline}>DISPATCHED</Text>
+          <Text style={[styles.statNumber, isDark && styles.textWhite]}>
             {overview?.stats?.delivered ?? 128}
           </Text>
-          <Text style={styles.statSubtext}>Confirmed dispatches</Text>
+          <Text style={styles.statCaption}>Sent msgs</Text>
         </View>
 
-        {/* Stat 3: Read Receipts */}
         <View style={[styles.statTile, isDark && styles.statTileDark]}>
-          <View style={styles.statTileTop}>
-            <Text style={[styles.statLabel, isDark && styles.statLabelDark]}>READ RECEIPTS</Text>
-            <View style={[styles.statBadge, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
-              <Text style={[styles.statBadgeText, { color: '#047857' }]}>BLUE-TICKS</Text>
-            </View>
-          </View>
-          <Text style={[styles.statValue, isDark && { color: '#F8FAFC' }]}>
+          <Text style={styles.statOverline}>READ RATE</Text>
+          <Text style={[styles.statNumber, { color: '#0284C7' }]}>
             {overview?.stats?.read ?? 114}
           </Text>
-          <Text style={styles.statSubtext}>Member open rate</Text>
+          <Text style={styles.statCaption}>Blue ticks</Text>
         </View>
 
-        {/* Stat 4: Opt-In Base */}
         <View style={[styles.statTile, isDark && styles.statTileDark]}>
-          <View style={styles.statTileTop}>
-            <Text style={[styles.statLabel, isDark && styles.statLabelDark]}>OPTED-IN</Text>
-            <View style={[styles.statBadge, { backgroundColor: '#F3E8FF', borderColor: '#E9D5FF' }]}>
-              <Text style={[styles.statBadgeText, { color: '#7E22CE' }]}>CONSENT</Text>
-            </View>
-          </View>
-          <Text style={[styles.statValue, isDark && { color: '#F8FAFC' }]}>
+          <Text style={styles.statOverline}>OPT-IN</Text>
+          <Text style={[styles.statNumber, { color: '#10B981' }]}>
             {overview?.consentCount ?? 42}
           </Text>
-          <Text style={styles.statSubtext}>Verified compliant members</Text>
+          <Text style={styles.statCaption}>Active consent</Text>
         </View>
       </View>
 
       {/* ============================================================ */}
-      {/* 3. DUAL WORKSPACE NAVIGATION BAR                             */}
-      {/* Mode Selector & Intent Selector                               */}
+      {/* 3. TACTILE HORIZONTAL SUB-NAVIGATION TABS                     */}
       {/* ============================================================ */}
-      <View style={styles.navigationSection}>
-        {/* Left: Mode Dropdown */}
-        <TouchableOpacity
-          style={[styles.dropdownPill, isDark && styles.dropdownPillDark]}
-          onPress={() => setViewMenuOpen(true)}
-          activeOpacity={0.8}
-        >
-          <CurrentViewIcon size={14} color="#0284C7" strokeWidth={2.4} />
-          <Text style={[styles.dropdownPillText, isDark && styles.dropdownPillTextDark]}>
-            {currentViewTab.label}
-          </Text>
-          <ChevronDown size={14} color={isDark ? '#94A3B8' : '#64748B'} />
-        </TouchableOpacity>
-
-        {/* Right: Campaign Intent Dropdown */}
-        <TouchableOpacity
-          style={[
-            styles.dropdownPill,
-            isDark && styles.dropdownPillDark,
-            { borderColor: currentIntentConfig.borderColor, backgroundColor: currentIntentConfig.bg },
-          ]}
-          onPress={() => setIntentMenuOpen(true)}
-          activeOpacity={0.8}
-        >
-          <CurrentIntentIcon size={14} color={currentIntentConfig.accentColor} strokeWidth={2.4} />
-          <Text
-            style={[styles.dropdownPillText, { color: currentIntentConfig.accentColor }]}
-            numberOfLines={1}
-          >
-            {currentIntentConfig.label}
-          </Text>
-          <ChevronDown size={14} color={currentIntentConfig.accentColor} />
-        </TouchableOpacity>
+      <View style={styles.subTabsContainer}>
+        <View style={[styles.subTabsTrack, isDark && styles.subTabsTrackDark]}>
+          {TABS.map((tab) => {
+            const active = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.subTabItem, active && styles.subTabItemActive]}
+                onPress={() => setActiveTab(tab.id as any)}
+                activeOpacity={0.8}
+              >
+                <Icon
+                  size={14}
+                  color={active ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                  strokeWidth={active ? 2.5 : 2}
+                />
+                <Text
+                  style={[
+                    styles.subTabText,
+                    active && styles.subTabTextActive,
+                    isDark && !active && { color: '#94A3B8' },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* ============================================================ */}
-      {/* 4. ACTIVE TAB WORKSPACE CONTENT                              */}
+      {/* 4. WORKSPACE BODY                                            */}
       {/* ============================================================ */}
       <View style={styles.workspaceBody}>
-        {/* ── TAB 1: COMPOSER STUDIO ── */}
+        {/* ── TAB 1: BROADCAST COMPOSER ── */}
         {activeTab === 'compose' && (
-          <View style={styles.tabContentBlock}>
-            {/* Target Audience Segment Bar */}
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
-                Target Audience
-              </Text>
-              <View style={styles.counterBadge}>
-                <Text style={styles.counterBadgeText}>
-                  {selectedMemberIds.length} Recipients Selected
-                </Text>
-              </View>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.segmentRail}
-            >
-              {SEGMENT_CHIPS.map((c) => {
-                const active = activeSegment === c.id;
-                return (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[
-                      styles.segmentPill,
-                      isDark && styles.segmentPillDark,
-                      active && styles.segmentPillActive,
-                    ]}
-                    onPress={() => setActiveSegment(c.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.segmentPillText,
-                        isDark && styles.segmentPillTextDark,
-                        active && styles.segmentPillTextActive,
-                      ]}
-                    >
-                      {c.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* Template Variables */}
-            <View style={[styles.sectionHeaderRow, { marginTop: 16 }]}>
-              <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
-                Dynamic Smart Variables
-              </Text>
-              <Text style={styles.helperNotice}>Tap variable to insert</Text>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.variablesRail}
-            >
-              {VARIABLE_CHIPS.map((v) => (
+          <View style={styles.tabContent}>
+            {/* 1. Campaign Intent Card Selector (Clean, Professional Dropdown) */}
+            <View style={[styles.contentCard, isDark && styles.contentCardDark]}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardHeaderLeft}>
+                  <View style={[styles.stepDot, isDark ? styles.stepDotDark : styles.stepDotLight]}>
+                    <Text style={[styles.stepDotText, isDark ? styles.textWhite : { color: '#0F172A' }]}>1</Text>
+                  </View>
+                  <Text style={[styles.cardTitle, isDark && styles.textWhite]}>
+                    Campaign Type
+                  </Text>
+                </View>
                 <TouchableOpacity
-                  key={v.token}
-                  style={styles.variablePill}
-                  onPress={() => insertVariable(v.token)}
-                  activeOpacity={0.7}
+                  style={[styles.intentSelectorTrigger, isDark && styles.intentSelectorTriggerDark]}
+                  onPress={() => setShowIntentMenu(!showIntentMenu)}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.variablePillText}>+ {v.label}</Text>
+                  <View style={[styles.intentMiniIcon, isDark && styles.intentMiniIconDark]}>
+                    {React.createElement(activeIntentObj.icon, {
+                      size: 13,
+                      color: isDark ? '#E2E8F0' : '#1E293B',
+                      strokeWidth: 2.2,
+                    })}
+                  </View>
+                  <Text style={[styles.intentTriggerLabel, isDark && styles.textWhite]}>
+                    {activeIntentObj.label}
+                  </Text>
+                  <ChevronDown size={14} color={isDark ? '#94A3B8' : '#64748B'} />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              </View>
 
-            {/* Message Body Editor */}
-            <View style={[styles.editorCard, isDark && styles.editorCardDark]}>
-              <TextInput
-                style={[styles.editorTextInput, isDark && styles.editorTextInputDark]}
-                multiline
-                numberOfLines={4}
-                value={messageBody}
-                onChangeText={setMessageBody}
-                placeholder="Type WhatsApp broadcast message..."
-                placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
-              />
+              {/* Collapsible Intent Choices (Professional Neutral Styling) */}
+              {showIntentMenu && (
+                <View style={[styles.intentMenuDrop, isDark && styles.intentMenuDropDark]}>
+                  {NOTIFICATION_TYPES.map((t) => {
+                    const isSelected = t.intent === selectedIntent;
+                    const Icon = t.icon;
+                    return (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[
+                          styles.intentMenuItem,
+                          isSelected && (isDark ? styles.intentMenuItemActiveDark : styles.intentMenuItemActive),
+                        ]}
+                        onPress={() => handleSelectIntent(t.intent)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.intentIconWrap, isDark && styles.intentIconWrapDark]}>
+                          <Icon size={14} color={isDark ? '#E2E8F0' : '#334155'} strokeWidth={2.2} />
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={[styles.intentItemTitle, isDark && styles.textWhite]}>
+                            {t.label}
+                          </Text>
+                          <Text style={styles.intentItemSub}>{t.desc}</Text>
+                        </View>
+                        {isSelected && (
+                          <View style={styles.intentCheckmarkBox}>
+                            <Check size={14} color={isDark ? '#38BDF8' : '#0F172A'} strokeWidth={2.5} />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
 
-            {/* Live Authentic WhatsApp Bubble Preview */}
-            <View style={[styles.sectionHeaderRow, { marginTop: 18 }]}>
-              <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
-                Live Device Preview
-              </Text>
-              <Text style={styles.helperNotice}>
-                To: {previewMember?.fullName || 'Member'}
-              </Text>
+            {/* 2. Target Audience Segment */}
+            <View style={[styles.contentCard, isDark && styles.contentCardDark]}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardHeaderLeft}>
+                  <View style={[styles.stepDot, isDark ? styles.stepDotDark : styles.stepDotLight]}>
+                    <Text style={[styles.stepDotText, isDark ? styles.textWhite : { color: '#0F172A' }]}>2</Text>
+                  </View>
+                  <Text style={[styles.cardTitle, isDark && styles.textWhite]}>
+                    Target Audience
+                  </Text>
+                </View>
+                <View style={[styles.recipientBadge, isDark && styles.recipientBadgeDark]}>
+                  <Users size={11} color={isDark ? '#94A3B8' : '#475569'} strokeWidth={2.2} />
+                  <Text style={[styles.recipientBadgeText, isDark && styles.textWhite]}>
+                    {selectedMemberIds.length} Members
+                  </Text>
+                </View>
+              </View>
+
+              {/* Search Bar on Left & Dropdown Menu Button on Right */}
+              <View style={styles.audienceControlRow}>
+                <View style={[styles.audienceSearchWrap, isDark && styles.audienceSearchWrapDark]}>
+                  <Search size={14} color="#94A3B8" />
+                  <TextInput
+                    style={[styles.audienceSearchInput, isDark && styles.textWhite]}
+                    placeholder="Search member name or phone..."
+                    placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+                    value={audienceSearchQuery}
+                    onChangeText={setAudienceSearchQuery}
+                  />
+                  {audienceSearchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setAudienceSearchQuery('')}>
+                      <X size={13} color="#94A3B8" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Dropdown Menu Trigger Button */}
+                <TouchableOpacity
+                  style={[styles.audienceDropdownBtn, isDark && styles.audienceDropdownBtnDark]}
+                  onPress={() => setShowSegmentMenu(!showSegmentMenu)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[styles.audienceDropdownText, isDark && styles.textWhite]}
+                    numberOfLines={1}
+                  >
+                    {SEGMENT_CHIPS.find((c) => c.id === activeSegment)?.label || 'All Members'}
+                  </Text>
+                  <ChevronDown size={14} color={isDark ? '#94A3B8' : '#475569'} style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Segment Dropdown Menu List with Professional Icons */}
+              {showSegmentMenu && (
+                <View style={[styles.segmentMenuDrop, isDark && styles.segmentMenuDropDark]}>
+                  {SEGMENT_CHIPS.map((c) => {
+                    const active = activeSegment === c.id;
+                    const Icon = c.icon;
+                    return (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={[
+                          styles.segmentMenuItem,
+                          active && (isDark ? styles.segmentMenuItemActiveDark : styles.segmentMenuItemActive),
+                        ]}
+                        onPress={() => {
+                          setActiveSegment(c.id);
+                          setShowSegmentMenu(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Icon size={14} color={isDark ? (active ? '#38BDF8' : '#94A3B8') : (active ? '#0F172A' : '#64748B')} strokeWidth={2.2} />
+                          <Text
+                            style={[
+                              styles.segmentMenuItemText,
+                              active && styles.segmentMenuItemTextActive,
+                              isDark && !active && styles.textWhite,
+                            ]}
+                          >
+                            {c.label}
+                          </Text>
+                        </View>
+                        {active && <Check size={14} color={isDark ? '#38BDF8' : '#0F172A'} strokeWidth={2.4} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Visually Matched Search Results Drawer */}
+              {audienceSearchQuery.trim().length > 0 && (
+                <View style={[styles.searchMatchesCard, isDark && styles.searchMatchesCardDark]}>
+                  <View style={styles.searchMatchesHeader}>
+                    <Text style={[styles.searchMatchesTitle, isDark && styles.textWhite]}>
+                      Matching Members ({filteredAudience.length})
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (selectedMemberIds.length === filteredAudience.length) {
+                          setSelectedMemberIds([]);
+                        } else {
+                          setSelectedMemberIds(filteredAudience.map((m) => m.id));
+                        }
+                      }}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Text style={styles.searchToggleAllText}>
+                        {selectedMemberIds.length === filteredAudience.length ? 'Deselect All' : 'Select All'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {filteredAudience.length === 0 ? (
+                    <View style={styles.searchNoMatchesBox}>
+                      <Text style={[styles.searchNoMatchesText, isDark && { color: '#94A3B8' }]}>
+                        No members found matching "{audienceSearchQuery}"
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.searchMatchesList}>
+                      {filteredAudience.slice(0, 5).map((member) => {
+                        const isMemberSelected = selectedMemberIds.includes(member.id);
+                        return (
+                          <TouchableOpacity
+                            key={member.id}
+                            style={[
+                              styles.searchMemberRow,
+                              isDark && styles.searchMemberRowDark,
+                              isMemberSelected && (isDark ? styles.searchMemberRowActiveDark : styles.searchMemberRowActive),
+                            ]}
+                            onPress={() => {
+                              if (isMemberSelected) {
+                                setSelectedMemberIds((prev) => prev.filter((id) => id !== member.id));
+                              } else {
+                                setSelectedMemberIds((prev) => [...prev, member.id]);
+                              }
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Avatar
+                              name={member.fullName || 'Member'}
+                              photoUrl={member.photoUrl || (member as any).profilePhotoUrl}
+                              gender={member.gender}
+                              size="sm"
+                              style={{ marginRight: 10 }}
+                            />
+                            <View style={styles.searchMemberInfoCol}>
+                              <Text style={[styles.searchMemberName, isDark && styles.textWhite]} numberOfLines={1}>
+                                {member.fullName}
+                              </Text>
+                              <View style={styles.searchMemberDetailsRow}>
+                                <Text style={styles.searchMemberPhone}>{member.phone}</Text>
+                                {member.planName ? (
+                                  <>
+                                    <Text style={styles.searchMemberDot}>•</Text>
+                                    <Text style={styles.searchMemberPlan} numberOfLines={1}>
+                                      {member.planName}
+                                    </Text>
+                                  </>
+                                ) : null}
+                              </View>
+                            </View>
+
+                            <View
+                              style={[
+                                styles.searchCheckbox,
+                                isMemberSelected && styles.searchCheckboxActive,
+                              ]}
+                            >
+                              {isMemberSelected && <Check size={11} color="#FFFFFF" strokeWidth={3} />}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+
+                      {filteredAudience.length > 5 && (
+                        <Text style={styles.searchMoreCountText}>
+                          + {filteredAudience.length - 5} more members matching
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
 
-            <View style={styles.whatsappPhoneCanvas}>
-              <View style={styles.phoneCanvasHeader}>
-                <View style={styles.canvasLiveDot} />
-                <Text style={styles.canvasHeaderText}>
-                  {user?.gymName || 'GymDeck'} Official Companion
+            {/* 3. Message Template Studio (Clean, without variable token row) */}
+            <View style={[styles.contentCard, isDark && styles.contentCardDark]}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardHeaderLeft}>
+                  <View style={[styles.stepDot, isDark ? styles.stepDotDark : styles.stepDotLight]}>
+                    <Text style={[styles.stepDotText, isDark ? styles.textWhite : { color: '#0F172A' }]}>3</Text>
+                  </View>
+                  <Text style={[styles.cardTitle, isDark && styles.textWhite]}>
+                    Message Template
+                  </Text>
+                </View>
+                <Text style={styles.charCountText}>
+                  {messageBody.length} characters
                 </Text>
               </View>
 
-              <View style={styles.chatBubble}>
-                <Text style={styles.chatBubbleText}>{renderedPreview}</Text>
-                <View style={styles.chatBubbleMeta}>
-                  <Text style={styles.chatBubbleTime}>Just now</Text>
-                  <CheckCheck size={13} color="#34B7F1" style={{ marginLeft: 3 }} />
+              {/* Text Input */}
+              <View style={[styles.editorWrap, isDark && styles.editorWrapDark]}>
+                <TextInput
+                  style={[styles.editorInput, isDark && styles.textWhite]}
+                  multiline
+                  numberOfLines={4}
+                  value={messageBody}
+                  onChangeText={setMessageBody}
+                  placeholder="Type broadcast message here..."
+                  placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+                />
+              </View>
+            </View>
+
+            {/* 4. Live WhatsApp Preview Bubble */}
+            <View style={[styles.contentCard, isDark && styles.contentCardDark]}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardHeaderLeft}>
+                  <OfficialWhatsAppBrandIcon size={14} color="#059669" />
+                  <Text style={[styles.cardTitle, { marginLeft: 6 }, isDark && styles.textWhite]}>
+                    Live Preview
+                  </Text>
+                </View>
+                <Text style={styles.previewTargetText}>
+                  Recipient: {previewMember?.fullName || 'Rahul Sharma'}
+                </Text>
+              </View>
+
+              <View style={styles.previewCanvas}>
+                <View style={styles.previewChatBubble}>
+                  <Text style={styles.previewMessageText}>{renderedPreview}</Text>
+                  <View style={styles.previewMetaRow}>
+                    <Text style={styles.previewTimeText}>Just now</Text>
+                    <CheckCheck size={13} color="#34B7F1" style={{ marginLeft: 4 }} />
+                  </View>
                 </View>
               </View>
             </View>
@@ -812,9 +952,9 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <Send size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  <OfficialWhatsAppBrandIcon size={18} color="#FFFFFF" />
                   <Text style={styles.dispatchBtnText}>
-                    Send to {selectedMemberIds.length} Members
+                    Send Broadcast ({selectedMemberIds.length} Members)
                   </Text>
                 </>
               )}
@@ -822,97 +962,59 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
           </View>
         )}
 
-        {/* ── TAB 2: GATEWAY COCKPIT ── */}
-        {activeTab === 'overview' && (
-          <View style={styles.tabContentBlock}>
-            <View style={[styles.cockpitCard, isDark && styles.cockpitCardDark]}>
-              <View style={styles.cockpitCardTop}>
-                <View style={styles.cockpitIconBox}>
-                  <Smartphone size={20} color="#0F172A" />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={[styles.cockpitTitle, isDark && styles.memberNameDark]}>
-                    Local Companion Gateway
-                  </Text>
-                  <Text style={styles.cockpitSubtitle}>
-                    {isConnected
-                      ? `Paired Device: ${connection?.phoneNumber || '+91 Official'}`
-                      : 'Standby · Open WhatsApp to Pair'}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.statBadge,
-                    { backgroundColor: isConnected ? '#DCFCE7' : '#FEE2E2' },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statBadgeText,
-                      { color: isConnected ? '#15803D' : '#991B1B' },
-                    ]}
-                  >
-                    {connection?.status || 'OFFLINE'}
-                  </Text>
-                </View>
-              </View>
-
-              {connection?.qrCode && !isConnected && (
-                <View style={styles.qrContainer}>
-                  <View style={styles.qrBox}>
-                    <QrCode size={110} color="#0F172A" />
-                  </View>
-                  <Text style={styles.qrNotice}>
-                    Open WhatsApp &gt; Settings &gt; Linked Devices &gt; Link a Device
-                  </Text>
-                </View>
-              )}
-
-              <View style={{ marginTop: 16 }}>
-                {!isConnected ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
-                    onPress={handleConnect}
-                    activeOpacity={0.8}
-                  >
-                    <QrCode size={15} color="#FFFFFF" strokeWidth={2.4} />
-                    <Text style={styles.actionBtnText}>Connect Gym WhatsApp</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
-                    onPress={handleDisconnect}
-                    activeOpacity={0.8}
-                  >
-                    <Unplug size={15} color="#FFFFFF" strokeWidth={2.4} />
-                    <Text style={styles.actionBtnText}>Disconnect WhatsApp Session</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+        {/* ── TAB 2: AUTOMATIONS ── */}
+        {activeTab === 'automation' && (
+          <View style={styles.tabContent}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>
+                Automatic System Triggers
+              </Text>
+              <Text style={styles.sectionSub}>No manual send required</Text>
             </View>
+
+            {autoRules.map((rule) => (
+              <View
+                key={rule.id}
+                style={[styles.autoCard, isDark && styles.autoCardDark]}
+              >
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={[styles.autoTitle, isDark && styles.textWhite]}>
+                    {rule.title}
+                  </Text>
+                  <Text style={styles.autoDesc}>{rule.description}</Text>
+                </View>
+                <Switch
+                  value={rule.enabled}
+                  onValueChange={() => handleToggleAutomation(rule.id, rule.enabled)}
+                  trackColor={{ false: '#CBD5E1', true: '#10B981' }}
+                  thumbColor="#FFFFFF"
+                  disabled={savingRuleId === rule.id}
+                />
+              </View>
+            ))}
           </View>
         )}
 
-        {/* ── TAB 3: MESSAGE HISTORY ── */}
+        {/* ── TAB 3: MESSAGE HISTORY / LOGS ── */}
         {activeTab === 'history' && (
-          <View style={styles.tabContentBlock}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
-                Recent Broadcast Activity
+          <View style={styles.tabContent}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>
+                Broadcast Dispatch Logs
               </Text>
-              <Text style={styles.helperNotice}>{messages.length} Dispatched</Text>
+              <Text style={styles.sectionSub}>{messages.length} Records</Text>
             </View>
 
             {historyLoading ? (
-              <ActivityIndicator color="#0284C7" style={{ marginVertical: 30 }} />
+              <ActivityIndicator color="#059669" style={{ marginVertical: 32 }} />
             ) : messages.length === 0 ? (
               <View style={[styles.emptyWrap, isDark && styles.emptyWrapDark]}>
                 <History size={32} color="#94A3B8" />
-                <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>
-                  No Broadcasts Dispatched
+                <Text style={[styles.emptyTitle, isDark && styles.textWhite]}>
+                  No Broadcasts Yet
                 </Text>
-                <Text style={styles.emptySubtitle}>
-                  Campaigns sent through Composer Studio will be logged here.
+                <Text style={styles.emptySub}>
+                  Messages dispatched from Composer Studio will appear here with delivery receipts.
                 </Text>
               </View>
             ) : (
@@ -922,12 +1024,12 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                   style={[styles.historyCard, isDark && styles.historyCardDark]}
                 >
                   <View style={styles.historyCardHeader}>
-                    <Text style={[styles.historyCardTitle, isDark && styles.memberNameDark]}>
-                      {item.title || item.intent || 'Broadcast Message'}
+                    <Text style={[styles.historyTitle, isDark && styles.textWhite]}>
+                      {item.title || item.intent || 'Broadcast Campaign'}
                     </Text>
                     <View
                       style={[
-                        styles.statBadge,
+                        styles.statusPill,
                         {
                           backgroundColor:
                             item.status === 'SENT' || item.status === 'DELIVERED'
@@ -938,7 +1040,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                     >
                       <Text
                         style={[
-                          styles.statBadgeText,
+                          styles.statusPillText,
                           {
                             color:
                               item.status === 'SENT' || item.status === 'DELIVERED'
@@ -951,17 +1053,14 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                       </Text>
                     </View>
                   </View>
-                  <Text
-                    style={[styles.historyCardBody, isDark && styles.statLabelDark]}
-                    numberOfLines={2}
-                  >
+                  <Text style={styles.historyBody} numberOfLines={2}>
                     {item.body}
                   </Text>
-                  <View style={styles.historyCardFooter}>
-                    <Text style={styles.historyCardMeta}>
+                  <View style={styles.historyFooter}>
+                    <Text style={styles.historyMeta}>
                       {item.sentCount} / {item.totalRecipients} Delivered
                     </Text>
-                    <Text style={styles.historyCardMeta}>
+                    <Text style={styles.historyMeta}>
                       {new Date(item.createdAt).toLocaleDateString([], {
                         month: 'short',
                         day: 'numeric',
@@ -973,206 +1072,109 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
             )}
           </View>
         )}
-
-        {/* ── TAB 4: AUTOMATIONS ── */}
-        {activeTab === 'automation' && (
-          <View style={styles.tabContentBlock}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>
-                Automated System Triggers
-              </Text>
-              <Text style={styles.helperNotice}>Synced with backend</Text>
-            </View>
-
-            {autoRules.map((auto) => (
-              <View
-                key={auto.id}
-                style={[styles.autoCard, isDark && styles.autoCardDark]}
-              >
-                <View style={{ flex: 1, marginRight: 12 }}>
-                  <Text style={[styles.autoTitle, isDark && styles.memberNameDark]}>
-                    {auto.title}
-                  </Text>
-                  <Text style={[styles.autoDesc, isDark && styles.statLabelDark]}>
-                    {auto.description}
-                  </Text>
-                </View>
-                <Switch
-                  value={auto.enabled}
-                  onValueChange={() => handleToggleAutomation(auto.id, auto.enabled)}
-                  trackColor={{ false: '#CBD5E1', true: '#10B981' }}
-                  thumbColor="#FFFFFF"
-                  disabled={savingRuleId === auto.id}
-                />
-              </View>
-            ))}
-          </View>
-        )}
       </View>
 
       {/* ============================================================ */}
-      {/* 5. VIEW MODE SELECTION MODAL                                 */}
-      {/* ============================================================ */}
-      <Modal
-        visible={isViewMenuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setViewMenuOpen(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setViewMenuOpen(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.modalCard, isDark && styles.modalCardDark]}>
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalHeaderTitle, isDark && styles.statLabelDark]}>
-                    SELECT WORKSPACE MODE
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setViewMenuOpen(false)}
-                    style={styles.modalCloseSquare}
-                  >
-                    <X size={15} color={isDark ? '#CBD5E1' : '#475569'} />
-                  </TouchableOpacity>
-                </View>
-
-                {SUB_TABS.map((tab) => {
-                  const isSelected = activeTab === tab.id;
-                  const Icon = tab.icon;
-                  return (
-                    <TouchableOpacity
-                      key={tab.id}
-                      style={[
-                        styles.menuRow,
-                        isSelected && (isDark ? styles.menuRowActiveDark : styles.menuRowActive),
-                      ]}
-                      onPress={() => {
-                        setActiveTab(tab.id as any);
-                        setViewMenuOpen(false);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.menuRowLeft}>
-                        <View
-                          style={[
-                            styles.menuIconCircle,
-                            {
-                              backgroundColor: isSelected
-                                ? '#0284C7'
-                                : isDark
-                                ? '#334155'
-                                : '#F1F5F9',
-                            },
-                          ]}
-                        >
-                          <Icon
-                            size={15}
-                            color={isSelected ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475569'}
-                            strokeWidth={2.2}
-                          />
-                        </View>
-                        <View style={{ marginLeft: 10 }}>
-                          <Text
-                            style={[
-                              styles.menuItemLabel,
-                              isDark && styles.memberNameDark,
-                              isSelected && { color: '#0284C7', fontWeight: '800' },
-                            ]}
-                          >
-                            {tab.label}
-                          </Text>
-                          <Text style={styles.menuItemDesc}>{tab.desc}</Text>
-                        </View>
-                      </View>
-                      {isSelected && <Check size={16} color="#0284C7" strokeWidth={2.4} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* ============================================================ */}
-      {/* 6. CAMPAIGN INTENT SELECTION MODAL                           */}
-      {/* ============================================================ */}
-      <Modal
-        visible={isIntentMenuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIntentMenuOpen(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setIntentMenuOpen(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.modalCard, isDark && styles.modalCardDark]}>
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalHeaderTitle, isDark && styles.statLabelDark]}>
-                    SELECT CAMPAIGN INTENT
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setIntentMenuOpen(false)}
-                    style={styles.modalCloseSquare}
-                  >
-                    <X size={15} color={isDark ? '#CBD5E1' : '#475569'} />
-                  </TouchableOpacity>
-                </View>
-
-                {NOTIFICATION_TYPES.map((type) => {
-                  const isSelected = selectedIntent === type.intent;
-                  const Icon = type.icon;
-                  return (
-                    <TouchableOpacity
-                      key={type.id}
-                      style={[
-                        styles.menuRow,
-                        isSelected && (isDark ? styles.menuRowActiveDark : styles.menuRowActive),
-                      ]}
-                      onPress={() => {
-                        handleSelectIntent(type.intent);
-                        setIntentMenuOpen(false);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.menuRowLeft}>
-                        <View
-                          style={[
-                            styles.menuIconCircle,
-                            { backgroundColor: `${type.accentColor}18` },
-                          ]}
-                        >
-                          <Icon size={16} color={type.accentColor} strokeWidth={2.2} />
-                        </View>
-                        <View style={{ marginLeft: 10 }}>
-                          <Text
-                            style={[
-                              styles.menuItemLabel,
-                              isDark && styles.memberNameDark,
-                              isSelected && { color: type.accentColor, fontWeight: '800' },
-                            ]}
-                          >
-                            {type.label}
-                          </Text>
-                          <Text style={styles.menuItemDesc}>{type.desc}</Text>
-                        </View>
-                      </View>
-                      {isSelected && <Check size={16} color={type.accentColor} strokeWidth={2.4} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* ============================================================ */}
-      {/* 7. BRAND SIGNATURE FOOTER                                    */}
-      {/* Engineered with ample padding so it clears bottom nav bar    */}
+      {/* 5. BRAND SIGNATURE FOOTER                                    */}
       {/* ============================================================ */}
       <View style={{ paddingBottom: layout.bottomNavHeight + 64 }}>
         <BrandSignatureFooter isDark={isDark} />
       </View>
+
+      {/* ============================================================ */}
+      {/* 6. LINK PHONE QR MODAL                                       */}
+      {/* ============================================================ */}
+      <Modal
+        visible={showQrModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowQrModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContentCard, isDark && styles.modalContentCardDark]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={styles.modalIconWrap}>
+                  <QrCode size={18} color="#059669" />
+                </View>
+                <Text style={[styles.modalTitle, isDark && styles.textWhite]}>
+                  Link Gym Phone
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowQrModal(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.modalCloseBtn}
+              >
+                <X size={18} color={isDark ? '#94A3B8' : '#64748B'} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.qrCanvasWrap}>
+              {isConnected ? (
+                <View style={styles.qrSuccessBox}>
+                  <View style={styles.shieldCircle}>
+                    <ShieldCheck size={38} color="#059669" strokeWidth={2.4} />
+                  </View>
+                  <Text style={[styles.qrSuccessTitle, isDark && styles.textWhite]}>
+                    Gateway Connected
+                  </Text>
+                  <Text style={styles.qrSuccessNumber}>
+                    {connection?.phoneNumber || 'Active Gym Companion'}
+                  </Text>
+                  <Text style={styles.qrSuccessSub}>
+                    Your WhatsApp pipeline is operational. Automated messages, payment receipts, and member alerts are flowing smoothly.
+                  </Text>
+                </View>
+              ) : connection?.qrCode ? (
+                <View style={styles.qrDisplayBox}>
+                  <View style={styles.qrCodeBorder}>
+                    <Image
+                      source={{ uri: connection.qrCode }}
+                      style={styles.qrImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <Text style={styles.qrInstructions}>
+                    1. Open WhatsApp on the gym phone{'\n'}
+                    2. Tap Settings &gt; Linked Devices &gt; Link a Device{'\n'}
+                    3. Point this camera at the code
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.qrLoadingBox}>
+                  <ActivityIndicator size="large" color="#059669" />
+                  <Text style={styles.qrLoadingText}>
+                    Generating fresh pairing session...
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={{ marginTop: 14 }}>
+              {!isConnected ? (
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: '#059669' }]}
+                  onPress={handleConnect}
+                  activeOpacity={0.8}
+                >
+                  <QrCode size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={styles.actionBtnText}>Generate New QR</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
+                  onPress={handleDisconnect}
+                  activeOpacity={0.8}
+                >
+                  <Unplug size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={styles.actionBtnText}>Disconnect WhatsApp Session</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1181,341 +1183,685 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  textWhite: {
+    color: '#F8FAFC',
+  },
 
-  /* 1. Header Card */
-  headerCardContainer: {
+  /* 1. Signature Hero Card */
+  heroSection: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 4,
   },
-  executiveHeaderCard: {
-    backgroundColor: '#0F172A', // Dark Navy matching other modules
-    borderRadius: 14,
+  emeraldHeroCard: {
+    borderRadius: 18,
+    minHeight: 160,
+    backgroundColor: '#075E54',
     paddingHorizontal: 18,
-    paddingVertical: 20,
-    paddingTop: 28,
-    minHeight: 96,
+    paddingVertical: 16,
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowColor: '#075E54',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  watermarkWrap: {
+  meshAura: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  heroWatermark: {
     position: 'absolute',
     right: -10,
-    top: -10,
+    bottom: -15,
   },
-  headerTopRow: {
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    zIndex: 2,
   },
-  overlineContainer: {
+  brandTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  officialBrandLogo: {
+    width: 24,
+    height: 24,
+  } as ImageStyle,
+  brandBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.9,
+  },
+  telemetryCapsule: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+  },
+  telemetryStatusText: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+
+  heroContent: {
+    marginTop: 12,
+    zIndex: 2,
+  },
+  heroMainTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
+  },
+  linkedNumberPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  linkedNumberText: {
+    fontSize: 11.5,
+    fontFamily: 'monospace',
+    fontWeight: '800',
+    color: '#064E3B',
+  },
+  heroSubText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.86)',
+    lineHeight: 16,
+    fontWeight: '500',
+    marginTop: 3,
+    maxWidth: 290,
+  },
+
+  heroActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    zIndex: 2,
+  },
+  heroPrimaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  headerOverline: {
-    fontSize: 10,
+  heroPrimaryBtnText: {
+    fontSize: 11.5,
     fontWeight: '800',
-    color: '#94A3B8',
-    letterSpacing: 1.2,
+    color: '#064E3B',
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#F8FAFC',
-    letterSpacing: -0.4,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-
-  fixedWifiContainer: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  /* 2. 4 Stat Tiles Grid */
-  statsGrid: {
+  heroSecondaryBtn: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(239, 68, 68, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.45)',
+    paddingHorizontal: 12,
+    paddingVertical: 7.5,
+    borderRadius: 8,
+  },
+  heroDangerBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#FEE2E2',
+  },
+  heroRefreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 11,
+    paddingVertical: 7.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  heroRefreshText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  /* 2. Stats Strip */
+  statsStrip: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
-    gap: 10,
-    marginTop: 8,
+    gap: 8,
+    marginTop: 10,
   },
   statTile: {
-    flexBasis: '48%',
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   statTileDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
   },
-  statTileTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  statLabel: {
-    fontSize: 9,
+  statOverline: {
+    fontSize: 8.5,
     fontWeight: '800',
     color: '#64748B',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
-  statLabelDark: {
-    color: '#94A3B8',
-  },
-  statBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  statBadgeText: {
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 18,
+  statNumber: {
+    fontSize: 17,
     fontWeight: '900',
     color: '#0F172A',
-    marginBottom: 2,
+    marginTop: 2,
   },
-  statSubtext: {
-    fontSize: 10,
+  statCaption: {
+    fontSize: 9.5,
     color: '#94A3B8',
-    fontWeight: '500',
+    marginTop: 1,
   },
 
-  /* 3. Navigation Dropdowns */
-  navigationSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  /* 3. Sub-Navigation Tabs */
+  subTabsContainer: {
     paddingHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 10,
+    marginTop: 12,
   },
-  dropdownPill: {
+  subTabsTrack: {
+    flexDirection: 'row',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 3,
+  },
+  subTabsTrackDark: {
+    backgroundColor: '#1E293B',
+  },
+  subTabItem: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 42,
-    gap: 6,
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  dropdownPillDark: {
+  subTabItemActive: {
     backgroundColor: '#0F172A',
-    borderColor: '#0284C7',
   },
-  dropdownPillText: {
-    flex: 1,
+  subTabText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#0284C7',
+    color: '#475569',
   },
-  dropdownPillTextDark: {
-    color: '#38BDF8',
+  subTabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
 
-  /* 4. Tab Workspace */
+  /* 4. Workspace Content */
   workspaceBody: {
     paddingHorizontal: 16,
-    marginTop: 6,
+    marginTop: 12,
   },
-  tabContentBlock: {
-    gap: 12,
+  tabContent: {
+    gap: 10,
   },
-  sectionHeaderRow: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
   },
-  sectionTitleDark: {
-    color: '#F8FAFC',
+  sectionSub: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
-  counterBadge: {
+
+  /* Reusable Content Cards */
+  contentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+  },
+  contentCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepDotLight: {
+    backgroundColor: '#E2E8F0',
+  },
+  stepDotDark: {
+    backgroundColor: '#334155',
+  },
+  stepDotText: {
+    fontSize: 10.5,
+    fontWeight: '900',
+  },
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+
+  /* Intent Dropdown */
+  intentSelectorTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    backgroundColor: '#F8FAFC',
+  },
+  intentSelectorTriggerDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  intentMiniIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  intentMiniIconDark: {
+    backgroundColor: '#334155',
+  },
+  intentTriggerLabel: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  intentMenuDrop: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 6,
+    gap: 3,
+  },
+  intentMenuDropDark: {
+    borderTopColor: '#334155',
+  },
+  intentMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  intentMenuItemActive: {
+    backgroundColor: '#F1F5F9',
+  },
+  intentMenuItemActiveDark: {
+    backgroundColor: '#1E293B',
+  },
+  intentIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  intentIconWrapDark: {
+    backgroundColor: '#1E293B',
+  },
+  intentItemTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  intentItemSub: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+  intentCheckmarkBox: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Audience & Segment */
+  recipientBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  counterBadgeText: {
-    fontSize: 10,
+  recipientBadgeDark: {
+    backgroundColor: '#1E293B',
+  },
+  recipientBadgeText: {
+    fontSize: 10.5,
     fontWeight: '800',
     color: '#475569',
   },
-  helperNotice: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-
-  /* Rails */
-  segmentRail: {
+  audienceControlRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    paddingBottom: 2,
+    marginTop: 4,
   },
-  segmentPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  audienceSearchWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 9,
+    height: 38,
+    gap: 6,
+  },
+  audienceSearchWrapDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
+  },
+  audienceSearchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: '#0F172A',
+    paddingVertical: 0,
+  },
+  audienceDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 10,
+    height: 38,
+  },
+  audienceDropdownBtnDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  audienceDropdownText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    maxWidth: 95,
+  },
+  segmentMenuDrop: {
+    marginTop: 8,
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
   },
-  segmentPillDark: {
+  segmentMenuDropDark: {
+    backgroundColor: '#0F172A',
     borderColor: '#334155',
+  },
+  segmentMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  segmentMenuItemActive: {
+    backgroundColor: '#F1F5F9',
+  },
+  segmentMenuItemActiveDark: {
     backgroundColor: '#1E293B',
   },
-  segmentPillActive: {
+  segmentMenuItemText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  segmentMenuItemTextActive: {
+    color: '#0F172A',
+    fontWeight: '800',
+  },
+
+  /* Search Matches Drawer */
+  searchMatchesCard: {
+    marginTop: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 10,
+  },
+  searchMatchesCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
+  },
+  searchMatchesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  searchMatchesTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  searchToggleAllText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
+  },
+  searchNoMatchesBox: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  searchNoMatchesText: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  searchMatchesList: {
+    gap: 4,
+  },
+  searchMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  searchMemberRowDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  searchMemberRowActive: {
+    borderColor: '#0F172A',
+    backgroundColor: '#F8FAFC',
+  },
+  searchMemberRowActiveDark: {
+    borderColor: '#38BDF8',
+    backgroundColor: '#0F172A',
+  },
+  searchMemberInfoCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  searchMemberName: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    lineHeight: 16,
+  },
+  searchMemberDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  searchMemberPhone: {
+    fontSize: 10.5,
+    color: '#64748B',
+    fontFamily: 'monospace',
+    fontWeight: '600',
+  },
+  searchMemberDot: {
+    fontSize: 9,
+    color: '#94A3B8',
+  },
+  searchMemberPlan: {
+    fontSize: 10.5,
+    color: '#0284C7',
+    fontWeight: '700',
+    maxWidth: 130,
+  },
+  searchCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  searchCheckboxActive: {
     backgroundColor: '#0F172A',
     borderColor: '#0F172A',
   },
-  segmentPillText: {
-    fontSize: 11,
+  searchMoreCountText: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+
+  /* Variables Dock & Editor */
+  charCountText: {
+    fontSize: 10,
+    color: '#94A3B8',
     fontWeight: '700',
-    color: '#475569',
   },
-  segmentPillTextDark: {
-    color: '#CBD5E1',
-  },
-  segmentPillTextActive: {
-    color: '#FFFFFF',
-  },
-
-  variablesRail: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingBottom: 2,
-  },
-  variablePill: {
-    backgroundColor: '#F0F9FF',
+  editorWrap: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#BAE6FD',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 7,
+    borderColor: '#E2E8F0',
+    padding: 10,
   },
-  variablePillText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: '#0369A1',
+  editorWrapDark: {
+    backgroundColor: '#0B132B',
+    borderColor: '#1E293B',
   },
-
-  /* Editor */
-  editorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    padding: 12,
-  },
-  editorCardDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-  },
-  editorTextInput: {
+  editorInput: {
     fontSize: 12.5,
     lineHeight: 18,
     color: '#0F172A',
-    minHeight: 74,
+    minHeight: 68,
     textAlignVertical: 'top',
   },
-  editorTextInputDark: {
-    color: '#F8FAFC',
-  },
 
-  /* Live Phone Canvas */
-  whatsappPhoneCanvas: {
-    backgroundColor: '#E5DDD5',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  phoneCanvasHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  canvasLiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-    marginRight: 6,
-  },
-  canvasHeaderText: {
+  /* WhatsApp Preview Bubble */
+  previewTargetText: {
     fontSize: 10.5,
-    fontWeight: '700',
-    color: '#4B5563',
+    color: '#64748B',
+    fontWeight: '600',
   },
-  chatBubble: {
+  previewCanvas: {
+    backgroundColor: '#E5DDD5',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#D4C8BE',
+  },
+  previewChatBubble: {
     backgroundColor: '#E7FFDB',
     borderRadius: 10,
-    borderTopLeftRadius: 3,
-    padding: 10,
-    maxWidth: '90%',
+    borderTopLeftRadius: 2,
+    padding: 8,
+    maxWidth: '92%',
     alignSelf: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 1,
   },
-  chatBubbleText: {
+  previewMessageText: {
     fontSize: 12,
     lineHeight: 17,
     color: '#111827',
   },
-  chatBubbleMeta: {
+  previewMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
     marginTop: 3,
   },
-  chatBubbleTime: {
+  previewTimeText: {
     fontSize: 9.5,
     color: '#6B7280',
   },
@@ -1525,28 +1871,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#25D366',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
     gap: 8,
-    marginTop: 8,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    marginTop: 2,
+    shadowColor: '#25D366',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
   dispatchBtnDisabled: {
     backgroundColor: '#CBD5E1',
     shadowOpacity: 0,
   },
   dispatchBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '900',
     color: '#FFFFFF',
   },
 
-  /* Cockpit Card */
+  /* Cockpit / QR */
   cockpitCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
@@ -1555,47 +1901,113 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   cockpitCardDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
   },
-  cockpitCardTop: {
+  cockpitTop: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   cockpitIconBox: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 10,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#ECFDF5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cockpitTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     color: '#0F172A',
   },
-  cockpitSubtitle: {
+  cockpitSub: {
     fontSize: 11,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 1,
   },
-  qrContainer: {
+  statusPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  statusPillText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  qrCanvasWrap: {
+    marginTop: 16,
     alignItems: 'center',
-    marginTop: 18,
-  },
-  qrBox: {
-    padding: 14,
-    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    minHeight: 220,
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    padding: 16,
   },
-  qrNotice: {
-    fontSize: 10.5,
+  qrSuccessBox: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  shieldCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  qrSuccessTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  qrSuccessNumber: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    fontWeight: '700',
+    color: '#059669',
+    marginTop: 2,
+  },
+  qrSuccessSub: {
+    fontSize: 11,
     color: '#64748B',
-    marginTop: 10,
     textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 6,
+    maxWidth: 280,
+  },
+  qrDisplayBox: {
+    alignItems: 'center',
+  },
+  qrCodeBorder: {
+    padding: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  qrImage: {
+    width: 170,
+    height: 170,
+  } as ImageStyle,
+  qrInstructions: {
+    fontSize: 10.5,
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  qrLoadingBox: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  qrLoadingText: {
+    fontSize: 11,
+    color: '#64748B',
   },
   actionBtn: {
     flexDirection: 'row',
@@ -1611,48 +2023,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  /* History & Automation */
-  historyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 12,
-  },
-  historyCardDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-  },
-  historyCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  historyCardTitle: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  historyCardBody: {
-    fontSize: 11.5,
-    color: '#64748B',
-    lineHeight: 16,
-  },
-  historyCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  historyCardMeta: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
-  },
-
+  /* Automations */
   autoCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1661,14 +2032,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 12,
+    padding: 14,
   },
   autoCardDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
   },
   autoTitle: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
   },
@@ -1678,7 +2049,47 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* Empty state */
+  /* History / Logs */
+  historyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+  },
+  historyCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  historyCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  historyTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  historyBody: {
+    fontSize: 11.5,
+    color: '#64748B',
+    lineHeight: 16,
+  },
+  historyFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  historyMeta: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
   emptyWrap: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -1688,8 +2099,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyWrapDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
   },
   emptyTitle: {
     fontSize: 14,
@@ -1697,100 +2108,61 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginTop: 8,
   },
-  emptyTitleDark: {
-    color: '#F8FAFC',
-  },
-  emptySubtitle: {
+  emptySub: {
     fontSize: 11,
     color: '#64748B',
     textAlign: 'center',
     marginTop: 2,
   },
 
-  /* Modals */
-  modalOverlay: {
+  /* Link Phone QR Modal */
+  modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  modalCard: {
+  modalContentCard: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 360,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 10,
   },
-  modalCardDark: {
-    backgroundColor: '#1E293B',
+  modalContentCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+    borderWidth: 1,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  modalHeaderTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.8,
-  },
-  modalCloseSquare: {
-    width: 28,
-    height: 28,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
-  },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 8,
-  },
-  menuRowActive: {
-    backgroundColor: '#F0F9FF',
-    borderColor: '#BAE6FD',
-  },
-  menuRowActiveDark: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0284C7',
-  },
-  menuRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  menuIconCircle: {
+  modalIconWrap: {
     width: 32,
     height: 32,
     borderRadius: 8,
+    backgroundColor: '#ECFDF5',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuItemLabel: {
-    fontSize: 12.5,
-    fontWeight: '700',
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: '800',
     color: '#0F172A',
   },
-  menuItemDesc: {
-    fontSize: 10,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  memberNameDark: {
-    color: '#F8FAFC',
+  modalCloseBtn: {
+    padding: 4,
   },
 });
+export default WhatsAppHubView;

@@ -50,6 +50,8 @@ export interface WhatsAppAudienceMember {
   expiresAt?: string;
   trainerName?: string;
   whatsappConsent?: boolean;
+  photoUrl?: string | null;
+  gender?: string | null;
 }
 
 export interface WhatsAppMessageJob {

@@ -48,6 +48,7 @@ export interface MemberContext {
   trainerName: string | null;
   latestPaymentAmount: number | null;
   latestPaymentStatus: string | null;
+  gender: string | null;
   profilePhotoUrl?: string | null;
 }
 
@@ -157,6 +158,7 @@ export class WhatsAppMemberContextService {
         phone: gymMembers.phone,
         membershipStatus: gymMembers.membershipStatus,
         expiresAt: gymMembers.expiresAt,
+        gender: gymMembers.gender,
         profilePhotoUrl: gymMembers.profilePhotoUrl,
       })
       .from(gymMembers)
@@ -178,6 +180,7 @@ export class WhatsAppMemberContextService {
         phone: gymMembers.phone,
         membershipStatus: gymMembers.membershipStatus,
         expiresAt: gymMembers.expiresAt,
+        gender: gymMembers.gender,
         profilePhotoUrl: gymMembers.profilePhotoUrl,
       })
       .from(gymMembers)
@@ -200,7 +203,8 @@ export class WhatsAppMemberContextService {
       phone: string;
       membershipStatus: string;
       expiresAt: Date | null;
-      profilePhotoUrl?: string | null;
+      gender: string | null;
+  profilePhotoUrl?: string | null;
     }>
   ): Promise<MemberContext[]> {
     const ids = members.map((member) => member.id);
@@ -290,6 +294,7 @@ export class WhatsAppMemberContextService {
         trainerName: trainerByMember.get(member.id) || null,
         latestPaymentAmount: payment?.amount ?? null,
         latestPaymentStatus: payment?.status ?? null,
+        gender: member.gender || null,
         profilePhotoUrl: member.profilePhotoUrl || null,
       };
     });
@@ -342,6 +347,8 @@ export class WhatsAppMemberContextService {
       membershipStatus: member.membershipStatus,
       planName: member.planName,
       membershipExpiry: formatWhatsAppDate(member.expiresAt),
+      gender: member.gender || null,
+      photoUrl: member.profilePhotoUrl || null,
       profilePhotoUrl: member.profilePhotoUrl || null,
     };
   }

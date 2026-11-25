@@ -620,7 +620,6 @@ const renderCategoryLucideIcon = (
 };
 
 const CATEGORIES = [
-  { id: 'whatsapp-hub', label: 'WhatsApp', renderIcon: (isDark: boolean, active: boolean) => <OfficialWhatsAppIcon size={22} color={active ? (isDark ? '#38BDF8' : '#25D366') : (isDark ? '#CBD5E1' : '#0F172A')} /> },
   { id: 'members', label: 'Members', renderIcon: renderMembersCategoryIcon },
   { id: 'past-members', label: 'Past Members', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(UserMinus, isDark, active) },
   { id: 'plans', label: 'Plans', renderIcon: renderPlansCategoryIcon },
