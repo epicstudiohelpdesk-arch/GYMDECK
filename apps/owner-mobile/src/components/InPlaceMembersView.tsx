@@ -50,6 +50,7 @@ import {
   UserX,
   User,
   AlertCircle,
+  AlertTriangle,
   Dumbbell,
   Check,
   UserPlus,
@@ -94,6 +95,7 @@ import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop, SvgXml } from 'rea
 import { useLocalMembers } from '../hooks/useLocalMembers';
 import { useLocalPlans } from '../hooks/useLocalPlans';
 import { localMutationService } from '../services/LocalMutationService';
+import { OwnerMembersService } from '../services/api/ownerMembersService';
 import { isDatabaseOpen } from '../database/LocalDatabaseManager';
 import { Avatar } from './ui/Avatar';
 import { getDefaultAvatarXml } from '../utils/avatarGenerator';
@@ -132,6 +134,14 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
   const [selectedStatus, setSelectedStatus] = useState('ACTIVE');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [memberFormMode, setMemberFormMode] = useState<'add' | 'edit'>('add');
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+
+  // Setup Guide Style Deletion Confirmation Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
+  const deleteModalBackdropAnim = useRef(new Animated.Value(0)).current;
+  const deleteModalScaleAnim = useRef(new Animated.Value(0.92)).current;
 
   // View Member Profile Modal State & Animations (Bottom Sheet Modal with Embedded Luxury Profile Card)
   const [isViewMemberModalOpen, setIsViewMemberModalOpen] = useState(false);
@@ -417,6 +427,163 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
     });
   };
 
+  useEffect(() => {
+    if (isDeleteModalOpen) {
+      deleteModalScaleAnim.setValue(0.95);
+      Animated.parallel([
+        Animated.timing(deleteModalBackdropAnim, {
+          toValue: 1,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.spring(deleteModalScaleAnim, {
+          toValue: 1,
+          friction: 9,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(deleteModalBackdropAnim, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(deleteModalScaleAnim, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isDeleteModalOpen]);
+
+  const openDeleteModal = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    Animated.parallel([
+      Animated.timing(deleteModalBackdropAnim, {
+        toValue: 0,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(deleteModalScaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsDeleteModalOpen(false);
+    });
+  };
+
+  const handleConfirmPermanentDelete = async () => {
+    if (!selectedMemberForView?.id) return;
+    setIsDeletingMember(true);
+    const memberId = String(selectedMemberForView.id);
+    const memberName = selectedMemberForView.fullName || 'Member';
+
+    try {
+      // 1. Delete locally from SQLite & enqueue sync outbox mutation
+      if (isDatabaseOpen()) {
+        await localMutationService.deleteMember(memberId);
+      }
+      // 2. Call backend cloud service for instant sync if reachable
+      try {
+        await OwnerMembersService.deleteMember(memberId);
+      } catch (cloudErr) {
+        // If device is offline, local soft-delete with sync outbox guarantees eventual consistency
+        console.warn('Backend delete sync note:', cloudErr);
+      }
+
+      // 3. Trigger refetch to update mobile member directory immediately
+      refetch();
+
+      // 4. Close both delete confirmation overlay and view member modal smoothly
+      closeDeleteModal();
+      closeViewMemberModal();
+
+      Alert.alert(
+        'Member Deleted',
+        `${memberName}'s profile and account records have been permanently removed from the gym roster.`
+      );
+    } catch (err: any) {
+      Alert.alert('Deletion Error', err?.message || 'Failed to delete member profile. Please try again.');
+    } finally {
+      setIsDeletingMember(false);
+    }
+  };
+
+  // Prefill Member Form for Edit Mode (Exact Desktop Logic)
+  const openEditMemberModal = (member: any) => {
+    if (!member) return;
+
+    // Capture target member attributes cleanly
+    const targetId = String(member.id);
+    const targetFullName = member.fullName || '';
+    const targetPhone = member.phone || '';
+    const targetEmail = member.email || '';
+    const targetDob = member.dob || '';
+    const targetGender =
+      member.gender === 'FEMALE' || member.gender === 'Female'
+        ? 'Female'
+        : member.gender === 'OTHER' || member.gender === 'Other'
+        ? 'Other'
+        : 'Male';
+    const targetWhatsApp = member.alternatePhone || member.phone || '';
+    const targetAddress = member.address || '';
+    const targetPhoto = member.profilePhotoUrl || null;
+
+    let extractedHeight = member.height ? String(member.height) : '';
+    let extractedWeight = member.weight ? String(member.weight) : '';
+    let extractedBlood = member.bloodGroup || '';
+    if (member.notes && typeof member.notes === 'string') {
+      const parts = member.notes.split('|').map((s: string) => s.trim());
+      parts.forEach((p: string) => {
+        if (p.startsWith('Height:')) {
+          const val = p.replace('Height:', '').trim().split(' ')[0];
+          if (!extractedHeight && val) extractedHeight = val;
+        } else if (p.startsWith('Weight:')) {
+          const val = p.replace('Weight:', '').trim().split(' ')[0];
+          if (!extractedWeight && val) extractedWeight = val;
+        } else if (p.startsWith('Blood:')) {
+          const val = p.replace('Blood:', '').trim();
+          if (!extractedBlood && val) extractedBlood = val;
+        }
+      });
+    }
+
+    // Set form edit mode state
+    setMemberFormMode('edit');
+    setEditingMemberId(targetId);
+
+    // Prefill Page 1 fields
+    setFormFullName(targetFullName);
+    setFormContactNumber(targetPhone);
+    setFormEmail(targetEmail);
+    setFormDob(targetDob);
+    setFormGender(targetGender);
+    setFormWhatsAppNumber(targetWhatsApp);
+    setFormAddress(targetAddress);
+    setFormHeight(extractedHeight);
+    setFormWeight(extractedWeight);
+    setFormBloodGroup(extractedBlood);
+
+    // Prefill Page 2 Profile Photo
+    setFormProfilePhoto(targetPhoto);
+
+    // Set page to 1 & clear form errors
+    setRegPage(1);
+    setFormError(null);
+
+    // Keep Member Profile Modal OPEN as requested!
+    // Open Add Member Modal in edit mode immediately overlaying the profile modal
+    setIsAddMemberModalOpen(true);
+  };
+
   const closeAddMemberModal = () => {
     Animated.parallel([
       Animated.timing(addModalBackdropAnim, {
@@ -551,6 +718,108 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
     setFormError(null);
 
     try {
+      // ─────────────────────────────────────────────────────────────
+      // EDIT MEMBER MODE: Update existing member details
+      // ─────────────────────────────────────────────────────────────
+      if (memberFormMode === 'edit' && editingMemberId) {
+        // Compose physical & health notes
+        const notesParts: string[] = [];
+        if (formHeight) notesParts.push(`Height: ${formHeight} ${formHeightUnit}`);
+        if (formWeight) notesParts.push(`Weight: ${formWeight} ${formWeightUnit}`);
+        if (formBloodGroup) notesParts.push(`Blood: ${formBloodGroup}`);
+        if (formWhatsAppNumber && formWhatsAppNumber !== formContactNumber) {
+          notesParts.push(`WhatsApp: ${formWhatsAppNumber}`);
+        }
+        const notes = notesParts.length > 0 ? notesParts.join(' | ') : undefined;
+
+        if (isDatabaseOpen()) {
+          await localMutationService.updateMember(editingMemberId, {
+            fullName: formFullName.trim(),
+            phone: cleanPhone,
+            alternatePhone: formWhatsAppNumber.trim() || null,
+            email: formEmail.trim() || null,
+            gender: formGender.toUpperCase(),
+            dob: formDob.trim() || null,
+            address: formAddress.trim(),
+            profilePhotoUrl: formProfilePhoto || null,
+            notes: notes || null,
+          });
+        }
+
+        // Also call cloud backend if reachable
+        try {
+          await OwnerMembersService.updateMember(editingMemberId, {
+            fullName: formFullName.trim(),
+            phone: cleanPhone,
+            alternatePhone: formWhatsAppNumber.trim() || undefined,
+            email: formEmail.trim() || undefined,
+            gender: formGender.toUpperCase(),
+            dob: formDob.trim() || undefined,
+            address: formAddress.trim(),
+            notes: notes || undefined,
+          });
+        } catch (cloudErr) {
+          console.warn('Backend update sync note:', cloudErr);
+        }
+
+        // Refresh roster list
+        refetch();
+
+        // Instantly update the currently visible profile modal with the new edited attributes
+        setSelectedMemberForView((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            fullName: formFullName.trim(),
+            phone: cleanPhone,
+            alternatePhone: formWhatsAppNumber.trim() || undefined,
+            email: formEmail.trim() || undefined,
+            gender: formGender.toUpperCase(),
+            dob: formDob.trim() || undefined,
+            address: formAddress.trim(),
+            profilePhotoUrl: formProfilePhoto || prev.profilePhotoUrl,
+            notes: notes || prev.notes,
+          };
+        });
+
+        Alert.alert(
+          'Member Updated Successfully',
+          `${formFullName.trim()}'s profile details have been saved to the database.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setFormFullName('');
+                setFormContactNumber('');
+                setFormEmail('');
+                setFormDob('');
+                setFormGender('Male');
+                setFormWhatsAppNumber('');
+                setFormHeight('');
+                setFormWeight('');
+                setFormBloodGroup('');
+                setFormAddress('');
+                setFormSelectedPlanId(undefined);
+                setFormProfilePhoto(null);
+                setFormDocs({ aadhaar: null, residential: null, health: null, others: null });
+                setFormJoiningFee(0);
+                setFormGstEnabled(false);
+                setFormSelectedAddons({});
+                setFormCustomAddons([]);
+                setRegPage(1);
+                setMemberFormMode('add');
+                setEditingMemberId(null);
+                closeAddMemberModal();
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // NEW REGISTRATION MODE: Create & Enroll Member
+      // ─────────────────────────────────────────────────────────────
       const selectedPlan = availablePlans.find((p) => p.id === formSelectedPlanId);
       const planPrice = selectedPlan ? Number(selectedPlan.price) : 0;
       const addonsTotal = Object.values(formSelectedAddons).reduce((acc, curr) => acc + curr, 0) +
@@ -743,395 +1012,8 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
     }
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
-      {/* 1. Executive Filled Header Card with Increased Height & Watermark */}
-      <View
-        style={[
-          styles.headerCard,
-          {
-            backgroundColor: isDark ? '#090D16' : '#0B1120',
-            borderColor: isDark ? '#1E293B' : '#1E293B',
-          },
-        ]}
-      >
-        {/* Subtle Watermark Brand Logo Attached to Inner Bottom Right */}
-        <View style={styles.watermarkLogo} pointerEvents="none">
-          <Svg width={88} height={88} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
-              stroke="#94A3B8"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.16}
-            />
-            <Circle
-              cx="9"
-              cy="7"
-              r="4"
-              stroke="#94A3B8"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.16}
-            />
-            <Path
-              d="M22 21v-2a4 4 0 0 0-3-3.87"
-              stroke="#94A3B8"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.16}
-            />
-            <Path
-              d="M16 3.13a4 4 0 0 1 0 7.75"
-              stroke="#94A3B8"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.16}
-            />
-          </Svg>
-        </View>
-
-        <View style={styles.headerCardTop}>
-          <View style={{ flex: 1, zIndex: 1 }}>
-            <Text style={styles.headerOverline}>
-              DIRECTORY & ROSTER
-            </Text>
-            <Text style={styles.headerTitle}>
-              Member Directory
-            </Text>
-            <Text style={styles.headerSubtitle}>
-              Identity, contact, membership & profile records
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 2. Professional "Add New Member" Action Card with Sculpted Cutout */}
-      <View style={styles.addNewMemberOuterWrapper}>
-        <View
-          style={[
-            styles.addNewMemberBanner,
-            {
-              backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-              borderColor: isDark ? '#334155' : '#E2E8F0',
-            },
-          ]}
-        >
-          {/* Subtle Background Watermark Graphic attached to bottom */}
-          <View style={styles.addMemberWatermark} pointerEvents="none">
-            <UserPlus
-              size={54}
-              color={isDark ? '#94A3B8' : '#64748B'}
-              strokeWidth={1.5}
-              opacity={0.12}
-            />
-          </View>
-
-          {/* Left Content with Non-Boxed Modern Icon attached to bottom */}
-          <View style={styles.addMemberLeftContent}>
-            {/* Non-boxed modern professional icon aligned near bottom */}
-            <View style={styles.addMemberModernIconWrapper}>
-              <UserPlus size={22} color="#F97316" strokeWidth={2.4} />
-            </View>
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.addMemberTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
-                New Admission
-              </Text>
-              <Text style={[styles.addMemberSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
-                Register new client, assign plan & collect fee
-              </Text>
-            </View>
-          </View>
-
-          {/* Sculpted Cutout Pocket for the Button */}
-          <View
-            style={[
-              styles.buttonCutoutPocket,
-              {
-                backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
-                borderColor: isDark ? '#334155' : '#E2E8F0',
-              },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.addMemberSquaredBtn}
-              onPress={() => setIsAddMemberModalOpen(true)}
-              activeOpacity={0.85}
-            >
-              <Plus size={13} color="#FFFFFF" strokeWidth={3} />
-              <Text style={styles.addMemberCtaText}>Add Member</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {/* 3. Search & E-Commerce Filter Row (Side-by-side equal height) */}
-      <View style={styles.searchFilterRow}>
-        {/* Search Bar on the left */}
-        <View
-          style={[
-            styles.searchBox,
-            {
-              backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-              borderColor: isDark ? '#334155' : '#E2E8F0',
-            },
-          ]}
-        >
-          <Search size={16} color={isDark ? '#64748B' : '#94A3B8'} strokeWidth={2} />
-          <TextInput
-            style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#0F172A' }]}
-            placeholder="Search name, phone, code..."
-            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
-            value={search}
-            onChangeText={handleSearchChange}
-            autoCorrect={false}
-            clearButtonMode="while-editing"
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearchChange('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <X size={14} color={isDark ? '#94A3B8' : '#64748B'} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Filter Dropdown Button exactly matching search bar height & appearance */}
-        <TouchableOpacity
-          style={[
-            styles.filterTriggerBtn,
-            {
-              backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-              borderColor: selectedStatus !== 'ALL' ? '#F97316' : isDark ? '#334155' : '#E2E8F0',
-            },
-          ]}
-          onPress={() => setIsFilterDropdownOpen(true)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.filterTriggerInner}>
-            <Filter
-              size={15}
-              color={selectedStatus !== 'ALL' ? '#F97316' : isDark ? '#CBD5E1' : '#334155'}
-              strokeWidth={2.2}
-            />
-            <Text
-              style={[
-                styles.filterTriggerText,
-                {
-                  color: selectedStatus !== 'ALL' ? '#EA580C' : isDark ? '#FFFFFF' : '#0F172A',
-                  fontWeight: selectedStatus !== 'ALL' ? '800' : '700',
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {activeFilterMeta.label.split(' ')[0]}
-            </Text>
-            <ChevronDown
-              size={14}
-              color={selectedStatus !== 'ALL' ? '#F97316' : isDark ? '#94A3B8' : '#64748B'}
-              strokeWidth={2.2}
-            />
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Modern Filter Dropdown Modal (Custom Smooth Bottom Sheet with Independent Fade Backdrop) */}
-      <Modal
-        visible={isFilterDropdownOpen}
-        transparent
-        animationType="none"
-        onRequestClose={closeFilterModal}
-      >
-        <View style={styles.modalRoot}>
-          {/* Smooth Fade-Only Dim Backdrop (Soft black fade, completely stationary, no sliding) */}
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                opacity: backdropAnim,
-                backgroundColor: 'rgba(0, 0, 0, 0.42)',
-              },
-            ]}
-          >
-            <TouchableWithoutFeedback onPress={closeFilterModal}>
-              <View style={StyleSheet.absoluteFill} />
-            </TouchableWithoutFeedback>
-          </Animated.View>
-
-          {/* Bottom Sheet Card sliding up from bottom independently */}
-          <Animated.View
-            style={[
-              styles.sheetContainer,
-              {
-                transform: [{ translateY: sheetTranslateY }],
-              },
-            ]}
-            pointerEvents="box-none"
-          >
-            <TouchableWithoutFeedback>
-              <View
-                style={[
-                  styles.dropdownSheet,
-                  {
-                    backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
-                    borderColor: isDark ? '#334155' : '#E2E8F0',
-                  },
-                ]}
-              >
-                {/* Drag Handle Bar */}
-                <View style={styles.modalDragHandleContainer}>
-                  <View
-                    style={[
-                      styles.modalDragHandle,
-                      { backgroundColor: isDark ? '#334155' : '#CBD5E1' },
-                    ]}
-                  />
-                </View>
-
-                {/* Modal Header */}
-                <View style={[styles.modalHeaderRow, { borderBottomColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View
-                      style={[
-                        styles.modalHeaderIconBadge,
-                        {
-                          backgroundColor: isDark ? 'rgba(249, 115, 22, 0.15)' : '#FFF7ED',
-                          borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : '#FFEDD5',
-                        },
-                      ]}
-                    >
-                      <Filter size={16} color="#F97316" strokeWidth={2.4} />
-                    </View>
-                    <View>
-                      <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                        Filter Members
-                      </Text>
-                      <Text style={[styles.modalSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                        Select membership status to display
-                      </Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={closeFilterModal}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={[
-                      styles.modalCloseCircle,
-                      { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' },
-                    ]}
-                  >
-                    <X size={16} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.2} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Filter Options with Category Icons & Subtle Badges */}
-                <View style={styles.dropdownOptionsContainer}>
-                  {FILTER_OPTIONS.map((opt) => {
-                    const isSelected = selectedStatus === opt.id;
-                    const IconComponent = opt.icon;
-                    return (
-                      <TouchableOpacity
-                        key={opt.id}
-                        style={[
-                          styles.dropdownOptionItem,
-                          {
-                            backgroundColor: isSelected
-                              ? isDark
-                                ? 'rgba(249, 115, 22, 0.14)'
-                                : '#FFF7ED'
-                              : isDark
-                              ? '#1E293B'
-                              : '#F8FAFC',
-                            borderColor: isSelected
-                              ? '#F97316'
-                              : isDark
-                              ? '#334155'
-                              : '#E2E8F0',
-                          },
-                        ]}
-                        onPress={() => handleSelectStatus(opt.id)}
-                        activeOpacity={0.7}
-                      >
-                        {/* Option Icon Pill */}
-                        <View
-                          style={[
-                            styles.optionIconContainer,
-                            {
-                              backgroundColor: isSelected
-                                ? 'rgba(249, 115, 22, 0.2)'
-                                : isDark
-                                ? '#0F172A'
-                                : '#FFFFFF',
-                              borderColor: isSelected
-                                ? 'rgba(249, 115, 22, 0.4)'
-                                : isDark
-                                ? '#334155'
-                                : '#E2E8F0',
-                            },
-                          ]}
-                        >
-                          <IconComponent
-                            size={18}
-                            color={isSelected ? '#EA580C' : opt.color}
-                            strokeWidth={2.2}
-                          />
-                        </View>
-
-                        {/* Title & Desc */}
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                          <Text
-                            style={[
-                              styles.dropdownOptionLabel,
-                              {
-                                color: isSelected ? '#EA580C' : isDark ? '#F8FAFC' : '#0F172A',
-                                fontWeight: isSelected ? '800' : '700',
-                              },
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.dropdownOptionDesc,
-                              { color: isDark ? '#94A3B8' : '#64748B' },
-                            ]}
-                          >
-                            {opt.desc}
-                          </Text>
-                        </View>
-
-                        {/* Active Selection Indicator */}
-                        {isSelected ? (
-                          <View style={styles.selectedCheckCircle}>
-                            <Check size={14} color="#FFFFFF" strokeWidth={3} />
-                          </View>
-                        ) : (
-                          <View
-                            style={[
-                              styles.unselectedCheckCircle,
-                              { borderColor: isDark ? '#475569' : '#CBD5E1' },
-                            ]}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </Animated.View>
-        </View>
-      </Modal>
-
-      {/* Modern "New Registration" Member Admission Modal (Matching Desktop New Registration Exactly) */}
-      <Modal
-        visible={isAddMemberModalOpen}
-        transparent
-        animationType="none"
-        onRequestClose={closeAddMemberModal}
-      >
-        <View style={styles.modalRoot}>
+const renderRegistrationFormSheet = () => (
+    <View style={styles.modalRoot} pointerEvents="box-none">
           {/* Smooth Fade-Only Dim Backdrop */}
           <Animated.View
             style={[
@@ -1181,21 +1063,27 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
                 <View style={[styles.modalHeaderRow, { borderBottomColor: isDark ? '#1E293B' : '#F1F5F9', marginBottom: 12 }]}>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={styles.registrationKickerText}>
-                      {regPage === 1 && 'NEW REGISTRATION'}
+                      {memberFormMode === 'edit'
+                        ? 'MODIFY REGISTRATION'
+                        : regPage === 1 && 'NEW REGISTRATION'}
                       {regPage === 2 && 'IDENTITY CAPTURE'}
                       {regPage === 3 && 'DOCUMENT UPLOAD'}
                       {regPage === 4 && 'PLAN SELECTION'}
                       {regPage === 5 && 'PAYMENT SETTLEMENT'}
                     </Text>
                     <Text style={[styles.modalTitle, styles.registrationHeaderTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                      {regPage === 1 && 'Add New Member'}
+                      {memberFormMode === 'edit' && regPage === 1
+                        ? 'Edit Member Details'
+                        : regPage === 1 && 'Add New Member'}
                       {regPage === 2 && 'Capture Member Photo'}
                       {regPage === 3 && 'Upload Member Documents'}
                       {regPage === 4 && 'Membership Planning'}
                       {regPage === 5 && 'Bill Summary & Pay'}
                     </Text>
                     <Text style={[styles.modalSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
-                      {regPage === 1 && 'Start a clean new profile with key member info in one focused flow.'}
+                      {memberFormMode === 'edit' && regPage === 1
+                        ? 'Update profile details, contact information and biometrics.'
+                        : regPage === 1 && 'Start a clean new profile with key member info in one focused flow.'}
                       {regPage === 2 && 'Upload a clear profile photo for identification & membership card.'}
                       {regPage === 3 && 'Add supporting documents to complete the member profile.'}
                       {regPage === 4 && 'Select a membership plan and payment schedule for the new member.'}
@@ -4038,7 +3926,29 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
                     </TouchableOpacity>
                   )}
 
-                  {regPage < 5 ? (
+                  {memberFormMode === 'edit' ? (
+                    <TouchableOpacity
+                      style={styles.registrationSubmitBtn}
+                      onPress={handleRegisterMember}
+                      disabled={formIsSubmitting}
+                      activeOpacity={0.85}
+                    >
+                      {formIsSubmitting ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <CheckCircle2
+                            size={15}
+                            color="#FFFFFF"
+                            strokeWidth={2.4}
+                          />
+                          <Text style={styles.registrationSubmitBtnText}>
+                            Save Changes
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  ) : regPage < 5 ? (
                     <TouchableOpacity
                       style={styles.registrationSubmitBtn}
                       onPress={handleNextPage}
@@ -4080,7 +3990,398 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
               </View>
             </TouchableWithoutFeedback>
           </Animated.View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
+      {/* 1. Executive Filled Header Card with Increased Height & Watermark */}
+      <View
+        style={[
+          styles.headerCard,
+          {
+            backgroundColor: isDark ? '#090D16' : '#0B1120',
+            borderColor: isDark ? '#1E293B' : '#1E293B',
+          },
+        ]}
+      >
+        {/* Subtle Watermark Brand Logo Attached to Inner Bottom Right */}
+        <View style={styles.watermarkLogo} pointerEvents="none">
+          <Svg width={88} height={88} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+              stroke="#94A3B8"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.16}
+            />
+            <Circle
+              cx="9"
+              cy="7"
+              r="4"
+              stroke="#94A3B8"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.16}
+            />
+            <Path
+              d="M22 21v-2a4 4 0 0 0-3-3.87"
+              stroke="#94A3B8"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.16}
+            />
+            <Path
+              d="M16 3.13a4 4 0 0 1 0 7.75"
+              stroke="#94A3B8"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.16}
+            />
+          </Svg>
         </View>
+
+        <View style={styles.headerCardTop}>
+          <View style={{ flex: 1, zIndex: 1 }}>
+            <Text style={styles.headerOverline}>
+              DIRECTORY & ROSTER
+            </Text>
+            <Text style={styles.headerTitle}>
+              Member Directory
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              Identity, contact, membership & profile records
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 2. Professional "Add New Member" Action Card with Sculpted Cutout */}
+      <View style={styles.addNewMemberOuterWrapper}>
+        <View
+          style={[
+            styles.addNewMemberBanner,
+            {
+              backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+              borderColor: isDark ? '#334155' : '#E2E8F0',
+            },
+          ]}
+        >
+          {/* Subtle Background Watermark Graphic attached to bottom */}
+          <View style={styles.addMemberWatermark} pointerEvents="none">
+            <UserPlus
+              size={54}
+              color={isDark ? '#94A3B8' : '#64748B'}
+              strokeWidth={1.5}
+              opacity={0.12}
+            />
+          </View>
+
+          {/* Left Content with Non-Boxed Modern Icon attached to bottom */}
+          <View style={styles.addMemberLeftContent}>
+            {/* Non-boxed modern professional icon aligned near bottom */}
+            <View style={styles.addMemberModernIconWrapper}>
+              <UserPlus size={22} color="#F97316" strokeWidth={2.4} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[styles.addMemberTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+                New Admission
+              </Text>
+              <Text style={[styles.addMemberSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
+                Register new client, assign plan & collect fee
+              </Text>
+            </View>
+          </View>
+
+          {/* Sculpted Cutout Pocket for the Button */}
+          <View
+            style={[
+              styles.buttonCutoutPocket,
+              {
+                backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
+                borderColor: isDark ? '#334155' : '#E2E8F0',
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.addMemberSquaredBtn}
+              onPress={() => setIsAddMemberModalOpen(true)}
+              activeOpacity={0.85}
+            >
+              <Plus size={13} color="#FFFFFF" strokeWidth={3} />
+              <Text style={styles.addMemberCtaText}>Add Member</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* 3. Search & E-Commerce Filter Row (Side-by-side equal height) */}
+      <View style={styles.searchFilterRow}>
+        {/* Search Bar on the left */}
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+              borderColor: isDark ? '#334155' : '#E2E8F0',
+            },
+          ]}
+        >
+          <Search size={16} color={isDark ? '#64748B' : '#94A3B8'} strokeWidth={2} />
+          <TextInput
+            style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#0F172A' }]}
+            placeholder="Search name, phone, code..."
+            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+            value={search}
+            onChangeText={handleSearchChange}
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => handleSearchChange('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={14} color={isDark ? '#94A3B8' : '#64748B'} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Filter Dropdown Button exactly matching search bar height & appearance */}
+        <TouchableOpacity
+          style={[
+            styles.filterTriggerBtn,
+            {
+              backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+              borderColor: selectedStatus !== 'ALL' ? '#F97316' : isDark ? '#334155' : '#E2E8F0',
+            },
+          ]}
+          onPress={() => setIsFilterDropdownOpen(true)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.filterTriggerInner}>
+            <Filter
+              size={15}
+              color={selectedStatus !== 'ALL' ? '#F97316' : isDark ? '#CBD5E1' : '#334155'}
+              strokeWidth={2.2}
+            />
+            <Text
+              style={[
+                styles.filterTriggerText,
+                {
+                  color: selectedStatus !== 'ALL' ? '#EA580C' : isDark ? '#FFFFFF' : '#0F172A',
+                  fontWeight: selectedStatus !== 'ALL' ? '800' : '700',
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {activeFilterMeta.label.split(' ')[0]}
+            </Text>
+            <ChevronDown
+              size={14}
+              color={selectedStatus !== 'ALL' ? '#F97316' : isDark ? '#94A3B8' : '#64748B'}
+              strokeWidth={2.2}
+            />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Modern Filter Dropdown Modal (Custom Smooth Bottom Sheet with Independent Fade Backdrop) */}
+      <Modal
+        visible={isFilterDropdownOpen}
+        transparent
+        animationType="none"
+        onRequestClose={closeFilterModal}
+      >
+        <View style={styles.modalRoot}>
+          {/* Smooth Fade-Only Dim Backdrop (Soft black fade, completely stationary, no sliding) */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                opacity: backdropAnim,
+                backgroundColor: 'rgba(0, 0, 0, 0.42)',
+              },
+            ]}
+          >
+            <TouchableWithoutFeedback onPress={closeFilterModal}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
+          </Animated.View>
+
+          {/* Bottom Sheet Card sliding up from bottom independently */}
+          <Animated.View
+            style={[
+              styles.sheetContainer,
+              {
+                transform: [{ translateY: sheetTranslateY }],
+              },
+            ]}
+            pointerEvents="box-none"
+          >
+            <TouchableWithoutFeedback>
+              <View
+                style={[
+                  styles.dropdownSheet,
+                  {
+                    backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                    borderColor: isDark ? '#334155' : '#E2E8F0',
+                  },
+                ]}
+              >
+                {/* Drag Handle Bar */}
+                <View style={styles.modalDragHandleContainer}>
+                  <View
+                    style={[
+                      styles.modalDragHandle,
+                      { backgroundColor: isDark ? '#334155' : '#CBD5E1' },
+                    ]}
+                  />
+                </View>
+
+                {/* Modal Header */}
+                <View style={[styles.modalHeaderRow, { borderBottomColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View
+                      style={[
+                        styles.modalHeaderIconBadge,
+                        {
+                          backgroundColor: isDark ? 'rgba(249, 115, 22, 0.15)' : '#FFF7ED',
+                          borderColor: isDark ? 'rgba(249, 115, 22, 0.3)' : '#FFEDD5',
+                        },
+                      ]}
+                    >
+                      <Filter size={16} color="#F97316" strokeWidth={2.4} />
+                    </View>
+                    <View>
+                      <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+                        Filter Members
+                      </Text>
+                      <Text style={[styles.modalSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                        Select membership status to display
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={closeFilterModal}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={[
+                      styles.modalCloseCircle,
+                      { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' },
+                    ]}
+                  >
+                    <X size={16} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.2} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Filter Options with Category Icons & Subtle Badges */}
+                <View style={styles.dropdownOptionsContainer}>
+                  {FILTER_OPTIONS.map((opt) => {
+                    const isSelected = selectedStatus === opt.id;
+                    const IconComponent = opt.icon;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={[
+                          styles.dropdownOptionItem,
+                          {
+                            backgroundColor: isSelected
+                              ? isDark
+                                ? 'rgba(249, 115, 22, 0.14)'
+                                : '#FFF7ED'
+                              : isDark
+                              ? '#1E293B'
+                              : '#F8FAFC',
+                            borderColor: isSelected
+                              ? '#F97316'
+                              : isDark
+                              ? '#334155'
+                              : '#E2E8F0',
+                          },
+                        ]}
+                        onPress={() => handleSelectStatus(opt.id)}
+                        activeOpacity={0.7}
+                      >
+                        {/* Option Icon Pill */}
+                        <View
+                          style={[
+                            styles.optionIconContainer,
+                            {
+                              backgroundColor: isSelected
+                                ? 'rgba(249, 115, 22, 0.2)'
+                                : isDark
+                                ? '#0F172A'
+                                : '#FFFFFF',
+                              borderColor: isSelected
+                                ? 'rgba(249, 115, 22, 0.4)'
+                                : isDark
+                                ? '#334155'
+                                : '#E2E8F0',
+                            },
+                          ]}
+                        >
+                          <IconComponent
+                            size={18}
+                            color={isSelected ? '#EA580C' : opt.color}
+                            strokeWidth={2.2}
+                          />
+                        </View>
+
+                        {/* Title & Desc */}
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text
+                            style={[
+                              styles.dropdownOptionLabel,
+                              {
+                                color: isSelected ? '#EA580C' : isDark ? '#F8FAFC' : '#0F172A',
+                                fontWeight: isSelected ? '800' : '700',
+                              },
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.dropdownOptionDesc,
+                              { color: isDark ? '#94A3B8' : '#64748B' },
+                            ]}
+                          >
+                            {opt.desc}
+                          </Text>
+                        </View>
+
+                        {/* Active Selection Indicator */}
+                        {isSelected ? (
+                          <View style={styles.selectedCheckCircle}>
+                            <Check size={14} color="#FFFFFF" strokeWidth={3} />
+                          </View>
+                        ) : (
+                          <View
+                            style={[
+                              styles.unselectedCheckCircle,
+                              { borderColor: isDark ? '#475569' : '#CBD5E1' },
+                            ]}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Modern "New Registration" Member Admission Modal (Matching Desktop New Registration Exactly) */}
+      <Modal
+        visible={isAddMemberModalOpen && !isViewMemberModalOpen}
+        transparent
+        animationType="none"
+        onRequestClose={closeAddMemberModal}
+      >
+        {renderRegistrationFormSheet()}
       </Modal>
 
       {/* MEMBER PROFILE Modal: Bottom Sheet Modal sliding up with Luxury Profile Card inside */}
@@ -4282,293 +4583,318 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
                   </View>
 
                   {/* ───────────────────────────────────────────────────────────── */}
-                  {/* MEMBER INTELLIGENCE CENTER (Desktop Exact Layout & Structure) */}
+                  {/* EXECUTIVE MEMBER INTELLIGENCE DOSSIER (Bold Professional Spec) */}
                   {/* ───────────────────────────────────────────────────────────── */}
 
-                  {/* 1. Header Banner Card: Name, Member ID & Active Status */}
+                  {/* 1. Header Card: Identity Barcode, Primary Name & Membership Status */}
                   <View
                     style={[
-                      styles.dashMainHeaderBox,
+                      styles.dossierHeaderBox,
                       {
-                        backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-                        borderColor: isDark ? '#334155' : '#E2E8F0',
+                        backgroundColor: isDark ? '#111827' : '#FFFFFF',
+                        borderColor: isDark ? '#374151' : '#E5E7EB',
                       },
                     ]}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                      <View style={{ flex: 1, minWidth: 160 }}>
-                        <Text style={[styles.dashMemberFullName, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.fullName || 'Member Name'}
+                    <View style={styles.dossierHeaderTop}>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={[styles.dossierPreTitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                          MEMBER DOSSIER
+                        </Text>
+                        <Text style={[styles.dossierMemberName, { color: isDark ? '#FFFFFF' : '#0B0F19' }]} numberOfLines={1}>
+                          {selectedMemberForView?.fullName || 'UNREGISTERED MEMBER'}
                         </Text>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <View style={[styles.dashBadgeId, { backgroundColor: isDark ? '#0F172A' : '#F1F5F9', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                          <Text style={[styles.dashBadgeIdText, { color: isDark ? '#94A3B8' : '#475569' }]}>
-                            {selectedMemberForView?.memberCode || 'GD-7425'}
+
+                      <View style={styles.dossierHeaderBadgeCol}>
+                        <View style={[styles.dossierIdBadge, { backgroundColor: isDark ? '#1F2937' : '#0F172A' }]}>
+                          <Text style={styles.dossierIdBadgeText}>
+                            {selectedMemberForView?.memberCode || (selectedMemberForView?.id ? `GD-${String(selectedMemberForView.id).slice(-4)}` : 'GD-RECORD')}
                           </Text>
                         </View>
-                        <View style={styles.dashStatusBadgeActive}>
-                          <View style={styles.dashStatusDot} />
-                          <Text style={styles.dashStatusBadgeText}>
+                        <View style={[
+                          styles.dossierStatusBadge,
+                          {
+                            backgroundColor: selectedMemberForView?.membershipStatus === 'ACTIVE'
+                              ? (isDark ? '#064E3B' : '#ECFDF5')
+                              : (isDark ? '#374151' : '#F3F4F6'),
+                            borderColor: selectedMemberForView?.membershipStatus === 'ACTIVE'
+                              ? '#10B981'
+                              : '#9CA3AF',
+                          }
+                        ]}>
+                          <View style={[
+                            styles.dossierStatusDot,
+                            {
+                              backgroundColor: selectedMemberForView?.membershipStatus === 'ACTIVE'
+                                ? '#10B981'
+                                : '#6B7280',
+                            }
+                          ]} />
+                          <Text style={[
+                            styles.dossierStatusText,
+                            {
+                              color: selectedMemberForView?.membershipStatus === 'ACTIVE'
+                                ? (isDark ? '#34D399' : '#047857')
+                                : (isDark ? '#D1D5DB' : '#374151'),
+                            }
+                          ]}>
                             {selectedMemberForView?.membershipStatus || 'ACTIVE'}
                           </Text>
                         </View>
                       </View>
                     </View>
 
-                    {/* Meta Chips Row */}
-                    <View style={[styles.dashHeaderChipsRow, { borderTopColor: isDark ? '#334155' : '#F1F5F9' }]}>
-                      <View style={styles.dashInfoChip}>
-                        <Text style={[styles.dashChipLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>MEMBER SINCE</Text>
-                        <Text style={[styles.dashChipValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+                    {/* Quick Executive Metadata Bar */}
+                    <View style={[styles.dossierQuickBar, { borderTopColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
+                      <View style={styles.dossierQuickItem}>
+                        <Text style={[styles.dossierQuickLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>ENROLLED</Text>
+                        <Text style={[styles.dossierQuickValue, { color: isDark ? '#F9FAFB' : '#111827' }]}>
                           {selectedMemberForView?.joinedAt
-                            ? new Date(selectedMemberForView.joinedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                            ? new Date(selectedMemberForView.joinedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                             : selectedMemberForView?.createdAt
-                            ? new Date(selectedMemberForView.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                            ? new Date(selectedMemberForView.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                             : '-'}
                         </Text>
                       </View>
 
-                      <View style={styles.dashInfoChip}>
-                        <Text style={[styles.dashChipLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>CURRENT PLAN</Text>
-                        <Text style={[styles.dashChipValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.membershipPlan || 'Standard Active'}
+                      <View style={[styles.dossierQuickDivider, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]} />
+
+                      <View style={styles.dossierQuickItem}>
+                        <Text style={[styles.dossierQuickLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>PLAN TIER</Text>
+                        <Text style={[styles.dossierQuickValue, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+                          {selectedMemberForView?.membershipPlan || 'Standard Tier'}
                         </Text>
                       </View>
 
-                      <View style={styles.dashInfoChip}>
-                        <Text style={[styles.dashChipLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>EXPIRY DATE</Text>
-                        <Text style={[styles.dashChipValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+                      <View style={[styles.dossierQuickDivider, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]} />
+
+                      <View style={styles.dossierQuickItem}>
+                        <Text style={[styles.dossierQuickLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>VALID UNTIL</Text>
+                        <Text style={[styles.dossierQuickValue, { color: isDark ? '#F9FAFB' : '#111827' }]}>
                           {selectedMemberForView?.expiresAt
-                            ? new Date(selectedMemberForView.expiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-                            : 'Open Validity'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashInfoChip}>
-                        <Text style={[styles.dashChipLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>STATUS</Text>
-                        <Text style={[styles.dashChipValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.membershipStatus || 'ACTIVE'}
+                            ? new Date(selectedMemberForView.expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : 'Open Access'}
                         </Text>
                       </View>
                     </View>
                   </View>
 
-                  {/* 2. Panel 1: PERSONAL INFORMATION */}
-                  <View style={[styles.dashInfoPanel, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                    <View style={[styles.dashPanelHeaderRow, { borderBottomColor: isDark ? '#334155' : '#F1F5F9' }]}>
-                      <View style={[styles.dashPanelHeaderIconBox, { backgroundColor: isDark ? '#0F172A' : '#EEF2FF', borderColor: isDark ? '#334155' : '#C7D2FE' }]}>
-                        <User size={13} color="#6366F1" strokeWidth={2.4} />
-                      </View>
-                      <Text style={[styles.dashPanelTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                        PERSONAL INFORMATION
+                  {/* 2. Structured Section: PRIMARY BIOMETRICS & PERSONAL SPECS */}
+                  <View style={[styles.dossierSectionCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+                    <View style={[styles.dossierSectionHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderBottomColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                      <View style={[styles.dossierSectionIndicator, { backgroundColor: '#0F172A' }]} />
+                      <Text style={[styles.dossierSectionHeadTitle, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                        BIOMETRIC & PERSONAL SPECIFICATIONS
                       </Text>
                     </View>
 
-                    <View style={styles.dashPanelGrid}>
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>FULL NAME</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.fullName || '-'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>MEMBER ID</Text>
-                        <View style={styles.dashMemberIdPill}>
-                          <Text style={styles.dashMemberIdPillText}>
+                    <View style={styles.dossierTable}>
+                      {/* Row 1: Full Name & Member ID */}
+                      <View style={[styles.dossierTableRow, { borderBottomColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>FULL LEGAL NAME</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.fullName || '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>INTERNAL ID</Text>
+                          <Text style={[styles.dossierCellValueMono, { color: isDark ? '#F3F4F6' : '#0F172A' }]}>
                             {selectedMemberForView?.memberCode || (selectedMemberForView?.id ? `GD-${String(selectedMemberForView.id).slice(-4)}` : '-')}
                           </Text>
                         </View>
                       </View>
 
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>DATE OF BIRTH</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.dob || '-'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>AGE</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.dob
-                            ? `${Math.max(0, new Date().getFullYear() - new Date(selectedMemberForView.dob).getFullYear())} years`
-                            : '-'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>GENDER</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.gender || '-'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>HEIGHT</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.height ? `${selectedMemberForView.height} cm` : '-'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>WEIGHT</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.weight ? `${selectedMemberForView.weight} kg` : '-'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>BLOOD GROUP</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.bloodGroup || '-'}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* 3. Panel 2: CONTACT INFORMATION */}
-                  <View style={[styles.dashInfoPanel, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                    <View style={[styles.dashPanelHeaderRow, { borderBottomColor: isDark ? '#334155' : '#F1F5F9' }]}>
-                      <View style={[styles.dashPanelHeaderIconBox, { backgroundColor: isDark ? '#0F172A' : '#ECFDF5', borderColor: isDark ? '#334155' : '#A7F3D0' }]}>
-                        <Phone size={13} color="#10B981" strokeWidth={2.4} />
-                      </View>
-                      <Text style={[styles.dashPanelTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                        CONTACT INFORMATION
-                      </Text>
-                    </View>
-
-                    <View style={styles.dashPanelGrid}>
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>PRIMARY PHONE</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.phone || '-'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>ALTERNATE PHONE</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.alternatePhone || '-'}
-                        </Text>
-                      </View>
-
-                      <View style={[styles.dashGridCol, { width: '100%' }]}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>EMAIL ADDRESS</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.email || '-'}
-                        </Text>
-                      </View>
-
-                      <View style={[styles.dashGridCol, { width: '100%' }]}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>HOME ADDRESS</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.address || '-'}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* 4. Panel 3: MEMBERSHIP DETAILS */}
-                  <View style={[styles.dashInfoPanel, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                    <View style={[styles.dashPanelHeaderRow, { borderBottomColor: isDark ? '#334155' : '#F1F5F9' }]}>
-                      <View style={[styles.dashPanelHeaderIconBox, { backgroundColor: isDark ? '#0F172A' : '#FFF7ED', borderColor: isDark ? '#334155' : '#FFEDD5' }]}>
-                        <CreditCard size={13} color="#F97316" strokeWidth={2.4} />
-                      </View>
-                      <Text style={[styles.dashPanelTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                        MEMBERSHIP DETAILS
-                      </Text>
-                    </View>
-
-                    <View style={styles.dashPanelGrid}>
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>CURRENT PLAN</Text>
-                        <View style={styles.dashPlanDistinguishedBadge}>
-                          <Text style={styles.dashPlanDistinguishedText}>
-                            {selectedMemberForView?.membershipPlan || 'Active Plan'}
+                      {/* Row 2: Date of Birth, Age & Gender */}
+                      <View style={[styles.dossierTableRow, { borderBottomColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
+                        <View style={styles.dossierTableCellThird}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>DATE OF BIRTH</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.dob || '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellThird}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>CALCULATED AGE</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.dob
+                              ? `${Math.max(0, new Date().getFullYear() - new Date(selectedMemberForView.dob).getFullYear())} YRS`
+                              : '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellThird}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>GENDER</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.gender || '-'}
                           </Text>
                         </View>
                       </View>
 
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>PLAN DURATION</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          12 Months
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>EXPIRY DATE</Text>
-                        <Text style={[styles.dashDataValue, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                          {selectedMemberForView?.expiresAt
-                            ? new Date(selectedMemberForView.expiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-                            : 'Ongoing'}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dashGridCol}>
-                        <Text style={[styles.dashDataLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>STATUS</Text>
-                        <View style={styles.dashRemainingDaysPill}>
-                          <Text style={styles.dashRemainingDaysText}>
-                            {selectedMemberForView?.membershipStatus || 'ACTIVE'}
+                      {/* Row 3: Height, Weight & Blood Group */}
+                      <View style={styles.dossierTableRowLast}>
+                        <View style={styles.dossierTableCellThird}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>STATURE (HEIGHT)</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.height ? `${selectedMemberForView.height} CM` : '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellThird}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>BODY MASS (WEIGHT)</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.weight ? `${selectedMemberForView.weight} KG` : '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellThird}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>BLOOD GROUP</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.bloodGroup || '-'}
                           </Text>
                         </View>
                       </View>
                     </View>
                   </View>
 
-                  {/* 6. Panel 4: VAULT DOCUMENTS */}
-                  <View style={[styles.dashInfoPanel, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                    <View style={[styles.dashPanelHeaderRow, { borderBottomColor: isDark ? '#334155' : '#F1F5F9' }]}>
-                      <View style={[styles.dashPanelHeaderIconBox, { backgroundColor: isDark ? '#0F172A' : '#EFF6FF', borderColor: isDark ? '#334155' : '#DBEAFE' }]}>
-                        <FileText size={13} color="#3B82F6" strokeWidth={2.4} />
-                      </View>
-                      <Text style={[styles.dashPanelTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-                        VAULT DOCUMENTS
+                  {/* 3. Structured Section: DIRECT CONTACT CHANNELS */}
+                  <View style={[styles.dossierSectionCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+                    <View style={[styles.dossierSectionHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderBottomColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                      <View style={[styles.dossierSectionIndicator, { backgroundColor: '#0F172A' }]} />
+                      <Text style={[styles.dossierSectionHeadTitle, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                        COMMUNICATION CHANNELS & RESIDENCE
                       </Text>
                     </View>
 
-                    {/* Two Cards per Row Layout */}
+                    <View style={styles.dossierTable}>
+                      {/* Row 1: Primary & Alternate Phone */}
+                      <View style={[styles.dossierTableRow, { borderBottomColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>PRIMARY PHONE</Text>
+                          <Text style={[styles.dossierCellValueMono, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.phone || '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>ALTERNATE CONTACT</Text>
+                          <Text style={[styles.dossierCellValueMono, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.alternatePhone || '-'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Row 2: Email */}
+                      <View style={[styles.dossierTableRow, { borderBottomColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>OFFICIAL EMAIL</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.email || '-'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Row 3: Physical Address */}
+                      <View style={styles.dossierTableRowLast}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>REGISTERED ADDRESS</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19', lineHeight: 20 }]}>
+                            {selectedMemberForView?.address || '-'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* 4. Structured Section: ENROLLMENT & MEMBERSHIP ACCREDITATION */}
+                  <View style={[styles.dossierSectionCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+                    <View style={[styles.dossierSectionHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderBottomColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                      <View style={[styles.dossierSectionIndicator, { backgroundColor: '#0F172A' }]} />
+                      <Text style={[styles.dossierSectionHeadTitle, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                        MEMBERSHIP STATUS & CONTRACT PARAMETERS
+                      </Text>
+                    </View>
+
+                    <View style={styles.dossierTable}>
+                      <View style={[styles.dossierTableRow, { borderBottomColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>ASSIGNED SUBSCRIPTION</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19', fontWeight: '800' }]}>
+                            {selectedMemberForView?.membershipPlan || 'Active Contract'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>CONTRACT TERM</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            12 MONTHS
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.dossierTableRowLast}>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>COMMENCEMENT DATE</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.joinedAt
+                              ? new Date(selectedMemberForView.joinedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                              : '-'}
+                          </Text>
+                        </View>
+                        <View style={styles.dossierTableCellHalf}>
+                          <Text style={[styles.dossierCellCaption, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>TERMINATION / EXPIRY</Text>
+                          <Text style={[styles.dossierCellValue, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                            {selectedMemberForView?.expiresAt
+                              ? new Date(selectedMemberForView.expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                              : 'ONGOING VALIDITY'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* 5. Structured Section: COMPLIANCE REPOSITORY & VAULT ARCHIVE */}
+                  <View style={[styles.dossierSectionCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+                    <View style={[styles.dossierSectionHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderBottomColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                      <View style={[styles.dossierSectionIndicator, { backgroundColor: '#0F172A' }]} />
+                      <Text style={[styles.dossierSectionHeadTitle, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                        SECURITY VAULT & VERIFICATION ARCHIVE
+                      </Text>
+                    </View>
+
+                    {/* Executive 2x2 Clean Grid Layout */}
                     <View style={{ gap: 12 }}>
                       {/* Row 1: Aadhaar Card & PAN Card */}
                       <View style={styles.dashDocRow}>
                         {/* Doc 1: Aadhaar Card */}
                         <TouchableOpacity
-                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', borderColor: isDark ? '#334155' : '#E2E8F0' }]}
+                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB', borderColor: isDark ? '#374151' : '#E5E7EB' }]}
                           onPress={() => {
-                            Alert.alert('Aadhaar Card', 'Document status: VERIFIED\nGovernment identity proof is securely verified.');
+                            Alert.alert('Aadhaar Document Archive', 'Verification Status: VERIFIED\nGovernment identity record encrypted and catalogued.');
                           }}
                           activeOpacity={0.75}
                         >
-                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                            <CreditCard size={18} color="#6366F1" strokeWidth={2.2} />
+                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#D1D5DB' }]}>
+                            <CreditCard size={18} color={isDark ? '#F3F4F6' : '#0F172A'} strokeWidth={2} />
                           </View>
-                          <View style={{ alignItems: 'center', width: '100%', gap: 3 }}>
-                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>Aadhaar Card</Text>
-                            <View style={styles.dashDocVerifiedPill}>
-                              <CheckCircle2 size={10} color="#059669" strokeWidth={2.5} />
-                              <Text style={styles.dashDocStatusVerified}>VERIFIED</Text>
+                          <View style={{ alignItems: 'center', width: '100%', gap: 4 }}>
+                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0B0F19' }]} numberOfLines={1}>AADHAAR CARD</Text>
+                            <View style={[styles.dossierDocVerifiedBadge, { backgroundColor: isDark ? '#064E3B' : '#ECFDF5' }]}>
+                              <Text style={styles.dossierDocVerifiedText}>VERIFIED</Text>
                             </View>
                           </View>
                         </TouchableOpacity>
 
                         {/* Doc 2: PAN Card */}
                         <TouchableOpacity
-                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', borderColor: isDark ? '#334155' : '#E2E8F0' }]}
+                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB', borderColor: isDark ? '#374151' : '#E5E7EB' }]}
                           onPress={() => {
-                            Alert.alert('PAN Card', 'Document status: VERIFIED\nTax identification and verification record is active.');
+                            Alert.alert('PAN Document Archive', 'Verification Status: VERIFIED\nFiscal identification record encrypted and catalogued.');
                           }}
                           activeOpacity={0.75}
                         >
-                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                            <CreditCard size={18} color="#6366F1" strokeWidth={2.2} />
+                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#D1D5DB' }]}>
+                            <CreditCard size={18} color={isDark ? '#F3F4F6' : '#0F172A'} strokeWidth={2} />
                           </View>
-                          <View style={{ alignItems: 'center', width: '100%', gap: 3 }}>
-                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>PAN Card</Text>
-                            <View style={styles.dashDocVerifiedPill}>
-                              <CheckCircle2 size={10} color="#059669" strokeWidth={2.5} />
-                              <Text style={styles.dashDocStatusVerified}>VERIFIED</Text>
+                          <View style={{ alignItems: 'center', width: '100%', gap: 4 }}>
+                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0B0F19' }]} numberOfLines={1}>PAN CARD</Text>
+                            <View style={[styles.dossierDocVerifiedBadge, { backgroundColor: isDark ? '#064E3B' : '#ECFDF5' }]}>
+                              <Text style={styles.dossierDocVerifiedText}>VERIFIED</Text>
                             </View>
                           </View>
                         </TouchableOpacity>
@@ -4578,40 +4904,38 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
                       <View style={styles.dashDocRow}>
                         {/* Doc 3: Medical Certificate */}
                         <TouchableOpacity
-                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', borderColor: isDark ? '#334155' : '#E2E8F0' }]}
+                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB', borderColor: isDark ? '#374151' : '#E5E7EB' }]}
                           onPress={() => {
-                            Alert.alert('Medical Certificate', 'Document status: PENDING\nFitness clearance certificate submission is awaiting review.');
+                            Alert.alert('Medical Clearance Record', 'Verification Status: PENDING\nFitness medical attestation submission awaiting audit.');
                           }}
                           activeOpacity={0.75}
                         >
-                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                            <FileText size={18} color="#F59E0B" strokeWidth={2.2} />
+                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#D1D5DB' }]}>
+                            <FileText size={18} color={isDark ? '#F3F4F6' : '#0F172A'} strokeWidth={2} />
                           </View>
-                          <View style={{ alignItems: 'center', width: '100%', gap: 3 }}>
-                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>Medical Cert</Text>
-                            <View style={styles.dashDocPendingPill}>
-                              <Clock size={10} color="#D97706" strokeWidth={2.5} />
-                              <Text style={styles.dashDocStatusPending}>PENDING</Text>
+                          <View style={{ alignItems: 'center', width: '100%', gap: 4 }}>
+                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0B0F19' }]} numberOfLines={1}>MEDICAL CERT</Text>
+                            <View style={[styles.dossierDocPendingBadge, { backgroundColor: isDark ? '#451A03' : '#FFFBEB' }]}>
+                              <Text style={styles.dossierDocPendingText}>PENDING</Text>
                             </View>
                           </View>
                         </TouchableOpacity>
 
                         {/* Doc 4: Member Agreement */}
                         <TouchableOpacity
-                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', borderColor: isDark ? '#334155' : '#E2E8F0' }]}
+                          style={[styles.dashDocCard, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB', borderColor: isDark ? '#374151' : '#E5E7EB' }]}
                           onPress={() => {
-                            Alert.alert('Member Agreement', 'Document status: SIGNED\nTerms of membership agreement electronically signed.');
+                            Alert.alert('Facility Contract Agreement', 'Verification Status: EXECUTED\nLegal facility consent signed and archived.');
                           }}
                           activeOpacity={0.75}
                         >
-                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
-                            <FileText size={18} color="#10B981" strokeWidth={2.2} />
+                          <View style={[styles.dashDocIconBox, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#D1D5DB' }]}>
+                            <FileText size={18} color={isDark ? '#F3F4F6' : '#0F172A'} strokeWidth={2} />
                           </View>
-                          <View style={{ alignItems: 'center', width: '100%', gap: 3 }}>
-                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>Agreement</Text>
-                            <View style={styles.dashDocSignedPill}>
-                              <CheckCircle2 size={10} color="#2563EB" strokeWidth={2.5} />
-                              <Text style={styles.dashDocStatusSigned}>SIGNED</Text>
+                          <View style={{ alignItems: 'center', width: '100%', gap: 4 }}>
+                            <Text style={[styles.dashDocName, { color: isDark ? '#FFFFFF' : '#0B0F19' }]} numberOfLines={1}>AGREEMENT</Text>
+                            <View style={[styles.dossierDocSignedBadge, { backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF' }]}>
+                              <Text style={styles.dossierDocSignedText}>EXECUTED</Text>
                             </View>
                           </View>
                         </TouchableOpacity>
@@ -4640,22 +4964,7 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
                         borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : '#FECACA',
                       },
                     ]}
-                    onPress={() => {
-                      Alert.alert(
-                        'Delete Member Profile',
-                        `Are you sure you want to permanently delete the profile of ${selectedMemberForView?.fullName || 'this member'}?`,
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Delete',
-                            style: 'destructive',
-                            onPress: () => {
-                              closeViewMemberModal();
-                            },
-                          },
-                        ]
-                      );
-                    }}
+                    onPress={openDeleteModal}
                     activeOpacity={0.8}
                   >
                     <Trash2 size={15} color="#EF4444" strokeWidth={2.2} />
@@ -4665,9 +4974,7 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
                   {/* Edit Member Button (Right side, matching Next button position & style) */}
                   <TouchableOpacity
                     style={styles.viewMemberEditBtn}
-                    onPress={() => {
-                      Alert.alert('Edit Member', 'Editing membership parameters and records.');
-                    }}
+                    onPress={() => openEditMemberModal(selectedMemberForView)}
                     activeOpacity={0.85}
                   >
                     <Edit3 size={15} color="#FFFFFF" strokeWidth={2.2} />
@@ -4676,6 +4983,142 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
                 </View>
               </View>
           </Animated.View>
+
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* SETUP GUIDE STYLE: CONFIRM PERMANENT MEMBER DELETION OVERLAY */}
+          {/* Compact, executive, highly professional with minimal text     */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          {isDeleteModalOpen && (
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  opacity: deleteModalBackdropAnim,
+                  backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                  zIndex: 99999,
+                  elevation: 99999,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: 20,
+                },
+              ]}
+            >
+              <TouchableWithoutFeedback onPress={closeDeleteModal}>
+                <View style={StyleSheet.absoluteFill} />
+              </TouchableWithoutFeedback>
+
+              <Animated.View
+                style={[
+                  styles.setupGuideModalContainer,
+                  {
+                    transform: [{ scale: deleteModalScaleAnim }],
+                    width: '100%',
+                    maxWidth: 390,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.setupGuideCard,
+                    {
+                      backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
+                      borderColor: isDark ? '#334155' : '#E2E8F0',
+                    },
+                  ]}
+                >
+                  {/* Top Right Close Button (Square shaped with 5px curved corners) */}
+                  <TouchableOpacity
+                    onPress={closeDeleteModal}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={[
+                      styles.setupGuideCloseBtn,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+                        borderColor: isDark ? '#334155' : '#E2E8F0',
+                      },
+                    ]}
+                  >
+                    <X size={15} color={isDark ? '#CBD5E1' : '#64748B'} strokeWidth={2.4} />
+                  </TouchableOpacity>
+
+                  {/* Header Kicker Badge */}
+                  <View style={styles.setupGuideKickerRow}>
+                    <View style={styles.setupGuideKickerBadge}>
+                      <AlertTriangle size={12} color="#DC2626" strokeWidth={2.6} />
+                      <Text style={styles.setupGuideKickerText}>CONFIRM ACTION</Text>
+                    </View>
+                  </View>
+
+                  {/* Title */}
+                  <Text style={[styles.setupGuideTitle, { color: isDark ? '#FFFFFF' : '#0B0F19' }]}>
+                    Delete Member Record
+                  </Text>
+
+                  {/* Subtitle / Explanatory Description (Bold, Professional & Compact) */}
+                  <Text style={[styles.setupGuideSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                    Are you sure you want to permanently delete{' '}
+                    <Text style={{ fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                      {selectedMemberForView?.fullName || 'this member'}
+                    </Text>
+                    ? All active plans, attendance logs, and vault records will be purged immediately.
+                  </Text>
+
+
+
+                  {/* Action Buttons: Cancel vs Permanent Delete */}
+                  <View style={styles.setupGuideActionRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.setupGuideCancelBtn,
+                        {
+                          backgroundColor: isDark ? '#1E293B' : '#F8FAFC',
+                          borderColor: isDark ? '#334155' : '#CBD5E1',
+                        },
+                      ]}
+                      onPress={closeDeleteModal}
+                      activeOpacity={0.8}
+                      disabled={isDeletingMember}
+                    >
+                      <Text style={[styles.setupGuideCancelBtnText, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.setupGuideDeleteBtn}
+                      onPress={handleConfirmPermanentDelete}
+                      activeOpacity={0.85}
+                      disabled={isDeletingMember}
+                    >
+                      {isDeletingMember ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <Trash2 size={14} color="#FFFFFF" strokeWidth={2.4} />
+                          <Text style={styles.setupGuideDeleteBtnText}>
+                            Delete
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Animated.View>
+            </Animated.View>
+          )}
+
+          {/* EDIT MEMBER OVERLAY: Renders the Registration / Edit Sheet on top of the Member Profile Modal */}
+          {isAddMemberModalOpen && (
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                { zIndex: 9999, elevation: 9999 },
+              ]}
+              pointerEvents="box-none"
+            >
+              {renderRegistrationFormSheet()}
+            </Animated.View>
+          )}
         </View>
       </Modal>
 
@@ -6791,99 +7234,190 @@ const styles = StyleSheet.create({
     color: '#059669',
     letterSpacing: 0.3,
   },
-  dashHeaderChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  // Executive Dossier Spec Styles (Bold & Professional)
+  dossierHeaderBox: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 14,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.5)',
   },
-  dashInfoChip: {
-    gap: 2,
-    minWidth: '45%',
-    flex: 1,
-  },
-  dashChipLabel: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  dashChipValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  dashStatsGrid: {
+  dossierHeaderTop: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: 10,
   },
-  dashStatCard: {
-    width: '48.4%',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  dashStatLabel: {
+  dossierPreTitle: {
     fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  dashStatValue: {
-    fontSize: 16,
     fontWeight: '900',
-    letterSpacing: -0.3,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
-  dashStatTrendBadge: {
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+  dossierMemberName: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    textTransform: 'uppercase',
+  },
+  dossierHeaderBadgeCol: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  dossierIdBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 4,
   },
-  dashStatTrendText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#166534',
+  dossierIdBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    letterSpacing: 0.8,
   },
-  dashInfoPanel: {
-    padding: 16,
-    borderRadius: 16,
+  dossierStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
     borderWidth: 1,
-    gap: 12,
   },
-  dashPanelHeaderRow: {
+  dossierStatusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  dossierStatusText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  dossierQuickBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  dossierQuickItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  dossierQuickDivider: {
+    width: 1,
+    height: 22,
+  },
+  dossierQuickLabel: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  dossierQuickValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
+  dossierSectionCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  dossierSectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingBottom: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
   },
-  dashPanelHeaderIconBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  dossierSectionIndicator: {
+    width: 3.5,
+    height: 12,
+    borderRadius: 1.5,
   },
-  dashPanelTitle: {
-    fontSize: 12,
+  dossierSectionHeadTitle: {
+    fontSize: 10.5,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    letterSpacing: 0.9,
   },
-  dashDocVerifiedPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+  dossierTable: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
-  dashDocPendingPill: {
+  dossierTableRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  dossierTableRowLast: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    gap: 12,
+  },
+  dossierTableCellHalf: {
+    flex: 1,
+    gap: 3,
+  },
+  dossierTableCellThird: {
+    flex: 1,
+    gap: 3,
+  },
+  dossierCellCaption: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  dossierCellValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  dossierCellValueMono: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    letterSpacing: 0.3,
+  },
+  dossierDocVerifiedBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  dossierDocVerifiedText: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#059669',
+    letterSpacing: 0.6,
+  },
+  dossierDocPendingBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  dossierDocPendingText: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#D97706',
+    letterSpacing: 0.6,
+  },
+  dossierDocSignedBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  dossierDocSignedText: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#2563EB',
+    letterSpacing: 0.6,
   },
   dashDocSignedPill: {
     flexDirection: 'row',
@@ -7044,6 +7578,128 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+
+  /* ───────────────────────────────────────────────────────────── */
+  /* SETUP GUIDE STYLE DELETION CONFIRMATION MODAL STYLES         */
+  /* ───────────────────────────────────────────────────────────── */
+  setupGuideModalContainer: {
+    width: '90%',
+    maxWidth: 420,
+    alignSelf: 'center',
+  },
+  setupGuideCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 20,
+    position: 'relative',
+  },
+  setupGuideCloseBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  setupGuideKickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  setupGuideKickerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 5,
+    backgroundColor: '#FEE2E2',
+  },
+  setupGuideKickerText: {
+    color: '#DC2626',
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  setupGuideTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  setupGuideSubtitle: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 14,
+  },
+  compactSecurityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 18,
+  },
+  compactSecurityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#DC2626',
+  },
+  compactSecurityText: {
+    fontSize: 11,
+    fontWeight: '600',
+    flex: 1,
+  },
+  setupGuideActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  setupGuideCancelBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setupGuideCancelBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  setupGuideDeleteBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#DC2626',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  setupGuideDeleteBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
 

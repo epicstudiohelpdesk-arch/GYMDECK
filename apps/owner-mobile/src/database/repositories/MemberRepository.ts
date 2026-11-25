@@ -426,6 +426,10 @@ export class MemberRepository implements IMemberRepository {
         setClauses.push('notes = ?');
         queryParams.push(updates.notes);
       }
+      if (updates.profilePhotoUrl !== undefined) {
+        setClauses.push('profile_photo_url = ?');
+        queryParams.push(updates.profilePhotoUrl);
+      }
 
       setClauses.push('updated_at = ?');
       queryParams.push(now);

@@ -212,6 +212,8 @@ export class LocalMutationService {
       dob?: string | null;
       address?: string | null;
       membershipStatus?: any;
+      expiresAt?: string | null;
+      profilePhotoUrl?: string | null;
       notes?: string | null;
     },
     gymId?: string

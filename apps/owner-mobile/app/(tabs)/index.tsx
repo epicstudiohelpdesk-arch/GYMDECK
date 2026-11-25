@@ -66,6 +66,9 @@ import { runMobileConvergenceAudit } from '../../src/utils/auditConvergence';
 import Svg, { Path, Rect, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { WhatsAppHubView } from '../../src/components/WhatsAppHubView';
 import { InPlaceMembersView } from '../../src/components/InPlaceMembersView';
+import { InPlacePlansView } from '../../src/components/InPlacePlansView';
+import { InPlacePastMembersView } from '../../src/components/InPlacePastMembersView';
+import { InPlaceExpiringMembersView } from '../../src/components/InPlaceExpiringMembersView';
 
 import {
   SearchBar,
@@ -617,6 +620,7 @@ const renderCategoryLucideIcon = (
 };
 
 const CATEGORIES = [
+  { id: 'whatsapp-hub', label: 'WhatsApp', renderIcon: (isDark: boolean, active: boolean) => <OfficialWhatsAppIcon size={22} color={active ? (isDark ? '#38BDF8' : '#25D366') : (isDark ? '#CBD5E1' : '#0F172A')} /> },
   { id: 'members', label: 'Members', renderIcon: renderMembersCategoryIcon },
   { id: 'past-members', label: 'Past Members', renderIcon: (isDark: boolean, active: boolean) => renderCategoryLucideIcon(UserMinus, isDark, active) },
   { id: 'plans', label: 'Plans', renderIcon: renderPlansCategoryIcon },
@@ -767,12 +771,16 @@ export default function OwnerHomeScreen() {
         // Display in-place directly below the horizontal categories rail, keeping header & bottom bar fixed
         break;
       case 'past-members':
+        // Display in-place directly below the horizontal categories rail, keeping header & bottom bar fixed
+        break;
       case 'expiring-memberships':
+        // Display in-place directly below the horizontal categories rail, keeping header & bottom bar fixed
+        break;
       case 'freeze-pause':
         router.push('/members' as any);
         break;
       case 'plans':
-        router.push('/plans' as any);
+        // Display in-place directly below the horizontal categories rail, keeping header & bottom bar fixed
         break;
       case 'daily-checkin':
         router.push('/attendance' as any);
@@ -1044,6 +1052,15 @@ export default function OwnerHomeScreen() {
           ) : activeCategory === 'members' ? (
             /* In-place Member Directory View replacing operations/recent admissions */
             <InPlaceMembersView isDark={isDark} onClose={() => setActiveCategory(null)} />
+          ) : activeCategory === 'plans' ? (
+            /* In-place Membership Plans Portfolio View matching desktop logic */
+            <InPlacePlansView isDark={isDark} onClose={() => setActiveCategory(null)} />
+          ) : activeCategory === 'past-members' ? (
+            /* In-place Past Members Archived & Lapsed Vault View */
+            <InPlacePastMembersView isDark={isDark} onClose={() => setActiveCategory(null)} />
+          ) : activeCategory === 'expiring-memberships' ? (
+            /* In-place Expiring Memberships & Retention Command View */
+            <InPlaceExpiringMembersView isDark={isDark} onClose={() => setActiveCategory(null)} />
           ) : (
             <>
               {/* ============================================================ */}
