@@ -61,17 +61,40 @@ export interface WhatsAppAudienceMember {
   gender?: string | null;
 }
 
+export interface WhatsAppRecipientSummary {
+  memberId?: string;
+  name: string;
+  phoneMasked?: string | null;
+  photoUrl?: string | null;
+  status?: string;
+  deliveredAt?: string | null;
+}
+
 export interface WhatsAppMessageJob {
   id: string;
+  batchId?: string;
+  memberId?: string;
+  recipientName?: string;
+  recipientPhoto?: string | null;
+  recipientMasked?: string | null;
+  recipients?: WhatsAppRecipientSummary[];
   title?: string;
-  body: string;
+  body?: string;
+  preview?: string;
   intent?: string;
-  status: string;
-  totalRecipients: number;
-  sentCount: number;
-  failedCount: number;
+  templateName?: string | null;
+  status?: string;
+  deliveryStatus?: string;
+  totalRecipients?: number;
+  sentCount?: number;
+  failedCount?: number;
   deliveredCount?: number;
+  failureCode?: string | null;
+  failureReason?: string | null;
   createdAt: string;
+  submittedAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
 }
 
 export interface WhatsAppAutomationRule {

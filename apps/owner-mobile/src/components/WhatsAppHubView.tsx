@@ -53,6 +53,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop, Pattern, Line } from 'react-native-svg';
 import {
@@ -98,6 +99,11 @@ import {
   ChevronUp,
   CircleHelp,
   HelpCircle,
+  CheckCircle,
+  XCircle,
+  Filter,
+  ListFilter,
+  Calendar,
 } from 'lucide-react-native';
 import {
   ownerWhatsAppService,
@@ -216,6 +222,7 @@ interface WhatsAppHubViewProps {
 }
 
 export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false, onClose }) => {
+  const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'compose' | 'history' | 'automation'>('compose');
   const [showQrModal, setShowQrModal] = useState(false);
@@ -256,8 +263,37 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
   // History & Automations
   const [messages, setMessages] = useState<WhatsAppMessageJob[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [logFilter, setLogFilter] = useState<'ALL' | 'DELIVERED' | 'GROUP' | 'FAILED' | 'PENDING'>('ALL');
+  const [logSearchQuery, setLogSearchQuery] = useState('');
+  const [logTimeFilter, setLogTimeFilter] = useState<'ALL' | 'TODAY' | '7_DAYS' | 'THIS_MONTH' | 'LAST_MONTH'>('ALL');
+  const [showCategoryFilterMenu, setShowCategoryFilterMenu] = useState(false);
+  const [showTimeFilterMenu, setShowTimeFilterMenu] = useState(false);
+  const [expandedRecipientLogId, setExpandedRecipientLogId] = useState<string | null>(null);
+  const [logSlideIndices, setLogSlideIndices] = useState<Record<string, number>>({});
+  const [logCurrentPage, setLogCurrentPage] = useState(1);
+  const LOGS_PER_PAGE = 6;
   const [autoRules, setAutoRules] = useState<WhatsAppAutomationRule[]>([]);
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
+
+  // Animated chevrons for category and time filter dropdown buttons
+  const categoryChevronAnim = useRef(new Animated.Value(0)).current;
+  const timeChevronAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(categoryChevronAnim, {
+      toValue: showCategoryFilterMenu ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [showCategoryFilterMenu, categoryChevronAnim]);
+
+  useEffect(() => {
+    Animated.timing(timeChevronAnim, {
+      toValue: showTimeFilterMenu ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [showTimeFilterMenu, timeChevronAnim]);
 
   const isConnected =
     connection?.status === 'CONNECTED' ||
@@ -509,12 +545,92 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     }
   }, [activeSegment, audienceSearchQuery]);
 
-  // Load message logs
+  // Load message logs (with batch aggregation for group broadcasts)
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
-      const res = await ownerWhatsAppService.getMessages({ limit: 30 });
-      if (res?.items) setMessages(res.items);
+      const res = await ownerWhatsAppService.getMessages({ limit: 100 });
+      if (res?.items) {
+        const rawItems = res.items;
+
+        // Group individual message rows by batchId if present, so multi-recipient sends are unified into group broadcast cards
+        const batchMap = new Map<string, WhatsAppMessageJob[]>();
+        const nonBatchItems: WhatsAppMessageJob[] = [];
+
+        rawItems.forEach((job) => {
+          if (job.batchId) {
+            const existing = batchMap.get(job.batchId) || [];
+            existing.push(job);
+            batchMap.set(job.batchId, existing);
+          } else {
+            nonBatchItems.push(job);
+          }
+        });
+
+        const unifiedJobs: WhatsAppMessageJob[] = [];
+
+        batchMap.forEach((batchJobs, batchId) => {
+          if (batchJobs.length > 1) {
+            // Unified Group Broadcast Job
+            const primary = batchJobs[0];
+            const recipientsList = batchJobs.map((j) => ({
+              memberId: j.memberId,
+              name: j.recipientName || 'Member',
+              phoneMasked: j.recipientMasked,
+              photoUrl: j.recipientPhoto,
+              status: j.status || j.deliveryStatus,
+              deliveredAt: j.deliveredAt,
+            }));
+
+            const sentCount = batchJobs.filter((j) => {
+              const st = (j.status || j.deliveryStatus || '').toUpperCase();
+              return st === 'SENT' || st === 'DELIVERED';
+            }).length;
+
+            const failedCount = batchJobs.filter((j) => {
+              const st = (j.status || j.deliveryStatus || '').toUpperCase();
+              return st === 'FAILED' || (j.failedCount || 0) > 0;
+            }).length;
+
+            const deliveredCount = batchJobs.filter((j) => {
+              const st = (j.status || j.deliveryStatus || '').toUpperCase();
+              return st === 'DELIVERED';
+            }).length;
+
+            const overallStatus =
+              failedCount === batchJobs.length
+                ? 'FAILED'
+                : sentCount === batchJobs.length
+                ? 'DELIVERED'
+                : sentCount > 0
+                ? 'SENT'
+                : 'QUEUED';
+
+            unifiedJobs.push({
+              ...primary,
+              id: `batch-${batchId}`,
+              batchId,
+              recipientName: undefined, // Cleared so it is classified as a group broadcast
+              totalRecipients: batchJobs.length,
+              sentCount,
+              failedCount,
+              deliveredCount,
+              status: overallStatus,
+              deliveryStatus: overallStatus,
+              recipients: recipientsList,
+            });
+          } else {
+            unifiedJobs.push(...batchJobs);
+          }
+        });
+
+        unifiedJobs.push(...nonBatchItems);
+
+        // Sort chronologically descending
+        unifiedJobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        setMessages(unifiedJobs);
+      }
     } finally {
       setHistoryLoading(false);
     }
@@ -1648,78 +1764,858 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
         {/* ── TAB 3: MESSAGE HISTORY / LOGS ── */}
         {activeTab === 'history' && (
           <View style={styles.tabContent}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>
-                Broadcast Dispatch Logs
-              </Text>
-              <Text style={styles.sectionSub}>{messages.length} Records</Text>
-            </View>
+            {/* Executive Logs Header Hero Card (Clean Deep Slate / Cobalt with subtle Grid) */}
+            <View style={styles.autoHeaderCardOuter}>
+              <View
+                style={[
+                  styles.autoHeaderCard,
+                  {
+                    backgroundColor: isDark ? '#0F172A' : '#1E293B',
+                    borderColor: isDark ? '#334155' : '#334155',
+                  },
+                ]}
+              >
+                {/* Subtle Faded Grid Background Pattern */}
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <Svg width="100%" height="100%">
+                    <Defs>
+                      <Pattern id="logHeroGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+                        <Path
+                          d="M 16 0 L 0 0 0 16"
+                          fill="none"
+                          stroke="#94A3B8"
+                          strokeWidth="1"
+                          opacity={isDark ? 0.08 : 0.12}
+                        />
+                      </Pattern>
+                    </Defs>
+                    <Rect width="100%" height="100%" fill="url(#logHeroGrid)" />
+                  </Svg>
+                </View>
 
-            {historyLoading ? (
-              <ActivityIndicator color="#059669" style={{ marginVertical: 32 }} />
-            ) : messages.length === 0 ? (
-              <View style={[styles.emptyWrap, isDark && styles.emptyWrapDark]}>
-                <History size={32} color="#94A3B8" />
-                <Text style={[styles.emptyTitle, isDark && styles.textWhite]}>
-                  No Broadcasts Yet
-                </Text>
-                <Text style={styles.emptySub}>
-                  Messages dispatched from Composer Studio will appear here with delivery receipts.
-                </Text>
-              </View>
-            ) : (
-              messages.map((item) => (
-                <View
-                  key={item.id}
-                  style={[styles.historyCard, isDark && styles.historyCardDark]}
-                >
-                  <View style={styles.historyCardHeader}>
-                    <Text style={[styles.historyTitle, isDark && styles.textWhite]}>
-                      {item.title || item.intent || 'Broadcast Campaign'}
+                {/* Subtle Watermark History Icon Attached to Inner Bottom Right */}
+                <View style={styles.autoWatermarkLogo} pointerEvents="none">
+                  <Svg width={72} height={72} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M12 8v4l3 3"
+                      stroke="#38BDF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                    <Circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="#38BDF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                  </Svg>
+                </View>
+
+                <View style={styles.autoHeaderCardTop}>
+                  <View style={{ flex: 1, zIndex: 1 }}>
+                    <Text style={styles.autoHeaderTitle}>
+                      Dispatch Logs & Audit
                     </Text>
-                    <View
-                      style={[
-                        styles.statusPill,
-                        {
-                          backgroundColor:
-                            item.status === 'SENT' || item.status === 'DELIVERED'
-                              ? '#DCFCE7'
-                              : '#FEF3C7',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusPillText,
-                          {
-                            color:
-                              item.status === 'SENT' || item.status === 'DELIVERED'
-                                ? '#15803D'
-                                : '#B45309',
-                          },
-                        ]}
-                      >
-                        {item.status}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.historyBody} numberOfLines={2}>
-                    {item.body}
-                  </Text>
-                  <View style={styles.historyFooter}>
-                    <Text style={styles.historyMeta}>
-                      {item.sentCount} / {item.totalRecipients} Delivered
-                    </Text>
-                    <Text style={styles.historyMeta}>
-                      {new Date(item.createdAt).toLocaleDateString([], {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                    <Text style={styles.autoHeaderSubtitle}>
+                      Real-time delivery telemetry, read status and automated message receipts
                     </Text>
                   </View>
                 </View>
-              ))
-            )}
+              </View>
+
+              {/* Sculpted Bottom-Middle Cutout Notch */}
+              <View style={styles.autoBottomCutoutWrapper} pointerEvents="none">
+                <View
+                  style={[
+                    styles.autoBottomCutoutNotch,
+                    {
+                      backgroundColor: isDark ? '#080E14' : '#F8FAFC',
+                      borderColor: isDark ? '#334155' : '#334155',
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.autoBottomCutoutPill,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#CBD5E1',
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Metric KPI Strip (Cards-less, Clean High-Impact Overview) */}
+            {(() => {
+              const totalDispatched = messages.reduce((acc, m) => acc + (m.sentCount || 0), 0);
+              const totalRecipients = messages.reduce((acc, m) => acc + (m.totalRecipients || 0), 0);
+              const totalDelivered = messages.reduce((acc, m) => acc + (m.deliveredCount || m.sentCount || 0), 0);
+              const deliveryRate = totalRecipients > 0 ? Math.round((totalDelivered / totalRecipients) * 100) : 100;
+              const failedCount = messages.reduce((acc, m) => acc + (m.failedCount || 0), 0);
+
+              return (
+                <View style={[styles.logKpiRow, isDark && styles.logKpiRowDark]}>
+                  <View style={styles.logKpiItem}>
+                    <Text style={styles.logKpiLabel}>TOTAL CAMPAIGNS</Text>
+                    <Text style={[styles.logKpiValue, isDark && styles.textWhite]}>
+                      {messages.length}
+                    </Text>
+                    <Text style={styles.logKpiSub}>{totalRecipients} targets</Text>
+                  </View>
+
+                  <View style={[styles.logKpiDivider, isDark && styles.permDividerDark]} />
+
+                  <View style={styles.logKpiItem}>
+                    <Text style={styles.logKpiLabel}>DELIVERY RATE</Text>
+                    <Text style={[styles.logKpiValue, { color: '#10B981' }]}>
+                      {deliveryRate}%
+                    </Text>
+                    <Text style={styles.logKpiSub}>{totalDelivered} delivered</Text>
+                  </View>
+
+                  <View style={[styles.logKpiDivider, isDark && styles.permDividerDark]} />
+
+                  <View style={styles.logKpiItem}>
+                    <Text style={styles.logKpiLabel}>FAILED / DROPPED</Text>
+                    <Text style={[styles.logKpiValue, { color: failedCount > 0 ? '#EF4444' : '#64748B' }]}>
+                      {failedCount}
+                    </Text>
+                    <Text style={styles.logKpiSub}>{failedCount === 0 ? 'Zero failures' : 'Undelivered'}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Search Bar + Category Dropdown Button + Time Filter Dropdown Button Row */}
+            <View style={styles.logControlsSection}>
+              <View style={styles.logSearchAndFilterRow}>
+                <View style={[styles.logSearchBox, isDark && styles.logSearchBoxDark]}>
+                  <Search size={15} color="#94A3B8" strokeWidth={2.2} />
+                  <TextInput
+                    style={[styles.logSearchInput, isDark && styles.textWhite]}
+                    placeholder="Search logs..."
+                    placeholderTextColor="#94A3B8"
+                    value={logSearchQuery}
+                    onChangeText={(text) => {
+                      setLogSearchQuery(text);
+                      setLogCurrentPage(1);
+                    }}
+                    autoCorrect={false}
+                  />
+                  {logSearchQuery.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setLogSearchQuery('');
+                        setLogCurrentPage(1);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <X size={14} color="#94A3B8" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Category Filter Dropdown Trigger Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.logDropdownBtn,
+                    isDark && styles.logDropdownBtnDark,
+                    logFilter !== 'ALL' && styles.logDropdownBtnActive,
+                  ]}
+                  onPress={() => {
+                    setShowTimeFilterMenu(false);
+                    setShowCategoryFilterMenu((prev) => !prev);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <ListFilter size={14} color={logFilter !== 'ALL' ? '#0284C7' : '#64748B'} strokeWidth={2.2} />
+                  <Text
+                    style={[
+                      styles.logDropdownBtnText,
+                      isDark && styles.textWhite,
+                      logFilter !== 'ALL' && styles.logDropdownBtnTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {logFilter === 'GROUP'
+                      ? 'Group'
+                      : logFilter === 'DELIVERED'
+                      ? 'Delivered'
+                      : logFilter === 'PENDING'
+                      ? 'Queued'
+                      : logFilter === 'FAILED'
+                      ? 'Failed'
+                      : 'All Logs'}
+                  </Text>
+                  <Animated.View
+                    style={{
+                      transform: [
+                        {
+                          rotate: categoryChevronAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '180deg'],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <ChevronDown
+                      size={12}
+                      color={logFilter !== 'ALL' ? '#0284C7' : '#64748B'}
+                    />
+                  </Animated.View>
+                </TouchableOpacity>
+
+                {/* Filter Dropdown Trigger Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.logDropdownBtn,
+                    isDark && styles.logDropdownBtnDark,
+                    logTimeFilter !== 'ALL' && styles.logDropdownBtnActive,
+                  ]}
+                  onPress={() => {
+                    setShowCategoryFilterMenu(false);
+                    setShowTimeFilterMenu((prev) => !prev);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Filter size={14} color={logTimeFilter !== 'ALL' ? '#0284C7' : '#64748B'} strokeWidth={2.2} />
+                  <Text
+                    style={[
+                      styles.logDropdownBtnText,
+                      isDark && styles.textWhite,
+                      logTimeFilter !== 'ALL' && styles.logDropdownBtnTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {logTimeFilter === 'TODAY'
+                      ? 'Today'
+                      : logTimeFilter === '7_DAYS'
+                      ? '7 Days'
+                      : logTimeFilter === 'THIS_MONTH'
+                      ? 'This Mo'
+                      : logTimeFilter === 'LAST_MONTH'
+                      ? 'Last Mo'
+                      : 'Date'}
+                  </Text>
+                  <Animated.View
+                    style={{
+                      transform: [
+                        {
+                          rotate: timeChevronAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '180deg'],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <ChevronDown
+                      size={12}
+                      color={logTimeFilter !== 'ALL' ? '#0284C7' : '#64748B'}
+                    />
+                  </Animated.View>
+                </TouchableOpacity>
+              </View>
+
+              {/* Category Filter Menu Dropdown Popover */}
+              {showCategoryFilterMenu && (
+                <View style={[styles.logDropdownMenu, isDark && styles.logDropdownMenuDark]}>
+                  <Text style={styles.logDropdownMenuHeader}>FILTER BY TYPE & STATUS</Text>
+                  {[
+                    { id: 'ALL', label: 'All Logs', count: messages.length, icon: History },
+                    {
+                      id: 'GROUP',
+                      label: 'Group',
+                      count: messages.filter((m) => (m.totalRecipients || (m.recipients ? m.recipients.length : 1)) > 1).length,
+                      icon: Users,
+                    },
+                    {
+                      id: 'DELIVERED',
+                      label: 'Delivered',
+                      count: messages.filter((m) => (m.status || m.deliveryStatus) === 'SENT' || (m.status || m.deliveryStatus) === 'DELIVERED').length,
+                      icon: CheckCircle2,
+                    },
+                    {
+                      id: 'PENDING',
+                      label: 'Queued',
+                      count: messages.filter((m) => (m.status || m.deliveryStatus) === 'QUEUED' || (m.status || m.deliveryStatus) === 'PROCESSING' || (m.status || m.deliveryStatus) === 'PENDING').length,
+                      icon: Clock,
+                    },
+                    {
+                      id: 'FAILED',
+                      label: 'Failed',
+                      count: messages.filter((m) => (m.status || m.deliveryStatus) === 'FAILED' || (m.failedCount || 0) > 0).length,
+                      icon: AlertCircle,
+                    },
+                  ].map((opt) => {
+                    const isSelected = logFilter === opt.id;
+                    const IconComponent = opt.icon;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={[
+                          styles.logDropdownOption,
+                          isSelected && (isDark ? styles.logDropdownOptionSelectedDark : styles.logDropdownOptionSelected),
+                        ]}
+                        onPress={() => {
+                          setLogFilter(opt.id as any);
+                          setShowCategoryFilterMenu(false);
+                          setLogCurrentPage(1);
+                          loadHistory();
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <IconComponent
+                            size={14}
+                            color={isSelected ? '#0284C7' : isDark ? '#94A3B8' : '#64748B'}
+                            strokeWidth={2}
+                          />
+                          <Text
+                            style={[
+                              styles.logDropdownOptionText,
+                              isDark && styles.textWhite,
+                              isSelected && styles.logDropdownOptionTextSelected,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                          {opt.count > 0 && (
+                            <View
+                              style={[
+                                styles.logDropdownBadge,
+                                isSelected && styles.logDropdownBadgeSelected,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.logDropdownBadgeText,
+                                  isSelected && styles.logDropdownBadgeTextSelected,
+                                ]}
+                              >
+                                {opt.count}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        {isSelected && <Check size={14} color="#0284C7" strokeWidth={2.4} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Time Filter Menu Dropdown Popover */}
+              {showTimeFilterMenu && (
+                <View style={[styles.logDropdownMenu, isDark && styles.logDropdownMenuDark]}>
+                  <Text style={styles.logDropdownMenuHeader}>FILTER BY TIMELINE</Text>
+                  {[
+                    { id: 'ALL', label: 'All Time', icon: History },
+                    { id: 'TODAY', label: 'Today (Last 24 Hours)', icon: Clock },
+                    { id: '7_DAYS', label: 'Past 7 Days', icon: Calendar },
+                    { id: 'THIS_MONTH', label: 'This Month', icon: CalendarCheck },
+                    { id: 'LAST_MONTH', label: 'Last Month', icon: Calendar },
+                  ].map((opt) => {
+                    const isSelected = logTimeFilter === opt.id;
+                    const IconComponent = opt.icon;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={[
+                          styles.logDropdownOption,
+                          isSelected && (isDark ? styles.logDropdownOptionSelectedDark : styles.logDropdownOptionSelected),
+                        ]}
+                        onPress={() => {
+                          setLogTimeFilter(opt.id as any);
+                          setShowTimeFilterMenu(false);
+                          setLogCurrentPage(1);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <IconComponent
+                            size={14}
+                            color={isSelected ? '#0284C7' : isDark ? '#94A3B8' : '#64748B'}
+                            strokeWidth={2}
+                          />
+                          <Text
+                            style={[
+                              styles.logDropdownOptionText,
+                              isDark && styles.textWhite,
+                              isSelected && styles.logDropdownOptionTextSelected,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </View>
+                        {isSelected && <Check size={14} color="#0284C7" strokeWidth={2.4} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            {/* List Header Count & Quick Refresh */}
+            <View style={styles.logListHeaderRow}>
+              <Text style={styles.logListHeaderTitle}>
+                DISPATCH HISTORY & TIMELINE
+              </Text>
+              <TouchableOpacity
+                style={styles.logRefreshBtn}
+                onPress={loadHistory}
+                disabled={historyLoading}
+                activeOpacity={0.7}
+              >
+                <RefreshCw size={13} color="#000000" strokeWidth={2.4} />
+                <Text style={styles.logRefreshBtnText}>Refresh</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* History Feed */}
+            {historyLoading ? (
+              <View style={styles.logLoadingWrapper}>
+                <ActivityIndicator color="#0284C7" size="small" />
+                <Text style={[styles.logLoadingText, isDark && styles.textMutedDark]}>
+                  Fetching real-time dispatch history...
+                </Text>
+              </View>
+            ) : (() => {
+              const now = new Date();
+              const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+              const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+              const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+              const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+              const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
+
+              const filtered = messages.filter((item) => {
+                const status = (item.status || item.deliveryStatus || '').toUpperCase();
+                if (logFilter === 'GROUP') {
+                  const rTotal = item.totalRecipients || (item.recipients ? item.recipients.length : 1);
+                  if (rTotal <= 1) return false;
+                } else if (logFilter === 'DELIVERED') {
+                  if (status !== 'SENT' && status !== 'DELIVERED') return false;
+                } else if (logFilter === 'PENDING') {
+                  if (status !== 'QUEUED' && status !== 'PROCESSING' && status !== 'PENDING') return false;
+                } else if (logFilter === 'FAILED') {
+                  if (status !== 'FAILED' && (item.failedCount || 0) === 0) return false;
+                }
+
+                // Time filter
+                const itemTime = new Date(item.createdAt).getTime();
+                if (logTimeFilter === 'TODAY') {
+                  if (itemTime < startOfToday) return false;
+                } else if (logTimeFilter === '7_DAYS') {
+                  if (itemTime < sevenDaysAgo) return false;
+                } else if (logTimeFilter === 'THIS_MONTH') {
+                  if (itemTime < startOfThisMonth) return false;
+                } else if (logTimeFilter === 'LAST_MONTH') {
+                  if (itemTime < startOfLastMonth || itemTime > endOfLastMonth) return false;
+                }
+
+                // Text search query
+                if (logSearchQuery.trim()) {
+                  const q = logSearchQuery.toLowerCase().trim();
+                  const matchTitle = item.title ? item.title.toLowerCase().includes(q) : false;
+                  const matchIntent = item.intent ? item.intent.toLowerCase().includes(q) : false;
+                  const matchBody = (item.body || item.preview || '').toLowerCase().includes(q);
+                  const matchRecipient = (item.recipientName || '').toLowerCase().includes(q);
+                  const matchPhone = (item.recipientMasked || '').toLowerCase().includes(q);
+                  if (!matchTitle && !matchIntent && !matchBody && !matchRecipient && !matchPhone) return false;
+                }
+
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <View style={[styles.logEmptyCard, isDark && styles.logEmptyCardDark]}>
+                    <View style={[styles.logEmptyIconBox, isDark && styles.logEmptyIconBoxDark]}>
+                      <History size={24} color="#64748B" strokeWidth={2} />
+                    </View>
+                    <Text style={[styles.logEmptyTitle, isDark && styles.textWhite]}>
+                      {logSearchQuery.trim() || logTimeFilter !== 'ALL' || logFilter !== 'ALL'
+                        ? 'No Matching Dispatches Found'
+                        : 'No Dispatches Recorded'}
+                    </Text>
+                    <Text style={[styles.logEmptySub, isDark && styles.textMutedDark]}>
+                      {logSearchQuery.trim() || logTimeFilter !== 'ALL' || logFilter !== 'ALL'
+                        ? 'Try clearing the search query or adjusting your timeline / status filters.'
+                        : 'Every broadcast message or automation sent through GymDeck WhatsApp line will be verified and logged here.'}
+                    </Text>
+                    {(logSearchQuery.trim().length > 0 || logTimeFilter !== 'ALL' || logFilter !== 'ALL') && (
+                      <TouchableOpacity
+                        style={styles.logResetFilterBtn}
+                        onPress={() => {
+                          setLogSearchQuery('');
+                          setLogFilter('ALL');
+                          setLogTimeFilter('ALL');
+                          setLogCurrentPage(1);
+                        }}
+                      >
+                        <Text style={styles.logResetFilterBtnText}>Reset All Filters</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              }
+
+              // Pagination calculation
+              const totalItems = filtered.length;
+              const totalPages = Math.ceil(totalItems / LOGS_PER_PAGE);
+              const validPage = Math.min(Math.max(logCurrentPage, 1), totalPages);
+              const startIndex = (validPage - 1) * LOGS_PER_PAGE;
+              const paginatedItems = filtered.slice(startIndex, startIndex + LOGS_PER_PAGE);
+
+              return (
+                <View>
+                  <View style={styles.logFeedList}>
+                    {paginatedItems.map((item, idx) => {
+                      const status = (item.status || item.deliveryStatus || 'SENT').toUpperCase();
+                      const isSuccess = status === 'SENT' || status === 'DELIVERED';
+                      const isFailed = status === 'FAILED' || (item.failedCount || 0) > 0;
+                      const isQueued = status === 'QUEUED' || status === 'PROCESSING' || status === 'PENDING';
+
+                      const statusBg = isSuccess ? '#ECFDF5' : isFailed ? '#FEF2F2' : '#EFF6FF';
+                      const statusBorder = isSuccess ? '#A7F3D0' : isFailed ? '#FECACA' : '#BFDBFE';
+                      const statusText = isSuccess ? '#059669' : isFailed ? '#DC2626' : '#2563EB';
+                      const StatusIcon = isSuccess ? CheckCheck : isFailed ? AlertCircle : Clock;
+
+                      const dateObj = new Date(item.createdAt);
+                      const formattedDate = dateObj.toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      });
+                      const formattedTime = dateObj.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+
+                      // Real recipient count
+                      const recipientTotal = item.totalRecipients || (item.recipients ? item.recipients.length : (item.recipientName ? 1 : 1));
+                      const sentCount = item.sentCount !== undefined ? item.sentCount : (isSuccess ? recipientTotal : 0);
+                      const deliveredCount = item.deliveredCount !== undefined ? item.deliveredCount : sentCount;
+                      const messageText = item.body || item.preview || '';
+
+                      // Recipient list for carousel and dropdown
+                      const recipientList: { name: string; memberId?: string; phoneMasked?: string | null }[] =
+                        item.recipients && item.recipients.length > 0
+                          ? item.recipients
+                          : item.recipientName
+                          ? [{ name: item.recipientName, memberId: item.memberId, phoneMasked: item.recipientMasked }]
+                          : Array.from({ length: recipientTotal }).map((_, i) => ({
+                              name: audience[i]?.fullName || `Member #${i + 1}`,
+                              memberId: audience[i]?.id,
+                              phoneMasked: audience[i]?.phone || null,
+                            }));
+
+                      const slideCardWidth = windowWidth - 60;
+
+                      return (
+                        <View
+                          key={item.id || `log-${startIndex + idx}`}
+                          style={[styles.logCleanCard, isDark && styles.logCleanCardDark]}
+                        >
+                          {/* Card Header Row: Icon + Intent/Recipient Info + Status Badge */}
+                          <View style={styles.logCleanHeaderRow}>
+                            <View style={[styles.logCleanAvatarBox, isDark && styles.logCleanAvatarBoxDark]}>
+                              <MessageSquare size={16} color={isDark ? '#F8FAFC' : '#000000'} strokeWidth={2.2} />
+                            </View>
+
+                            <View style={styles.logCleanHeaderTextContainer}>
+                              <Text style={[styles.logCleanIntentTag, isDark && styles.textWhite]} numberOfLines={1}>
+                                {item.intent ? item.intent.replace(/_/g, ' ') : (item.templateName || 'CAMPAIGN DISPATCH')}
+                              </Text>
+                              <View style={styles.logCleanMetaRow}>
+                                <Clock size={10} color="#94A3B8" strokeWidth={2} />
+                                <Text style={styles.logCleanTimestamp}>
+                                  {formattedDate} • {formattedTime}
+                                </Text>
+                              </View>
+                            </View>
+
+                            <View
+                              style={[
+                                styles.logCleanStatusBadge,
+                                {
+                                  backgroundColor: isDark ? (isSuccess ? '#064E3B' : isFailed ? '#7F1D1D' : '#1E3A8A') : statusBg,
+                                  borderColor: isDark ? (isSuccess ? '#059669' : isFailed ? '#DC2626' : '#2563EB') : statusBorder,
+                                },
+                              ]}
+                            >
+                              <StatusIcon size={12} color={isDark ? (isSuccess ? '#34D399' : isFailed ? '#F87171' : '#60A5FA') : statusText} strokeWidth={2.4} />
+                              <Text
+                                style={[
+                                  styles.logCleanStatusText,
+                                  { color: isDark ? (isSuccess ? '#34D399' : isFailed ? '#F87171' : '#60A5FA') : statusText },
+                                ]}
+                              >
+                                {status}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Message Body Content Container: Horizontal scrollable live preview style for multi-recipient/group, or single canvas */}
+                          {recipientTotal > 1 ? (
+                            <View style={styles.logMultiPreviewWrapper}>
+                              <ScrollView
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                onMomentumScrollEnd={(e) => {
+                                  const contentOffsetX = e.nativeEvent.contentOffset.x;
+                                  const layoutWidth = e.nativeEvent.layoutMeasurement.width;
+                                  if (layoutWidth > 0) {
+                                    const newIdx = Math.round(contentOffsetX / layoutWidth);
+                                    setLogSlideIndices((prev) => ({
+                                      ...prev,
+                                      [item.id || `log-${startIndex + idx}`]: newIdx,
+                                    }));
+                                  }
+                                }}
+                                style={styles.logHorizontalScroll}
+                              >
+                                {recipientList.map((rec, rIdx) => {
+                                  const personalizedBody = messageText
+                                    ? messageText.replace(/\{\{member_name\}\}/gi, rec.name)
+                                    : `Message dispatched to ${rec.name}`;
+
+                                  return (
+                                    <View key={rec.memberId || `rec-${rIdx}`} style={[styles.logPreviewSlide, { width: slideCardWidth }]}>
+                                      <View style={[styles.previewCanvas, styles.logPreviewCanvas, isDark && styles.logPreviewCanvasDark]}>
+                                        <View style={styles.logPreviewSlideHeader}>
+                                          <Users size={11} color="#64748B" />
+                                          <Text style={styles.logPreviewSlideRecipientName} numberOfLines={1}>
+                                            To: <Text style={{ fontWeight: '800', color: isDark ? '#E2E8F0' : '#0F172A' }}>{rec.name}</Text>
+                                            {rec.phoneMasked ? ` (${rec.phoneMasked})` : ''}
+                                          </Text>
+                                        </View>
+                                        <View style={[styles.previewChatBubble, isDark && styles.logPreviewChatBubbleDark]}>
+                                          <Text style={[styles.previewMessageText, isDark && styles.textWhite]}>{personalizedBody}</Text>
+                                          <View style={styles.previewMetaRow}>
+                                            <Text style={[styles.previewTimeText, isDark && styles.textMutedDark]}>{formattedTime}</Text>
+                                            <CheckCheck
+                                              size={13}
+                                              color={isSuccess ? '#34B7F1' : '#94A3B8'}
+                                              style={{ marginLeft: 4 }}
+                                            />
+                                          </View>
+                                        </View>
+                                      </View>
+                                    </View>
+                                  );
+                                })}
+                              </ScrollView>
+
+                              {/* Horizontal pagination dots for multi-recipient cards */}
+                              {recipientList.length > 1 && (
+                                <View style={styles.logPreviewDotsRow}>
+                                  {recipientList.slice(0, 6).map((_, dotIdx) => {
+                                    const currentSlideIdx = logSlideIndices[item.id || `log-${startIndex + idx}`] || 0;
+                                    const isDotActive =
+                                      dotIdx === currentSlideIdx || (currentSlideIdx >= 5 && dotIdx === 5);
+                                    return (
+                                      <View
+                                        key={dotIdx}
+                                        style={[
+                                          styles.previewDot,
+                                          isDotActive ? styles.previewDotActive : styles.previewDotInactive,
+                                        ]}
+                                      />
+                                    );
+                                  })}
+                                </View>
+                              )}
+                            </View>
+                          ) : (
+                            <View style={[styles.logCleanContentBox, isDark && styles.logCleanContentBoxDark]}>
+                              <Text style={[styles.logCleanBodyText, isDark && styles.textMutedDark]} numberOfLines={3}>
+                                {messageText || '(Empty message payload)'}
+                              </Text>
+                            </View>
+                          )}
+
+                          {/* Footer Telemetry Row: Recipient dropdown button & Delivery count */}
+                          <View style={styles.logCleanFooterRow}>
+                            <View style={styles.logCleanFooterLeft}>
+                              {recipientTotal > 1 ? (
+                                <TouchableOpacity
+                                  style={[styles.logRecipientDropdownBtn, isDark && styles.logRecipientDropdownBtnDark]}
+                                  onPress={() => {
+                                    setExpandedRecipientLogId((prev) =>
+                                      prev === (item.id || `log-${startIndex + idx}`) ? null : (item.id || `log-${startIndex + idx}`)
+                                    );
+                                  }}
+                                  activeOpacity={0.7}
+                                >
+                                  <Users size={12} color={isDark ? '#38BDF8' : '#0284C7'} />
+                                  <Text style={[styles.logRecipientDropdownBtnText, isDark && styles.textWhite]}>
+                                    Recipients: <Text style={{ fontWeight: '800' }}>{recipientTotal} members</Text>
+                                  </Text>
+                                  <ChevronDown
+                                    size={12}
+                                    color={isDark ? '#94A3B8' : '#64748B'}
+                                    style={{
+                                      transform: [
+                                        {
+                                          rotate:
+                                            expandedRecipientLogId === (item.id || `log-${startIndex + idx}`)
+                                              ? '180deg'
+                                              : '0deg',
+                                        },
+                                      ],
+                                    }}
+                                  />
+                                </TouchableOpacity>
+                              ) : item.recipientName ? (
+                                <View style={styles.logRecipientDataRow}>
+                                  <Users size={12} color="#64748B" />
+                                  <Text style={styles.logRecipientDataText}>
+                                    Recipient: <Text style={{ fontWeight: '700', color: isDark ? '#E2E8F0' : '#0F172A' }}>{item.recipientName}</Text>
+                                    {item.recipientMasked ? ` (${item.recipientMasked})` : ''}
+                                  </Text>
+                                </View>
+                              ) : (
+                                <View style={styles.logRecipientDataRow}>
+                                  <Users size={12} color="#64748B" />
+                                  <Text style={styles.logRecipientDataText}>
+                                    Audience: <Text style={{ fontWeight: '700', color: isDark ? '#E2E8F0' : '#0F172A' }}>{recipientTotal} member</Text>
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+
+                            <View style={styles.logCleanFooterRight}>
+                              <View style={[styles.logReceiptDeliveryBadge, isDark && styles.logReceiptDeliveryBadgeDark]}>
+                                <CheckCheck size={12} color={isSuccess ? '#059669' : '#64748B'} strokeWidth={2} />
+                                <Text style={[styles.logReceiptDeliveryText, isSuccess && { color: '#059669' }]}>
+                                  {sentCount}/{recipientTotal} sent
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          {/* Recipient Dropdown Menu / Expanded List */}
+                          {expandedRecipientLogId === (item.id || `log-${startIndex + idx}`) && recipientTotal > 1 && (
+                            <View style={[styles.logRecipientExpandedMenu, isDark && styles.logRecipientExpandedMenuDark]}>
+                              <View style={styles.logRecipientExpandedHeader}>
+                                <Text style={styles.logRecipientExpandedTitle}>
+                                  DISPATCH TARGETS ({recipientList.length})
+                                </Text>
+                                <TouchableOpacity
+                                  onPress={() => setExpandedRecipientLogId(null)}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                  <X size={12} color="#94A3B8" />
+                                </TouchableOpacity>
+                              </View>
+                              <ScrollView
+                                nestedScrollEnabled
+                                style={styles.logRecipientScrollList}
+                                showsVerticalScrollIndicator={false}
+                              >
+                                {recipientList.map((rec, rIdx) => (
+                                  <View
+                                    key={rec.memberId || `r-${rIdx}`}
+                                    style={[
+                                      styles.logRecipientListItem,
+                                      rIdx !== recipientList.length - 1 && styles.logRecipientListItemBorder,
+                                      isDark && styles.logRecipientListItemBorderDark,
+                                    ]}
+                                  >
+                                    <View style={styles.logRecipientItemLeft}>
+                                      <View style={[styles.logRecipientMiniAvatar, isDark && styles.logRecipientMiniAvatarDark]}>
+                                        <Text style={[styles.logRecipientMiniAvatarText, isDark && styles.textWhite]}>
+                                          {rec.name.charAt(0).toUpperCase()}
+                                        </Text>
+                                      </View>
+                                      <View>
+                                        <Text style={[styles.logRecipientItemName, isDark && styles.textWhite]}>
+                                          {rec.name}
+                                        </Text>
+                                        {rec.phoneMasked && (
+                                          <Text style={styles.logRecipientItemPhone}>
+                                            {rec.phoneMasked}
+                                          </Text>
+                                        )}
+                                      </View>
+                                    </View>
+                                    <View style={styles.logRecipientItemRight}>
+                                      <CheckCircle2 size={12} color="#10B981" />
+                                      <Text style={styles.logRecipientItemStatusText}>Delivered</Text>
+                                    </View>
+                                  </View>
+                                ))}
+                              </ScrollView>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* Pagination Bar (Matching Member Directory page style exactly) */}
+                  {totalPages > 1 && (
+                    <View style={styles.paginationContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.pageBtn,
+                          validPage <= 1 && styles.pageBtnDisabled,
+                          { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' },
+                        ]}
+                        onPress={() => setLogCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={validPage <= 1}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.pageBtnText,
+                            { color: validPage <= 1 ? (isDark ? '#475569' : '#94A3B8') : (isDark ? '#F8FAFC' : '#0F172A') },
+                          ]}
+                        >
+                          ← Prev
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={styles.pageInfoBox}>
+                        <Text style={[styles.pageInfoText, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                          Page <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>{String(validPage).padStart(2, '0')}</Text>/<Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>{String(totalPages).padStart(2, '0')}</Text>
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.pageBtn,
+                          validPage >= totalPages && styles.pageBtnDisabled,
+                          { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' },
+                        ]}
+                        onPress={() => setLogCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={validPage >= totalPages}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.pageBtnText,
+                            { color: validPage >= totalPages ? (isDark ? '#475569' : '#94A3B8') : (isDark ? '#F8FAFC' : '#0F172A') },
+                          ]}
+                        >
+                          Next →
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
           </View>
         )}
       </View>
@@ -3448,70 +4344,646 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  /* History / Logs */
-  historyCard: {
+  /* Redesigned Dispatch Logs & Audit */
+  logKpiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+  },
+  logKpiRowDark: {
+    borderColor: '#1E293B',
+  },
+  logKpiItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logKpiDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#E2E8F0',
+  },
+  logKpiLabel: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
+  logKpiValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+    marginTop: 2,
+  },
+  logKpiSub: {
+    fontSize: 9.5,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  logControlsSection: {
+    gap: 10,
+    marginBottom: 14,
+    zIndex: 20,
+  },
+  logFilterPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  logFilterChipDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logFilterChipActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  logFilterChipActiveDark: {
+    backgroundColor: '#38BDF8',
+    borderColor: '#38BDF8',
+  },
+  logFilterChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  logFilterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  logFilterBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 5,
+  },
+  logFilterBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  logFilterBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  logFilterBadgeTextActive: {
+    color: '#FFFFFF',
+  },
+  logSearchAndFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logSearchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  logSearchBoxDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logSearchInput: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#0F172A',
+    fontWeight: '500',
+    padding: 0,
+  },
+  logDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+    height: 40,
+    width: 96,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  logDropdownBtnDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logDropdownBtnActive: {
+    borderColor: '#BAE6FD',
+    backgroundColor: '#F0F9FF',
+  },
+  logDropdownBtnText: {
+    flex: 1,
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+    textAlign: 'left',
+  },
+  logDropdownBtnTextActive: {
+    color: '#0284C7',
+  },
+  logDropdownMenu: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 12,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 6,
+    marginTop: 4,
   },
-  historyCardDark: {
+  logDropdownMenuDark: {
     backgroundColor: '#0F172A',
     borderColor: '#1E293B',
   },
-  historyCardHeader: {
+  logDropdownMenuHeader: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  logDropdownOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  historyTitle: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#0F172A',
+  logDropdownOptionSelected: {
+    backgroundColor: '#F0F9FF',
   },
-  historyBody: {
+  logDropdownOptionSelectedDark: {
+    backgroundColor: '#1E293B',
+  },
+  logDropdownOptionText: {
     fontSize: 11.5,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  logDropdownOptionTextSelected: {
+    fontWeight: '800',
+    color: '#0284C7',
+  },
+  logDropdownBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  logDropdownBadgeSelected: {
+    backgroundColor: '#E0F2FE',
+  },
+  logDropdownBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
     color: '#64748B',
-    lineHeight: 16,
   },
-  historyFooter: {
+  logDropdownBadgeTextSelected: {
+    color: '#0284C7',
+  },
+  logListHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#F8FAFC',
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
-  historyMeta: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
+  logListHeaderTitle: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: '#000000',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
-  emptyWrap: {
+  logRefreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 5,
+    backgroundColor: '#F1F5F9',
+  },
+  logRefreshBtnText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#000000',
+  },
+  logLoadingWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+    gap: 10,
+  },
+  logLoadingText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  logEmptyCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     padding: 28,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  emptyWrapDark: {
+  logEmptyCardDark: {
     backgroundColor: '#0F172A',
     borderColor: '#1E293B',
   },
-  emptyTitle: {
-    fontSize: 14,
+  logEmptyIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  logEmptyIconBoxDark: {
+    backgroundColor: '#1E293B',
+  },
+  logEmptyTitle: {
+    fontSize: 13.5,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 8,
+    marginBottom: 3,
   },
-  emptySub: {
+  logEmptySub: {
     fontSize: 11,
     color: '#64748B',
     textAlign: 'center',
-    marginTop: 2,
+    lineHeight: 16,
+    maxWidth: 280,
+  },
+  logResetFilterBtn: {
+    marginTop: 12,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  logResetFilterBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0284C7',
+  },
+  logFeedList: {
+    gap: 10,
+    marginBottom: 14,
+  },
+  /* Clean Professional Log Card */
+  logCleanCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  logCleanCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logCleanHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  logCleanAvatarBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  logCleanAvatarBoxDark: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  logCleanHeaderTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  logCleanIntentTag: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  logCleanMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  logCleanTimestamp: {
+    fontSize: 10.5,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  logCleanStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: 'center',
+  },
+  logCleanStatusText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  logCleanContentBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  logCleanContentBoxDark: {
+    backgroundColor: '#080E14',
+    borderColor: '#1E293B',
+  },
+  logCleanBodyText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#334155',
+    fontWeight: '500',
+  },
+  logCleanFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 8,
+  },
+  logCleanFooterLeft: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  logRecipientDataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logRecipientDataText: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  logCleanFooterRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  logReceiptDeliveryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  logReceiptDeliveryBadgeDark: {
+    backgroundColor: '#080E14',
+    borderColor: '#1E293B',
+  },
+  logReceiptDeliveryText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  /* Horizontal Multi-Recipient Live Preview Styles */
+  logMultiPreviewWrapper: {
+    marginBottom: 10,
+    marginHorizontal: -14,
+  },
+  logHorizontalScroll: {
+    paddingHorizontal: 0,
+  },
+  logPreviewSlide: {
+    paddingHorizontal: 14,
+  },
+  logPreviewCanvas: {
+    minHeight: 115,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#EFEAE2',
+  },
+  logPreviewCanvasDark: {
+    backgroundColor: '#0B131E',
+    borderColor: '#1E293B',
+  },
+  logPreviewSlideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 7,
+    paddingHorizontal: 2,
+  },
+  logPreviewSlideRecipientName: {
+    fontSize: 10.5,
+    color: '#64748B',
+  },
+  logPreviewChatBubbleDark: {
+    backgroundColor: '#0F2C24',
+  },
+  logPreviewDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 8,
+    marginBottom: 2,
+  },
+
+  /* Recipient Dropdown in Cards */
+  logRecipientDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignSelf: 'flex-start',
+  },
+  logRecipientDropdownBtnDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  logRecipientDropdownBtnText: {
+    fontSize: 11,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  logRecipientExpandedMenu: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 10,
+    padding: 10,
+  },
+  logRecipientExpandedMenuDark: {
+    backgroundColor: '#080E14',
+    borderColor: '#1E293B',
+  },
+  logRecipientExpandedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  logRecipientExpandedTitle: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#64748B',
+    letterSpacing: 0.7,
+  },
+  logRecipientScrollList: {
+    maxHeight: 150,
+  },
+  logRecipientListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  logRecipientListItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  logRecipientListItemBorderDark: {
+    borderBottomColor: '#1E293B',
+  },
+  logRecipientItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logRecipientMiniAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logRecipientMiniAvatarDark: {
+    backgroundColor: 'rgba(2, 132, 199, 0.2)',
+  },
+  logRecipientMiniAvatarText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#0284C7',
+  },
+  logRecipientItemName: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  logRecipientItemPhone: {
+    fontSize: 9.5,
+    color: '#64748B',
+  },
+  logRecipientItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  logRecipientItemStatusText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+
+  /* Pagination Bar (Matching Member Directory page style exactly) */
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginTop: 18,
+    marginBottom: 16,
+  },
+  pageBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pageBtnDisabled: {
+    opacity: 0.35,
+  },
+  pageBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  pageInfoBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pageInfoText: {
+    fontSize: 11.5,
+    fontWeight: '500',
   },
 
   /* Link Phone QR Bottom Sheet Modal (Matching Add Member in InPlaceMembersView) */
