@@ -285,6 +285,22 @@ export const openwaClient = {
     }
   },
 
+  /**
+   * Request an 8-character pairing code from OpenWA to link via phone number.
+   * OpenWA v0.30.3 endpoint: POST /sessions/:sessionId/pairing-code
+   * Body: { phoneNumber: string } (digits only in international format).
+   */
+  async requestPairingCode(
+    sessionId: string,
+    phoneNumber: string
+  ): Promise<{ pairingCode: string; status: string }> {
+    return request<{ pairingCode: string; status: string }>(
+      'POST',
+      `/sessions/${encodeURIComponent(sessionId)}/pairing-code`,
+      { phoneNumber }
+    );
+  },
+
   async listWebhooks(sessionId: string): Promise<any[]> {
     const data = await request<any[]>(
       'GET',

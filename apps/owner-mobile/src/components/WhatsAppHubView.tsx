@@ -49,6 +49,10 @@ import {
   Image,
   ImageStyle,
   Modal,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import {
@@ -78,6 +82,14 @@ import {
   CalendarCheck,
   AlertCircle,
   FileText,
+  KeyRound,
+  Copy,
+  Info,
+  Lock,
+  ArrowRight,
+  CheckCircle2,
+  Phone,
+  AlertTriangle,
 } from 'lucide-react-native';
 import {
   ownerWhatsAppService,
@@ -190,6 +202,16 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
   const [activeTab, setActiveTab] = useState<'compose' | 'history' | 'automation'>('compose');
   const [showQrModal, setShowQrModal] = useState(false);
 
+  const [pairingPhone, setPairingPhone] = useState('');
+  const [isRequestingPairingCode, setIsRequestingPairingCode] = useState(false);
+  const [pairingResult, setPairingResult] = useState<{
+    pairingCode: string;
+    expiresInSeconds: number;
+    status: string;
+  } | null>(null);
+  const [pairingError, setPairingError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+
   // Connection State
   const [connection, setConnection] = useState<WhatsAppConnectionState | null>(null);
   const [overview, setOverview] = useState<WhatsAppOverview | null>(null);
@@ -219,7 +241,10 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
   const [autoRules, setAutoRules] = useState<WhatsAppAutomationRule[]>([]);
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
 
-  const isConnected = connection?.status === 'CONNECTED';
+  const isConnected =
+    connection?.status === 'CONNECTED' ||
+    (connection as any)?.connectionStatus === 'CONNECTED' ||
+    Boolean((connection as any)?.isLive);
 
   // Pulse animation for online indicator
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -233,6 +258,172 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     loop.start();
     return () => loop.stop();
   }, [pulseAnim]);
+
+  // Modal slide-up from bottom animation (matching Add Member Modal in InPlaceMembersView)
+  const modalBackdropAnim = useRef(new Animated.Value(0)).current;
+  const modalSheetTranslateY = useRef(new Animated.Value(600)).current;
+
+  // Dynamic keyboard bottom padding so modal bottom stays attached to screen bottom
+  // while the modal body extends seamlessly upward for complete visibility
+  const keyboardPaddingAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        Animated.timing(keyboardPaddingAnim, {
+          toValue: e.endCoordinates.height,
+          duration: Platform.OS === 'ios' ? e.duration || 250 : 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (e) => {
+        Animated.timing(keyboardPaddingAnim, {
+          toValue: 0,
+          duration: Platform.OS === 'ios' ? e.duration || 200 : 180,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardPaddingAnim]);
+
+  const closeModal = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(modalBackdropAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalSheetTranslateY, {
+        toValue: 600,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowQrModal(false);
+      setPairingPhone('');
+      setPairingResult(null);
+      setPairingError(null);
+      setCopiedCode(false);
+    });
+  }, [modalBackdropAnim, modalSheetTranslateY]);
+
+  const openModal = useCallback(() => {
+    setPairingPhone('');
+    setPairingResult(null);
+    setPairingError(null);
+    setCopiedCode(false);
+    setShowQrModal(true);
+    modalSheetTranslateY.setValue(600);
+    Animated.parallel([
+      Animated.timing(modalBackdropAnim, {
+        toValue: 1,
+        duration: 260,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalSheetTranslateY, {
+        toValue: 0,
+        duration: 320,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [modalBackdropAnim, modalSheetTranslateY]);
+  const successColorAnim = useRef(new Animated.Value(0)).current;
+  const successScaleAnim = useRef(new Animated.Value(0.3)).current;
+  const successTextOpacity = useRef(new Animated.Value(0)).current;
+  const wasConnectedRef = useRef(false);
+
+  // Custom Disconnect Popup Modal State & Animations
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  const disconnectBackdropAnim = useRef(new Animated.Value(0)).current;
+  const disconnectScaleAnim = useRef(new Animated.Value(0.85)).current;
+
+  const openDisconnectModal = useCallback(() => {
+    setShowDisconnectModal(true);
+    disconnectBackdropAnim.setValue(0);
+    disconnectScaleAnim.setValue(0.85);
+    Animated.parallel([
+      Animated.timing(disconnectBackdropAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(disconnectScaleAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [disconnectBackdropAnim, disconnectScaleAnim]);
+
+  const closeDisconnectModal = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(disconnectBackdropAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(disconnectScaleAnim, {
+        toValue: 0.85,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowDisconnectModal(false);
+    });
+  }, [disconnectBackdropAnim, disconnectScaleAnim]);
+
+  const triggerSuccessAnimation = useCallback(() => {
+    successColorAnim.setValue(0);
+    successScaleAnim.setValue(0.3);
+    successTextOpacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(successColorAnim, {
+        toValue: 1,
+        duration: 650,
+        useNativeDriver: false, // Color interpolation requires false
+      }),
+      Animated.spring(successScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 70,
+        useNativeDriver: true,
+      }),
+      Animated.timing(successTextOpacity, {
+        toValue: 1,
+        duration: 500,
+        delay: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [successColorAnim, successScaleAnim, successTextOpacity]);
+
+  useEffect(() => {
+    // When connection status flips from not connected -> connected
+    if (!wasConnectedRef.current && isConnected) {
+      triggerSuccessAnimation();
+    } else if (!isConnected) {
+      successColorAnim.setValue(0);
+      successScaleAnim.setValue(0.3);
+      successTextOpacity.setValue(0);
+    }
+    wasConnectedRef.current = isConnected;
+  }, [isConnected, triggerSuccessAnimation, successColorAnim, successScaleAnim, successTextOpacity]);
+
+  // When modal is opened while already connected (or pairing just finalized)
+  useEffect(() => {
+    if (showQrModal && isConnected) {
+      triggerSuccessAnimation();
+    }
+  }, [showQrModal, isConnected, triggerSuccessAnimation]);
 
   // Load gateway connection
   const loadData = useCallback(async () => {
@@ -303,6 +494,19 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     loadData();
     loadAudience();
   }, [loadData, loadAudience]);
+
+  // Active polling when modal is open and awaiting owner approval/connection
+  useEffect(() => {
+    let interval: any = null;
+    if (showQrModal && !isConnected) {
+      interval = setInterval(() => {
+        loadData();
+      }, 3000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showQrModal, isConnected, loadData]);
 
   useEffect(() => {
     if (activeTab === 'history') loadHistory();
@@ -415,26 +619,62 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     }
   };
 
-  const handleDisconnect = async () => {
-    Alert.alert(
-      'Disconnect WhatsApp Line',
-      'Are you sure you want to unlink the companion gym phone? Automatic fee receipts and member notifications will be paused until re-linked.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unlink Phone',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await ownerWhatsAppService.disconnect();
-              loadData();
-            } catch (e: any) {
-              Alert.alert('Error', e?.message || 'Failed to disconnect.');
-            }
-          },
-        },
-      ]
-    );
+  const handleRequestPairingCode = async () => {
+    Keyboard.dismiss();
+    const cleanDigits = pairingPhone.replace(/\D/g, '');
+    if (!cleanDigits) {
+      Alert.alert('Phone Required', 'Please enter your WhatsApp mobile number.');
+      return;
+    }
+    const fullInternational = cleanDigits.startsWith('91') && cleanDigits.length > 10
+      ? cleanDigits
+      : `91${cleanDigits}`;
+
+    setIsRequestingPairingCode(true);
+    setPairingError(null);
+    try {
+      const res = await ownerWhatsAppService.requestPairingCode(fullInternational);
+      setPairingResult({
+        pairingCode: res.pairingCode,
+        expiresInSeconds: res.expiresInSeconds || 300,
+        status: res.status,
+      });
+      loadData();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to request pairing code.';
+      setPairingError(msg);
+      Alert.alert('Pairing Error', msg);
+    } finally {
+      setIsRequestingPairingCode(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    openDisconnectModal();
+  };
+
+  const handleConfirmDisconnect = () => {
+    closeDisconnectModal();
+
+    // Instantly break and cut off connection in UI with zero delay
+    setConnection({
+      status: 'DISCONNECTED',
+      connectionStatus: 'DISCONNECTED',
+      phoneNumber: null,
+      businessPhoneNumber: null,
+      isLive: false,
+    });
+    setPairingResult(null);
+    setPairingError(null);
+    setCopiedCode(false);
+
+    // Execute backend disconnection in background without blocking UI
+    ownerWhatsAppService.disconnect().then(() => {
+      loadData();
+    }).catch((e: any) => {
+      Alert.alert('Error', e?.message || 'Failed to disconnect.');
+      loadData();
+    });
   };
 
   const handleToggleAutomation = async (ruleId: string, currentEnabled: boolean) => {
@@ -491,29 +731,32 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
               <Text style={styles.brandBadgeText}>WHATSAPP LINE</Text>
             </View>
 
-            {/* Live Signal Indicator: Professional Wifi Icon indicating online/offline state */}
-            <View style={styles.telemetryCapsule}>
+            {/* Live Signal Indicator: Active online telemetry pill with glowing pulse dot */}
+            <View style={[styles.telemetryCapsule, isConnected && styles.telemetryCapsuleOnline]}>
               {isConnected ? (
-                <Wifi size={17} color="#34D399" strokeWidth={2.4} />
+                <View style={styles.telemetryInnerOnline}>
+                  <Animated.View
+                    style={[
+                      styles.telemetryPulseDot,
+                      {
+                        transform: [{ scale: pulseAnim }],
+                      },
+                    ]}
+                  />
+                  <Wifi size={16} color="#10B981" strokeWidth={2.8} />
+                </View>
               ) : (
-                <WifiOff size={17} color="#F87171" strokeWidth={2.2} />
+                <WifiOff size={16} color="#F87171" strokeWidth={2.2} />
               )}
             </View>
           </View>
 
-          {/* Hero Main Body: Title & Companion Number */}
+          {/* Hero Main Body: Title & Companion Subtext */}
           <View style={styles.heroContent}>
             <Text style={styles.heroMainTitle}>Companion Line</Text>
-            {connection?.phoneNumber ? (
-              <View style={styles.linkedNumberPill}>
-                <Smartphone size={11} color="#064E3B" strokeWidth={2.4} />
-                <Text style={styles.linkedNumberText}>{connection.phoneNumber}</Text>
-              </View>
-            ) : (
-              <Text style={styles.heroSubText}>
-                Automated receipts, check-in pings & instant broadcasts
-              </Text>
-            )}
+            <Text style={styles.heroSubText}>
+              Automated receipts, check-in pings & instant broadcasts
+            </Text>
           </View>
 
           {/* Hero Actions Row: Clean & Proportional Buttons */}
@@ -521,11 +764,11 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
             {!isConnected ? (
               <TouchableOpacity
                 style={styles.heroPrimaryBtn}
-                onPress={() => setShowQrModal(true)}
+                onPress={openModal}
                 activeOpacity={0.85}
               >
                 <QrCode size={14} color="#064E3B" strokeWidth={2.6} />
-                <Text style={styles.heroPrimaryBtnText}>Link Phone via QR</Text>
+                <Text style={styles.heroPrimaryBtnText}>Link WhatsApp via Code</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -533,7 +776,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                 onPress={handleDisconnect}
                 activeOpacity={0.85}
               >
-                <Unplug size={13} color="#FCA5A5" strokeWidth={2.4} />
+                <Unplug size={13} color="#EF4444" strokeWidth={2.4} />
                 <Text style={styles.heroDangerBtnText}>Unlink</Text>
               </TouchableOpacity>
             )}
@@ -954,7 +1197,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                 <>
                   <OfficialWhatsAppBrandIcon size={18} color="#FFFFFF" />
                   <Text style={styles.dispatchBtnText}>
-                    Send Broadcast ({selectedMemberIds.length} Members)
+                    Send Broadcast
                   </Text>
                 </>
               )}
@@ -1082,98 +1325,390 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
       </View>
 
       {/* ============================================================ */}
-      {/* 6. LINK PHONE QR MODAL                                       */}
+      {/* 6. LINK PHONE CODE / QR MODAL                                */}
       {/* ============================================================ */}
       <Modal
         visible={showQrModal}
         transparent
-        animationType="fade"
-        onRequestClose={() => setShowQrModal(false)}
+        animationType="none"
+        onRequestClose={closeModal}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalContentCard, isDark && styles.modalContentCardDark]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={styles.modalIconWrap}>
-                  <QrCode size={18} color="#059669" />
+        <View style={styles.bottomSheetRoot} pointerEvents="box-none">
+          {/* Smooth Fade-Only Dim Backdrop */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                opacity: modalBackdropAnim,
+                backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              },
+            ]}
+          >
+            <TouchableWithoutFeedback onPress={closeModal}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
+          </Animated.View>
+
+          {/* Bottom Sheet Card sliding up from bottom with matching Add Member animation */}
+          <Animated.View
+            style={[
+              styles.bottomSheetContainer,
+              {
+                transform: [{ translateY: modalSheetTranslateY }],
+              },
+            ]}
+            pointerEvents="box-none"
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <Animated.View
+                style={[
+                  styles.modalContentCard,
+                  isDark && styles.modalContentCardDark,
+                  {
+                    paddingBottom: Animated.add(
+                      new Animated.Value(28),
+                      keyboardPaddingAnim
+                    ),
+                  },
+                  isConnected && [
+                    styles.modalContentCardConnected,
+                    {
+                      backgroundColor: successColorAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [isDark ? '#0F172A' : '#FFFFFF', '#25D366'],
+                      }),
+                    },
+                  ],
+                ]}
+              >
+                {/* Drag Handle Bar */}
+                <View style={styles.modalDragHandleContainer}>
+                  <View
+                    style={[
+                      styles.modalDragHandle,
+                      { backgroundColor: isConnected ? 'rgba(255, 255, 255, 0.5)' : isDark ? '#334155' : '#CBD5E1' },
+                    ]}
+                  />
                 </View>
-                <Text style={[styles.modalTitle, isDark && styles.textWhite]}>
-                  Link Gym Phone
+
+                {/* Header: Clean close button, hidden title when connected */}
+                <View style={[styles.modalHeader, isConnected && styles.modalHeaderSuccess]}>
+                  {!isConnected ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={styles.modalIconWrap}>
+                        <KeyRound size={17} color="#25D366" strokeWidth={2.4} />
+                      </View>
+                      <View>
+                        <Text style={[styles.modalTitle, isDark && styles.textWhite]}>
+                          Link WhatsApp Line
+                        </Text>
+                        <Text style={styles.modalSubHeader}>
+                          Companion device pairing
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ flex: 1 }} />
+                  )}
+                  <TouchableOpacity
+                    onPress={closeModal}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={[styles.modalCloseBtn, isConnected && styles.modalCloseBtnSuccess]}
+                  >
+                    <X size={20} color={isConnected ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'} strokeWidth={3} />
+                  </TouchableOpacity>
+                </View>
+
+                {isConnected ? (
+                  <View style={styles.successScreenContainer}>
+                    {/* BOLD WATERMARK TEXT IN THE BACKGROUND OF THE TICK */}
+                    <Animated.View
+                      style={[
+                        styles.watermarkContainer,
+                        {
+                          opacity: successTextOpacity.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 0.22],
+                          }),
+                        },
+                      ]}
+                    >
+                      <Text style={styles.watermarkBoldText} numberOfLines={1} adjustsFontSizeToFit>
+                        SUCCESSFUL
+                      </Text>
+                    </Animated.View>
+
+                    {/* ANIMATED CENTER TICK MARK */}
+                    <Animated.View
+                      style={[
+                        styles.centerTickCircle,
+                        {
+                          transform: [{ scale: successScaleAnim }],
+                        },
+                      ]}
+                    >
+                      <Check size={42} color="#25D366" strokeWidth={4.2} />
+                    </Animated.View>
+
+                    {/* BOLD SUCCESS HEADLINE */}
+                    <Text style={styles.successMainTitle}>
+                      Line Connected
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.qrCanvasWrap}>
+                    {pairingResult?.pairingCode ? (
+                      <View style={styles.pairingDisplayBox}>
+                        <Text style={[styles.pairingSubtitle, isDark && { color: '#94A3B8' }]}>
+                          Enter this 8-character pairing code in WhatsApp:
+                        </Text>
+                        <View style={[styles.pairingCodeCard, isDark && styles.pairingCodeCardDark]}>
+                          <Text style={styles.pairingCodeText}>{pairingResult.pairingCode}</Text>
+                        </View>
+
+                        <View style={[styles.pairingInstructionsBox, isDark && styles.pairingInstructionsBoxDark]}>
+                          <View style={styles.instructionStepRow}>
+                            <View style={styles.stepNumberBadge}>
+                              <Text style={styles.stepNumberText}>1</Text>
+                            </View>
+                            <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
+                              Open <Text style={{ fontWeight: '800' }}>WhatsApp</Text> on this phone
+                            </Text>
+                          </View>
+                          <View style={styles.instructionStepRow}>
+                            <View style={styles.stepNumberBadge}>
+                              <Text style={styles.stepNumberText}>2</Text>
+                            </View>
+                            <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
+                              Go to <Text style={{ fontWeight: '800' }}>Settings &gt; Linked Devices</Text>
+                            </Text>
+                          </View>
+                          <View style={styles.instructionStepRow}>
+                            <View style={styles.stepNumberBadge}>
+                              <Text style={styles.stepNumberText}>3</Text>
+                            </View>
+                            <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
+                              Tap <Text style={{ fontWeight: '800' }}>Link a Device &gt; Link with phone number</Text>
+                            </Text>
+                          </View>
+                          <View style={styles.instructionStepRow}>
+                            <View style={styles.stepNumberBadge}>
+                              <Text style={styles.stepNumberText}>4</Text>
+                            </View>
+                            <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
+                              Type the pairing code displayed above
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.pairingTimerRow}>
+                          <Clock size={12} color="#059669" strokeWidth={2.4} />
+                          <Text style={styles.pairingTimerText}>Active code • Expires in 5 minutes</Text>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.pairingInputBox}>
+                        <View style={styles.phoneLabelRow}>
+                          <Text style={[styles.pairingInputLabel, isDark && styles.textWhite]}>
+                            WhatsApp Phone Number
+                          </Text>
+                          <View style={styles.secureTag}>
+                            <Lock size={10} color="#059669" />
+                            <Text style={styles.secureTagText}>Direct Link</Text>
+                          </View>
+                        </View>
+
+                        {/* Phone input with auto +91 badge */}
+                        <View style={[styles.phoneInputRow, isDark && styles.phoneInputRowDark]}>
+                          <View style={[styles.countryCodeBadge, isDark && styles.countryCodeBadgeDark]}>
+                            <Text style={styles.countryFlag}>🇮🇳</Text>
+                            <Text style={[styles.countryCodeText, isDark && styles.textWhite]}>+91</Text>
+                          </View>
+                          <View style={styles.phoneDivider} />
+                          <TextInput
+                            style={[styles.phoneTextInput, isDark && styles.textWhite]}
+                            value={pairingPhone}
+                            onChangeText={(text) => {
+                              // Strip any accidental leading +91 if user pastes full number
+                              const clean = text.replace(/[^\d\s-]/g, '');
+                              if (clean.replace(/\D/g, '').startsWith('91') && clean.replace(/\D/g, '').length > 10) {
+                                setPairingPhone(clean.replace(/\D/g, '').slice(2));
+                              } else {
+                                setPairingPhone(clean);
+                              }
+                            }}
+                            placeholder="98765 43210"
+                            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+                            keyboardType="phone-pad"
+                            maxLength={15}
+                          />
+                        </View>
+
+                        <View style={styles.infoNoticeRow}>
+                          <Info size={13} color="#059669" strokeWidth={2.2} style={{ marginTop: 1 }} />
+                          <Text style={styles.pairingInputHelper}>
+                            We will generate an instant pairing code so you can connect without scanning a QR code from another device.
+                          </Text>
+                        </View>
+
+                        {pairingError && (
+                          <View style={styles.pairingErrorRow}>
+                            <AlertCircle size={13} color="#EF4444" />
+                            <Text style={styles.pairingErrorText}>{pairingError}</Text>
+                          </View>
+                        )}
+                        {isRequestingPairingCode && (
+                          <View style={styles.pairingLoadingRow}>
+                            <ActivityIndicator size="small" color="#059669" />
+                            <Text style={styles.pairingLoadingText}>Requesting code from WhatsApp...</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                <View style={{ marginTop: !isConnected ? 14 : 0 }}>
+                  {!isConnected ? (
+                    pairingResult?.pairingCode ? (
+                      <View style={{ gap: 8 }}>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { backgroundColor: '#059669' }]}
+                          onPress={handleRequestPairingCode}
+                          disabled={isRequestingPairingCode}
+                          activeOpacity={0.8}
+                        >
+                          <RefreshCw size={15} color="#FFFFFF" strokeWidth={2.4} />
+                          <Text style={styles.actionBtnText}>Request New Code</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: '#059669' }]}
+                        onPress={handleRequestPairingCode}
+                        disabled={isRequestingPairingCode}
+                        activeOpacity={0.8}
+                      >
+                        {isRequestingPairingCode ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <KeyRound size={15} color="#FFFFFF" strokeWidth={2.4} />
+                            <Text style={styles.actionBtnText}>Get Pairing Code</Text>
+                            <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.4} />
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    )
+                  ) : null}
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* CUSTOM MODAL POPUP: DISCONNECT WHATSAPP LINE CONFIRMATION    */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <Modal
+        visible={showDisconnectModal}
+        transparent
+        animationType="none"
+        onRequestClose={closeDisconnectModal}
+      >
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.disconnectModalBackdrop,
+            {
+              opacity: disconnectBackdropAnim,
+            },
+          ]}
+        >
+          <TouchableWithoutFeedback onPress={closeDisconnectModal}>
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
+
+          <Animated.View
+            style={[
+              styles.disconnectModalContainer,
+              {
+                transform: [{ scale: disconnectScaleAnim }],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.disconnectCard,
+                isDark && styles.disconnectCardDark,
+              ]}
+            >
+              {/* Top-Right Square Close Button */}
+              <TouchableOpacity
+                onPress={closeDisconnectModal}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={[
+                  styles.disconnectCloseBtn,
+                  isDark && styles.disconnectCloseBtnDark,
+                ]}
+              >
+                <X size={15} color={isDark ? '#CBD5E1' : '#64748B'} strokeWidth={2.4} />
+              </TouchableOpacity>
+
+              {/* Warning Kicker Pill */}
+              <View style={styles.disconnectKickerRow}>
+                <View style={styles.disconnectKickerBadge}>
+                  <AlertTriangle size={12} color="#DC2626" strokeWidth={2.6} />
+                  <Text style={styles.disconnectKickerText}>UNLINK WHATSAPP</Text>
+                </View>
+              </View>
+
+              {/* Title & Subtitle */}
+              <Text style={[styles.disconnectTitle, isDark && styles.textWhite]}>
+                Disconnect WhatsApp Line
+              </Text>
+              <Text style={[styles.disconnectSubtitle, isDark && { color: '#94A3B8' }]}>
+                Are you sure you want to unlink the companion gym phone? Automatic fee receipts, invoice alerts, and automated member messages will be paused until re-linked.
+              </Text>
+
+              {/* Notice Strip */}
+              <View style={[styles.disconnectNoticeStrip, isDark && styles.disconnectNoticeStripDark]}>
+                <Info size={13} color="#DC2626" strokeWidth={2.2} />
+                <Text style={[styles.disconnectNoticeText, isDark && { color: '#FCA5A5' }]}>
+                  You can reconnect any time via 8-character pairing code.
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => setShowQrModal(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.modalCloseBtn}
-              >
-                <X size={18} color={isDark ? '#94A3B8' : '#64748B'} />
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.qrCanvasWrap}>
-              {isConnected ? (
-                <View style={styles.qrSuccessBox}>
-                  <View style={styles.shieldCircle}>
-                    <ShieldCheck size={38} color="#059669" strokeWidth={2.4} />
-                  </View>
-                  <Text style={[styles.qrSuccessTitle, isDark && styles.textWhite]}>
-                    Gateway Connected
-                  </Text>
-                  <Text style={styles.qrSuccessNumber}>
-                    {connection?.phoneNumber || 'Active Gym Companion'}
-                  </Text>
-                  <Text style={styles.qrSuccessSub}>
-                    Your WhatsApp pipeline is operational. Automated messages, payment receipts, and member alerts are flowing smoothly.
-                  </Text>
-                </View>
-              ) : connection?.qrCode ? (
-                <View style={styles.qrDisplayBox}>
-                  <View style={styles.qrCodeBorder}>
-                    <Image
-                      source={{ uri: connection.qrCode }}
-                      style={styles.qrImage}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <Text style={styles.qrInstructions}>
-                    1. Open WhatsApp on the gym phone{'\n'}
-                    2. Tap Settings &gt; Linked Devices &gt; Link a Device{'\n'}
-                    3. Point this camera at the code
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.qrLoadingBox}>
-                  <ActivityIndicator size="large" color="#059669" />
-                  <Text style={styles.qrLoadingText}>
-                    Generating fresh pairing session...
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={{ marginTop: 14 }}>
-              {!isConnected ? (
+              {/* Action Buttons */}
+              <View style={styles.disconnectActionsRow}>
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: '#059669' }]}
-                  onPress={handleConnect}
+                  style={[
+                    styles.disconnectCancelBtn,
+                    isDark && styles.disconnectCancelBtnDark,
+                  ]}
+                  onPress={closeDisconnectModal}
                   activeOpacity={0.8}
                 >
-                  <QrCode size={15} color="#FFFFFF" strokeWidth={2.4} />
-                  <Text style={styles.actionBtnText}>Generate New QR</Text>
+                  <Text style={[styles.disconnectCancelBtnText, isDark && { color: '#CBD5E1' }]}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
-              ) : (
+
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
-                  onPress={handleDisconnect}
-                  activeOpacity={0.8}
+                  style={styles.disconnectConfirmBtn}
+                  onPress={handleConfirmDisconnect}
+                  activeOpacity={0.85}
                 >
-                  <Unplug size={15} color="#FFFFFF" strokeWidth={2.4} />
-                  <Text style={styles.actionBtnText}>Disconnect WhatsApp Session</Text>
+                  <Unplug size={14} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={styles.disconnectConfirmBtnText}>
+                    Unlink Phone
+                  </Text>
                 </TouchableOpacity>
-              )}
+              </View>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </View>
   );
@@ -1244,10 +1779,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 28,
+    paddingHorizontal: 8,
     height: 28,
     borderRadius: 14,
     backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  telemetryCapsuleOnline: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: '#34D399',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  telemetryInnerOnline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  telemetryPulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
   },
   telemetryStatusText: {
     fontSize: 11,
@@ -1321,17 +1878,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(239, 68, 68, 0.25)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.45)',
+    borderColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 7.5,
     borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
   heroDangerBtnText: {
     fontSize: 11.5,
     fontWeight: '800',
-    color: '#FEE2E2',
+    color: '#EF4444',
   },
   heroRefreshBtn: {
     flexDirection: 'row',
@@ -1946,38 +2508,143 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     padding: 16,
   },
+  qrCanvasWrapConnected: {
+    backgroundColor: '#047857',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1,
+    minHeight: 180,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginTop: 12,
+  },
   qrSuccessBox: {
     alignItems: 'center',
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    width: '100%',
   },
   shieldCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 10,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  connectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
     marginBottom: 8,
   },
+  connectedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#059669',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   qrSuccessTitle: {
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 15.5,
+    fontWeight: '800',
     color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  connectedNumberPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  connectedNumberPillDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
   },
   qrSuccessNumber: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontFamily: 'monospace',
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#059669',
-    marginTop: 2,
   },
   qrSuccessSub: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#64748B',
     textAlign: 'center',
-    lineHeight: 16,
-    marginTop: 6,
-    maxWidth: 280,
+    lineHeight: 16.5,
+    marginTop: 2,
+    paddingHorizontal: 8,
+  },
+  connectedMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 12,
+    width: '100%',
+  },
+  connectedMetaRowDark: {
+    backgroundColor: '#1E293B',
+  },
+  connectedMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  connectedMetaDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#CBD5E1',
+    marginHorizontal: 8,
+  },
+  connectedMetaText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  connectedActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+  },
+  doneActionBtn: {
+    flex: 1,
+    backgroundColor: '#059669',
+  },
+  disconnectActionBtn: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    paddingHorizontal: 14,
+  },
+  disconnectBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#EF4444',
   },
   qrDisplayBox: {
     alignItems: 'center',
@@ -2115,25 +2782,71 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* Link Phone QR Modal */
-  modalBackdrop: {
+  /* Link Phone QR Bottom Sheet Modal (Matching Add Member in InPlaceMembersView) */
+  bottomSheetRoot: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContainer: {
+    width: '100%',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 0,
+    paddingBottom: 0,
+  },
+  modalDragHandleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
+  modalDragHandle: {
+    width: 42,
+    height: 4.5,
+    borderRadius: 2.5,
   },
   modalContentCard: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 440,
+    minHeight: 400,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingHorizontal: 20,
+    paddingTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 16,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: '#E2E8F0',
+  },
+  modalContentCardConnected: {
+    backgroundColor: '#25D366',
+    borderColor: 'rgba(255, 255, 255, 0.45)',
+    borderTopWidth: 1.5,
+    borderLeftWidth: 1.5,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    minHeight: 400,
+    maxWidth: 440,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    shadowColor: '#25D366',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 16,
   },
   modalContentCardDark: {
     backgroundColor: '#0F172A',
@@ -2148,6 +2861,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+  modalHeaderSuccess: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
+    marginBottom: 4,
+  },
   modalIconWrap: {
     width: 32,
     height: 32,
@@ -2156,13 +2874,491 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  modalIconWrapSuccess: {
+    backgroundColor: '#FFFFFF',
+  },
   modalTitle: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
   },
+  modalSubHeader: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
   modalCloseBtn: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 8,
+  },
+  modalCloseBtnSuccess: {
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Professional Success Screen with Center Tick & SUCCESSFUL Watermark */
+  successScreenContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 4,
+    width: '100%',
+    flex: 1,
+    overflow: 'hidden',
+  },
+  watermarkContainer: {
+    position: 'absolute',
+    top: '32%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  watermarkBoldText: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 4,
+    textAlign: 'center',
+    opacity: 0.9,
+    includeFontPadding: false,
+  },
+  centerTickCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    marginTop: 4,
+    marginBottom: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  successMainTitle: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+    zIndex: 2,
+  },
+  successDescription: {
+    fontSize: 11.5,
+    color: 'rgba(255, 255, 255, 0.92)',
+    textAlign: 'center',
+    lineHeight: 16,
+    paddingHorizontal: 4,
+    zIndex: 2,
+    marginBottom: 10,
+  },
+  successMetaStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.16)',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    width: '100%',
+    zIndex: 2,
+  },
+  successMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  successMetaText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  successMetaDivider: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 8,
+  },
+  doneActionBtnSuccess: {
+    backgroundColor: '#FFFFFF',
+    flex: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  doneActionBtnSuccessText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#059669',
+  },
+  disconnectActionBtnSuccess: {
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  disconnectBtnTextSuccess: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+  /* Pairing Code Display & Form */
+  pairingDisplayBox: {
+    alignItems: 'center',
+    width: '100%',
+    paddingVertical: 4,
+  },
+  pairingSubtitle: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  pairingCodeCard: {
+    backgroundColor: '#064E3B',
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#059669',
+    marginBottom: 12,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  pairingCodeCardDark: {
+    backgroundColor: '#022C22',
+    borderColor: '#10B981',
+  },
+  pairingCodeText: {
+    fontSize: 27,
+    fontWeight: '900',
+    color: '#34D399',
+    letterSpacing: 4,
+    fontFamily: 'monospace',
+  },
+  pairingInstructionsBox: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    gap: 8,
+    marginBottom: 10,
+  },
+  pairingInstructionsBoxDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  instructionStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepNumberBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  instructionStepText: {
+    fontSize: 11.5,
+    color: '#334155',
+    flex: 1,
+  },
+  pairingTimerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  pairingTimerText: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '700',
+  },
+  pairingInputBox: {
+    width: '100%',
+    paddingVertical: 4,
+  },
+  phoneLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  pairingInputLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  secureTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  secureTagText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  infoNoticeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 8,
+  },
+  pairingInputHelper: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 15,
+    flex: 1,
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#059669',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    height: 48,
+  },
+  phoneInputRowDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#10B981',
+  },
+  countryCodeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 6,
+  },
+  countryCodeBadgeDark: {},
+  countryFlag: {
+    fontSize: 14,
+  },
+  countryCodeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'monospace',
+  },
+  phoneDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#CBD5E1',
+    marginHorizontal: 8,
+  },
+  phoneTextInput: {
+    flex: 1,
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'monospace',
+  },
+  pairingErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  pairingErrorText: {
+    fontSize: 11,
+    color: '#EF4444',
+    fontWeight: '600',
+    flex: 1,
+  },
+  pairingLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  pairingLoadingText: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '600',
+  },
+
+  /* Custom Disconnect Confirmation Popup Modal */
+  disconnectModalBackdrop: {
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 999,
+  },
+  disconnectModalContainer: {
+    width: '100%',
+    maxWidth: 380,
+    alignItems: 'center',
+  },
+  disconnectCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+    position: 'relative',
+  },
+  disconnectCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
+  },
+  disconnectCloseBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  disconnectCloseBtnDark: {
+    borderColor: '#334155',
+    backgroundColor: '#1E293B',
+  },
+  disconnectKickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  disconnectKickerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  disconnectKickerText: {
+    color: '#DC2626',
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  disconnectTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  disconnectSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  disconnectNoticeStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  disconnectNoticeStripDark: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderColor: 'rgba(239, 68, 68, 0.35)',
+  },
+  disconnectNoticeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
+    flex: 1,
+  },
+  disconnectActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  disconnectCancelBtn: {
+    flex: 1,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disconnectCancelBtnDark: {
+    borderColor: '#334155',
+    backgroundColor: '#1E293B',
+  },
+  disconnectCancelBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  disconnectConfirmBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: '#DC2626',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  disconnectConfirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
 export default WhatsAppHubView;

@@ -8,15 +8,22 @@ import { apiClient } from './client';
 import { ApiResponse } from '../../types';
 
 export interface WhatsAppConnectionState {
-  status: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'QR_READY' | 'FAILED' | 'UNKNOWN';
-  phoneNumber?: string;
+  status?: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'QR_READY' | 'FAILED' | 'UNKNOWN' | string;
+  connectionStatus?: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'QR_READY' | 'FAILED' | 'UNKNOWN' | string;
+  phoneNumber?: string | null;
+  businessPhoneNumber?: string | null;
   pushname?: string;
+  displayName?: string;
   platform?: string;
   battery?: number;
   plugged?: boolean;
-  qrCode?: string;
+  qrCode?: string | null;
   lastConnectedAt?: string;
+  connectedAt?: string | Date;
+  lastVerifiedAt?: string | Date;
   error?: string;
+  ownerMessage?: string;
+  isLive?: boolean;
 }
 
 export interface WhatsAppTemplate {
@@ -80,7 +87,17 @@ export interface WhatsAppAutomationRule {
 export const ownerWhatsAppService = {
   getConnection: async (): Promise<WhatsAppConnectionState> => {
     const res = await apiClient.get<ApiResponse<WhatsAppConnectionState>>('/owner/whatsapp/connection');
-    return (res.data as any).data || (res.data as any);
+    const raw = (res.data as any).data || (res.data as any);
+    if (!raw) return { status: 'DISCONNECTED', connectionStatus: 'DISCONNECTED' };
+    const status = raw.connectionStatus || raw.status || (raw.isLive ? 'CONNECTED' : 'DISCONNECTED');
+    const phoneNumber = raw.businessPhoneNumber || raw.phoneNumber || null;
+    return {
+      ...raw,
+      status,
+      connectionStatus: status,
+      phoneNumber,
+      businessPhoneNumber: phoneNumber,
+    };
   },
 
   getPrerequisites: async (): Promise<any> => {
@@ -90,6 +107,21 @@ export const ownerWhatsAppService = {
 
   connect: async (): Promise<any> => {
     const res = await apiClient.post<ApiResponse<any>>('/owner/whatsapp/connection/connect', {});
+    return (res.data as any).data || (res.data as any);
+  },
+
+  requestPairingCode: async (phoneNumber: string): Promise<{
+    pairingCode: string;
+    status: string;
+    connectionStatus: string;
+    expiresInSeconds: number;
+  }> => {
+    const res = await apiClient.post<ApiResponse<{
+      pairingCode: string;
+      status: string;
+      connectionStatus: string;
+      expiresInSeconds: number;
+    }>>('/owner/whatsapp/connection/pairing-code', { phoneNumber });
     return (res.data as any).data || (res.data as any);
   },
 
@@ -122,19 +154,51 @@ export const ownerWhatsAppService = {
     };
   },
 
-  preview: async (payload: { templateId?: string; intent: string; body: string; memberId?: string }): Promise<any> => {
-    const res = await apiClient.post<ApiResponse<any>>('/owner/whatsapp/messages/preview', payload);
+  preview: async (payload: {
+    templateId?: string;
+    intent?: string;
+    body?: string;
+    memberId?: string;
+    memberIds?: string[];
+    mode?: 'SELECTED' | 'ALL';
+  }): Promise<any> => {
+    const memberIds = payload.memberIds || (payload.memberId ? [payload.memberId] : undefined);
+    const bodyPayload = {
+      audience: {
+        mode: memberIds && memberIds.length > 0 ? 'SELECTED' : (payload.mode || 'ALL'),
+        memberIds: memberIds && memberIds.length > 0 ? memberIds : undefined,
+      },
+      body: payload.body,
+      intent: payload.intent,
+      templateId: payload.templateId,
+    };
+    const res = await apiClient.post<ApiResponse<any>>('/owner/whatsapp/messages/preview', bodyPayload);
     return (res.data as any).data || (res.data as any);
   },
 
   send: async (payload: {
     templateId?: string;
-    intent: string;
-    body: string;
-    memberIds: string[];
+    intent?: string;
+    body?: string;
+    memberIds?: string[];
+    mode?: 'SELECTED' | 'ALL';
     title?: string;
+    confirm?: boolean;
+    clientBatchId?: string;
   }): Promise<any> => {
-    const res = await apiClient.post<ApiResponse<any>>('/owner/whatsapp/messages/send', payload);
+    const memberIds = payload.memberIds;
+    const bodyPayload = {
+      audience: {
+        mode: memberIds && memberIds.length > 0 ? 'SELECTED' : (payload.mode || 'ALL'),
+        memberIds: memberIds && memberIds.length > 0 ? memberIds : undefined,
+      },
+      body: payload.body,
+      intent: payload.intent,
+      templateId: payload.templateId,
+      confirm: payload.confirm ?? true,
+      clientBatchId: payload.clientBatchId,
+    };
+    const res = await apiClient.post<ApiResponse<any>>('/owner/whatsapp/messages/send', bodyPayload);
     return (res.data as any).data || (res.data as any);
   },
 

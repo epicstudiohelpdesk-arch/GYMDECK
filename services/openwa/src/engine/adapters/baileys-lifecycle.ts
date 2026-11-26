@@ -51,7 +51,7 @@ const STORED_PREVIEWS_READ_TIMEOUT_MS = 10_000;
 const BAILEYS_BROWSER: [string, string, string] = [
   process.env.BAILEYS_BROWSER_NAME?.trim() || 'Ubuntu',
   'Chrome',
-  '120.0.0',
+  '22.04.4',
 ];
 
 /**

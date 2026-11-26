@@ -156,6 +156,32 @@ router.post(
   }
 );
 
+const PairingCodeSchema = z
+  .object({
+    phoneNumber: z.string().min(6).max(25),
+  })
+  .strict();
+
+router.post(
+  '/connection/pairing-code',
+  requirePermission('settings.write'),
+  connectLimiter,
+  validateBody(PairingCodeSchema),
+  async (req, res, next) => {
+    try {
+      const { gymId, userId } = tenantContext(req);
+      const result = await whatsappAccountService.requestPairingCode(
+        gymId,
+        req.body.phoneNumber,
+        userId
+      );
+      res.json({ data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 router.post(
   '/connection/verify',
   requirePermission('settings.write'),

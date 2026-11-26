@@ -465,6 +465,233 @@ export class WhatsAppAccountService {
     return this.getConnection(gymId);
   }
 
+  /**
+   * Request an 8-character phone number pairing code from OpenWA.
+   * Safe lifecycle:
+   * 1. Validates and normalizes the target phone number.
+   * 2. Checks if an active session exists; if already CONNECTED, returns existing status.
+   * 3. If session does not exist or is stopped, ensures & starts session and ensures webhook.
+   * 4. Waits until session reaches qr_ready (the state required by OpenWA to accept pairing).
+   * 5. Requests the pairing code via OpenWA v0.30.3 POST /sessions/:id/pairing-code.
+   * 6. Audits the pairing request with masked phone.
+   */
+  public async requestPairingCode(
+    gymId: string,
+    phoneNumber: string,
+    actorUserId?: string
+  ): Promise<{
+    pairingCode: string;
+    status: string;
+    connectionStatus: ConnectionStatus;
+    expiresInSeconds: number;
+  }> {
+    const normalized = normalizeWhatsAppNumber(phoneNumber);
+    if (!normalized) {
+      throw AppError.validation(
+        'Invalid phone number. Please provide a valid number with country code.'
+      );
+    }
+
+    // Check existing account
+    let account = await this.getAccount(gymId);
+    let session: OpenWASession | null = null;
+
+    if (account?.openwaSessionId) {
+      try {
+        session = await openwaClient.getSession(account.openwaSessionId);
+      } catch {
+        session = null;
+      }
+    }
+
+    // If already connected, do not break the active connection
+    if (session && String(session.status).toLowerCase() === 'ready') {
+      const conn = await this.getConnection(gymId);
+      throw AppError.conflict(
+        `WhatsApp is already connected for this gym (${conn.businessPhoneNumber || 'Active Line'}). Disconnect first if you want to link a different number.`
+      );
+    }
+
+    const sessionName = sessionNameForGym(gymId);
+    let webhookId: string | null = account?.openwaWebhookId || null;
+
+    // Ensure session exists and is started
+    if (!session || !account?.openwaSessionId) {
+      try {
+        session = await openwaClient.ensureSession(sessionName);
+        const [, webhook] = await Promise.all([
+          openwaClient.startSession(session.id),
+          openwaClient
+            .ensureWebhook(
+              session.id,
+              config.OPENWA_WEBHOOK_URL,
+              config.OPENWA_WEBHOOK_SECRET,
+              WEBHOOK_EVENTS
+            )
+            .catch(() => null),
+        ]);
+        webhookId = webhook?.id ? String(webhook.id) : webhookId;
+        session = await openwaClient.getSession(session.id);
+      } catch (err: any) {
+        logger.error('[whatsapp] Failed to ensure session for pairing', {
+          gymId,
+          message: err instanceof Error ? err.message : 'unknown',
+        });
+        throw AppError.conflict(
+          err instanceof OpenWARequestError
+            ? `OpenWA could not start WhatsApp session: ${err.message}`
+            : 'Could not start WhatsApp session for pairing.'
+        );
+      }
+
+      const now = new Date();
+      await db
+        .insert(gymWhatsAppAccounts)
+        .values({
+          gymId,
+          provider: 'OPENWA',
+          openwaSessionId: session.id,
+          openwaSessionName: session.name,
+          openwaWebhookId: webhookId,
+          openwaStatus: session.status,
+          connectionStatus: mapSessionStatus(session),
+          lastVerifiedAt: now,
+          createdBy: actorUserId ?? null,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: gymWhatsAppAccounts.gymId,
+          set: {
+            openwaSessionId: session.id,
+            openwaSessionName: session.name,
+            openwaWebhookId: webhookId,
+            openwaStatus: session.status,
+            connectionStatus: mapSessionStatus(session),
+            lastVerifiedAt: now,
+            updatedAt: now,
+          },
+        });
+    } else {
+      // Session exists; if stopped or disconnected, start it
+      const currentStatus = String(session.status).toLowerCase();
+      if (['disconnected', 'failed', 'stopped'].includes(currentStatus)) {
+        await openwaClient.startSession(session.id).catch(() => null);
+        session = await openwaClient.getSession(session.id);
+      }
+    }
+
+    // Wait up to ~15 seconds for the engine to reach qr_ready
+    let engineStatus = String(session.status).toLowerCase();
+    if (engineStatus !== 'qr_ready') {
+      for (let attempt = 0; attempt < 30; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        try {
+          session = await openwaClient.getSession(session.id);
+          engineStatus = String(session.status).toLowerCase();
+          if (engineStatus === 'qr_ready' || engineStatus === 'ready') break;
+        } catch {
+          // Keep polling
+        }
+      }
+    }
+
+    if (engineStatus === 'ready') {
+      throw AppError.conflict('WhatsApp session is already authenticated.');
+    }
+
+    if (engineStatus !== 'qr_ready') {
+      throw AppError.conflict(
+        'WhatsApp session is still initializing. Please wait a few seconds and try again.'
+      );
+    }
+
+    // Request pairing code from OpenWA (with automatic retry if engine is in transition)
+    try {
+      let pairingResult: { pairingCode: string; status: string };
+      try {
+        pairingResult = await openwaClient.requestPairingCode(session.id, normalized);
+      } catch (firstErr: any) {
+        // If 409 Conflict occurred because the previous socket closed or was in transition,
+        // restart the session cleanly, wait for qr_ready, and retry once.
+        if (firstErr instanceof OpenWARequestError && firstErr.status === 409) {
+          logger.warn('[whatsapp] Pairing code 409 conflict, restarting session for retry', {
+            sessionId: session.id,
+          });
+          await openwaClient.stopSession(session.id).catch(() => null);
+          await openwaClient.startSession(session.id).catch(() => null);
+
+          let retriedReady = false;
+          for (let attempt = 0; attempt < 30; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            try {
+              session = await openwaClient.getSession(session.id);
+              if (String(session.status).toLowerCase() === 'qr_ready') {
+                retriedReady = true;
+                break;
+              }
+            } catch {
+              // keep polling
+            }
+          }
+
+          if (!retriedReady) {
+            throw firstErr;
+          }
+
+          pairingResult = await openwaClient.requestPairingCode(session.id, normalized);
+        } else {
+          throw firstErr;
+        }
+      }
+
+      await recordWhatsAppAudit({
+        gymId,
+        actorId: actorUserId,
+        action: 'WHATSAPP_PAIRING_CODE_REQUESTED',
+        targetId: session.id,
+        metadata: {
+          maskedPhone: maskWhatsAppNumber(normalized),
+          status: pairingResult.status,
+        },
+      });
+
+      return {
+        pairingCode: pairingResult.pairingCode,
+        status: pairingResult.status,
+        connectionStatus: 'CONNECTING',
+        expiresInSeconds: 300, // OpenWA / WhatsApp pairing codes are valid for ~5 minutes
+      };
+    } catch (err: any) {
+      logger.error('[whatsapp] Pairing code generation failed', {
+        gymId,
+        status: err?.status,
+        message: err instanceof Error ? err.message : 'unknown',
+      });
+
+      if (err instanceof OpenWARequestError) {
+        if (err.status === 409) {
+          throw AppError.conflict(
+            'WhatsApp session is not ready to pair or another pairing attempt is active. Please wait a moment and try again.'
+          );
+        }
+        if (err.status === 400) {
+          throw AppError.validation(err.message || 'WhatsApp rejected the phone number.');
+        }
+        if (err.status === 500 && (err.message?.includes('rate-overlimit') || err.message?.includes('429'))) {
+          throw AppError.conflict(
+            'WhatsApp is temporarily rate-limiting pairing code requests for this phone number. Please wait a couple of minutes before requesting a new code.'
+          );
+        }
+      }
+      if (err instanceof Error && (err.message?.includes('rate-overlimit') || err.message?.includes('429'))) {
+        throw AppError.conflict(
+          'WhatsApp is temporarily rate-limiting pairing code requests for this phone number. Please wait a couple of minutes before requesting a new code.'
+        );
+      }
+      throw AppError.conflict('Could not generate pairing code from WhatsApp. Please try again.');
+    }
+  }
+
   /** Resolve tenant ownership from the OpenWA webhook session id, never from the request body gym. */
   public async findByOpenWASessionId(sessionId: string): Promise<any | null> {
     if (!sessionId) return null;
