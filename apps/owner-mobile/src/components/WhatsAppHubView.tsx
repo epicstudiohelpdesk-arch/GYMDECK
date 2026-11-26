@@ -427,6 +427,49 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
   const disconnectBackdropAnim = useRef(new Animated.Value(0)).current;
   const disconnectScaleAnim = useRef(new Animated.Value(0.85)).current;
 
+  // Custom Broadcast Sent Success Modal State & Animations
+  const [showBroadcastSuccessModal, setShowBroadcastSuccessModal] = useState(false);
+  const [lastBroadcastInfo, setLastBroadcastInfo] = useState<{ count: number; intent: string } | null>(null);
+  const broadcastSuccessBackdropAnim = useRef(new Animated.Value(0)).current;
+  const broadcastSuccessScaleAnim = useRef(new Animated.Value(0.85)).current;
+
+  const openBroadcastSuccessModal = useCallback((count: number, intent: string) => {
+    setLastBroadcastInfo({ count, intent });
+    setShowBroadcastSuccessModal(true);
+    broadcastSuccessBackdropAnim.setValue(0);
+    broadcastSuccessScaleAnim.setValue(0.85);
+    Animated.parallel([
+      Animated.timing(broadcastSuccessBackdropAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(broadcastSuccessScaleAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [broadcastSuccessBackdropAnim, broadcastSuccessScaleAnim]);
+
+  const closeBroadcastSuccessModal = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(broadcastSuccessBackdropAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(broadcastSuccessScaleAnim, {
+        toValue: 0.85,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowBroadcastSuccessModal(false);
+    });
+  }, [broadcastSuccessBackdropAnim, broadcastSuccessScaleAnim]);
+
   const openDisconnectModal = useCallback(() => {
     setShowDisconnectModal(true);
     disconnectBackdropAnim.setValue(0);
@@ -783,10 +826,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
         memberIds: selectedMemberIds,
         body: messageBody,
       });
-      Alert.alert(
-        'Broadcast Sent',
-        `Dispatched WhatsApp communication to ${selectedMemberIds.length} members.`
-      );
+      openBroadcastSuccessModal(selectedMemberIds.length, activeIntentObj.label || 'Direct Message');
       loadData();
     } catch (e: any) {
       Alert.alert('Dispatch Error', e?.message || 'Could not queue message dispatch.');
@@ -2673,15 +2713,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                       keyboardPaddingAnim
                     ),
                   },
-                  isConnected && [
-                    styles.modalContentCardConnected,
-                    {
-                      backgroundColor: successColorAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [isDark ? '#0F172A' : '#FFFFFF', '#25D366'],
-                      }),
-                    },
-                  ],
+                  isConnected && styles.modalContentCardConnected,
                 ]}
               >
                 {/* Drag Handle Bar */}
@@ -2689,7 +2721,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                   <View
                     style={[
                       styles.modalDragHandle,
-                      { backgroundColor: isConnected ? 'rgba(255, 255, 255, 0.5)' : isDark ? '#334155' : '#CBD5E1' },
+                      { backgroundColor: isDark ? '#334155' : '#CBD5E1' },
                     ]}
                   />
                 </View>
@@ -2716,47 +2748,62 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                   <TouchableOpacity
                     onPress={closeModal}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    style={[styles.modalCloseBtn, isConnected && styles.modalCloseBtnSuccess]}
+                    style={styles.modalCloseBtn}
                   >
-                    <X size={20} color={isConnected ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'} strokeWidth={3} />
+                    <X size={20} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.4} />
                   </TouchableOpacity>
                 </View>
 
                 {isConnected ? (
                   <View style={styles.successScreenContainer}>
-                    {/* BOLD WATERMARK TEXT IN THE BACKGROUND OF THE TICK */}
+                    {/* Animated Clean Center Emblem */}
                     <Animated.View
                       style={[
-                        styles.watermarkContainer,
-                        {
-                          opacity: successTextOpacity.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, 0.22],
-                          }),
-                        },
-                      ]}
-                    >
-                      <Text style={styles.watermarkBoldText} numberOfLines={1} adjustsFontSizeToFit>
-                        SUCCESSFUL
-                      </Text>
-                    </Animated.View>
-
-                    {/* ANIMATED CENTER TICK MARK */}
-                    <Animated.View
-                      style={[
-                        styles.centerTickCircle,
+                        styles.successEmblemWrap,
                         {
                           transform: [{ scale: successScaleAnim }],
                         },
                       ]}
                     >
-                      <Check size={42} color="#25D366" strokeWidth={4.2} />
+                      <View style={styles.successEmblemCircle}>
+                        <Check size={36} color="#000000" strokeWidth={3.8} />
+                      </View>
                     </Animated.View>
 
-                    {/* BOLD SUCCESS HEADLINE */}
-                    <Text style={styles.successMainTitle}>
-                      Line Connected
+                    {/* Bold Clean Headline & Subtitle */}
+                    <Text style={[styles.successHeadline, isDark && styles.textWhite]}>
+                      WhatsApp Line Connected
                     </Text>
+                    <Text style={styles.successSubline}>
+                      Your business number is securely linked. Automated member triggers and broadcasts are operational.
+                    </Text>
+
+                    {/* Verified Details Card */}
+                    <View style={[styles.successDetailsCard, isDark && styles.successDetailsCardDark]}>
+                      <View style={styles.successDetailRow}>
+                        <Text style={styles.successDetailLabel}>Connected Number</Text>
+                        <Text style={[styles.successDetailValue, isDark && styles.textWhite]}>
+                          {connection?.phoneNumber || connection?.businessPhoneNumber || (pairingPhone ? `+91 ${pairingPhone}` : 'Active Line')}
+                        </Text>
+                      </View>
+                      <View style={styles.successDetailSeparator} />
+                      <View style={styles.successDetailRow}>
+                        <Text style={styles.successDetailLabel}>Security & Sync</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <ShieldCheck size={13} color="#059669" strokeWidth={2.4} />
+                          <Text style={styles.successDetailValueGreen}>End-to-End Encrypted</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Primary Action Button */}
+                    <TouchableOpacity
+                      style={styles.successPrimaryBtn}
+                      onPress={closeModal}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.successPrimaryBtnText}>Done</Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <View style={styles.qrCanvasWrap}>
@@ -3009,6 +3056,107 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                   </Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* CUSTOM MODAL POPUP: BROADCAST SENT CONFIRMATION               */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <Modal
+        visible={showBroadcastSuccessModal}
+        transparent
+        animationType="none"
+        onRequestClose={closeBroadcastSuccessModal}
+      >
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.broadcastSuccessModalBackdrop,
+            {
+              opacity: broadcastSuccessBackdropAnim,
+            },
+          ]}
+        >
+          <TouchableWithoutFeedback onPress={closeBroadcastSuccessModal}>
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
+
+          <Animated.View
+            style={[
+              styles.broadcastSuccessModalContainer,
+              {
+                transform: [{ scale: broadcastSuccessScaleAnim }],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.broadcastSuccessCard,
+                isDark && styles.broadcastSuccessCardDark,
+              ]}
+            >
+              {/* Top-Right Square Close Button */}
+              <TouchableOpacity
+                onPress={closeBroadcastSuccessModal}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={[
+                  styles.disconnectCloseBtn,
+                  isDark && styles.disconnectCloseBtnDark,
+                ]}
+              >
+                <X size={15} color={isDark ? '#CBD5E1' : '#64748B'} strokeWidth={2.4} />
+              </TouchableOpacity>
+
+              {/* Bold Center Emblem */}
+              <View style={styles.broadcastSuccessEmblemWrap}>
+                <View style={styles.broadcastSuccessEmblemCircle}>
+                  <Check size={32} color="#000000" strokeWidth={3.8} />
+                </View>
+              </View>
+
+              {/* Bold Headline & Subtitle */}
+              <Text style={[styles.broadcastSuccessTitle, isDark && styles.textWhite]}>
+                Broadcast Dispatched
+              </Text>
+              <Text style={styles.broadcastSuccessSubtitle}>
+                Communication has been queued for transmission via your linked WhatsApp line.
+              </Text>
+
+              {/* Verified Details Card */}
+              <View style={[styles.successDetailsCard, isDark && styles.successDetailsCardDark]}>
+                <View style={styles.successDetailRow}>
+                  <Text style={styles.successDetailLabel}>Recipients Targeted</Text>
+                  <Text style={[styles.successDetailValue, isDark && styles.textWhite]}>
+                    {lastBroadcastInfo?.count || 1} {lastBroadcastInfo?.count === 1 ? 'Member' : 'Members'}
+                  </Text>
+                </View>
+                <View style={styles.successDetailSeparator} />
+                <View style={styles.successDetailRow}>
+                  <Text style={styles.successDetailLabel}>Broadcast Category</Text>
+                  <Text style={[styles.successDetailValue, isDark && styles.textWhite]}>
+                    {lastBroadcastInfo?.intent || 'Custom Message'}
+                  </Text>
+                </View>
+                <View style={styles.successDetailSeparator} />
+                <View style={styles.successDetailRow}>
+                  <Text style={styles.successDetailLabel}>Transmission Status</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <CheckCheck size={13} color="#059669" strokeWidth={2.4} />
+                    <Text style={styles.successDetailValueGreen}>Queued for Delivery</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Primary Action Button */}
+              <TouchableOpacity
+                style={styles.successPrimaryBtn}
+                onPress={closeBroadcastSuccessModal}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.successPrimaryBtnText}>Done</Text>
+              </TouchableOpacity>
             </View>
           </Animated.View>
         </Animated.View>
@@ -5032,25 +5180,25 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   modalContentCardConnected: {
-    backgroundColor: '#25D366',
-    borderColor: 'rgba(255, 255, 255, 0.45)',
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1.5,
-    borderRightWidth: 1.5,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     borderBottomWidth: 0,
     paddingHorizontal: 20,
     paddingTop: 8,
-    minHeight: 400,
+    minHeight: 380,
     maxWidth: 440,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    shadowColor: '#25D366',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 16,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
   },
   modalContentCardDark: {
     backgroundColor: '#0F172A',
@@ -5068,7 +5216,7 @@ const styles = StyleSheet.create({
   modalHeaderSuccess: {
     borderBottomWidth: 0,
     paddingBottom: 0,
-    marginBottom: 4,
+    marginBottom: 0,
   },
   modalIconWrap: {
     width: 32,
@@ -5079,7 +5227,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalIconWrapSuccess: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
   },
   modalTitle: {
     fontSize: 15,
@@ -5096,118 +5244,138 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modalCloseBtnSuccess: {
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
     width: 32,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  /* Professional Success Screen with Center Tick & SUCCESSFUL Watermark */
+  /* Professional Clean Success Modal Presentation */
   successScreenContainer: {
-    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 36,
-    paddingHorizontal: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     width: '100%',
-    flex: 1,
-    overflow: 'hidden',
   },
-  watermarkContainer: {
-    position: 'absolute',
-    top: '32%',
-    left: 0,
-    right: 0,
+  successStatusPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 16,
   },
-  watermarkBoldText: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 4,
-    textAlign: 'center',
-    opacity: 0.9,
-    includeFontPadding: false,
+  successStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#16A34A',
   },
-  centerTickCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
-    marginTop: 4,
+  successStatusPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.8,
+  },
+  successEmblemWrap: {
     marginBottom: 14,
+  },
+  successEmblemCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 2,
+    borderColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  successMainTitle: {
-    fontSize: 19,
+  successHeadline: {
+    fontSize: 18,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#000000',
     textAlign: 'center',
     letterSpacing: -0.3,
-    zIndex: 2,
+    marginBottom: 6,
   },
-  successDescription: {
-    fontSize: 11.5,
-    color: 'rgba(255, 255, 255, 0.92)',
+  successSubline: {
+    fontSize: 12,
+    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 16,
-    paddingHorizontal: 4,
-    zIndex: 2,
-    marginBottom: 10,
+    lineHeight: 18,
+    paddingHorizontal: 12,
+    marginBottom: 20,
   },
-  successMetaStrip: {
+  successDetailsCard: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+  successDetailsCardDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  successDetailRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  successDetailLabel: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  successDetailValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  successDetailValueGreen: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  successDetailSeparator: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 6,
+  },
+  successPrimaryBtn: {
+    width: '100%',
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.16)',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    width: '100%',
-    zIndex: 2,
-  },
-  successMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  successMetaText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  successMetaDivider: {
-    width: 1,
-    height: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginHorizontal: 8,
-  },
-  doneActionBtnSuccess: {
-    backgroundColor: '#FFFFFF',
-    flex: 1,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
     elevation: 3,
   },
-  doneActionBtnSuccessText: {
+  successPrimaryBtnText: {
     fontSize: 13,
-    fontWeight: '900',
-    color: '#059669',
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   disconnectActionBtnSuccess: {
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
@@ -5563,6 +5731,74 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+  },
+
+  /* Custom Broadcast Sent Success Modal */
+  broadcastSuccessModalBackdrop: {
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 999,
+  },
+  broadcastSuccessModalContainer: {
+    width: '100%',
+    maxWidth: 380,
+    alignItems: 'center',
+  },
+  broadcastSuccessCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 20,
+    position: 'relative',
+    alignItems: 'center',
+  },
+  broadcastSuccessCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  broadcastSuccessEmblemWrap: {
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  broadcastSuccessEmblemCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 2,
+    borderColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  broadcastSuccessTitle: {
+    fontSize: 17.5,
+    fontWeight: '900',
+    color: '#000000',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  broadcastSuccessSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+    marginBottom: 16,
   },
 });
 export default WhatsAppHubView;
