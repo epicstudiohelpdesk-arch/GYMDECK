@@ -90,6 +90,9 @@ import {
   CheckCircle2,
   Phone,
   AlertTriangle,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import {
   ownerWhatsAppService,
@@ -174,6 +177,16 @@ const NOTIFICATION_TYPES = [
     color: '#475569',
     bg: '#F1F5F9',
   },
+  {
+    id: 'custom',
+    label: 'Custom Message',
+    desc: 'Freeform personalized broadcast',
+    badge: 'Custom',
+    icon: MessageSquare,
+    intent: 'CUSTOM_MESSAGE',
+    color: '#059669',
+    bg: '#ECFDF5',
+  },
 ];
 
 const SEGMENT_CHIPS = [
@@ -225,13 +238,13 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
   const [showSegmentMenu, setShowSegmentMenu] = useState(false);
   const [audienceSearchQuery, setAudienceSearchQuery] = useState('');
 
-  // Composer State
-  const [selectedIntent, setSelectedIntent] = useState<string>('SERVICE_ANNOUNCEMENT');
+  // Composer State - Custom Message selected by default
+  const [selectedIntent, setSelectedIntent] = useState<string>('CUSTOM_MESSAGE');
   const [activeSegment, setActiveSegment] = useState<string>('all');
   const [audience, setAudience] = useState<WhatsAppAudienceMember[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [messageBody, setMessageBody] = useState<string>(
-    'Hi {{member_name}}, this is an official update from {{gym_name}}. Please visit the front desk for details.'
+    'Hi {{member_name}}, '
   );
   const [sending, setSending] = useState(false);
 
@@ -246,8 +259,33 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     (connection as any)?.connectionStatus === 'CONNECTED' ||
     Boolean((connection as any)?.isLive);
 
+  // Active preview index for carousel when previewing multiple selected members
+  const [activePreviewIndex, setActivePreviewIndex] = useState(0);
+
   // Pulse animation for online indicator
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const syncSpinAnim = useRef(new Animated.Value(0)).current;
+
+  // Continuous spin animation while isRefreshingState is true
+  useEffect(() => {
+    let loop: Animated.CompositeAnimation | null = null;
+    if (isRefreshingState) {
+      syncSpinAnim.setValue(0);
+      loop = Animated.loop(
+        Animated.timing(syncSpinAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        })
+      );
+      loop.start();
+    } else {
+      syncSpinAnim.setValue(0);
+    }
+    return () => {
+      if (loop) loop.stop();
+    };
+  }, [isRefreshingState, syncSpinAnim]);
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -453,7 +491,10 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
       });
       if (res && res.members) {
         setAudience(res.members);
-        setSelectedMemberIds(res.members.map((m) => m.id));
+        // Only select members by default if user is NOT currently searching
+        if (!audienceSearchQuery.trim()) {
+          setSelectedMemberIds(res.members.map((m) => m.id));
+        }
       }
     } catch {
       // offline fallback
@@ -525,6 +566,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
       else if (intent === 'MEMBERSHIP_EXPIRY') setMessageBody('Hi {{member_name}}, your {{membership_plan}} at {{gym_name}} expires on {{membership_expiry}}. Renew today to keep your fitness unbroken!');
       else if (intent === 'PAYMENT_DUE') setMessageBody('Dear {{member_name}}, your subscription due amount is {{payment_amount}} payable by {{payment_due_date}}. Tap here to pay online.');
       else if (intent === 'MEMBERSHIP_WELCOME') setMessageBody('Welcome to {{gym_name}}, {{member_name}}! We are thrilled to partner in your fitness journey. Check your locker details at the desk.');
+      else if (intent === 'CUSTOM_MESSAGE') setMessageBody('Hi {{member_name}}, ');
       else setMessageBody('Hi {{member_name}}, your visit to {{gym_name}} was logged successfully.');
     }
   };
@@ -545,39 +587,59 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     );
   }, [audience, audienceSearchQuery]);
 
-  // Keep selected IDs in sync with filtered search results
+  // When segment changes (without active search), select all members in that segment by default.
+  // When a search query is active, DO NOT auto-select members: keep checkboxes unchecked by default.
   useEffect(() => {
-    setSelectedMemberIds(filteredAudience.map((m) => m.id));
-  }, [filteredAudience]);
-
-  // Preview formatting
-  const previewMember = useMemo(() => {
-    if (selectedMemberIds.length > 0) {
-      return filteredAudience.find((m) => m.id === selectedMemberIds[0]) || filteredAudience[0] || audience[0];
+    if (!audienceSearchQuery.trim()) {
+      setSelectedMemberIds(audience.map((m) => m.id));
+    } else {
+      // Clear auto-selection for search results so user selects explicitly
+      setSelectedMemberIds([]);
     }
+  }, [audience, activeSegment, audienceSearchQuery]);
+
+  // Selected members list in current audience
+  const selectedMembers = useMemo(() => {
+    if (selectedMemberIds.length === 0) return [];
+    return audience.filter((m) => selectedMemberIds.includes(m.id));
+  }, [audience, selectedMemberIds]);
+
+  // Keep preview index bounded when selection count changes
+  useEffect(() => {
+    if (activePreviewIndex >= selectedMembers.length && selectedMembers.length > 0) {
+      setActivePreviewIndex(0);
+    }
+  }, [selectedMembers.length, activePreviewIndex]);
+
+  // Helper to format preview message for a specific member
+  const formatMemberPreview = useCallback(
+    (member?: WhatsAppAudienceMember) => {
+      const gymName = user?.gymName || 'GymDeck Fitness';
+      const memberName = member?.fullName || 'Rahul Sharma';
+      const plan = member?.planName || 'Annual Gold Pass';
+      const expiry = member?.expiresAt
+        ? new Date(member.expiresAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '31 Dec 2026';
+
+      return messageBody
+        .replace(/\{\{member_name\}\}/gi, memberName)
+        .replace(/\{\{gym_name\}\}/gi, gymName)
+        .replace(/\{\{membership_plan\}\}/gi, plan)
+        .replace(/\{\{membership_expiry\}\}/gi, expiry)
+        .replace(/\{\{payment_amount\}\}/gi, '₹2,500')
+        .replace(/\{\{payment_due_date\}\}/gi, '05 Dec 2026');
+    },
+    [messageBody, user?.gymName]
+  );
+
+  // Fallback single member preview when none selected
+  const fallbackPreviewMember = useMemo(() => {
     return filteredAudience[0] || audience[0];
-  }, [filteredAudience, audience, selectedMemberIds]);
+  }, [filteredAudience, audience]);
 
   const activeIntentObj = useMemo(() => {
     return NOTIFICATION_TYPES.find((t) => t.intent === selectedIntent) || NOTIFICATION_TYPES[0];
   }, [selectedIntent]);
-
-  const renderedPreview = useMemo(() => {
-    const gymName = user?.gymName || 'GymDeck Fitness';
-    const memberName = previewMember?.fullName || 'Rahul Sharma';
-    const plan = previewMember?.planName || 'Annual Gold Pass';
-    const expiry = previewMember?.expiresAt
-      ? new Date(previewMember.expiresAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-      : '31 Dec 2026';
-
-    return messageBody
-      .replace(/\{\{member_name\}\}/gi, memberName)
-      .replace(/\{\{gym_name\}\}/gi, gymName)
-      .replace(/\{\{membership_plan\}\}/gi, plan)
-      .replace(/\{\{membership_expiry\}\}/gi, expiry)
-      .replace(/\{\{payment_amount\}\}/gi, '₹2,500')
-      .replace(/\{\{payment_due_date\}\}/gi, '05 Dec 2026');
-  }, [messageBody, previewMember, user?.gymName]);
 
   // Send Broadcast
   const handleSendBroadcast = async () => {
@@ -787,14 +849,21 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
               activeOpacity={0.7}
               disabled={isRefreshingState}
             >
-              {isRefreshingState ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <RefreshCw size={12} color="#E2E8F0" strokeWidth={2.2} />
-                  <Text style={styles.heroRefreshText}>Sync</Text>
-                </>
-              )}
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: syncSpinAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <RefreshCw size={12} color="#E2E8F0" strokeWidth={2.2} />
+              </Animated.View>
+              <Text style={styles.heroRefreshText}>Sync</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1156,8 +1225,8 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
               </View>
             </View>
 
-            {/* 4. Live WhatsApp Preview Bubble */}
-            <View style={[styles.contentCard, isDark && styles.contentCardDark]}>
+            {/* 4. Live WhatsApp Preview Bubble (Scrollable when multiple members selected) */}
+            <View style={[styles.contentCard, styles.previewContentCard, isDark && styles.contentCardDark]}>
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
                   <OfficialWhatsAppBrandIcon size={14} color="#059669" />
@@ -1165,20 +1234,81 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                     Live Preview
                   </Text>
                 </View>
-                <Text style={styles.previewTargetText}>
-                  Recipient: {previewMember?.fullName || 'Rahul Sharma'}
-                </Text>
-              </View>
-
-              <View style={styles.previewCanvas}>
-                <View style={styles.previewChatBubble}>
-                  <Text style={styles.previewMessageText}>{renderedPreview}</Text>
-                  <View style={styles.previewMetaRow}>
-                    <Text style={styles.previewTimeText}>Just now</Text>
-                    <CheckCheck size={13} color="#34B7F1" style={{ marginLeft: 4 }} />
+                <View style={styles.previewHeaderRight}>
+                  <View style={[styles.previewRecipientPill, isDark && styles.previewRecipientPillDark]}>
+                    <Text style={[styles.previewTargetText, isDark && styles.previewTargetTextDark]} numberOfLines={1}>
+                      Recipient: <Text style={styles.previewTargetHighlight}>{selectedMembers.length > 1 ? 'Multiple' : selectedMembers.length === 1 ? (selectedMembers[0]?.fullName || 'Selected Member') : (fallbackPreviewMember?.fullName || 'Rahul Sharma')}</Text>
+                    </Text>
                   </View>
                 </View>
               </View>
+
+              {/* Live Preview Canvas: Horizontal Swipeable if >1 member selected */}
+              {selectedMembers.length > 1 ? (
+                <>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(e) => {
+                      const contentOffsetX = e.nativeEvent.contentOffset.x;
+                      const layoutWidth = e.nativeEvent.layoutMeasurement.width;
+                      if (layoutWidth > 0) {
+                        const newIndex = Math.round(contentOffsetX / layoutWidth);
+                        if (newIndex >= 0 && newIndex < selectedMembers.length) {
+                          setActivePreviewIndex(newIndex);
+                        }
+                      }
+                    }}
+                    style={styles.previewHorizontalScroll}
+                  >
+                    {selectedMembers.map((member) => {
+                      const messageContent = formatMemberPreview(member);
+                      return (
+                        <View key={member.id} style={styles.previewPageSlide}>
+                          <View style={styles.previewCanvas}>
+                            <View style={styles.previewChatBubble}>
+                              <Text style={styles.previewMessageText}>{messageContent}</Text>
+                              <View style={styles.previewMetaRow}>
+                                <Text style={styles.previewTimeText}>Just now</Text>
+                                <CheckCheck size={13} color="#34B7F1" style={{ marginLeft: 4 }} />
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {/* Clean, professional pagination dots */}
+                  <View style={styles.previewDotsContainer}>
+                    {selectedMembers.slice(0, 5).map((_, dotIdx) => {
+                      const isDotActive = dotIdx === activePreviewIndex || (activePreviewIndex >= 4 && dotIdx === 4);
+                      return (
+                        <View
+                          key={dotIdx}
+                          style={[
+                            styles.previewDot,
+                            isDotActive ? styles.previewDotActive : styles.previewDotInactive,
+                          ]}
+                        />
+                      );
+                    })}
+                  </View>
+                </>
+              ) : (
+                <View style={styles.previewCanvas}>
+                  <View style={styles.previewChatBubble}>
+                    <Text style={styles.previewMessageText}>
+                      {formatMemberPreview(selectedMembers[0] || fallbackPreviewMember)}
+                    </Text>
+                    <View style={styles.previewMetaRow}>
+                      <Text style={styles.previewTimeText}>Just now</Text>
+                      <CheckCheck size={13} color="#34B7F1" style={{ marginLeft: 4 }} />
+                    </View>
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Dispatch Action Button */}
@@ -1898,6 +2028,7 @@ const styles = StyleSheet.create({
   heroRefreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 11,
@@ -1905,6 +2036,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.22)',
+    minWidth: 62,
+    height: 31,
   },
   heroRefreshText: {
     fontSize: 11.5,
@@ -2387,45 +2520,116 @@ const styles = StyleSheet.create({
   },
 
   /* WhatsApp Preview Bubble */
+  previewContentCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  previewHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  previewRecipientPill: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  previewRecipientPillDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  previewHorizontalScroll: {
+    marginHorizontal: -4,
+    marginTop: 2,
+  },
+  previewPageSlide: {
+    width: 320,
+    paddingHorizontal: 4,
+  },
+  previewDotsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 2,
+  },
+  previewDot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  previewDotActive: {
+    width: 20,
+    backgroundColor: '#059669',
+  },
+  previewDotInactive: {
+    width: 6,
+    backgroundColor: '#CBD5E1',
+  },
   previewTargetText: {
-    fontSize: 10.5,
+    fontSize: 11,
     color: '#64748B',
     fontWeight: '600',
   },
+  previewTargetTextDark: {
+    color: '#94A3B8',
+  },
+  previewTargetHighlight: {
+    color: '#0F172A',
+    fontWeight: '800',
+  },
   previewCanvas: {
-    backgroundColor: '#E5DDD5',
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: '#EFEAE2',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
     borderWidth: 1,
-    borderColor: '#D4C8BE',
+    borderColor: '#E2DCD5',
+    minHeight: 125,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   previewChatBubble: {
     backgroundColor: '#E7FFDB',
-    borderRadius: 10,
-    borderTopLeftRadius: 2,
-    padding: 8,
+    borderRadius: 12,
+    borderTopLeftRadius: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     maxWidth: '92%',
     alignSelf: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 2.5,
+    elevation: 2,
   },
   previewMessageText: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 19,
     color: '#111827',
   },
   previewMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
-    marginTop: 3,
+    marginTop: 4,
   },
   previewTimeText: {
-    fontSize: 9.5,
+    fontSize: 10,
     color: '#6B7280',
+    fontWeight: '500',
   },
 
   /* Dispatch Button */
