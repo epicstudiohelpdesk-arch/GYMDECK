@@ -63,8 +63,9 @@ import { ownerNotificationService } from '../../src/services/api/ownerNotificati
 import { AttendanceItem, GymMemberSummary } from '../../src/types';
 import { formatCurrency } from '../../src/utils/currency';
 import { runMobileConvergenceAudit } from '../../src/utils/auditConvergence';
-import Svg, { Path, Rect, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Line, Defs, LinearGradient, Stop, Pattern } from 'react-native-svg';
 import { WhatsAppHubView } from '../../src/components/WhatsAppHubView';
+import EmailHubView from '../../src/components/EmailHubView';
 import { InPlaceMembersView } from '../../src/components/InPlaceMembersView';
 import { InPlacePlansView } from '../../src/components/InPlacePlansView';
 import { InPlacePastMembersView } from '../../src/components/InPlacePastMembersView';
@@ -804,10 +805,10 @@ export default function OwnerHomeScreen() {
         router.push('/pt' as any);
         break;
       case 'whatsapp-hub':
+      case 'email-hub':
         // Display in-place on homepage directly below horizontal buttons
         break;
       case 'sms-hub':
-      case 'email-hub':
         router.push('/notifications' as any);
         break;
       case 'cctv':
@@ -1048,6 +1049,9 @@ export default function OwnerHomeScreen() {
           {activeCategory === 'whatsapp-hub' ? (
             /* In-place Desktop-grade WhatsApp Communication Hub */
             <WhatsAppHubView isDark={isDark} onClose={() => setActiveCategory(null)} />
+          ) : activeCategory === 'email-hub' ? (
+            /* In-place Desktop-grade Email Line Workspace */
+            <EmailHubView isDark={isDark} onClose={() => setActiveCategory(null)} />
           ) : activeCategory === 'members' ? (
             /* In-place Member Directory View replacing operations/recent admissions */
             <InPlaceMembersView isDark={isDark} onClose={() => setActiveCategory(null)} />
@@ -1272,7 +1276,7 @@ export default function OwnerHomeScreen() {
                     borderColor: isDark ? '#8B5CF6' : '#E9D5FF',
                   },
                 ]}
-                onPress={() => router.push('/notifications' as any)}
+                onPress={() => setActiveCategory('email-hub')}
                 activeOpacity={0.82}
               >
                 <View style={styles.commCardTop}>
