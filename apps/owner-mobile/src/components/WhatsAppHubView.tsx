@@ -54,7 +54,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop, Pattern, Line } from 'react-native-svg';
 import {
   Send,
   History,
@@ -93,6 +93,11 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  Receipt,
+  FileCheck,
+  ChevronUp,
+  CircleHelp,
+  HelpCircle,
 } from 'lucide-react-native';
 import {
   ownerWhatsAppService,
@@ -261,6 +266,9 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
 
   // Active preview index for carousel when previewing multiple selected members
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
+
+  // Expanded FAQ item id for Automations tab
+  const [expandedFaqId, setExpandedFaqId] = useState<string | null>(null);
 
   // Pulse animation for online indicator
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -520,10 +528,10 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
         setAutoRules(res.rules);
       } else {
         setAutoRules([
-          { id: 'auto-checkin', triggerEvent: 'ATTENDANCE_CHECKIN', title: 'Daily Attendance Receipt', description: 'Instantly message member upon QR turnstile scan', enabled: true },
-          { id: 'auto-expiry', triggerEvent: 'MEMBERSHIP_EXPIRING', title: '3-Day Renewal Alert', description: 'Send reminder with extension link before expiry', enabled: true },
-          { id: 'auto-due', triggerEvent: 'PAYMENT_CONFIRMATION', title: 'Fee Payment Confirmation', description: 'Auto-deliver official payment receipt PDF', enabled: true },
-          { id: 'auto-welcome', triggerEvent: 'MEMBERSHIP_WELCOME', title: 'Welcome Kit & Onboarding', description: 'Send gym guidelines and schedule to new members', enabled: false },
+          { id: 'auto-expiry', triggerEvent: 'MEMBERSHIP_EXPIRING', title: 'Membership Expiry Alert', description: 'Automatic warning reminder dispatched before membership expires with renewal links', enabled: true },
+          { id: 'auto-due', triggerEvent: 'PAYMENT_CONFIRMATION', title: 'Instant Payment & Fee Receipt', description: 'Auto-dispatch official payment receipt & invoice breakdown upon fee payment', enabled: true },
+          { id: 'auto-checkin', triggerEvent: 'ATTENDANCE_CHECKIN', title: 'Daily Attendance Check-In', description: 'Instant WhatsApp visit confirmation receipt when QR scan or turnstile logs visit', enabled: true },
+          { id: 'auto-welcome', triggerEvent: 'MEMBERSHIP_WELCOME', title: 'New Member Induction Kit', description: 'Automatically welcome freshly registered members with gym rules & onboarding guidelines', enabled: false },
         ]);
       }
     } catch {
@@ -1338,33 +1346,302 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
         {/* ── TAB 2: AUTOMATIONS ── */}
         {activeTab === 'automation' && (
           <View style={styles.tabContent}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>
-                Automatic System Triggers
-              </Text>
-              <Text style={styles.sectionSub}>No manual send required</Text>
+            {/* Executive Automated Notifications Hero Card (Deep Slate/Cobalt with Faded Grid Design) */}
+            <View style={styles.autoHeaderCardOuter}>
+              <View
+                style={[
+                  styles.autoHeaderCard,
+                  {
+                    backgroundColor: isDark ? '#0F172A' : '#1E293B',
+                    borderColor: isDark ? '#334155' : '#334155',
+                  },
+                ]}
+              >
+                {/* Subtle Faded Grid Background Pattern */}
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <Svg width="100%" height="100%">
+                    <Defs>
+                      <Pattern id="autoHeroGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+                        <Path
+                          d="M 16 0 L 0 0 0 16"
+                          fill="none"
+                          stroke="#94A3B8"
+                          strokeWidth="1"
+                          opacity={isDark ? 0.08 : 0.12}
+                        />
+                      </Pattern>
+                    </Defs>
+                    <Rect width="100%" height="100%" fill="url(#autoHeroGrid)" />
+                  </Svg>
+                </View>
+
+                {/* Subtle Watermark Bell Icon Attached to Inner Bottom Right */}
+                <View style={styles.autoWatermarkLogo} pointerEvents="none">
+                  <Svg width={72} height={72} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+                      stroke="#38BDF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                    <Path
+                      d="M13.73 21a2 2 0 0 1-3.46 0"
+                      stroke="#38BDF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                  </Svg>
+                </View>
+
+                <View style={styles.autoHeaderCardTop}>
+                  <View style={{ flex: 1, zIndex: 1 }}>
+                    <Text style={styles.autoHeaderTitle}>
+                      Automated Notifications
+                    </Text>
+                    <Text style={styles.autoHeaderSubtitle}>
+                      Instant member dispatch for expiration warnings, digital receipts, access check-in & welcome onboarding
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Sculpted Bottom-Middle Cutout Notch - Perfectly Placed Over the Bottom Border */}
+              <View style={styles.autoBottomCutoutWrapper} pointerEvents="none">
+                <View
+                  style={[
+                    styles.autoBottomCutoutNotch,
+                    {
+                      backgroundColor: isDark ? '#080E14' : '#F8FAFC',
+                      borderColor: isDark ? '#334155' : '#334155',
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.autoBottomCutoutPill,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#CBD5E1',
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
             </View>
 
-            {autoRules.map((rule) => (
-              <View
-                key={rule.id}
-                style={[styles.autoCard, isDark && styles.autoCardDark]}
-              >
-                <View style={{ flex: 1, marginRight: 12 }}>
-                  <Text style={[styles.autoTitle, isDark && styles.textWhite]}>
-                    {rule.title}
-                  </Text>
-                  <Text style={styles.autoDesc}>{rule.description}</Text>
+            {/* ── CARDLESS PERMISSION & ACCESS SECTION ── */}
+            <View style={styles.permSection}>
+              {/* Section Header */}
+              <View style={styles.permHeaderRow}>
+                <View style={[styles.permShieldIconWrap, isDark && styles.permShieldIconWrapDark]}>
+                  <ShieldCheck size={18} color={isDark ? '#E2E8F0' : '#0F172A'} strokeWidth={2.2} />
                 </View>
-                <Switch
-                  value={rule.enabled}
-                  onValueChange={() => handleToggleAutomation(rule.id, rule.enabled)}
-                  trackColor={{ false: '#CBD5E1', true: '#10B981' }}
-                  thumbColor="#FFFFFF"
-                  disabled={savingRuleId === rule.id}
-                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.permOverline}>DISPATCH AUTHORIZATION</Text>
+                  <Text style={[styles.permMainTitle, isDark && styles.textWhite]}>
+                    Automated Notifications
+                  </Text>
+                </View>
               </View>
-            ))}
+
+              {/* Master Permission Toggle Row */}
+              <View style={[styles.permMasterRow, isDark && styles.permDividerDark]}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={[styles.permMasterTitle, isDark && styles.textWhite]}>
+                    Member Automation Dispatches
+                  </Text>
+                  <Text style={[styles.permMasterSub, isDark && styles.textMutedDark]}>
+                    Authorize automated notifications across all channels
+                  </Text>
+                </View>
+
+                {savingRuleId === 'master' ? (
+                  <ActivityIndicator size="small" color="#0F172A" />
+                ) : (
+                  <Switch
+                    value={autoRules.some((r) => r.enabled)}
+                    onValueChange={async (newVal) => {
+                      setSavingRuleId('master');
+                      const updated = autoRules.map((r) => ({ ...r, enabled: newVal }));
+                      setAutoRules(updated);
+                      try {
+                        await ownerWhatsAppService.saveAutomation(updated);
+                      } catch {
+                        setAutoRules(autoRules);
+                        Alert.alert('Error', 'Failed to update automation permissions.');
+                      } finally {
+                        setSavingRuleId(null);
+                      }
+                    }}
+                    trackColor={{ false: '#CBD5E1', true: '#0F172A' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#CBD5E1"
+                  />
+                )}
+              </View>
+
+              {/* Permission Channels List */}
+              <View style={styles.permList}>
+                {[
+                  {
+                    id: 'auto-expiry',
+                    icon: Clock,
+                    title: 'Membership Expiry Alert',
+                    desc: 'Timely reminders before plan expiration',
+                  },
+                  {
+                    id: 'auto-due',
+                    icon: Receipt,
+                    title: 'Payment & Fee Receipts',
+                    desc: 'Instant digital invoice sent upon payment',
+                  },
+                  {
+                    id: 'auto-checkin',
+                    icon: CalendarCheck,
+                    title: 'Attendance Check-In',
+                    desc: 'Instant visit confirmation to members',
+                  },
+                  {
+                    id: 'auto-welcome',
+                    icon: UserCheck,
+                    title: 'New Member Induction',
+                    desc: 'Welcome kit and rules sent upon joining',
+                  },
+                ].map((item, idx, arr) => {
+                  const rule = autoRules.find((r) => r.id === item.id) || { enabled: false };
+                  const isLast = idx === arr.length - 1;
+                  const Icon = item.icon;
+
+                  return (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.permItemRow,
+                        !isLast && styles.permItemBorder,
+                        !isLast && isDark && styles.permDividerDark,
+                      ]}
+                    >
+                      <View style={[styles.permItemIconWrap, isDark && styles.permItemIconWrapDark]}>
+                        <Icon size={16} color={isDark ? '#CBD5E1' : '#334155'} strokeWidth={2.2} />
+                      </View>
+
+                      <View style={{ flex: 1, marginRight: 10 }}>
+                        <Text style={[styles.permItemTitle, isDark && styles.textWhite]}>
+                          {item.title}
+                        </Text>
+                        <Text style={[styles.permItemDesc, isDark && styles.textMutedDark]}>
+                          {item.desc}
+                        </Text>
+                      </View>
+
+                      {savingRuleId === item.id ? (
+                        <ActivityIndicator size="small" color="#0F172A" />
+                      ) : (
+                        <Switch
+                          value={rule.enabled}
+                          onValueChange={() => handleToggleAutomation(item.id, rule.enabled)}
+                          trackColor={{ false: '#CBD5E1', true: '#0F172A' }}
+                          thumbColor="#FFFFFF"
+                          ios_backgroundColor="#CBD5E1"
+                        />
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Interactive FAQs Card */}
+            <View style={[styles.autoFaqCard, isDark && styles.autoFaqCardDark]}>
+              {/* Card Background Gradient fading to page background at the bottom */}
+              <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                <Svg width="100%" height="100%">
+                  <Defs>
+                    <LinearGradient id="faqFadeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <Stop
+                        offset="0%"
+                        stopColor={isDark ? '#0F172A' : '#FFFFFF'}
+                        stopOpacity={1}
+                      />
+                      <Stop
+                        offset="65%"
+                        stopColor={isDark ? '#0F172A' : '#FFFFFF'}
+                        stopOpacity={1}
+                      />
+                      <Stop
+                        offset="100%"
+                        stopColor={isDark ? '#080E14' : '#F8FAFC'}
+                        stopOpacity={0.88}
+                      />
+                    </LinearGradient>
+                  </Defs>
+                  <Rect width="100%" height="100%" fill="url(#faqFadeGrad)" rx={14} />
+                </Svg>
+              </View>
+
+              <View style={[styles.autoFaqHeader, isDark && styles.autoFaqHeaderDark]}>
+                <View style={[styles.autoFaqIconWrap, isDark && styles.autoFaqIconWrapDark]}>
+                  <HelpCircle size={18} color={isDark ? '#38BDF8' : '#0284C7'} strokeWidth={2.4} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.autoFaqKicker}>FREQUENTLY ASKED QUESTIONS</Text>
+                  <Text style={[styles.autoFaqHeaderTitle, isDark && styles.textWhite]}>
+                    Automation Rules & Delivery FAQ
+                  </Text>
+                </View>
+              </View>
+
+              {[
+                {
+                  id: 'faq-1',
+                  q: 'How are automated member updates dispatched?',
+                  a: 'Every notification is triggered instantly by GymDeck system events (such as biometric/manual check-in, fee payments, and upcoming expiration cycles). Messages are transmitted in the background through your linked WhatsApp gym line without requiring manual intervention.',
+                },
+                {
+                  id: 'faq-2',
+                  q: 'Are payment receipts and expiration warnings sent automatically?',
+                  a: 'Yes. Upon receiving a member payment, an itemized digital receipt is generated and dispatched immediately to the member’s phone. Expiration reminders are scheduled ahead of membership maturity to maximize renewals.',
+                },
+                {
+                  id: 'faq-3',
+                  q: 'How is member privacy and consent maintained?',
+                  a: 'GymDeck strictly honors member communication preferences. If a member requests not to receive notifications, their profile delivery flag is respected and automated promotional messages will not be sent.',
+                },
+                {
+                  id: 'faq-4',
+                  q: 'Are there extra message fees or third-party API costs?',
+                  a: 'No. Automations run directly through your official linked phone line using GymDeck WhatsApp Companion with zero third-party per-message fees or subscription surcharges.',
+                },
+              ].map((faq) => {
+                const isExpanded = expandedFaqId === faq.id;
+                return (
+                  <View key={faq.id} style={[styles.autoFaqItem, isDark && styles.autoFaqItemDark]}>
+                    <TouchableOpacity
+                      style={styles.autoFaqQuestionRow}
+                      onPress={() => setExpandedFaqId(isExpanded ? null : faq.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.autoFaqQuestionText, isDark && styles.textWhite]}>
+                        {faq.q}
+                      </Text>
+                      {isExpanded ? (
+                        <ChevronUp size={16} color={isDark ? '#94A3B8' : '#475569'} strokeWidth={2.2} />
+                      ) : (
+                        <ChevronDown size={16} color={isDark ? '#94A3B8' : '#475569'} strokeWidth={2.2} />
+                      )}
+                    </TouchableOpacity>
+                    {isExpanded && (
+                      <Text style={[styles.autoFaqAnswerText, isDark && styles.textMutedDark]}>
+                        {faq.a}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -1850,6 +2127,9 @@ const styles = StyleSheet.create({
   },
   textWhite: {
     color: '#F8FAFC',
+  },
+  textMutedDark: {
+    color: '#94A3B8',
   },
 
   /* 1. Signature Hero Card */
@@ -2894,30 +3174,278 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  /* Automations */
-  autoCard: {
+  /* Executive Automated Notifications Hero Card (Deep Slate/Cobalt with Faded Grid Design) */
+  autoHeaderCardOuter: {
+    position: 'relative',
+    marginBottom: 14,
+  },
+  autoHeaderCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 70,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  autoWatermarkLogo: {
+    position: 'absolute',
+    right: 4,
+    bottom: -6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  autoHeaderCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+  },
+  autoHeaderOverline: {
+    color: '#38BDF8',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  autoHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 18.5,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+  },
+  autoHeaderSubtitle: {
+    color: '#94A3B8',
+    fontSize: 10.5,
+    fontWeight: '500',
+    marginTop: 2.5,
+    lineHeight: 14.5,
+    maxWidth: '92%',
+  },
+  /* Sculpted Bottom-Middle Cutout Notch - Attached completely over the bottom edge */
+  autoBottomCutoutWrapper: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 99,
+    elevation: 10,
+  },
+  autoBottomCutoutNotch: {
+    width: 108,
+    height: 14,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  autoBottomCutoutPill: {
+    width: 34,
+    height: 3,
+    borderRadius: 1.5,
+    marginTop: 2,
+  },
+
+  /* Cardless Permission & Access Section */
+  permSection: {
+    marginBottom: 16,
+    paddingHorizontal: 2,
+  },
+  permHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  permShieldIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
   },
-  autoCardDark: {
-    backgroundColor: '#0F172A',
-    borderColor: '#1E293B',
+  permShieldIconWrapDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
   },
-  autoTitle: {
-    fontSize: 13,
+  permOverline: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  permMainTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    marginTop: 1,
+  },
+  permMasterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 4,
+  },
+  permMasterTitle: {
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#0F172A',
   },
-  autoDesc: {
-    fontSize: 10.5,
+  permMasterSub: {
+    fontSize: 10,
     color: '#64748B',
     marginTop: 2,
+    fontWeight: '500',
+  },
+  permList: {
+    paddingTop: 0,
+  },
+  permItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+  },
+  permItemBorder: {
+    borderBottomWidth: 1,
+    borderColor: '#F8FAFC',
+  },
+  permDividerDark: {
+    borderColor: '#1E293B',
+  },
+  permItemIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  permItemIconWrapDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  permItemTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  permItemDesc: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 1,
+    fontWeight: '500',
+  },
+
+  /* Professional FAQ Card */
+  autoFaqCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 14,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    paddingBottom: 20,
+    marginBottom: 20,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  autoFaqCardDark: {
+    borderColor: '#1E293B',
+  },
+  autoFaqHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  autoFaqHeaderDark: {
+    borderBottomColor: '#1E293B',
+  },
+  autoFaqIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  autoFaqIconWrapDark: {
+    backgroundColor: 'rgba(2, 132, 199, 0.15)',
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+  },
+  autoFaqKicker: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  autoFaqHeaderTitle: {
+    fontSize: 14.5,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  autoFaqItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  autoFaqItemDark: {
+    borderBottomColor: '#1E293B',
+  },
+  autoFaqQuestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  autoFaqQuestionText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    flex: 1,
+    marginRight: 10,
+    lineHeight: 17,
+  },
+  autoFaqAnswerText: {
+    fontSize: 11.5,
+    lineHeight: 17.5,
+    color: '#475569',
+    marginTop: 8,
+    paddingRight: 6,
+    fontWeight: '500',
   },
 
   /* History / Logs */
