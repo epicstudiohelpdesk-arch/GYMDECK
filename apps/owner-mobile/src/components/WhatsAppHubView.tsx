@@ -54,6 +54,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop, Pattern, Line } from 'react-native-svg';
 import {
@@ -104,6 +105,7 @@ import {
   Filter,
   ListFilter,
   Calendar,
+  ExternalLink,
 } from 'lucide-react-native';
 import {
   ownerWhatsAppService,
@@ -845,11 +847,21 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
     }
   };
 
+  const handleOpenWhatsApp = useCallback(() => {
+    // Open WhatsApp app natively
+    Linking.openURL('whatsapp://app').catch(() => {
+      // Fallback if whatsapp:// is not installed or unhandled
+      Linking.openURL('https://wa.me/').catch(() => {
+        Alert.alert('WhatsApp Not Installed', 'Please install or open WhatsApp manually on your device.');
+      });
+    });
+  }, []);
+
   const handleRequestPairingCode = async () => {
     Keyboard.dismiss();
     const cleanDigits = pairingPhone.replace(/\D/g, '');
     if (!cleanDigits) {
-      Alert.alert('Phone Required', 'Please enter your WhatsApp mobile number.');
+      setPairingError('Please enter your WhatsApp mobile number before requesting a pairing code.');
       return;
     }
     const fullInternational = cleanDigits.startsWith('91') && cleanDigits.length > 10
@@ -867,9 +879,8 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
       });
       loadData();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to request pairing code.';
+      const msg = err?.response?.data?.message || err?.message || 'Could not generate pairing code from WhatsApp. Please try again.';
       setPairingError(msg);
-      Alert.alert('Pairing Error', msg);
     } finally {
       setIsRequestingPairingCode(false);
     }
@@ -2731,7 +2742,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                   {!isConnected ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <View style={styles.modalIconWrap}>
-                        <KeyRound size={17} color="#25D366" strokeWidth={2.4} />
+                        <KeyRound size={17} color="#000000" strokeWidth={2.6} />
                       </View>
                       <View>
                         <Text style={[styles.modalTitle, isDark && styles.textWhite]}>
@@ -2750,7 +2761,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={styles.modalCloseBtn}
                   >
-                    <X size={20} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.4} />
+                    <X size={18} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.4} />
                   </TouchableOpacity>
                 </View>
 
@@ -2822,7 +2833,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                               <Text style={styles.stepNumberText}>1</Text>
                             </View>
                             <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
-                              Open <Text style={{ fontWeight: '800' }}>WhatsApp</Text> on this phone
+                              Tap <Text style={{ fontWeight: '900', color: isDark ? '#FFFFFF' : '#000000' }}>"Open WhatsApp to Link"</Text> below
                             </Text>
                           </View>
                           <View style={styles.instructionStepRow}>
@@ -2830,7 +2841,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                               <Text style={styles.stepNumberText}>2</Text>
                             </View>
                             <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
-                              Go to <Text style={{ fontWeight: '800' }}>Settings &gt; Linked Devices</Text>
+                              Go to <Text style={{ fontWeight: '900', color: isDark ? '#FFFFFF' : '#000000' }}>Settings &gt; Linked Devices</Text>
                             </Text>
                           </View>
                           <View style={styles.instructionStepRow}>
@@ -2838,7 +2849,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                               <Text style={styles.stepNumberText}>3</Text>
                             </View>
                             <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
-                              Tap <Text style={{ fontWeight: '800' }}>Link a Device &gt; Link with phone number</Text>
+                              Tap <Text style={{ fontWeight: '900', color: isDark ? '#FFFFFF' : '#000000' }}>Link a Device &gt; Link with phone number</Text>
                             </Text>
                           </View>
                           <View style={styles.instructionStepRow}>
@@ -2846,7 +2857,7 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                               <Text style={styles.stepNumberText}>4</Text>
                             </View>
                             <Text style={[styles.instructionStepText, isDark && styles.textWhite]}>
-                              Type the pairing code displayed above
+                              Enter the <Text style={{ fontWeight: '900', color: isDark ? '#FFFFFF' : '#000000' }}>8-digit code</Text> shown above
                             </Text>
                           </View>
                         </View>
@@ -2856,16 +2867,30 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                           <Text style={styles.pairingTimerText}>Active code • Expires in 5 minutes</Text>
                         </View>
                       </View>
+                    ) : pairingError ? (
+                      /* Clean, distraction-free Pairing Notice */
+                      <View style={styles.inlineNoticeContainer}>
+                        {/* Centered Professional Red Alert Emblem */}
+                        <View style={styles.inlineNoticeIconWrap}>
+                          <View style={styles.inlineNoticeIconCircle}>
+                            <AlertCircle size={30} color="#DC2626" strokeWidth={2.4} />
+                          </View>
+                        </View>
+
+                        {/* Bold Clear Headline & Friendly Explanation */}
+                        <Text style={[styles.inlineNoticeHeadline, isDark && styles.textWhite]}>
+                          Pairing Code Notice
+                        </Text>
+                        <Text style={[styles.inlineNoticeExplainText, isDark && { color: '#94A3B8' }]}>
+                          {pairingError}
+                        </Text>
+                      </View>
                     ) : (
                       <View style={styles.pairingInputBox}>
                         <View style={styles.phoneLabelRow}>
                           <Text style={[styles.pairingInputLabel, isDark && styles.textWhite]}>
-                            WhatsApp Phone Number
+                            WhatsApp Business / Phone Number
                           </Text>
-                          <View style={styles.secureTag}>
-                            <Lock size={10} color="#059669" />
-                            <Text style={styles.secureTagText}>Direct Link</Text>
-                          </View>
                         </View>
 
                         {/* Phone input with auto +91 badge */}
@@ -2895,18 +2920,12 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                         </View>
 
                         <View style={styles.infoNoticeRow}>
-                          <Info size={13} color="#059669" strokeWidth={2.2} style={{ marginTop: 1 }} />
+                          <Info size={13} color="#0F172A" strokeWidth={2.2} style={{ marginTop: 1 }} />
                           <Text style={styles.pairingInputHelper}>
-                            We will generate an instant pairing code so you can connect without scanning a QR code from another device.
+                            Enter your mobile phone number to generate an 8-character companion pairing code.
                           </Text>
                         </View>
 
-                        {pairingError && (
-                          <View style={styles.pairingErrorRow}>
-                            <AlertCircle size={13} color="#EF4444" />
-                            <Text style={styles.pairingErrorText}>{pairingError}</Text>
-                          </View>
-                        )}
                         {isRequestingPairingCode && (
                           <View style={styles.pairingLoadingRow}>
                             <ActivityIndicator size="small" color="#059669" />
@@ -2922,29 +2941,51 @@ export const WhatsAppHubView: React.FC<WhatsAppHubViewProps> = ({ isDark = false
                   {!isConnected ? (
                     pairingResult?.pairingCode ? (
                       <View style={{ gap: 8 }}>
+                        {/* 1-Tap Open WhatsApp Button */}
                         <TouchableOpacity
-                          style={[styles.actionBtn, { backgroundColor: '#059669' }]}
+                          style={styles.openWhatsAppActionBtn}
+                          onPress={handleOpenWhatsApp}
+                          activeOpacity={0.85}
+                        >
+                          <OfficialWhatsAppBrandIcon size={18} color="#FFFFFF" />
+                          <Text style={styles.openWhatsAppActionBtnText}>Open WhatsApp to Link</Text>
+                          <ExternalLink size={14} color="#FFFFFF" strokeWidth={2.4} />
+                        </TouchableOpacity>
+
+                        {/* Request New Code Option */}
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' }]}
                           onPress={handleRequestPairingCode}
                           disabled={isRequestingPairingCode}
                           activeOpacity={0.8}
                         >
-                          <RefreshCw size={15} color="#FFFFFF" strokeWidth={2.4} />
-                          <Text style={styles.actionBtnText}>Request New Code</Text>
+                          <RefreshCw size={14} color="#334155" strokeWidth={2.2} />
+                          <Text style={[styles.actionBtnText, { color: '#334155' }]}>Request New Code</Text>
                         </TouchableOpacity>
                       </View>
+                    ) : pairingError ? (
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: '#000000' }]}
+                        onPress={() => setPairingError(null)}
+                        activeOpacity={0.85}
+                      >
+                        <RefreshCw size={15} color="#FFFFFF" strokeWidth={2.4} />
+                        <Text style={styles.actionBtnText}>Try Again</Text>
+                        <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.4} />
+                      </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: '#059669' }]}
+                        style={[styles.actionBtn, { backgroundColor: '#000000' }]}
                         onPress={handleRequestPairingCode}
                         disabled={isRequestingPairingCode}
-                        activeOpacity={0.8}
+                        activeOpacity={0.85}
                       >
                         {isRequestingPairingCode ? (
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
                           <>
                             <KeyRound size={15} color="#FFFFFF" strokeWidth={2.4} />
-                            <Text style={styles.actionBtnText}>Get Pairing Code</Text>
+                            <Text style={styles.actionBtnText}>Generate Pairing Code</Text>
                             <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.4} />
                           </>
                         )}
@@ -5390,6 +5431,26 @@ const styles = StyleSheet.create({
   },
 
   /* Pairing Code Display & Form */
+  openWhatsAppActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#059669',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  openWhatsAppActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
   pairingDisplayBox: {
     alignItems: 'center',
     width: '100%',
@@ -5403,39 +5464,39 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   pairingCodeCard: {
-    backgroundColor: '#064E3B',
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#059669',
-    marginBottom: 12,
-    shadowColor: '#059669',
+    borderColor: '#334155',
+    marginBottom: 14,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
   },
   pairingCodeCardDark: {
-    backgroundColor: '#022C22',
-    borderColor: '#10B981',
+    backgroundColor: '#020617',
+    borderColor: '#334155',
   },
   pairingCodeText: {
-    fontSize: 27,
+    fontSize: 30,
     fontWeight: '900',
-    color: '#34D399',
-    letterSpacing: 4,
+    color: '#FFFFFF',
+    letterSpacing: 5,
     fontFamily: 'monospace',
   },
   pairingInstructionsBox: {
     width: '100%',
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     padding: 12,
-    gap: 8,
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: 12,
   },
   pairingInstructionsBoxDark: {
     backgroundColor: '#1E293B',
@@ -5444,25 +5505,26 @@ const styles = StyleSheet.create({
   instructionStepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   stepNumberBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#ECFDF5',
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepNumberText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#059669',
+    fontSize: 10.5,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   instructionStepText: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#334155',
     flex: 1,
+    lineHeight: 17,
   },
   pairingTimerRow: {
     flexDirection: 'row',
@@ -5472,7 +5534,7 @@ const styles = StyleSheet.create({
   pairingTimerText: {
     fontSize: 11,
     color: '#059669',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   pairingInputBox: {
     width: '100%',
@@ -5482,52 +5544,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   pairingInputLabel: {
     fontSize: 13,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '900',
+    color: '#000000',
+    letterSpacing: -0.2,
   },
   secureTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    gap: 4,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   secureTagText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#059669',
+    color: '#000000',
   },
   infoNoticeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
-    marginTop: 8,
+    marginTop: 10,
   },
   pairingInputHelper: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#64748B',
-    lineHeight: 15,
+    lineHeight: 16,
     flex: 1,
+    fontWeight: '500',
   },
   phoneInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#059669',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    height: 48,
+    borderColor: '#000000',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    height: 50,
   },
   phoneInputRowDark: {
     backgroundColor: '#1E293B',
-    borderColor: '#10B981',
+    borderColor: '#38BDF8',
   },
   countryCodeBadge: {
     flexDirection: 'row',
@@ -5799,6 +5865,68 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingHorizontal: 8,
     marginBottom: 16,
+  },
+  pairingErrorEmblemWrap: {
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  pairingErrorEmblemCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 2,
+    borderColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  /* Minimalist, Clean & Bold Inline Pairing Notice Styles */
+  inlineNoticeContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  inlineNoticeIconWrap: {
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineNoticeIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  inlineNoticeHeadline: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0F172A',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+    marginBottom: 8,
+  },
+  inlineNoticeExplainText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
 });
 export default WhatsAppHubView;

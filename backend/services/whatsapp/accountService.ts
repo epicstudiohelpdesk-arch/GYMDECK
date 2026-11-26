@@ -677,16 +677,24 @@ export class WhatsAppAccountService {
         if (err.status === 400) {
           throw AppError.validation(err.message || 'WhatsApp rejected the phone number.');
         }
-        if (err.status === 500 && (err.message?.includes('rate-overlimit') || err.message?.includes('429'))) {
-          throw AppError.conflict(
+        if (err.status === 429 || (err.status === 500 && (err.message?.includes('rate-overlimit') || err.message?.includes('429')))) {
+          throw AppError.rateLimited(
             'WhatsApp is temporarily rate-limiting pairing code requests for this phone number. Please wait a couple of minutes before requesting a new code.'
           );
         }
+        if (err.message) {
+          throw AppError.conflict(err.message);
+        }
       }
-      if (err instanceof Error && (err.message?.includes('rate-overlimit') || err.message?.includes('429'))) {
-        throw AppError.conflict(
-          'WhatsApp is temporarily rate-limiting pairing code requests for this phone number. Please wait a couple of minutes before requesting a new code.'
-        );
+      if (err instanceof Error) {
+        if (err.message?.includes('rate-overlimit') || err.message?.includes('429')) {
+          throw AppError.rateLimited(
+            'WhatsApp is temporarily rate-limiting pairing code requests for this phone number. Please wait a couple of minutes before requesting a new code.'
+          );
+        }
+        if (err.message && !err.message.includes('unknown')) {
+          throw AppError.conflict(err.message);
+        }
       }
       throw AppError.conflict('Could not generate pairing code from WhatsApp. Please try again.');
     }

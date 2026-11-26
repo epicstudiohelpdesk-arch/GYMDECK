@@ -6,6 +6,7 @@ import type { Socket } from 'net';
 import * as qrcode from 'qrcode';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { SocksProxyAgent } from 'socks-proxy-agent';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { type Dispatcher } from 'undici';
 import type * as BaileysLib from '@whiskeysockets/baileys';
 import type { WASocket } from '@whiskeysockets/baileys';
@@ -1476,9 +1477,16 @@ export class BaileysLifecycle {
     let code: string;
     try {
       code = await sock.requestPairingCode(phoneNumber);
-    } catch (error) {
+    } catch (error: any) {
       // A stop that closes the socket under the request rejects it (Boom 428) instead of resolving it.
       if (stopped()) throw notWaiting();
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('rate-overlimit')) {
+        throw new HttpException(
+          'WhatsApp is temporarily rate-limiting pairing code requests for this phone number. Please wait a couple of minutes before requesting a new code.',
+          HttpStatus.TOO_MANY_REQUESTS
+        );
+      }
       throw error;
     }
     // A stop, logout or new socket while the code was being sent leaves a code nothing can link any more.
