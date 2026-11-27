@@ -1315,6 +1315,32 @@ export default function OwnerHomeScreen() {
           </View>
 
           <View style={styles.activityFeedList}>
+            {/* Card Background Gradient fading to page background at the bottom (matching WhatsApp Hub FAQ card) */}
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Svg width="100%" height="100%">
+                <Defs>
+                  <LinearGradient id="admissionsFadeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <Stop
+                      offset="0%"
+                      stopColor={isDark ? '#0F172A' : '#FFFFFF'}
+                      stopOpacity={1}
+                    />
+                    <Stop
+                      offset="65%"
+                      stopColor={isDark ? '#0F172A' : '#FFFFFF'}
+                      stopOpacity={1}
+                    />
+                    <Stop
+                      offset="100%"
+                      stopColor={isDark ? '#080E14' : '#F8FAFC'}
+                      stopOpacity={0.88}
+                    />
+                  </LinearGradient>
+                </Defs>
+                <Rect width="100%" height="100%" fill="url(#admissionsFadeGrad)" rx={18} />
+              </Svg>
+            </View>
+
             {recentMembers.length > 0 ? (
               recentMembers.slice(0, 4).map((member: GymMemberSummary, idx: number) => (
                 <TouchableOpacity
@@ -1332,8 +1358,7 @@ export default function OwnerHomeScreen() {
                     photoUrl={member.profilePhotoUrl}
                     gender={(member as any).gender}
                     size="md"
-                    showStatusDot={member.membershipStatus === 'ACTIVE'}
-                    statusDotColor="#10B981"
+                    showStatusDot={false}
                   />
 
                   <View style={{ flex: 1, marginLeft: 12 }}>
@@ -1952,16 +1977,16 @@ const styles = StyleSheet.create({
 
   /* 6. Recent Activity Feed */
   activityFeedList: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: 18,
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
     borderColor: '#E2E8F0',
     paddingHorizontal: 14,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    paddingBottom: 4,
+    overflow: 'hidden',
   },
   activityFeedRow: {
     flexDirection: 'row',

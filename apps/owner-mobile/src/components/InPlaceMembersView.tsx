@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, Camera as ExpoCamera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import {
   View,
@@ -98,6 +98,8 @@ import { localMutationService } from '../services/LocalMutationService';
 import { OwnerMembersService } from '../services/api/ownerMembersService';
 import { isDatabaseOpen } from '../database/LocalDatabaseManager';
 import { Avatar } from './ui/Avatar';
+import { PermissionAccessModal, PermissionAccessType } from './ui/PermissionAccessModal';
+import { MemberRegisteredSuccessModal, MemberSuccessData } from './ui/MemberRegisteredSuccessModal';
 import { getDefaultAvatarXml } from '../utils/avatarGenerator';
 import { BrandSignatureFooter } from './BrandSignatureFooter';
 import { layout } from '../theme/spacing';
@@ -163,6 +165,91 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
   // Add Member Modal Animations
   const addModalBackdropAnim = useRef(new Animated.Value(0)).current;
   const addModalSheetTranslateY = useRef(new Animated.Value(750)).current;
+
+  // Custom Member Success Modal State
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successModalData, setSuccessModalData] = useState<MemberSuccessData | null>(null);
+
+  // Custom Device Permissions Request Modal State
+  const [permissionModalVisible, setPermissionModalVisible] = useState(false);
+  const [permissionModalType, setPermissionModalType] = useState<PermissionAccessType>('gallery');
+  const [permissionCanAskAgain, setPermissionCanAskAgain] = useState(true);
+  const pendingPermissionActionRef = useRef<(() => Promise<void> | void) | null>(null);
+
+  const requestCustomPermission = async (
+    type: PermissionAccessType,
+    action: () => Promise<void> | void
+  ) => {
+    try {
+      if (type === 'camera') {
+        const status = await ExpoCamera.getCameraPermissionsAsync();
+        if (status?.granted) {
+          await action();
+          return;
+        }
+        setPermissionModalType('camera');
+        setPermissionCanAskAgain(status?.canAskAgain !== false);
+        pendingPermissionActionRef.current = async () => {
+          setPermissionModalVisible(false);
+          const req = await requestCameraPermission();
+          if (req.granted) {
+            setTimeout(() => {
+              action();
+            }, 300);
+          } else {
+            setPermissionCanAskAgain(false);
+            setTimeout(() => {
+              setPermissionModalVisible(true);
+            }, 400);
+          }
+        };
+        setPermissionModalVisible(true);
+      } else {
+        // 'gallery' or 'documents'
+        let status;
+        try {
+          status = await ImagePicker.getMediaLibraryPermissionsAsync();
+        } catch {
+          status = null;
+        }
+
+        if (status?.granted) {
+          await action();
+          return;
+        }
+
+        // If status is undetermined, trigger requestMediaLibraryPermissionsAsync directly so iOS native picker prompt appears
+        if (!status || status.status === 'undetermined') {
+          const directReq = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (directReq.granted) {
+            await action();
+            return;
+          }
+        }
+
+        setPermissionModalType(type);
+        setPermissionCanAskAgain(status?.canAskAgain !== false);
+        pendingPermissionActionRef.current = async () => {
+          setPermissionModalVisible(false);
+          const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (req.granted) {
+            setTimeout(() => {
+              action();
+            }, 300);
+          } else {
+            setPermissionCanAskAgain(false);
+            setTimeout(() => {
+              setPermissionModalVisible(true);
+            }, 400);
+          }
+        };
+        setPermissionModalVisible(true);
+      }
+    } catch {
+      // Fallback: directly execute action
+      await action();
+    }
+  };
 
   // Shake & Red Flash Animations for mandatory validation feedback
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -584,7 +671,31 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
     setIsAddMemberModalOpen(true);
   };
 
-  const closeAddMemberModal = () => {
+  const resetRegistrationForm = () => {
+    setFormFullName('');
+    setFormContactNumber('');
+    setFormEmail('');
+    setFormDob('');
+    setFormGender('Male');
+    setFormWhatsAppNumber('');
+    setFormHeight('');
+    setFormWeight('');
+    setFormBloodGroup('');
+    setFormAddress('');
+    setFormSelectedPlanId(undefined);
+    setFormProfilePhoto(null);
+    setFormDocs({ aadhaar: null, residential: null, health: null, others: null });
+    setFormJoiningFee(0);
+    setFormGstEnabled(false);
+    setFormSelectedAddons({});
+    setFormCustomAddons([]);
+    setRegPage(1);
+    setMemberFormMode('add');
+    setEditingMemberId(null);
+    setFormError(null);
+  };
+
+  const closeAddMemberModal = (onClosed?: any) => {
     Animated.parallel([
       Animated.timing(addModalBackdropAnim, {
         toValue: 0,
@@ -600,6 +711,9 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
       setIsAddMemberModalOpen(false);
       setRegPage(1);
       setFormError(null);
+      if (typeof onClosed === 'function') {
+        onClosed();
+      }
     });
   };
 
@@ -782,38 +896,25 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
           };
         });
 
-        Alert.alert(
-          'Member Updated Successfully',
-          `${formFullName.trim()}'s profile details have been saved to the database.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setFormFullName('');
-                setFormContactNumber('');
-                setFormEmail('');
-                setFormDob('');
-                setFormGender('Male');
-                setFormWhatsAppNumber('');
-                setFormHeight('');
-                setFormWeight('');
-                setFormBloodGroup('');
-                setFormAddress('');
-                setFormSelectedPlanId(undefined);
-                setFormProfilePhoto(null);
-                setFormDocs({ aadhaar: null, residential: null, health: null, others: null });
-                setFormJoiningFee(0);
-                setFormGstEnabled(false);
-                setFormSelectedAddons({});
-                setFormCustomAddons([]);
-                setRegPage(1);
-                setMemberFormMode('add');
-                setEditingMemberId(null);
-                closeAddMemberModal();
-              },
-            },
-          ]
-        );
+        // Close Add/Edit Member Modal FIRST, then present custom success modal
+        const updatedName = formFullName.trim();
+        const updatedPhone = formContactNumber.trim();
+        const selectedPlan = availablePlans.find((p) => p.id === formSelectedPlanId);
+        const planName = selectedPlan?.planName;
+
+        closeAddMemberModal(() => {
+          resetRegistrationForm();
+          setTimeout(() => {
+            setSuccessModalData({
+              memberId: editingMemberId || undefined,
+              fullName: updatedName,
+              phone: updatedPhone,
+              planName,
+              isEdit: true,
+            });
+            setSuccessModalVisible(true);
+          }, 150);
+        });
         return;
       }
 
@@ -841,8 +942,9 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
       if (addonsTotal > 0) notesParts.push(`Add-ons: ₹${addonsTotal}`);
       const notes = notesParts.length > 0 ? notesParts.join(' | ') : undefined;
 
+      let createdMemberId: string | undefined = undefined;
       if (isDatabaseOpen()) {
-        await localMutationService.admitMember({
+        const result = await localMutationService.admitMember({
           fullName: formFullName.trim(),
           phone: cleanPhone,
           alternatePhone: formWhatsAppNumber.trim() || undefined,
@@ -856,42 +958,30 @@ export const InPlaceMembersView: React.FC<InPlaceMembersViewProps> = ({ isDark =
           initialPaymentMethod: formSelectedPlanId ? formPaymentMethod : undefined,
           profilePhotoUrl: formProfilePhoto || undefined,
         });
+        createdMemberId = result?.member?.id;
       }
 
       // Refresh list
       refetch();
 
-      Alert.alert(
-        'Member Registered Successfully',
-        `${formFullName.trim()} has been registered and activated in the gym roster.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset form fields
-              setFormFullName('');
-              setFormContactNumber('');
-              setFormEmail('');
-              setFormDob('');
-              setFormGender('Male');
-              setFormWhatsAppNumber('');
-              setFormHeight('');
-              setFormWeight('');
-              setFormBloodGroup('');
-              setFormAddress('');
-              setFormSelectedPlanId(undefined);
-              setFormProfilePhoto(null);
-              setFormDocs({ aadhaar: null, residential: null, health: null, others: null });
-              setFormJoiningFee(0);
-              setFormGstEnabled(false);
-              setFormSelectedAddons({});
-              setFormCustomAddons([]);
-              setRegPage(1);
-              closeAddMemberModal();
-            },
-          },
-        ]
-      );
+      const registeredName = formFullName.trim();
+      const registeredPhone = formContactNumber.trim();
+      const planName = selectedPlan?.planName;
+
+      // Close Add Member modal FIRST, then present Custom Success Modal from bottom to top
+      closeAddMemberModal(() => {
+        resetRegistrationForm();
+        setTimeout(() => {
+          setSuccessModalData({
+            memberId: createdMemberId,
+            fullName: registeredName,
+            phone: registeredPhone,
+            planName,
+            isEdit: false,
+          });
+          setSuccessModalVisible(true);
+        }, 150);
+      });
     } catch (err: any) {
       setFormError(err?.message || 'Failed to register member. Please check fields.');
     } finally {
@@ -1609,18 +1699,10 @@ const renderRegistrationFormSheet = () => (
                                     : '#CBD5E1',
                                 },
                               ]}
-                              onPress={async () => {
-                                if (!cameraPermission?.granted) {
-                                  const res = await requestCameraPermission();
-                                  if (!res.granted) {
-                                    Alert.alert(
-                                      'Camera Permission Needed',
-                                      'Please enable Camera permission in iOS Settings to take member photos.'
-                                    );
-                                    return;
-                                  }
-                                }
-                                setIsLiveCameraActive(true);
+                              onPress={() => {
+                                requestCustomPermission('camera', () => {
+                                  setIsLiveCameraActive(true);
+                                });
                               }}
                               activeOpacity={0.8}
                             >
@@ -1687,18 +1769,10 @@ const renderRegistrationFormSheet = () => (
                             <View style={styles.proActionRow}>
                               <TouchableOpacity
                                 style={[styles.proPrimaryBtn, { backgroundColor: '#EA580C' }]}
-                                onPress={async () => {
-                                  if (!cameraPermission?.granted) {
-                                    const res = await requestCameraPermission();
-                                    if (!res.granted) {
-                                      Alert.alert(
-                                        'Camera Permission Needed',
-                                        'Please enable Camera permission in iOS Settings to take member photos.'
-                                      );
-                                      return;
-                                    }
-                                  }
-                                  setIsLiveCameraActive(true);
+                                onPress={() => {
+                                  requestCustomPermission('camera', () => {
+                                    setIsLiveCameraActive(true);
+                                  });
                                 }}
                                 activeOpacity={0.8}
                               >
@@ -1716,31 +1790,25 @@ const renderRegistrationFormSheet = () => (
                                     borderColor: isDark ? '#334155' : '#E2E8F0',
                                   },
                                 ]}
-                                onPress={async () => {
-                                  try {
-                                    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                                    if (!perm.granted) {
+                                onPress={() => {
+                                  requestCustomPermission('gallery', async () => {
+                                    try {
+                                      const res = await ImagePicker.launchImageLibraryAsync({
+                                        mediaTypes: ['images'],
+                                        allowsEditing: true,
+                                        aspect: [1, 1],
+                                        quality: 0.85,
+                                      });
+                                      if (!res.canceled && res.assets?.[0]?.uri) {
+                                        setFormProfilePhoto(res.assets[0].uri);
+                                      }
+                                    } catch (e: any) {
                                       Alert.alert(
-                                        'Permission Denied',
-                                        'Photo gallery access is required.'
+                                        'Gallery Error',
+                                        e?.message || 'Could not select photo'
                                       );
-                                      return;
                                     }
-                                    const res = await ImagePicker.launchImageLibraryAsync({
-                                      mediaTypes: ['images'],
-                                      allowsEditing: true,
-                                      aspect: [1, 1],
-                                      quality: 0.85,
-                                    });
-                                    if (!res.canceled && res.assets?.[0]?.uri) {
-                                      setFormProfilePhoto(res.assets[0].uri);
-                                    }
-                                  } catch (e: any) {
-                                    Alert.alert(
-                                      'Gallery Error',
-                                      e?.message || 'Could not select photo'
-                                    );
-                                  }
+                                  });
                                 }}
                                 activeOpacity={0.8}
                               >
@@ -1980,30 +2048,27 @@ const renderRegistrationFormSheet = () => (
                                 borderWidth: missingFieldErrors.aadhaar ? 1.8 : 1,
                               },
                             ]}
-                            onPress={async () => {
-                              try {
-                                if (formDocs.aadhaar) {
-                                  setFormDocs({ ...formDocs, aadhaar: null });
-                                  return;
-                                }
-                                const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                                if (!perm.granted) {
-                                  Alert.alert('Permission Denied', 'Gallery access is required to select document.');
-                                  return;
-                                }
-                                const res = await ImagePicker.launchImageLibraryAsync({
-                                  mediaTypes: ['images'],
-                                  quality: 0.85,
-                                });
-                                if (!res.canceled && res.assets?.[0]?.uri) {
-                                  setFormDocs({ ...formDocs, aadhaar: res.assets[0].uri });
-                                  if (missingFieldErrors.aadhaar) {
-                                    setMissingFieldErrors((prev) => ({ ...prev, aadhaar: false }));
-                                  }
-                                }
-                              } catch (e: any) {
-                                Alert.alert('Error', e?.message || 'Could not select document');
+                            onPress={() => {
+                              if (formDocs.aadhaar) {
+                                setFormDocs({ ...formDocs, aadhaar: null });
+                                return;
                               }
+                              requestCustomPermission('documents', async () => {
+                                try {
+                                  const res = await ImagePicker.launchImageLibraryAsync({
+                                    mediaTypes: ['images'],
+                                    quality: 0.85,
+                                  });
+                                  if (!res.canceled && res.assets?.[0]?.uri) {
+                                    setFormDocs((prev) => ({ ...prev, aadhaar: res.assets[0].uri }));
+                                    if (missingFieldErrors.aadhaar) {
+                                      setMissingFieldErrors((prev) => ({ ...prev, aadhaar: false }));
+                                    }
+                                  }
+                                } catch (e: any) {
+                                  Alert.alert('Error', e?.message || 'Could not select document');
+                                }
+                              });
                             }}
                             activeOpacity={0.82}
                           >
@@ -2100,27 +2165,24 @@ const renderRegistrationFormSheet = () => (
                                   : '#E2E8F0',
                               },
                             ]}
-                            onPress={async () => {
-                              try {
-                                if (formDocs.residential) {
-                                  setFormDocs({ ...formDocs, residential: null });
-                                  return;
-                                }
-                                const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                                if (!perm.granted) {
-                                  Alert.alert('Permission Denied', 'Gallery access is required to select document.');
-                                  return;
-                                }
-                                const res = await ImagePicker.launchImageLibraryAsync({
-                                  mediaTypes: ['images'],
-                                  quality: 0.85,
-                                });
-                                if (!res.canceled && res.assets?.[0]?.uri) {
-                                  setFormDocs({ ...formDocs, residential: res.assets[0].uri });
-                                }
-                              } catch (e: any) {
-                                Alert.alert('Error', e?.message || 'Could not select document');
+                            onPress={() => {
+                              if (formDocs.residential) {
+                                setFormDocs({ ...formDocs, residential: null });
+                                return;
                               }
+                              requestCustomPermission('documents', async () => {
+                                try {
+                                  const res = await ImagePicker.launchImageLibraryAsync({
+                                    mediaTypes: ['images'],
+                                    quality: 0.85,
+                                  });
+                                  if (!res.canceled && res.assets?.[0]?.uri) {
+                                    setFormDocs((prev) => ({ ...prev, residential: res.assets[0].uri }));
+                                  }
+                                } catch (e: any) {
+                                  Alert.alert('Error', e?.message || 'Could not select document');
+                                }
+                              });
                             }}
                             activeOpacity={0.82}
                           >
@@ -2214,27 +2276,24 @@ const renderRegistrationFormSheet = () => (
                                   : '#E2E8F0',
                               },
                             ]}
-                            onPress={async () => {
-                              try {
-                                if (formDocs.health) {
-                                  setFormDocs({ ...formDocs, health: null });
-                                  return;
-                                }
-                                const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                                if (!perm.granted) {
-                                  Alert.alert('Permission Denied', 'Gallery access is required to select document.');
-                                  return;
-                                }
-                                const res = await ImagePicker.launchImageLibraryAsync({
-                                  mediaTypes: ['images'],
-                                  quality: 0.85,
-                                });
-                                if (!res.canceled && res.assets?.[0]?.uri) {
-                                  setFormDocs({ ...formDocs, health: res.assets[0].uri });
-                                }
-                              } catch (e: any) {
-                                Alert.alert('Error', e?.message || 'Could not select document');
+                            onPress={() => {
+                              if (formDocs.health) {
+                                setFormDocs({ ...formDocs, health: null });
+                                return;
                               }
+                              requestCustomPermission('documents', async () => {
+                                try {
+                                  const res = await ImagePicker.launchImageLibraryAsync({
+                                    mediaTypes: ['images'],
+                                    quality: 0.85,
+                                  });
+                                  if (!res.canceled && res.assets?.[0]?.uri) {
+                                    setFormDocs((prev) => ({ ...prev, health: res.assets[0].uri }));
+                                  }
+                                } catch (e: any) {
+                                  Alert.alert('Error', e?.message || 'Could not select document');
+                                }
+                              });
                             }}
                             activeOpacity={0.82}
                           >
@@ -2325,27 +2384,24 @@ const renderRegistrationFormSheet = () => (
                                   : '#E2E8F0',
                               },
                             ]}
-                            onPress={async () => {
-                              try {
-                                if (formDocs.others) {
-                                  setFormDocs({ ...formDocs, others: null });
-                                  return;
-                                }
-                                const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                                if (!perm.granted) {
-                                  Alert.alert('Permission Denied', 'Gallery access is required to select document.');
-                                  return;
-                                }
-                                const res = await ImagePicker.launchImageLibraryAsync({
-                                  mediaTypes: ['images'],
-                                  quality: 0.85,
-                                });
-                                if (!res.canceled && res.assets?.[0]?.uri) {
-                                  setFormDocs({ ...formDocs, others: res.assets[0].uri });
-                                }
-                              } catch (e: any) {
-                                Alert.alert('Error', e?.message || 'Could not select document');
+                            onPress={() => {
+                              if (formDocs.others) {
+                                setFormDocs({ ...formDocs, others: null });
+                                return;
                               }
+                              requestCustomPermission('documents', async () => {
+                                try {
+                                  const res = await ImagePicker.launchImageLibraryAsync({
+                                    mediaTypes: ['images'],
+                                    quality: 0.85,
+                                  });
+                                  if (!res.canceled && res.assets?.[0]?.uri) {
+                                    setFormDocs((prev) => ({ ...prev, others: res.assets[0].uri }));
+                                  }
+                                } catch (e: any) {
+                                  Alert.alert('Error', e?.message || 'Could not select document');
+                                }
+                              });
                             }}
                             activeOpacity={0.82}
                           >
@@ -3990,6 +4046,20 @@ const renderRegistrationFormSheet = () => (
               </View>
             </TouchableWithoutFeedback>
           </Animated.View>
+
+          {/* Custom Device Permission Access Request Modal Rendered Directly Inside Registration Sheet */}
+          <PermissionAccessModal
+            visible={permissionModalVisible}
+            type={permissionModalType}
+            isDark={isDark}
+            canAskAgain={permissionCanAskAgain}
+            onClose={() => setPermissionModalVisible(false)}
+            onGrantPermission={async () => {
+              if (pendingPermissionActionRef.current) {
+                await pendingPermissionActionRef.current();
+              }
+            }}
+          />
     </View>
   );
 
@@ -5314,6 +5384,38 @@ const renderRegistrationFormSheet = () => (
       <View style={{ marginTop: 28, marginBottom: 16 }}>
         <BrandSignatureFooter isDark={isDark} />
       </View>
+
+      {/* 6. Custom Device Permission Access Request Modal */}
+      <PermissionAccessModal
+        visible={permissionModalVisible}
+        type={permissionModalType}
+        isDark={isDark}
+        canAskAgain={permissionCanAskAgain}
+        onClose={() => setPermissionModalVisible(false)}
+        onGrantPermission={async () => {
+          if (pendingPermissionActionRef.current) {
+            await pendingPermissionActionRef.current();
+          }
+        }}
+      />
+
+      {/* 7. Member Registered / Updated Success Modal (Custom Bottom-Sheet) */}
+      <MemberRegisteredSuccessModal
+        visible={successModalVisible}
+        data={successModalData}
+        isDark={isDark}
+        onClose={() => {
+          setSuccessModalVisible(false);
+          setSuccessModalData(null);
+        }}
+        onViewProfile={(memberId) => {
+          const found = allMembers.find((m) => m.id === memberId);
+          if (found) {
+            setSelectedMemberForView(found);
+            setIsViewMemberModalOpen(true);
+          }
+        }}
+      />
     </View>
   );
 };

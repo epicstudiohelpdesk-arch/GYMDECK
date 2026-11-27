@@ -61,6 +61,8 @@ export interface EmailRecipient {
   membershipStatus?: 'ACTIVE' | 'EXPIRED' | 'TRIAL' | string;
   planName?: string;
   expiresAt?: string;
+  profilePhotoUrl?: string | null;
+  gender?: string | null;
 }
 
 export interface EmailRecipientsResponse {
@@ -144,7 +146,7 @@ export const ownerEmailService = {
    * Get quota, metrics, relay status, and recent transmissions
    */
   async getOverview(): Promise<EmailOverview> {
-    const res = await apiClient.get<ApiResponse<EmailOverview>>('/v1/owner/email/overview');
+    const res = await apiClient.get<ApiResponse<EmailOverview>>('/owner/email/overview');
     return res.data.data;
   },
 
@@ -164,7 +166,7 @@ export const ownerEmailService = {
     if (params?.offset) query.append('offset', String(params.offset));
 
     const qs = query.toString();
-    const url = `/v1/owner/email/recipients${qs ? `?${qs}` : ''}`;
+    const url = `/owner/email/recipients${qs ? `?${qs}` : ''}`;
     const res = await apiClient.get<ApiResponse<EmailRecipientsResponse>>(url);
     return res.data.data;
   },
@@ -173,7 +175,7 @@ export const ownerEmailService = {
    * Send / queue broadcast email
    */
   async sendEmail(payload: ComposeEmailDto): Promise<any> {
-    const res = await apiClient.post<ApiResponse<any>>('/v1/owner/email/send', payload);
+    const res = await apiClient.post<ApiResponse<any>>('/owner/email/send', payload);
     return res.data.data;
   },
 
@@ -181,7 +183,7 @@ export const ownerEmailService = {
    * Get saved drafts
    */
   async getDrafts(): Promise<EmailDraft[]> {
-    const res = await apiClient.get<ApiResponse<EmailDraft[]>>('/v1/owner/email/drafts');
+    const res = await apiClient.get<ApiResponse<EmailDraft[]>>('/owner/email/drafts');
     return res.data.data || [];
   },
 
@@ -189,7 +191,7 @@ export const ownerEmailService = {
    * Save or update draft
    */
   async saveDraft(payload: Partial<EmailDraft>): Promise<EmailDraft> {
-    const res = await apiClient.post<ApiResponse<EmailDraft>>('/v1/owner/email/drafts', payload);
+    const res = await apiClient.post<ApiResponse<EmailDraft>>('/owner/email/drafts', payload);
     return res.data.data;
   },
 
@@ -198,7 +200,7 @@ export const ownerEmailService = {
    */
   async deleteDraft(id: string): Promise<{ success: boolean }> {
     const res = await apiClient.delete<ApiResponse<{ success: boolean }>>(
-      `/v1/owner/email/drafts/${encodeURIComponent(id)}`
+      `/owner/email/drafts/${encodeURIComponent(id)}`
     );
     return res.data.data;
   },
@@ -213,7 +215,7 @@ export const ownerEmailService = {
     if (params?.search) query.append('search', params.search);
 
     const qs = query.toString();
-    const url = `/v1/owner/email/history${qs ? `?${qs}` : ''}`;
+    const url = `/owner/email/history${qs ? `?${qs}` : ''}`;
     const res = await apiClient.get<ApiResponse<EmailHistoryResponse>>(url);
     return res.data.data || { messages: [], totalCount: 0 };
   },
@@ -223,7 +225,7 @@ export const ownerEmailService = {
    */
   async getMessageDetails(id: string): Promise<EmailMessageDetails> {
     const res = await apiClient.get<ApiResponse<EmailMessageDetails>>(
-      `/v1/owner/email/messages/${encodeURIComponent(id)}`
+      `/owner/email/messages/${encodeURIComponent(id)}`
     );
     return res.data.data;
   },
@@ -232,7 +234,7 @@ export const ownerEmailService = {
    * Get email templates
    */
   async getTemplates(): Promise<EmailTemplate[]> {
-    const res = await apiClient.get<ApiResponse<EmailTemplate[]>>('/v1/owner/email/templates');
+    const res = await apiClient.get<ApiResponse<EmailTemplate[]>>('/owner/email/templates');
     return res.data.data || [];
   },
 
@@ -240,7 +242,7 @@ export const ownerEmailService = {
    * Create template
    */
   async createTemplate(payload: EmailTemplate): Promise<EmailTemplate> {
-    const res = await apiClient.post<ApiResponse<EmailTemplate>>('/v1/owner/email/templates', payload);
+    const res = await apiClient.post<ApiResponse<EmailTemplate>>('/owner/email/templates', payload);
     return res.data.data;
   },
 };

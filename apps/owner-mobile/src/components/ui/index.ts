@@ -17,4 +17,6 @@ export * from './LoadingSkeleton';
 export * from './ErrorState';
 export * from './ConnectivityBanner';
 export * from './Avatar';
+export * from './PermissionAccessModal';
+export * from './MemberRegisteredSuccessModal';
 export * from '../StatusBadge';

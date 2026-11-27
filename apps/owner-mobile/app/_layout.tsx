@@ -22,7 +22,8 @@ import { SyncManager } from '../src/services/sync';
 import { CoreBootstrapCoordinator } from '../src/database/bootstrap/CoreBootstrapCoordinator';
 import { Logger } from '../src/observability';
 
-// Ignore expected test outcomes and intentional rollback aborts from displaying redbox overlays
+// Suppress runtime LogBox warning toasts and banners in the app UI permanently
+LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs([
   'INTENTIONAL_TEST_ROLLBACK_ABORT',
   'UNIQUE constraint failed: sync_outbox.event_id',

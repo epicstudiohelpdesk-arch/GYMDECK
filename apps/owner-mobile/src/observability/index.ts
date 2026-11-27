@@ -8,7 +8,9 @@ export class Logger {
   }
 
   public static warn(message: string, context?: Record<string, unknown>): void {
-    console.warn(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[WARN] ${message}`, context ? JSON.stringify(context) : '');
+    }
   }
 
   public static error(message: string, error?: unknown, context?: Record<string, unknown>): void {

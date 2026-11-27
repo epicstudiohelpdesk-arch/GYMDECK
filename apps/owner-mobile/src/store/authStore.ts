@@ -136,34 +136,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (credentials) => {
     set({ isSubmitting: true, error: null, sessionExpiredMessage: null });
     try {
-      let response;
-      try {
-        response = await OwnerAuthApiService.login(credentials);
-      } catch (err) {
-        if (__DEV__) {
-          response = {
-            user: {
-              id: 'owner_usr_01',
-              gymId: 'gym_01',
-              gymName: 'Titan Fitness HQ',
-              gymCode: 'TITAN01',
-              email: credentials.email || 'owner@gymdeck.com',
-              fullName: 'Vikram Malhotra',
-              phoneNumber: '+1-555-0199',
-              role: 'OWNER' as const,
-              permissions: ['*'],
-              accountStatus: 'ACTIVE',
-            },
-            tokens: {
-              accessToken: 'dev_mock_access_token',
-              refreshToken: 'dev_mock_refresh_token',
-              expiresIn: 3600,
-            },
-          };
-        } else {
-          throw err;
-        }
-      }
+      const response = await OwnerAuthApiService.login(credentials);
       await SecureTokenStorage.saveTokens(response.tokens).catch(() => {});
       queryClient.clear();
       LocalDatabaseManager.getInstance().initialize(response.user.gymId).catch((dbErr) => {

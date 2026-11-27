@@ -42,8 +42,9 @@ import {
   Platform,
   useWindowDimensions,
   Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
-import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop, Pattern } from 'react-native-svg';
 import {
   Mail,
   Send,
@@ -63,6 +64,7 @@ import {
   Check,
   Sparkles,
   Inbox,
+  Megaphone,
   ArrowRight,
   Layers,
   CheckCheck,
@@ -79,6 +81,10 @@ import {
   CalendarCheck,
   MessageSquare,
   Lock,
+  History,
+  ListFilter,
+  Filter,
+  Calendar,
 } from 'lucide-react-native';
 import {
   ownerEmailService,
@@ -90,8 +96,11 @@ import {
   EmailMessageDetails,
 } from '../services/api/ownerEmailService';
 import { useAuthStore } from '../store/authStore';
+import { LocalDatabaseManager } from '../database/LocalDatabaseManager';
+import { MemberRepository } from '../database/repositories/MemberRepository';
 import { Avatar } from './ui';
 import { BrandSignatureFooter } from './BrandSignatureFooter';
+import { layout } from '../theme/spacing';
 
 interface EmailHubViewProps {
   isDark?: boolean;
@@ -100,7 +109,7 @@ interface EmailHubViewProps {
 
 const TABS = [
   { id: 'compose', label: 'Broadcast', icon: Send },
-  { id: 'history', label: 'Ledger & Logs', icon: Clock },
+  { id: 'history', label: 'Logs', icon: History },
   { id: 'templates', label: 'Templates & Rules', icon: Bookmark },
 ];
 
@@ -110,7 +119,7 @@ const CAMPAIGN_TYPES = [
     label: 'Gym Announcement',
     desc: 'Facility updates, holiday hours & notices',
     badge: 'Broadcast',
-    icon: Sparkles,
+    icon: Megaphone,
     subject: 'Important Announcement from {{gym_name}}',
     body: 'Dear {{member_name}},\n\nWe would like to inform you about important operational updates at {{gym_name}}.\n\nThank you for being part of our fitness community!',
   },
@@ -196,9 +205,38 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
 
   // Modals
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [dispatchModalStep, setDispatchModalStep] = useState<'review' | 'sending' | 'success' | 'error'>('review');
+  const [dispatchStatusMsg, setDispatchStatusMsg] = useState('');
+  const [dispatchedCount, setDispatchedCount] = useState(0);
   const [showInspectModal, setShowInspectModal] = useState(false);
   const [inspectData, setInspectData] = useState<EmailMessageDetails | null>(null);
   const [loadingInspect, setLoadingInspect] = useState(false);
+
+  // Logs Filtering & Pagination (Styled like WhatsAppHubView)
+  const [logSearchQuery, setLogSearchQuery] = useState('');
+  const [logFilter, setLogFilter] = useState<'ALL' | 'COMPLETED' | 'SENDING' | 'BOUNCED' | 'FAILED'>('ALL');
+  const [logTimeFilter, setLogTimeFilter] = useState<'ALL' | 'TODAY' | '7_DAYS' | 'THIS_MONTH' | 'LAST_MONTH'>('ALL');
+  const [showCategoryFilterMenu, setShowCategoryFilterMenu] = useState(false);
+  const [showTimeFilterMenu, setShowTimeFilterMenu] = useState(false);
+  const [logCurrentPage, setLogCurrentPage] = useState(1);
+  const categoryChevronAnim = useRef(new Animated.Value(0)).current;
+  const timeChevronAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(categoryChevronAnim, {
+      toValue: showCategoryFilterMenu ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [showCategoryFilterMenu, categoryChevronAnim]);
+
+  useEffect(() => {
+    Animated.timing(timeChevronAnim, {
+      toValue: showTimeFilterMenu ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [showTimeFilterMenu, timeChevronAnim]);
 
   // Toast / Banners
   const [toastNotice, setToastNotice] = useState<string | null>(null);
@@ -207,6 +245,60 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
   // Animated Values
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const syncSpinAnim = useRef(new Animated.Value(0)).current;
+
+  // Confirm Dispatch Bottom Sheet Animation
+  const confirmBackdropAnim = useRef(new Animated.Value(0)).current;
+  const confirmSheetTranslateY = useRef(new Animated.Value(400)).current;
+
+  useEffect(() => {
+    if (showConfirmModal) {
+      confirmSheetTranslateY.setValue(400);
+      Animated.parallel([
+        Animated.timing(confirmBackdropAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.spring(confirmSheetTranslateY, {
+          toValue: 0,
+          friction: 8.5,
+          tension: 65,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(confirmBackdropAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(confirmSheetTranslateY, {
+          toValue: 400,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showConfirmModal]);
+
+  const closeConfirmModal = () => {
+    Animated.parallel([
+      Animated.timing(confirmBackdropAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(confirmSheetTranslateY, {
+        toValue: 400,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowConfirmModal(false);
+      setDispatchModalStep('review');
+    });
+  };
 
   // Pulse animation for online indicator
   useEffect(() => {
@@ -268,7 +360,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
     }
   }, []);
 
-  // Fetch Recipient Members Directory
+  // Fetch Recipient Members Directory (Network with seamless local SQLite fallback)
   const loadRecipients = useCallback(async (status: string, search: string) => {
     setLoadingRecipients(true);
     try {
@@ -279,13 +371,39 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
       });
       const validEmails = (res?.members || []).filter((m) => m.email && m.email.trim().length > 0);
       setAvailableRecipients(validEmails);
-
-      // If user isn't searching, auto-select current segment members
-      if (!search.trim()) {
-        setSelectedMemberIds(validEmails.map((m) => m.id));
-      }
+      // By default do not select all members
     } catch (err: any) {
-      console.warn('Recipient query warning:', err);
+      console.warn('Recipient query cloud warning, falling back to local database:', err);
+      try {
+        const gymId = useAuthStore.getState().user?.gymId;
+        const dbManager = LocalDatabaseManager.getInstance();
+        if (gymId && dbManager.isOpen()) {
+          const repo = new MemberRepository(dbManager);
+          const localRecords = await repo.list({
+            gymId,
+            status: status === 'ALL' ? undefined : status,
+            search: search.trim() || undefined,
+          });
+          const localValid: EmailRecipient[] = localRecords
+            .filter((m) => m.email && m.email.trim().length > 0)
+            .map((m) => ({
+              id: m.id,
+              memberCode: m.member_code,
+              fullName: m.full_name,
+              email: m.email!,
+              phone: m.phone,
+              membershipStatus: m.membership_status,
+              expiresAt: m.expires_at || undefined,
+              profilePhotoUrl: m.profile_photo_url || null,
+              gender: m.gender || null,
+            }));
+          setAvailableRecipients(localValid);
+          // By default do not select all members
+          return;
+        }
+      } catch (localErr) {
+        console.warn('Local recipient query fallback warning:', localErr);
+      }
       setAvailableRecipients([]);
     } finally {
       setLoadingRecipients(false);
@@ -443,7 +561,8 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
     }
 
     setIsSending(true);
-    setShowConfirmModal(false);
+    setDispatchModalStep('sending');
+    setDispatchedCount(recipientsToSend.length);
 
     try {
       await ownerEmailService.sendEmail({
@@ -455,13 +574,14 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
         idempotencyKey: `email_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       });
 
-      setToastNotice(`Email broadcast successfully queued for ${recipientsToSend.length} members.`);
+      setDispatchStatusMsg(`Email broadcast queued successfully for ${recipientsToSend.length} ${recipientsToSend.length === 1 ? 'member' : 'members'}.`);
+      setDispatchModalStep('success');
       setSelectedMemberIds([]);
-      setActiveTab('history');
       loadOverviewData();
       loadHistoryLogs();
     } catch (err: any) {
-      setToastError(err.message || 'Failed to dispatch email broadcast.');
+      setDispatchStatusMsg(err.message || 'Failed to dispatch email broadcast. Please try again.');
+      setDispatchModalStep('error');
     } finally {
       setIsSending(false);
     }
@@ -604,22 +724,22 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
           <Text style={[styles.statNumber, isDark && styles.textWhite]}>
             {quota.consumedCount}
           </Text>
-          <Text style={styles.statCaption}>Sent this month</Text>
+          <Text style={styles.statCaption}>Sent msgs</Text>
         </View>
 
         <View style={[styles.statTile, isDark && styles.statTileDark]}>
           <Text style={styles.statOverline}>DELIVERY RATE</Text>
-          <Text style={[styles.statNumber, { color: '#10B981' }]}>
+          <Text style={[styles.statNumber, { color: '#0284C7' }]}>
             {overview?.metrics?.totalSentThisMonth && overview.metrics.totalSentThisMonth > 0
               ? `${overview.metrics.successRate}%`
               : '100%'}
           </Text>
-          <Text style={styles.statCaption}>MTA confirmed</Text>
+          <Text style={styles.statCaption}>Confirmed</Text>
         </View>
 
         <View style={[styles.statTile, isDark && styles.statTileDark]}>
-          <Text style={styles.statOverline}>REMAINING QUOTA</Text>
-          <Text style={[styles.statNumber, { color: '#4F46E5' }]}>
+          <Text style={styles.statOverline}>REMAINING</Text>
+          <Text style={[styles.statNumber, { color: '#10B981' }]}>
             {quota.remainingQuota}
           </Text>
           <Text style={styles.statCaption}>of {quota.allocatedQuota} units</Text>
@@ -642,7 +762,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                 activeOpacity={0.8}
               >
                 <Icon
-                  size={14}
+                  size={13}
                   color={active ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
                   strokeWidth={active ? 2.5 : 2}
                 />
@@ -652,6 +772,8 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                     active && styles.subTabTextActive,
                     isDark && !active && { color: '#94A3B8' },
                   ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {tab.label}
                 </Text>
@@ -696,11 +818,11 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                   <View style={[styles.intentMiniIcon, isDark && styles.intentMiniIconDark]}>
                     {React.createElement(activeCampaignObj.icon, {
                       size: 13,
-                      color: isDark ? '#E2E8F0' : '#4F46E5',
+                      color: isDark ? '#E2E8F0' : '#1E293B',
                       strokeWidth: 2.2,
                     })}
                   </View>
-                  <Text style={[styles.intentTriggerLabel, isDark && styles.textWhite]} numberOfLines={1}>
+                  <Text style={[styles.intentTriggerLabel, isDark && styles.textWhite]} numberOfLines={1} ellipsizeMode="tail">
                     {activeCampaignObj.label}
                   </Text>
                   <ChevronDown size={14} color={isDark ? '#94A3B8' : '#64748B'} />
@@ -726,22 +848,24 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                       >
                         <View style={styles.dropdownMenuItemLeft}>
                           <View style={[styles.dropdownMenuIconBox, isDark && styles.dropdownMenuIconBoxDark]}>
-                            <Icon size={14} color={active ? '#4F46E5' : isDark ? '#E2E8F0' : '#475569'} strokeWidth={2.2} />
+                            <Icon size={14} color={isDark ? '#E2E8F0' : '#334155'} strokeWidth={2.2} />
                           </View>
-                          <View>
+                          <View style={{ flex: 1, paddingRight: 6 }}>
                             <Text
                               style={[
                                 styles.dropdownMenuItemTitle,
-                                active && { color: '#4F46E5' },
+                                active && { color: isDark ? '#38BDF8' : '#0F172A', fontWeight: '800' },
                                 isDark && !active && styles.textWhite,
                               ]}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
                             >
                               {c.label}
                             </Text>
-                            <Text style={styles.dropdownMenuItemDesc}>{c.desc}</Text>
+                            <Text style={styles.dropdownMenuItemDesc} numberOfLines={1} ellipsizeMode="tail">{c.desc}</Text>
                           </View>
                         </View>
-                        {active && <Check size={14} color="#4F46E5" strokeWidth={2.4} />}
+                        {active && <Check size={14} color={isDark ? '#38BDF8' : '#0F172A'} strokeWidth={2.5} />}
                       </TouchableOpacity>
                     );
                   })}
@@ -761,20 +885,49 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                   </Text>
                 </View>
 
+                <View style={[styles.recipientBadge, isDark && styles.recipientBadgeDark]}>
+                  <Users size={11} color={isDark ? '#94A3B8' : '#475569'} strokeWidth={2.2} />
+                  <Text style={[styles.recipientBadgeText, isDark && styles.textWhite]}>
+                    {selectedMemberIds.length} Members
+                  </Text>
+                </View>
+              </View>
+
+              {/* Search Bar on Left & Segment Dropdown Trigger on Right (Matching WhatsApp Line) */}
+              <View style={styles.audienceControlRow}>
+                <View style={[styles.audienceSearchWrap, isDark && styles.audienceSearchWrapDark]}>
+                  <Search size={14} color="#94A3B8" />
+                  <TextInput
+                    style={[styles.audienceSearchInput, isDark && styles.textWhite]}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search member name or email..."
+                    placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <X size={13} color="#94A3B8" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 <TouchableOpacity
-                  style={[styles.intentSelectorTrigger, isDark && styles.intentSelectorTriggerDark]}
+                  style={[styles.audienceDropdownBtn, isDark && styles.audienceDropdownBtnDark]}
                   onPress={() => setShowSegmentDropdown(!showSegmentDropdown)}
                   activeOpacity={0.8}
                 >
-                  <Users size={13} color={isDark ? '#E2E8F0' : '#4F46E5'} />
-                  <Text style={[styles.intentTriggerLabel, isDark && styles.textWhite]}>
-                    {activeSegmentObj.label} ({selectedMemberIds.length})
+                  <Text
+                    style={[styles.audienceDropdownText, isDark && styles.textWhite]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {activeSegmentObj.label}
                   </Text>
-                  <ChevronDown size={14} color={isDark ? '#94A3B8' : '#64748B'} />
+                  <ChevronDown size={14} color={isDark ? '#94A3B8' : '#475569'} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
               </View>
 
-              {/* Segment Dropdown */}
+              {/* Segment Dropdown List */}
               {showSegmentDropdown && (
                 <View style={[styles.dropdownMenu, isDark && styles.dropdownMenuDark]}>
                   {AUDIENCE_SEGMENTS.map((s) => {
@@ -795,40 +948,25 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                         activeOpacity={0.7}
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Icon size={14} color={active ? '#4F46E5' : isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.2} />
+                          <Icon size={14} color={isDark ? (active ? '#38BDF8' : '#94A3B8') : (active ? '#0F172A' : '#64748B')} strokeWidth={2.2} />
                           <Text
                             style={[
                               styles.segmentMenuItemText,
-                              active && { color: '#4F46E5', fontWeight: '800' },
+                              active && { color: isDark ? '#38BDF8' : '#0F172A', fontWeight: '800' },
                               isDark && !active && styles.textWhite,
                             ]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
                           >
                             {s.label}
                           </Text>
                         </View>
-                        {active && <Check size={14} color="#4F46E5" strokeWidth={2.4} />}
+                        {active && <Check size={14} color={isDark ? '#38BDF8' : '#0F172A'} strokeWidth={2.4} />}
                       </TouchableOpacity>
                     );
                   })}
                 </View>
               )}
-
-              {/* Member Search Bar */}
-              <View style={[styles.searchBox, isDark && styles.searchBoxDark]}>
-                <Search size={14} color={isDark ? '#64748B' : '#94A3B8'} />
-                <TextInput
-                  style={[styles.searchInput, isDark && styles.textWhite]}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="Search member name or email..."
-                  placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <X size={14} color={isDark ? '#94A3B8' : '#64748B'} />
-                  </TouchableOpacity>
-                )}
-              </View>
 
               {/* Search Matching Drawer / Member Checkboxes */}
               <View style={[styles.recipientListCard, isDark && styles.recipientListCardDark]}>
@@ -877,17 +1015,19 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                         >
                           <Avatar
                             name={member.fullName}
+                            photoUrl={member.profilePhotoUrl}
+                            gender={member.gender}
                             size="sm"
                             style={{ marginRight: 10 }}
                           />
                           <View style={styles.memberInfoCol}>
                             <View style={styles.memberNameRow}>
-                              <Text style={[styles.memberNameText, isDark && styles.textWhite]} numberOfLines={1}>
+                              <Text style={[styles.memberNameText, isDark && styles.textWhite]} numberOfLines={1} ellipsizeMode="tail">
                                 {member.fullName}
                               </Text>
                               <Text style={styles.memberStatusBadge}>{member.membershipStatus}</Text>
                             </View>
-                            <Text style={[styles.memberEmailText, isDark && { color: '#94A3B8' }]} numberOfLines={1}>
+                            <Text style={[styles.memberEmailText, isDark && { color: '#94A3B8' }]} numberOfLines={1} ellipsizeMode="tail">
                               {member.email}
                             </Text>
                           </View>
@@ -900,7 +1040,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
 
                     {filteredRecipients.length > 5 && (
                       <Text style={styles.moreRecipientsText}>
-                        + {filteredRecipients.length - 5} more recipients selected
+                        + {filteredRecipients.length - 5} more eligible members available
                       </Text>
                     )}
                   </View>
@@ -934,28 +1074,6 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                 placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
               />
 
-              {/* Dynamic Personalization Token Chips */}
-              <View style={styles.tokensWrapper}>
-                <View style={styles.tokensHeader}>
-                  <Sparkles size={11} color="#4F46E5" />
-                  <Text style={styles.tokensLabel}>INSERT DYNAMIC TAG:</Text>
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tokensScroll}>
-                  {VARIABLE_TOKENS.map((tokenObj) => (
-                    <TouchableOpacity
-                      key={tokenObj.token}
-                      style={[styles.tokenChipPill, isDark && styles.tokenChipPillDark]}
-                      onPress={() => insertToken(tokenObj.token)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.tokenChipText, isDark && styles.textWhite]}>
-                        +{tokenObj.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
               {/* Body Content Editor */}
               <Text style={[styles.fieldSectionLabel, { marginTop: 12 }]}>MESSAGE CONTENT</Text>
               <View style={[styles.editorWrap, isDark && styles.editorWrapDark]}>
@@ -976,7 +1094,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
             <View style={[styles.contentCard, styles.previewContentCard, isDark && styles.contentCardDark]}>
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
-                  <Mail size={14} color="#4F46E5" />
+                  <Mail size={14} color={isDark ? '#E2E8F0' : '#0F172A'} strokeWidth={2.4} />
                   <Text style={[styles.cardTitle, { marginLeft: 6 }, isDark && styles.textWhite]}>
                     Email Client Preview
                   </Text>
@@ -1027,7 +1145,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                 {/* Email Verified Signature Footer */}
                 <View style={[styles.envelopeFooter, isDark && styles.envelopeFooterDark]}>
                   <View style={styles.envelopeVerifiedBadge}>
-                    <ShieldCheck size={11} color="#10B981" />
+                    <ShieldCheck size={12} color="#E2E8F0" strokeWidth={2.2} />
                     <Text style={styles.envelopeVerifiedText}>
                       Signed by {user?.gymName || 'GymDeck'} • Encrypted Relay
                     </Text>
@@ -1053,7 +1171,9 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                 <>
                   <Send size={16} color="#FFFFFF" />
                   <Text style={styles.dispatchBtnText}>
-                    Review & Dispatch ({selectedMemberIds.length})
+                    {selectedMemberIds.length > 0
+                      ? `Review & Dispatch (${selectedMemberIds.length})`
+                      : 'Review & Dispatch'}
                   </Text>
                 </>
               )}
@@ -1061,96 +1181,648 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
           </View>
         ) : activeTab === 'history' ? (
           /* ═══════════════════════════════════════════════════════════
-             TAB 2: TRANSMISSION LEDGER & AUDIT LOGS
+             TAB 2: DISPATCH LOGS & AUDIT (Redesigned like WhatsAppHubView)
           ═══════════════════════════════════════════════════════════ */
           <View style={styles.tabContent}>
-            <View style={styles.ledgerHeaderRow}>
-              <View>
-                <Text style={[styles.ledgerTitle, isDark && styles.textWhite]}>
-                  TRANSMISSION AUDIT LEDGER
-                </Text>
-                <Text style={[styles.ledgerSubtitle, isDark && { color: '#94A3B8' }]}>
-                  Permanent MTA server delivery logs & bounced telemetry
-                </Text>
+            {/* Executive Logs Header Hero Card (Clean Deep Slate / Cobalt with subtle Grid) */}
+            <View style={styles.autoHeaderCardOuter}>
+              <View
+                style={[
+                  styles.autoHeaderCard,
+                  {
+                    backgroundColor: isDark ? '#0F172A' : '#1E293B',
+                    borderColor: '#334155',
+                  },
+                ]}
+              >
+                {/* Subtle Faded Grid Background Pattern */}
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <Svg width="100%" height="100%">
+                    <Defs>
+                      <Pattern id="emailLogHeroGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+                        <Path
+                          d="M 16 0 L 0 0 0 16"
+                          fill="none"
+                          stroke="#94A3B8"
+                          strokeWidth="1"
+                          opacity={isDark ? 0.08 : 0.12}
+                        />
+                      </Pattern>
+                    </Defs>
+                    <Rect width="100%" height="100%" fill="url(#emailLogHeroGrid)" />
+                  </Svg>
+                </View>
+
+                {/* Subtle Watermark History Icon Attached to Inner Bottom Right */}
+                <View style={styles.autoWatermarkLogo} pointerEvents="none">
+                  <Svg width={72} height={72} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M12 8v4l3 3"
+                      stroke="#818CF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                    <Circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="#818CF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                  </Svg>
+                </View>
+
+                <View style={styles.autoHeaderCardTop}>
+                  <View style={{ flex: 1, zIndex: 1 }}>
+                    <Text style={styles.autoHeaderTitle}>
+                      Dispatch Logs & Audit
+                    </Text>
+                    <Text style={styles.autoHeaderSubtitle}>
+                      Real-time delivery telemetry, bounce monitoring and server transmission receipts
+                    </Text>
+                  </View>
+                </View>
               </View>
+
+              {/* Sculpted Bottom-Middle Cutout Notch */}
+              <View style={styles.autoBottomCutoutWrapper} pointerEvents="none">
+                <View
+                  style={[
+                    styles.autoBottomCutoutNotch,
+                    {
+                      backgroundColor: isDark ? '#080E14' : '#F8FAFC',
+                      borderColor: '#334155',
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.autoBottomCutoutPill,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#CBD5E1',
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Metric KPI Strip (Clean High-Impact Overview) */}
+            {(() => {
+              const totalBroadcasts = history.length;
+              const totalRecipients = history.reduce((acc, m) => acc + (m.recipientCount || 0), 0);
+              const completedCount = history.filter((m) => m.status === 'COMPLETED').length;
+              const deliveryRate = totalBroadcasts > 0 ? Math.round((completedCount / totalBroadcasts) * 100) : 100;
+              const sendingCount = history.filter((m) => m.status === 'SENDING').length;
+
+              return (
+                <View style={[styles.logKpiRow, isDark && styles.logKpiRowDark]}>
+                  <View style={styles.logKpiItem}>
+                    <Text style={styles.logKpiLabel}>TOTAL CAMPAIGNS</Text>
+                    <Text style={[styles.logKpiValue, isDark && styles.textWhite]}>
+                      {totalBroadcasts}
+                    </Text>
+                    <Text style={styles.logKpiSub}>{totalRecipients} targets</Text>
+                  </View>
+
+                  <View style={[styles.logKpiDivider, isDark && styles.permDividerDark]} />
+
+                  <View style={styles.logKpiItem}>
+                    <Text style={styles.logKpiLabel}>DELIVERY RATE</Text>
+                    <Text style={[styles.logKpiValue, { color: '#10B981' }]}>
+                      {deliveryRate}%
+                    </Text>
+                    <Text style={styles.logKpiSub}>{completedCount} verified</Text>
+                  </View>
+
+                  <View style={[styles.logKpiDivider, isDark && styles.permDividerDark]} />
+
+                  <View style={styles.logKpiItem}>
+                    <Text style={styles.logKpiLabel}>IN TRANSIT</Text>
+                    <Text style={[styles.logKpiValue, { color: sendingCount > 0 ? '#4F46E5' : '#64748B' }]}>
+                      {sendingCount}
+                    </Text>
+                    <Text style={styles.logKpiSub}>{sendingCount === 0 ? 'All delivered' : 'Active queue'}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Search Bar + Category Dropdown Button + Time Filter Dropdown Button Row */}
+            <View style={styles.logControlsSection}>
+              <View style={styles.logSearchAndFilterRow}>
+                <View style={[styles.logSearchBox, isDark && styles.logSearchBoxDark]}>
+                  <Search size={15} color="#94A3B8" strokeWidth={2.2} />
+                  <TextInput
+                    style={[styles.logSearchInput, isDark && styles.textWhite]}
+                    placeholder="Search logs..."
+                    placeholderTextColor="#94A3B8"
+                    value={logSearchQuery}
+                    onChangeText={(text) => {
+                      setLogSearchQuery(text);
+                      setLogCurrentPage(1);
+                    }}
+                    autoCorrect={false}
+                  />
+                  {logSearchQuery.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setLogSearchQuery('');
+                        setLogCurrentPage(1);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <X size={14} color="#94A3B8" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Category Filter Dropdown Trigger Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.logDropdownBtn,
+                    isDark && styles.logDropdownBtnDark,
+                    logFilter !== 'ALL' && styles.logDropdownBtnActive,
+                  ]}
+                  onPress={() => {
+                    setShowTimeFilterMenu(false);
+                    setShowCategoryFilterMenu((prev) => !prev);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <ListFilter size={13} color={logFilter !== 'ALL' ? '#4F46E5' : '#64748B'} strokeWidth={2.2} />
+                  <Text
+                    style={[
+                      styles.logDropdownBtnText,
+                      isDark && styles.textWhite,
+                      logFilter !== 'ALL' && styles.logDropdownBtnTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {logFilter === 'COMPLETED'
+                      ? 'Delivered'
+                      : logFilter === 'SENDING'
+                      ? 'Sending'
+                      : logFilter === 'BOUNCED'
+                      ? 'Bounced'
+                      : 'Status'}
+                  </Text>
+                  <Animated.View
+                    style={{
+                      transform: [
+                        {
+                          rotate: categoryChevronAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '180deg'],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <ChevronDown
+                      size={11}
+                      color={logFilter !== 'ALL' ? '#4F46E5' : '#64748B'}
+                    />
+                  </Animated.View>
+                </TouchableOpacity>
+
+                {/* Filter Dropdown Trigger Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.logDropdownBtn,
+                    isDark && styles.logDropdownBtnDark,
+                    logTimeFilter !== 'ALL' && styles.logDropdownBtnActive,
+                  ]}
+                  onPress={() => {
+                    setShowCategoryFilterMenu(false);
+                    setShowTimeFilterMenu((prev) => !prev);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Filter size={13} color={logTimeFilter !== 'ALL' ? '#4F46E5' : '#64748B'} strokeWidth={2.2} />
+                  <Text
+                    style={[
+                      styles.logDropdownBtnText,
+                      isDark && styles.textWhite,
+                      logTimeFilter !== 'ALL' && styles.logDropdownBtnTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {logTimeFilter === 'TODAY'
+                      ? 'Today'
+                      : logTimeFilter === '7_DAYS'
+                      ? '7 Days'
+                      : logTimeFilter === 'THIS_MONTH'
+                      ? 'This Mo'
+                      : logTimeFilter === 'LAST_MONTH'
+                      ? 'Last Mo'
+                      : 'Date'}
+                  </Text>
+                  <Animated.View
+                    style={{
+                      transform: [
+                        {
+                          rotate: timeChevronAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '180deg'],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <ChevronDown
+                      size={11}
+                      color={logTimeFilter !== 'ALL' ? '#4F46E5' : '#64748B'}
+                    />
+                  </Animated.View>
+                </TouchableOpacity>
+              </View>
+
+              {/* Category Filter Menu Dropdown Popover */}
+              {showCategoryFilterMenu && (
+                <View style={[styles.logDropdownMenu, isDark && styles.logDropdownMenuDark]}>
+                  <Text style={styles.logDropdownMenuHeader}>FILTER BY TRANSMISSION STATUS</Text>
+                  {[
+                    { id: 'ALL', label: 'All Logs', count: history.length, icon: History },
+                    {
+                      id: 'COMPLETED',
+                      label: 'Delivered',
+                      count: history.filter((m) => m.status === 'COMPLETED').length,
+                      icon: CheckCircle2,
+                    },
+                    {
+                      id: 'SENDING',
+                      label: 'Sending',
+                      count: history.filter((m) => m.status === 'SENDING').length,
+                      icon: Clock,
+                    },
+                    {
+                      id: 'BOUNCED',
+                      label: 'Bounced / Dropped',
+                      count: history.filter((m) => m.status === 'BOUNCED' || m.status === 'FAILED').length,
+                      icon: AlertCircle,
+                    },
+                  ].map((opt) => {
+                    const isSelected = logFilter === opt.id;
+                    const IconComponent = opt.icon;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={[
+                          styles.logDropdownOption,
+                          isSelected && (isDark ? styles.logDropdownOptionSelectedDark : styles.logDropdownOptionSelected),
+                        ]}
+                        onPress={() => {
+                          setLogFilter(opt.id as any);
+                          setShowCategoryFilterMenu(false);
+                          setLogCurrentPage(1);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <IconComponent
+                            size={14}
+                            color={isSelected ? '#4F46E5' : isDark ? '#94A3B8' : '#64748B'}
+                            strokeWidth={2}
+                          />
+                          <Text
+                            style={[
+                              styles.logDropdownOptionText,
+                              isDark && styles.textWhite,
+                              isSelected && styles.logDropdownOptionTextSelected,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                          {opt.count > 0 && (
+                            <View
+                              style={[
+                                styles.logDropdownBadge,
+                                isSelected && styles.logDropdownBadgeSelected,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.logDropdownBadgeText,
+                                  isSelected && styles.logDropdownBadgeTextSelected,
+                                ]}
+                              >
+                                {opt.count}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        {isSelected && <Check size={14} color="#4F46E5" strokeWidth={2.4} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Time Filter Menu Dropdown Popover */}
+              {showTimeFilterMenu && (
+                <View style={[styles.logDropdownMenu, isDark && styles.logDropdownMenuDark]}>
+                  <Text style={styles.logDropdownMenuHeader}>FILTER BY TIMELINE</Text>
+                  {[
+                    { id: 'ALL', label: 'All Time', icon: History },
+                    { id: 'TODAY', label: 'Today (Last 24 Hours)', icon: Clock },
+                    { id: '7_DAYS', label: 'Past 7 Days', icon: Calendar },
+                    { id: 'THIS_MONTH', label: 'This Month', icon: CalendarCheck },
+                    { id: 'LAST_MONTH', label: 'Last Month', icon: Calendar },
+                  ].map((opt) => {
+                    const isSelected = logTimeFilter === opt.id;
+                    const IconComponent = opt.icon;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={[
+                          styles.logDropdownOption,
+                          isSelected && (isDark ? styles.logDropdownOptionSelectedDark : styles.logDropdownOptionSelected),
+                        ]}
+                        onPress={() => {
+                          setLogTimeFilter(opt.id as any);
+                          setShowTimeFilterMenu(false);
+                          setLogCurrentPage(1);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <IconComponent
+                            size={14}
+                            color={isSelected ? '#4F46E5' : isDark ? '#94A3B8' : '#64748B'}
+                            strokeWidth={2}
+                          />
+                          <Text
+                            style={[
+                              styles.logDropdownOptionText,
+                              isDark && styles.textWhite,
+                              isSelected && styles.logDropdownOptionTextSelected,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </View>
+                        {isSelected && <Check size={14} color="#4F46E5" strokeWidth={2.4} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            {/* List Header Count & Quick Refresh */}
+            <View style={styles.logListHeaderRow}>
+              <Text style={styles.logListHeaderTitle}>
+                TRANSMISSION AUDIT & LOGS
+              </Text>
               <TouchableOpacity
-                style={[styles.ledgerRefreshBtn, isDark && styles.ledgerRefreshBtnDark]}
+                style={styles.logRefreshBtn}
                 onPress={loadHistoryLogs}
                 activeOpacity={0.7}
               >
-                <RefreshCw size={12} color={isDark ? '#E2E8F0' : '#0F172A'} />
-                <Text style={[styles.ledgerRefreshText, isDark && styles.textWhite]}>Refresh</Text>
+                <RefreshCw size={12} color="#000000" strokeWidth={2.4} />
+                <Text style={styles.logRefreshBtnText}>Refresh</Text>
               </TouchableOpacity>
             </View>
 
-            {history.length > 0 ? (
-              <View style={styles.ledgerCardsList}>
-                {history.map((msg) => (
-                  <View
-                    key={msg.id}
-                    style={[styles.ledgerCardItem, isDark && styles.ledgerCardItemDark]}
-                  >
-                    <View style={styles.ledgerCardTop}>
-                      <View style={styles.ledgerSubjectCol}>
-                        <Text style={[styles.ledgerSubjectText, isDark && styles.textWhite]} numberOfLines={1}>
-                          {msg.subject}
-                        </Text>
-                        <Text style={styles.ledgerTimestamp}>
-                          {new Date(msg.createdAt).toLocaleDateString()} • {msg.recipientCount} recipients
-                        </Text>
-                      </View>
-                      <View
+            {/* History Feed */}
+            {(() => {
+              const now = new Date();
+              const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+              const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+              const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+              const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+              const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
+
+              const filtered = history.filter((item) => {
+                const status = (item.status || '').toUpperCase();
+                if (logFilter === 'COMPLETED' && status !== 'COMPLETED') return false;
+                if (logFilter === 'SENDING' && status !== 'SENDING') return false;
+                if (logFilter === 'BOUNCED' && status !== 'BOUNCED' && status !== 'FAILED') return false;
+
+                // Time filter
+                const itemTime = new Date(item.createdAt).getTime();
+                if (logTimeFilter === 'TODAY' && itemTime < startOfToday) return false;
+                if (logTimeFilter === '7_DAYS' && itemTime < sevenDaysAgo) return false;
+                if (logTimeFilter === 'THIS_MONTH' && itemTime < startOfThisMonth) return false;
+                if (logTimeFilter === 'LAST_MONTH' && (itemTime < startOfLastMonth || itemTime > endOfLastMonth)) return false;
+
+                // Text search query
+                if (logSearchQuery.trim()) {
+                  const q = logSearchQuery.toLowerCase().trim();
+                  const matchSubject = item.subject ? item.subject.toLowerCase().includes(q) : false;
+                  const matchSender = item.senderDisplayName ? item.senderDisplayName.toLowerCase().includes(q) : false;
+                  const matchFrom = item.fromAddress ? item.fromAddress.toLowerCase().includes(q) : false;
+                  if (!matchSubject && !matchSender && !matchFrom) return false;
+                }
+
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <View style={[styles.logEmptyCard, isDark && styles.logEmptyCardDark]}>
+                    <View style={[styles.logEmptyIconBox, isDark && styles.logEmptyIconBoxDark]}>
+                      <History size={24} color="#64748B" strokeWidth={2} />
+                    </View>
+                    <Text style={[styles.logEmptyTitle, isDark && styles.textWhite]}>
+                      {logSearchQuery.trim() || logTimeFilter !== 'ALL' || logFilter !== 'ALL'
+                        ? 'No Matching Logs Found'
+                        : 'No Email Logs Recorded'}
+                    </Text>
+                    <Text style={[styles.logEmptySub, isDark && { color: '#94A3B8' }]}>
+                      {logSearchQuery.trim() || logTimeFilter !== 'ALL' || logFilter !== 'ALL'
+                        ? 'Try clearing the search query or adjusting your filters.'
+                        : 'Every broadcast email dispatched through GymDeck MTA relay will be verified and logged here.'}
+                    </Text>
+                    {(logSearchQuery.trim().length > 0 || logTimeFilter !== 'ALL' || logFilter !== 'ALL') && (
+                      <TouchableOpacity
+                        style={styles.logResetFilterBtn}
+                        onPress={() => {
+                          setLogSearchQuery('');
+                          setLogFilter('ALL');
+                          setLogTimeFilter('ALL');
+                          setLogCurrentPage(1);
+                        }}
+                      >
+                        <Text style={styles.logResetFilterBtnText}>Reset All Filters</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              }
+
+              // Pagination
+              const LOGS_PER_PAGE = 10;
+              const totalItems = filtered.length;
+              const totalPages = Math.ceil(totalItems / LOGS_PER_PAGE);
+              const validPage = Math.min(Math.max(logCurrentPage, 1), totalPages);
+              const startIndex = (validPage - 1) * LOGS_PER_PAGE;
+              const paginatedItems = filtered.slice(startIndex, startIndex + LOGS_PER_PAGE);
+
+              return (
+                <View>
+                  <View style={styles.logFeedList}>
+                    {paginatedItems.map((item) => {
+                      const status = (item.status || 'COMPLETED').toUpperCase();
+                      const isSuccess = status === 'COMPLETED';
+                      const isSendingStatus = status === 'SENDING';
+                      const isFailed = status === 'BOUNCED' || status === 'FAILED';
+
+                      const statusBg = isSuccess ? '#ECFDF5' : isFailed ? '#FEF2F2' : '#EEF2FF';
+                      const statusBorder = isSuccess ? '#A7F3D0' : isFailed ? '#FECACA' : '#C7D2FE';
+                      const statusText = isSuccess ? '#059669' : isFailed ? '#DC2626' : '#4F46E5';
+                      const StatusIcon = isSuccess ? CheckCheck : isFailed ? AlertCircle : Clock;
+
+                      const dateObj = new Date(item.createdAt);
+                      const formattedDate = dateObj.toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      });
+                      const formattedTime = dateObj.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+
+                      return (
+                        <View
+                          key={item.id}
+                          style={[styles.logCleanCard, isDark && styles.logCleanCardDark]}
+                        >
+                          {/* Card Header Row: Icon + Subject/Campaign + Status Badge */}
+                          <View style={styles.logCleanHeaderRow}>
+                            <View style={[styles.logCleanAvatarBox, isDark && styles.logCleanAvatarBoxDark]}>
+                              <Mail size={16} color={isDark ? '#818CF8' : '#4F46E5'} strokeWidth={2.2} />
+                            </View>
+
+                            <View style={styles.logCleanHeaderTextContainer}>
+                              <Text style={[styles.logCleanIntentTag, isDark && styles.textWhite]} numberOfLines={1}>
+                                {item.subject || 'UNTITLED BROADCAST'}
+                              </Text>
+                              <View style={styles.logCleanMetaRow}>
+                                <Clock size={10} color="#94A3B8" strokeWidth={2} />
+                                <Text style={styles.logCleanTimestamp}>
+                                  {formattedDate} • {formattedTime}
+                                </Text>
+                              </View>
+                            </View>
+
+                            <View
+                              style={[
+                                styles.logCleanStatusBadge,
+                                {
+                                  backgroundColor: isDark ? (isSuccess ? '#064E3B' : isFailed ? '#7F1D1D' : '#1E1B4B') : statusBg,
+                                  borderColor: isDark ? (isSuccess ? '#059669' : isFailed ? '#DC2626' : '#6366F1') : statusBorder,
+                                },
+                              ]}
+                            >
+                              <StatusIcon size={12} color={isDark ? (isSuccess ? '#34D399' : isFailed ? '#F87171' : '#A5B4FC') : statusText} strokeWidth={2.4} />
+                              <Text
+                                style={[
+                                  styles.logCleanStatusText,
+                                  { color: isDark ? (isSuccess ? '#34D399' : isFailed ? '#F87171' : '#A5B4FC') : statusText },
+                                ]}
+                              >
+                                {status}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Sender Identity Info */}
+                          <View style={[styles.logCleanContentBox, isDark && styles.logCleanContentBoxDark]}>
+                            <Text style={[styles.logCleanSenderText, isDark && { color: '#94A3B8' }]} numberOfLines={1}>
+                              From: <Text style={{ fontWeight: '700', color: isDark ? '#E2E8F0' : '#0F172A' }}>{item.senderDisplayName || 'GymDeck'}</Text> &lt;{item.fromAddress || 'notifications@mail.epic-studio.in'}&gt;
+                            </Text>
+                          </View>
+
+                          {/* Footer Telemetry Row: Recipient count & Inspect Button */}
+                          <View style={styles.logCleanFooterRow}>
+                            <View style={styles.logCleanFooterLeft}>
+                              <View style={styles.logRecipientDataRow}>
+                                <Users size={12} color="#64748B" />
+                                <Text style={styles.logRecipientDataText} numberOfLines={1}>
+                                  Targeted: <Text style={{ fontWeight: '700', color: isDark ? '#E2E8F0' : '#0F172A' }}>{item.recipientCount} {item.recipientCount === 1 ? 'member' : 'members'}</Text>
+                                </Text>
+                              </View>
+                            </View>
+
+                            <View style={styles.logCleanFooterRight}>
+                              <TouchableOpacity
+                                style={[styles.logInspectActionBtn, isDark && styles.logInspectActionBtnDark]}
+                                onPress={() => handleInspect(item.id)}
+                                activeOpacity={0.7}
+                              >
+                                <Eye size={12} color={isDark ? '#818CF8' : '#4F46E5'} strokeWidth={2.2} />
+                                <Text style={[styles.logInspectActionBtnText, isDark && { color: '#818CF8' }]}>
+                                  Inspect
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* Pagination Bar */}
+                  {totalPages > 1 && (
+                    <View style={styles.paginationContainer}>
+                      <TouchableOpacity
                         style={[
-                          styles.ledgerStatusPill,
-                          msg.status === 'COMPLETED'
-                            ? styles.statusCompletedPill
-                            : msg.status === 'SENDING'
-                            ? styles.statusSendingPill
-                            : styles.statusDefaultPill,
+                          styles.pageBtn,
+                          validPage <= 1 && styles.pageBtnDisabled,
+                          { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' },
                         ]}
+                        onPress={() => setLogCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={validPage <= 1}
+                        activeOpacity={0.7}
                       >
                         <Text
                           style={[
-                            styles.ledgerStatusText,
-                            msg.status === 'COMPLETED'
-                              ? styles.statusCompletedText
-                              : msg.status === 'SENDING'
-                              ? styles.statusSendingText
-                              : styles.statusDefaultText,
+                            styles.pageBtnText,
+                            { color: validPage <= 1 ? (isDark ? '#475569' : '#94A3B8') : (isDark ? '#F8FAFC' : '#0F172A') },
                           ]}
                         >
-                          {msg.status}
+                          ← Prev
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={styles.pageInfoBox}>
+                        <Text style={[styles.pageInfoText, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+                          Page <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>{String(validPage).padStart(2, '0')}</Text>/<Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>{String(totalPages).padStart(2, '0')}</Text>
                         </Text>
                       </View>
-                    </View>
 
-                    <View style={[styles.ledgerCardBottom, isDark && styles.ledgerCardBottomDark]}>
-                      <Text style={styles.ledgerSenderEmail} numberOfLines={1}>
-                        From: {msg.senderDisplayName || 'GymDeck'} &lt;{msg.fromAddress || 'notifications@mail.epic-studio.in'}&gt;
-                      </Text>
                       <TouchableOpacity
-                        style={[styles.ledgerInspectBtn, isDark && styles.ledgerInspectBtnDark]}
-                        onPress={() => handleInspect(msg.id)}
+                        style={[
+                          styles.pageBtn,
+                          validPage >= totalPages && styles.pageBtnDisabled,
+                          { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' },
+                        ]}
+                        onPress={() => setLogCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={validPage >= totalPages}
                         activeOpacity={0.7}
                       >
-                        <Eye size={12} color={isDark ? '#E2E8F0' : '#4F46E5'} />
-                        <Text style={[styles.ledgerInspectBtnText, isDark && styles.textWhite]}>Inspect</Text>
+                        <Text
+                          style={[
+                            styles.pageBtnText,
+                            { color: validPage >= totalPages ? (isDark ? '#475569' : '#94A3B8') : (isDark ? '#F8FAFC' : '#0F172A') },
+                          ]}
+                        >
+                          Next →
+                        </Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyLedgerBox}>
-                <Inbox size={26} color={isDark ? '#475569' : '#94A3B8'} />
-                <Text style={[styles.emptyLedgerTitle, isDark && styles.textWhite]}>
-                  No sent email records found
-                </Text>
-                <Text style={[styles.emptyLedgerDesc, isDark && { color: '#64748B' }]}>
-                  Dispatched broadcasts will automatically appear here with full delivery verification.
-                </Text>
-              </View>
-            )}
+                  )}
+                </View>
+              );
+            })()}
           </View>
         ) : (
           /* ═══════════════════════════════════════════════════════════
@@ -1158,8 +1830,8 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
           ═══════════════════════════════════════════════════════════ */
           <View style={styles.tabContent}>
             {/* Executive Automated Rules Banner */}
-            <View style={styles.autoHeaderCardOuter}>
-              <View style={[styles.autoHeaderCard, isDark && styles.autoHeaderCardDark]}>
+            <View style={styles.autoRuleHeaderCardOuter}>
+              <View style={[styles.autoRuleHeaderCard, isDark && styles.autoRuleHeaderCardDark]}>
                 <View style={styles.autoHeaderTopRow}>
                   <View style={styles.autoHeaderBadge}>
                     <Zap size={11} color="#A7F3D0" />
@@ -1170,7 +1842,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                     <Text style={styles.autoStatusText}>ENGINE ACTIVE</Text>
                   </View>
                 </View>
-                <Text style={styles.autoHeaderTitle}>Managed Transactional Triggers</Text>
+                <Text style={styles.autoRuleHeaderTitle}>Managed Transactional Triggers</Text>
                 <Text style={styles.autoHeaderDesc}>
                   GymDeck automatically schedules and dispatches emails on critical membership lifecycle events.
                 </Text>
@@ -1275,74 +1947,234 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
         )}
       </View>
 
-      {/* ─── CONFIRMATION DISPATCH MODAL ─── */}
-      <Modal visible={showConfirmModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, isDark && styles.modalBoxDark]}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Send size={16} color="#4F46E5" />
-                <Text style={[styles.modalTitle, isDark && styles.textWhite]}>Confirm Dispatch</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowConfirmModal(false)} activeOpacity={0.7}>
-                <X size={18} color={isDark ? '#94A3B8' : '#64748B'} />
-              </TouchableOpacity>
+      {/* ─── CONFIRMATION DISPATCH BOTTOM-SHEET MODAL ─── */}
+      <Modal visible={showConfirmModal} transparent animationType="none" onRequestClose={closeConfirmModal}>
+        <View style={styles.confirmModalRoot}>
+          {/* Smooth Fade-Only Dim Backdrop */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              styles.confirmModalBackdrop,
+              { opacity: confirmBackdropAnim },
+            ]}
+          >
+            <TouchableWithoutFeedback onPress={closeConfirmModal}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
+          </Animated.View>
+
+          {/* Bottom Sheet Card sliding up from bottom */}
+          <Animated.View
+            style={[
+              styles.confirmSheetContainer,
+              isDark && styles.confirmSheetContainerDark,
+              { transform: [{ translateY: confirmSheetTranslateY }] },
+            ]}
+          >
+            {/* Pull indicator */}
+            <View style={styles.confirmPullIndicatorWrapper}>
+              <View style={[styles.confirmPullIndicator, isDark && { backgroundColor: '#334155' }]} />
             </View>
 
-            <View style={[styles.modalDetailCard, isDark && styles.modalDetailCardDark]}>
-              <View style={styles.modalDetailRow}>
-                <Text style={[styles.modalDetailLabel, isDark && { color: '#94A3B8' }]}>Subject:</Text>
-                <Text style={[styles.modalDetailValue, isDark && styles.textWhite]} numberOfLines={1}>
-                  {subject}
-                </Text>
-              </View>
-              <View style={styles.modalDetailRow}>
-                <Text style={[styles.modalDetailLabel, isDark && { color: '#94A3B8' }]}>Recipients:</Text>
-                <Text style={[styles.modalDetailValue, isDark && styles.textWhite]}>
-                  {selectedMemberIds.length} members
-                </Text>
-              </View>
-              <View style={styles.modalDetailRow}>
-                <Text style={[styles.modalDetailLabel, isDark && { color: '#94A3B8' }]}>Quota Impact:</Text>
-                <Text style={styles.modalQuotaImpact}>-{selectedMemberIds.length} units</Text>
-              </View>
-              <View style={[styles.modalDetailRow, { borderTopWidth: 1, borderTopColor: isDark ? '#1F2937' : '#E2E8F0', paddingTop: 6, marginTop: 4 }]}>
-                <Text style={[styles.modalDetailLabel, isDark && { color: '#94A3B8' }]}>Remaining:</Text>
-                <Text style={styles.modalRemainingValue}>
-                  {Math.max(0, quota.remainingQuota - selectedMemberIds.length)} units
-                </Text>
-              </View>
-            </View>
+            {/* Content Switcher based on dispatchModalStep */}
+            {dispatchModalStep === 'review' && (
+              <>
+                {/* Header */}
+                <View style={styles.confirmHeaderRow}>
+                  <View style={styles.confirmHeaderLeft}>
+                    <View style={[styles.confirmBadgeIcon, isDark && { backgroundColor: '#1E1B4B' }]}>
+                      <Send size={15} color="#6366F1" strokeWidth={2.5} />
+                    </View>
+                    <View>
+                      <Text style={[styles.confirmTitle, isDark && styles.textWhite]}>Confirm Dispatch</Text>
+                      <Text style={[styles.confirmSubtitle, isDark && { color: '#94A3B8' }]}>
+                        Review recipient scope before sending
+                      </Text>
+                    </View>
+                  </View>
 
-            <Text style={[styles.modalDisclaimer, isDark && { color: '#94A3B8' }]}>
-              This broadcast will be dispatched through the authenticated SMTP relay and delivered directly to the inbox of verified members.
-            </Text>
+                  {/* Square close button with 5px curved corners */}
+                  <TouchableOpacity
+                    onPress={closeConfirmModal}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={[styles.confirmSquareCloseBtn, isDark && styles.confirmSquareCloseBtnDark]}
+                    activeOpacity={0.7}
+                  >
+                    <X size={14} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.4} />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.modalButtonRow}>
-              <TouchableOpacity
-                style={[styles.modalCancelButton, isDark && styles.modalCancelButtonDark]}
-                onPress={() => setShowConfirmModal(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.modalCancelButtonText, isDark && styles.textWhite]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalConfirmButton}
-                onPress={handleConfirmDispatch}
-                disabled={isSending}
-                activeOpacity={0.8}
-              >
-                {isSending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Send size={13} color="#FFFFFF" />
-                    <Text style={styles.modalConfirmButtonText}>Confirm & Send</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+                {/* Clean KPI / Scope Summary Card */}
+                <View style={[styles.confirmSummaryCard, isDark && styles.confirmSummaryCardDark]}>
+                  <View style={styles.confirmSummaryRow}>
+                    <View style={styles.confirmSummaryItem}>
+                      <Text style={[styles.confirmSummaryLabel, isDark && { color: '#94A3B8' }]}>AUDIENCE</Text>
+                      <View style={styles.confirmValueRow}>
+                        <Users size={13} color={isDark ? '#60A5FA' : '#2563EB'} strokeWidth={2.2} />
+                        <Text style={[styles.confirmSummaryValue, isDark && styles.textWhite]}>
+                          {selectedMemberIds.length} <Text style={{ fontSize: 11, fontWeight: '500' }}>members</Text>
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[styles.confirmSummaryDivider, isDark && { backgroundColor: '#334155' }]} />
+                    <View style={styles.confirmSummaryItem}>
+                      <Text style={[styles.confirmSummaryLabel, isDark && { color: '#94A3B8' }]}>QUOTA BALANCE</Text>
+                      <View style={styles.confirmValueRow}>
+                        <ShieldCheck size={13} color="#10B981" strokeWidth={2.2} />
+                        <Text style={[styles.confirmSummaryValue, { color: '#10B981' }]}>
+                          {Math.max(0, quota.remainingQuota - selectedMemberIds.length)} <Text style={{ fontSize: 11, fontWeight: '500', color: isDark ? '#94A3B8' : '#64748B' }}>left</Text>
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Subject Row */}
+                  <View style={[styles.confirmSubjectRow, isDark && { borderTopColor: '#334155' }]}>
+                    <Text style={[styles.confirmSubjectLabel, isDark && { color: '#94A3B8' }]}>Subject</Text>
+                    <Text style={[styles.confirmSubjectText, isDark && styles.textWhite]} numberOfLines={1}>
+                      {subject}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Action Row */}
+                <View style={styles.confirmActionRow}>
+                  <TouchableOpacity
+                    style={[styles.confirmCancelBtn, isDark && styles.confirmCancelBtnDark]}
+                    onPress={closeConfirmModal}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.confirmCancelBtnText, isDark && styles.textWhite]}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.confirmSendBtn}
+                    onPress={handleConfirmDispatch}
+                    disabled={isSending}
+                    activeOpacity={0.85}
+                  >
+                    <Send size={13} color="#FFFFFF" strokeWidth={2.2} />
+                    <Text style={styles.confirmSendBtnText}>Dispatch Broadcast</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* In-Flight Sending State */}
+            {dispatchModalStep === 'sending' && (
+              <View style={styles.dispatchStatusContainer}>
+                <View style={[styles.dispatchLoadingIconBox, isDark && styles.dispatchLoadingIconBoxDark]}>
+                  <ActivityIndicator size="large" color="#10B981" />
+                </View>
+                <Text style={[styles.dispatchStatusTitle, isDark && styles.textWhite]}>
+                  Queueing Broadcast...
+                </Text>
+                <Text style={[styles.dispatchStatusSubtitle, isDark && { color: '#94A3B8' }]}>
+                  Encrypting message packets & dispatching to {dispatchedCount} member {dispatchedCount === 1 ? 'inbox' : 'inboxes'}
+                </Text>
+              </View>
+            )}
+
+            {/* Success State - Emerald Green Aesthetics */}
+            {dispatchModalStep === 'success' && (
+              <View style={styles.dispatchStatusContainer}>
+                {/* Square close button in corner */}
+                <View style={styles.dispatchModalTopBar}>
+                  <View style={{ flex: 1 }} />
+                  <TouchableOpacity
+                    onPress={() => {
+                      closeConfirmModal();
+                      setActiveTab('history');
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={[styles.confirmSquareCloseBtn, isDark && styles.confirmSquareCloseBtnDark]}
+                    activeOpacity={0.7}
+                  >
+                    <X size={14} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.4} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Emerald Success Icon Badge */}
+                <View style={[styles.dispatchSuccessBadge, isDark && styles.dispatchSuccessBadgeDark]}>
+                  <CheckCircle2 size={32} color="#059669" strokeWidth={2.4} />
+                </View>
+
+                <Text style={[styles.dispatchSuccessTitle, isDark && { color: '#34D399' }]}>
+                  Successfully Queued
+                </Text>
+                <Text style={[styles.dispatchSuccessSubtitle, isDark && { color: '#A7F3D0' }]}>
+                  {dispatchStatusMsg || `Broadcast has been safely scheduled and relayed to ${dispatchedCount} members.`}
+                </Text>
+
+                {/* Highlight Pill */}
+                <View style={[styles.dispatchSuccessPill, isDark && styles.dispatchSuccessPillDark]}>
+                  <ShieldCheck size={14} color="#059669" strokeWidth={2.2} />
+                  <Text style={[styles.dispatchSuccessPillText, isDark && { color: '#6EE7B7' }]}>
+                    Relay Verified · Delivery In Progress
+                  </Text>
+                </View>
+
+                {/* Dismiss Button */}
+                <TouchableOpacity
+                  style={[styles.dispatchSuccessDoneBtn, isDark && styles.dispatchSuccessDoneBtnDark]}
+                  onPress={() => {
+                    closeConfirmModal();
+                    setActiveTab('history');
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.dispatchSuccessDoneBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Error State */}
+            {dispatchModalStep === 'error' && (
+              <View style={styles.dispatchStatusContainer}>
+                <View style={styles.dispatchModalTopBar}>
+                  <View style={{ flex: 1 }} />
+                  <TouchableOpacity
+                    onPress={closeConfirmModal}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={[styles.confirmSquareCloseBtn, isDark && styles.confirmSquareCloseBtnDark]}
+                    activeOpacity={0.7}
+                  >
+                    <X size={14} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.4} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={[styles.dispatchErrorBadge, isDark && styles.dispatchErrorBadgeDark]}>
+                  <AlertCircle size={32} color="#DC2626" strokeWidth={2.4} />
+                </View>
+
+                <Text style={[styles.dispatchErrorTitle, isDark && { color: '#F87171' }]}>
+                  Dispatch Failed
+                </Text>
+                <Text style={[styles.dispatchErrorSubtitle, isDark && { color: '#94A3B8' }]}>
+                  {dispatchStatusMsg}
+                </Text>
+
+                <View style={styles.confirmActionRow}>
+                  <TouchableOpacity
+                    style={[styles.confirmCancelBtn, isDark && styles.confirmCancelBtnDark]}
+                    onPress={closeConfirmModal}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.confirmCancelBtnText, isDark && styles.textWhite]}>Close</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.confirmSendBtn}
+                    onPress={handleConfirmDispatch}
+                    activeOpacity={0.85}
+                  >
+                    <RefreshCw size={13} color="#FFFFFF" strokeWidth={2.2} />
+                    <Text style={styles.confirmSendBtnText}>Try Again</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </Animated.View>
         </View>
       </Modal>
 
@@ -1461,7 +2293,9 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
       </Modal>
 
       {/* ─── BRAND SIGNATURE FOOTER ─── */}
-      <BrandSignatureFooter isDark={isDark} />
+      <View style={{ paddingBottom: layout.bottomNavHeight + 64 }}>
+        <BrandSignatureFooter isDark={isDark} />
+      </View>
     </View>
   );
 }
@@ -1469,7 +2303,6 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
 const styles = StyleSheet.create({
   root: {
     width: '100%',
-    paddingBottom: 24,
   },
   textWhite: {
     color: '#FFFFFF',
@@ -1653,154 +2486,144 @@ const styles = StyleSheet.create({
   /* 2. Stats Strip */
   statsStrip: {
     flexDirection: 'row',
-    gap: 8,
     paddingHorizontal: 16,
-    marginBottom: 14,
+    gap: 8,
+    marginTop: 10,
   },
   statTile: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   statTileDark: {
-    backgroundColor: '#111827',
-    borderColor: '#1F2937',
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
   },
   statOverline: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#64748B',
     letterSpacing: 0.6,
-    color: '#94A3B8',
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '900',
-    letterSpacing: -0.5,
-    marginTop: 4,
+    color: '#0F172A',
+    marginTop: 2,
   },
   statCaption: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 9.5,
     color: '#94A3B8',
     marginTop: 1,
   },
 
   /* 3. Sub Tabs */
   subTabsContainer: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    marginTop: 12,
     marginBottom: 14,
   },
   subTabsTrack: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 10,
     padding: 3,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   subTabsTrackDark: {
-    backgroundColor: '#111827',
-    borderColor: '#1F2937',
+    backgroundColor: '#1E293B',
   },
   subTabItem: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 9,
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 8,
   },
   subTabItemActive: {
-    backgroundColor: '#4F46E5',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: '#0F172A',
   },
   subTabText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#475569',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   subTabTextActive: {
     color: '#FFFFFF',
+    fontWeight: '800',
   },
 
   /* 4. Workspace Body & Cards */
   workspaceBody: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    marginTop: 12,
   },
   tabContent: {
-    gap: 12,
+    gap: 10,
   },
   contentCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    padding: 12,
   },
   contentCardDark: {
-    backgroundColor: '#111827',
-    borderColor: '#1F2937',
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
   cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   stepDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepDotLight: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#E2E8F0',
   },
   stepDotDark: {
-    backgroundColor: '#312E81',
+    backgroundColor: '#334155',
   },
   stepDotText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '900',
   },
   cardTitle: {
     fontSize: 13,
     fontWeight: '800',
-    letterSpacing: -0.2,
+    color: '#0F172A',
   },
   intentSelectorTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    backgroundColor: '#F8FAFC',
+    maxWidth: 160,
   },
   intentSelectorTriggerDark: {
     backgroundColor: '#1E293B',
@@ -1809,17 +2632,84 @@ const styles = StyleSheet.create({
   intentMiniIcon: {
     width: 20,
     height: 20,
-    borderRadius: 5,
-    backgroundColor: '#EEF2FF',
+    borderRadius: 4,
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   intentMiniIconDark: {
-    backgroundColor: '#312E81',
+    backgroundColor: '#334155',
   },
   intentTriggerLabel: {
     fontSize: 11.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    flexShrink: 1,
+  },
+  recipientBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  recipientBadgeDark: {
+    backgroundColor: '#1E293B',
+  },
+  recipientBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  audienceControlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  audienceSearchWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 9,
+    height: 38,
+    gap: 6,
+  },
+  audienceSearchWrapDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#334155',
+  },
+  audienceSearchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: '#0F172A',
+    paddingVertical: 0,
+  },
+  audienceDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 10,
+    height: 38,
+  },
+  audienceDropdownBtnDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  audienceDropdownText: {
+    fontSize: 11.5,
     fontWeight: '700',
+    color: '#0F172A',
+    maxWidth: 95,
   },
   charCountText: {
     fontSize: 10,
@@ -1829,16 +2719,16 @@ const styles = StyleSheet.create({
 
   /* Dropdown Menus */
   dropdownMenu: {
+    marginTop: 8,
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginTop: 10,
     overflow: 'hidden',
   },
   dropdownMenuDark: {
     backgroundColor: '#0F172A',
-    borderColor: '#1E293B',
+    borderColor: '#334155',
   },
   dropdownMenuItem: {
     flexDirection: 'row',
@@ -1853,10 +2743,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#1E293B',
   },
   dropdownMenuItemActive: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F1F5F9',
   },
   dropdownMenuItemActiveDark: {
-    backgroundColor: '#1E1B4B',
+    backgroundColor: '#1E293B',
   },
   dropdownMenuItemLeft: {
     flexDirection: 'row',
@@ -1865,9 +2755,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dropdownMenuIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1877,16 +2767,18 @@ const styles = StyleSheet.create({
   },
   dropdownMenuItemTitle: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#0F172A',
   },
   dropdownMenuItemDesc: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 1,
   },
   segmentMenuItemText: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#475569',
   },
 
   /* Search & Member Directory */
@@ -1895,15 +2787,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 10,
     height: 38,
     marginTop: 10,
   },
   searchBoxDark: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#0F172A',
     borderColor: '#334155',
   },
   searchInput: {
@@ -1914,15 +2806,15 @@ const styles = StyleSheet.create({
   },
   recipientListCard: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginTop: 10,
+    marginTop: 8,
     padding: 10,
   },
   recipientListCardDark: {
     backgroundColor: '#0F172A',
-    borderColor: '#1E293B',
+    borderColor: '#334155',
   },
   recipientListHeader: {
     flexDirection: 'row',
@@ -1945,7 +2837,7 @@ const styles = StyleSheet.create({
   recipientActionLink: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#4F46E5',
+    color: '#0284C7',
   },
   dividerPill: {
     fontSize: 11,
@@ -1970,10 +2862,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   memberRowItemActive: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F1F5F9',
   },
   memberRowItemActiveDark: {
-    backgroundColor: '#1E1B4B',
+    backgroundColor: '#1E293B',
   },
   memberInfoCol: {
     flex: 1,
@@ -1996,20 +2888,21 @@ const styles = StyleSheet.create({
   },
   memberEmailText: {
     fontSize: 10,
+    color: '#64748B',
     marginTop: 1,
   },
   checkboxSquare: {
     width: 18,
     height: 18,
-    borderRadius: 5,
+    borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: '#94A3B8',
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSquareActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
   },
   moreRecipientsText: {
     fontSize: 10,
@@ -2034,15 +2927,15 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '900',
     letterSpacing: 0.6,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 10,
     marginBottom: 4,
   },
   subjectTextInput: {
     height: 38,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     backgroundColor: '#F8FAFC',
     paddingHorizontal: 12,
     fontSize: 12,
@@ -2066,7 +2959,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
-    color: '#94A3B8',
+    color: '#64748B',
   },
   tokensScroll: {
     gap: 6,
@@ -2088,9 +2981,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   editorWrap: {
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     backgroundColor: '#F8FAFC',
     padding: 10,
   },
@@ -2108,12 +3001,12 @@ const styles = StyleSheet.create({
 
   /* Preview Card */
   previewContentCard: {
-    paddingBottom: 14,
+    paddingBottom: 12,
   },
   previewRecipientPill: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 20,
+    borderRadius: 6,
     backgroundColor: '#F1F5F9',
   },
   previewRecipientPillDark: {
@@ -2129,14 +3022,14 @@ const styles = StyleSheet.create({
   },
   previewTargetHighlight: {
     fontWeight: '800',
-    color: '#4F46E5',
+    color: '#0284C7',
   },
   envelopeCanvas: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginTop: 10,
+    marginTop: 8,
     overflow: 'hidden',
   },
   envelopeCanvasDark: {
@@ -2144,7 +3037,7 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   envelopeHeader: {
-    padding: 12,
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
@@ -2159,31 +3052,31 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   envelopeSenderAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#4F46E5',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   envelopeSenderInitial: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
   },
   envelopeSenderMeta: {
     flex: 1,
   },
   envelopeSenderName: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   envelopeFromEmail: {
-    fontSize: 9.5,
+    fontSize: 9,
     color: '#94A3B8',
   },
   envelopeTimeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '600',
     color: '#94A3B8',
   },
@@ -2191,7 +3084,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 8,
+    marginTop: 6,
     paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
@@ -2200,19 +3093,19 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontWeight: '900',
     letterSpacing: 0.6,
-    color: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    color: '#0284C7',
+    backgroundColor: '#E0F2FE',
     paddingHorizontal: 5,
     paddingVertical: 1.5,
     borderRadius: 4,
   },
   envelopeSubjectText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
     flex: 1,
   },
   envelopeBodyContainer: {
-    padding: 12,
+    padding: 10,
   },
   envelopeBodyText: {
     fontSize: 11.5,
@@ -2221,129 +3114,564 @@ const styles = StyleSheet.create({
   },
   envelopeFooter: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    backgroundColor: '#F1F5F9',
+    borderTopColor: '#0F172A',
+    backgroundColor: '#0A0F1D',
   },
   envelopeFooterDark: {
-    backgroundColor: '#111827',
-    borderTopColor: '#1F2937',
+    backgroundColor: '#030712',
+    borderTopColor: '#111827',
   },
   envelopeVerifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   envelopeVerifiedText: {
-    fontSize: 9.5,
+    fontSize: 10.5,
     fontWeight: '700',
-    color: '#059669',
+    color: '#F8FAFC',
+    letterSpacing: 0.1,
   },
 
   /* Dispatch Button */
   dispatchBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#0F172A',
     height: 46,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   dispatchBtnDisabled: {
-    opacity: 0.45,
+    backgroundColor: '#CBD5E1',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   dispatchBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '900',
     letterSpacing: 0.2,
   },
 
-  /* Ledger Styles */
-  ledgerHeaderRow: {
+  /* Executive Dispatch Logs & Audit Hero Card */
+  autoHeaderCardOuter: {
+    position: 'relative',
+    marginBottom: 14,
+  },
+  autoHeaderCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 70,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  autoWatermarkLogo: {
+    position: 'absolute',
+    right: 4,
+    bottom: -6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  autoHeaderCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
-  ledgerTitle: {
-    fontSize: 12,
+  autoHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 18.5,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    letterSpacing: -0.4,
   },
-  ledgerSubtitle: {
-    fontSize: 10,
-    color: '#64748B',
-    marginTop: 1,
+  autoHeaderSubtitle: {
+    color: '#94A3B8',
+    fontSize: 10.5,
+    fontWeight: '500',
+    marginTop: 2.5,
+    lineHeight: 14.5,
+    maxWidth: '92%',
   },
-  ledgerRefreshBtn: {
+  autoBottomCutoutWrapper: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 99,
+    elevation: 10,
+  },
+  autoBottomCutoutNotch: {
+    width: 108,
+    height: 14,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  autoBottomCutoutPill: {
+    width: 34,
+    height: 3,
+    borderRadius: 1.5,
+    marginTop: 2,
+  },
+
+  /* Redesigned Dispatch Logs & Audit KPI Strip */
+  logKpiRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+  },
+  logKpiRowDark: {
+    borderColor: '#1E293B',
+  },
+  logKpiItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logKpiDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#E2E8F0',
+  },
+  logKpiLabel: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
+  logKpiValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+    marginTop: 2,
+  },
+  logKpiSub: {
+    fontSize: 9.5,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  permDividerDark: {
+    borderColor: '#1E293B',
+  },
+
+  /* Search & Dropdown Controls */
+  logControlsSection: {
+    gap: 10,
+    marginBottom: 14,
+    zIndex: 20,
+  },
+  logSearchAndFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logSearchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    height: 40,
+    minWidth: 0,
+  },
+  logSearchBoxDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logSearchInput: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#0F172A',
+    fontWeight: '500',
+    padding: 0,
+    minWidth: 0,
+  },
+  logDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+    height: 40,
+    width: 82,
+    paddingHorizontal: 7,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexShrink: 0,
   },
-  ledgerRefreshBtnDark: {
+  logDropdownBtnDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logDropdownBtnActive: {
+    borderColor: '#C7D2FE',
+    backgroundColor: '#EEF2FF',
+  },
+  logDropdownBtnText: {
+    flex: 1,
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+    textAlign: 'left',
+  },
+  logDropdownBtnTextActive: {
+    color: '#4F46E5',
+  },
+  logDropdownMenu: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 6,
+    marginTop: 4,
+  },
+  logDropdownMenuDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logDropdownMenuHeader: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  logDropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  logDropdownOptionSelected: {
+    backgroundColor: '#EEF2FF',
+  },
+  logDropdownOptionSelectedDark: {
     backgroundColor: '#1E293B',
-    borderColor: '#334155',
   },
-  ledgerRefreshText: {
-    fontSize: 11,
-    fontWeight: '700',
+  logDropdownOptionText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#334155',
   },
-  ledgerCardsList: {
+  logDropdownOptionTextSelected: {
+    fontWeight: '800',
+    color: '#4F46E5',
+  },
+  logDropdownBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  logDropdownBadgeSelected: {
+    backgroundColor: '#E0E7FF',
+  },
+  logDropdownBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  logDropdownBadgeTextSelected: {
+    color: '#4F46E5',
+  },
+
+  /* List Header */
+  logListHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  logListHeaderTitle: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: '#000000',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  logRefreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 5,
+    backgroundColor: '#F1F5F9',
+  },
+  logRefreshBtnText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#000000',
+  },
+
+  /* Clean Professional Log Card */
+  logFeedList: {
     gap: 10,
+    marginBottom: 14,
   },
-  ledgerCardItem: {
+  logCleanCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 12,
+    padding: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  ledgerCardItemDark: {
-    backgroundColor: '#111827',
-    borderColor: '#1F2937',
+  logCleanCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
   },
-  ledgerCardTop: {
+  logCleanHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  logCleanAvatarBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  logCleanAvatarBoxDark: {
+    backgroundColor: '#1E1B4B',
+    borderColor: '#312E81',
+  },
+  logCleanHeaderTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  logCleanIntentTag: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  logCleanMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  logCleanTimestamp: {
+    fontSize: 10.5,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  logCleanStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  logCleanStatusText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  logCleanContentBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 10,
+  },
+  logCleanContentBoxDark: {
+    backgroundColor: '#080E14',
+    borderColor: '#1E293B',
+  },
+  logCleanSenderText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  logCleanFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 8,
   },
-  ledgerSubjectCol: {
+  logCleanFooterLeft: {
     flex: 1,
-    paddingRight: 8,
+    justifyContent: 'center',
+    minWidth: 0,
   },
-  ledgerSubjectText: {
-    fontSize: 12.5,
+  logRecipientDataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logRecipientDataText: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  logCleanFooterRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  logInspectActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5.5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  logInspectActionBtnDark: {
+    backgroundColor: '#1E1B4B',
+    borderColor: '#312E81',
+  },
+  logInspectActionBtnText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+
+  /* Empty State */
+  logEmptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logEmptyCardDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  logEmptyIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  logEmptyIconBoxDark: {
+    backgroundColor: '#1E293B',
+  },
+  logEmptyTitle: {
+    fontSize: 13.5,
     fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 3,
   },
-  ledgerTimestamp: {
-    fontSize: 10,
-    color: '#94A3B8',
-    marginTop: 2,
+  logEmptySub: {
+    fontSize: 11,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 16,
+    maxWidth: 280,
   },
-  ledgerStatusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
+  logResetFilterBtn: {
+    marginTop: 12,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
+  logResetFilterBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#4F46E5',
+  },
+
+  /* Pagination Bar */
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  pageBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pageBtnDisabled: {
+    opacity: 0.45,
+  },
+  pageBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  /* Status pills for inspection modal */
   statusCompletedPill: {
     backgroundColor: '#ECFDF5',
   },
@@ -2355,10 +3683,6 @@ const styles = StyleSheet.create({
   },
   statusDefaultPill: {
     backgroundColor: '#F1F5F9',
-  },
-  ledgerStatusText: {
-    fontSize: 9.5,
-    fontWeight: '800',
   },
   statusCompletedText: {
     color: '#065F46',
@@ -2372,76 +3696,25 @@ const styles = StyleSheet.create({
   statusDefaultText: {
     color: '#64748B',
   },
-  ledgerCardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 8,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  ledgerCardBottomDark: {
-    borderTopColor: '#1F2937',
-  },
-  ledgerSenderEmail: {
-    fontSize: 10,
-    color: '#94A3B8',
-    flex: 1,
-    paddingRight: 8,
-  },
-  ledgerInspectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-  },
-  ledgerInspectBtnDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-  },
-  ledgerInspectBtnText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-  },
-  emptyLedgerBox: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 28,
+
+  pageInfoBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
   },
-  emptyLedgerTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  emptyLedgerDesc: {
+  pageInfoText: {
     fontSize: 11,
-    textAlign: 'center',
-    color: '#64748B',
-    paddingHorizontal: 16,
+    fontWeight: '600',
   },
-
-  /* Automations & Templates */
-  autoHeaderCardOuter: {
+  autoRuleHeaderCardOuter: {
     borderRadius: 16,
     overflow: 'hidden',
   },
-  autoHeaderCard: {
+  autoRuleHeaderCard: {
     backgroundColor: '#0F172A',
     borderRadius: 16,
     padding: 14,
   },
-  autoHeaderCardDark: {
+  autoRuleHeaderCardDark: {
     backgroundColor: '#090D16',
     borderWidth: 1,
     borderColor: '#1E293B',
@@ -2487,7 +3760,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     color: '#34D399',
   },
-  autoHeaderTitle: {
+  autoRuleHeaderTitle: {
     fontSize: 15,
     fontWeight: '900',
     color: '#FFFFFF',
@@ -2622,6 +3895,332 @@ const styles = StyleSheet.create({
   },
 
   /* Modals */
+  confirmModalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  confirmModalBackdrop: {
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  confirmSheetContainer: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 20,
+    gap: 12,
+  },
+  confirmSheetContainerDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+  confirmPullIndicatorWrapper: {
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  confirmPullIndicator: {
+    width: 32,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+  },
+  confirmHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  confirmHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  confirmBadgeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    color: '#0F172A',
+  },
+  confirmSubtitle: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 1,
+  },
+  confirmSquareCloseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmSquareCloseBtnDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  confirmSummaryCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    gap: 10,
+  },
+  confirmSummaryCardDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  confirmSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  confirmSummaryItem: {
+    flex: 1,
+  },
+  confirmSummaryLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.3,
+    marginBottom: 4,
+  },
+  confirmValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  confirmSummaryValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  confirmSummaryDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: 12,
+  },
+  confirmSubjectRow: {
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E2E8F0',
+  },
+  confirmSubjectLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 2,
+  },
+  confirmSubjectText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  confirmActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    height: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCancelBtnDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  confirmCancelBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  confirmSendBtn: {
+    flex: 1.5,
+    height: 42,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  confirmSendBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  /* Dispatch Modal In-Flight & Result States */
+  dispatchStatusContainer: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  dispatchModalTopBar: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: 4,
+  },
+  dispatchLoadingIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  dispatchLoadingIconBoxDark: {
+    backgroundColor: '#064E3B',
+  },
+  dispatchStatusTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  dispatchStatusSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 12,
+  },
+  dispatchSuccessBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
+    borderColor: '#A7F3D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  dispatchSuccessBadgeDark: {
+    backgroundColor: '#064E3B',
+    borderColor: '#059669',
+  },
+  dispatchSuccessTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#065F46',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  dispatchSuccessSubtitle: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: '#047857',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+  dispatchSuccessPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  dispatchSuccessPillDark: {
+    backgroundColor: '#064E3B',
+    borderColor: '#047857',
+  },
+  dispatchSuccessPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  dispatchSuccessDoneBtn: {
+    width: '100%',
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  dispatchSuccessDoneBtnDark: {
+    backgroundColor: '#10B981',
+  },
+  dispatchSuccessDoneBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  dispatchErrorBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 2,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  dispatchErrorBadgeDark: {
+    backgroundColor: '#450A0A',
+    borderColor: '#991B1B',
+  },
+  dispatchErrorTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#DC2626',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  dispatchErrorSubtitle: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+    marginBottom: 8,
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
