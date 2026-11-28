@@ -67,6 +67,12 @@ import {
   Megaphone,
   ArrowRight,
   Layers,
+  Receipt,
+  FileCheck,
+  ChevronUp,
+  CircleHelp,
+  HelpCircle,
+  Bell,
   CheckCheck,
   Bookmark,
   FileEdit,
@@ -109,8 +115,8 @@ interface EmailHubViewProps {
 
 const TABS = [
   { id: 'compose', label: 'Broadcast', icon: Send },
+  { id: 'automation', label: 'Automations', icon: Bell },
   { id: 'history', label: 'Logs', icon: History },
-  { id: 'templates', label: 'Templates & Rules', icon: Bookmark },
 ];
 
 const CAMPAIGN_TYPES = [
@@ -178,7 +184,7 @@ const VARIABLE_TOKENS = [
 export default function EmailHubView({ isDark = false, onClose }: EmailHubViewProps) {
   const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'compose' | 'history' | 'templates'>('compose');
+  const [activeTab, setActiveTab] = useState<'compose' | 'history' | 'automation'>('compose');
 
   // Loading & Syncing States
   const [loading, setLoading] = useState(true);
@@ -186,6 +192,36 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
   const [overview, setOverview] = useState<EmailOverview | null>(null);
   const [history, setHistory] = useState<EmailRecentMessage[]>([]);
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
+
+  // Automations Tab States (Aligned with WhatsApp Line)
+  const [autoRules, setAutoRules] = useState([
+    {
+      id: 'auto-expiry',
+      title: 'Membership Expiry Alert',
+      desc: 'Timely reminders before plan expiration with renewal link',
+      enabled: true,
+    },
+    {
+      id: 'auto-due',
+      title: 'Payment & Fee Receipts',
+      desc: 'Instant official digital invoice dispatched upon payment',
+      enabled: true,
+    },
+    {
+      id: 'auto-checkin',
+      title: 'Attendance Check-In',
+      desc: 'Instant facility check-in confirmation to members',
+      enabled: false,
+    },
+    {
+      id: 'auto-welcome',
+      title: 'New Member Induction',
+      desc: 'Gym onboarding kit, locker rules & guidelines sent upon joining',
+      enabled: true,
+    },
+  ]);
+  const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
+  const [expandedFaqId, setExpandedFaqId] = useState<string | null>(null);
 
   // Composer Form States
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('announcement');
@@ -211,6 +247,10 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
   const [showInspectModal, setShowInspectModal] = useState(false);
   const [inspectData, setInspectData] = useState<EmailMessageDetails | null>(null);
   const [loadingInspect, setLoadingInspect] = useState(false);
+
+  // Inspect Modal Bottom Sheet Animation
+  const inspectBackdropAnim = useRef(new Animated.Value(0)).current;
+  const inspectSheetTranslateY = useRef(new Animated.Value(450)).current;
 
   // Logs Filtering & Pagination (Styled like WhatsAppHubView)
   const [logSearchQuery, setLogSearchQuery] = useState('');
@@ -297,6 +337,55 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
     ]).start(() => {
       setShowConfirmModal(false);
       setDispatchModalStep('review');
+    });
+  };
+
+  useEffect(() => {
+    if (showInspectModal) {
+      inspectSheetTranslateY.setValue(450);
+      Animated.parallel([
+        Animated.timing(inspectBackdropAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.spring(inspectSheetTranslateY, {
+          toValue: 0,
+          friction: 9,
+          tension: 65,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(inspectBackdropAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(inspectSheetTranslateY, {
+          toValue: 450,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showInspectModal]);
+
+  const closeInspectModal = () => {
+    Animated.parallel([
+      Animated.timing(inspectBackdropAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(inspectSheetTranslateY, {
+        toValue: 450,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowInspectModal(false);
     });
   };
 
@@ -1355,7 +1444,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                   }}
                   activeOpacity={0.75}
                 >
-                  <ListFilter size={13} color={logFilter !== 'ALL' ? '#4F46E5' : '#64748B'} strokeWidth={2.2} />
+                  <ListFilter size={14} color={logFilter !== 'ALL' ? '#0F172A' : '#64748B'} strokeWidth={2.2} />
                   <Text
                     style={[
                       styles.logDropdownBtnText,
@@ -1370,7 +1459,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                       ? 'Sending'
                       : logFilter === 'BOUNCED'
                       ? 'Bounced'
-                      : 'Status'}
+                      : 'All Logs'}
                   </Text>
                   <Animated.View
                     style={{
@@ -1385,8 +1474,8 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                     }}
                   >
                     <ChevronDown
-                      size={11}
-                      color={logFilter !== 'ALL' ? '#4F46E5' : '#64748B'}
+                      size={12}
+                      color={logFilter !== 'ALL' ? '#0F172A' : '#64748B'}
                     />
                   </Animated.View>
                 </TouchableOpacity>
@@ -1404,7 +1493,7 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                   }}
                   activeOpacity={0.75}
                 >
-                  <Filter size={13} color={logTimeFilter !== 'ALL' ? '#4F46E5' : '#64748B'} strokeWidth={2.2} />
+                  <Filter size={14} color={logTimeFilter !== 'ALL' ? '#0F172A' : '#64748B'} strokeWidth={2.2} />
                   <Text
                     style={[
                       styles.logDropdownBtnText,
@@ -1436,8 +1525,8 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                     }}
                   >
                     <ChevronDown
-                      size={11}
-                      color={logTimeFilter !== 'ALL' ? '#4F46E5' : '#64748B'}
+                      size={12}
+                      color={logTimeFilter !== 'ALL' ? '#0F172A' : '#64748B'}
                     />
                   </Animated.View>
                 </TouchableOpacity>
@@ -1690,15 +1779,17 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                         minute: '2-digit',
                       });
 
+                      const statusDotColor = isSuccess ? '#10B981' : isFailed ? '#EF4444' : '#6366F1';
+
                       return (
                         <View
                           key={item.id}
                           style={[styles.logCleanCard, isDark && styles.logCleanCardDark]}
                         >
-                          {/* Card Header Row: Icon + Subject/Campaign + Status Badge */}
+                          {/* Card Header Row: Icon + Subject/Campaign + Minimal Status Indicator */}
                           <View style={styles.logCleanHeaderRow}>
                             <View style={[styles.logCleanAvatarBox, isDark && styles.logCleanAvatarBoxDark]}>
-                              <Mail size={16} color={isDark ? '#818CF8' : '#4F46E5'} strokeWidth={2.2} />
+                              <Mail size={15} color={isDark ? '#E2E8F0' : '#1E293B'} strokeWidth={2.2} />
                             </View>
 
                             <View style={styles.logCleanHeaderTextContainer}>
@@ -1713,22 +1804,10 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                               </View>
                             </View>
 
-                            <View
-                              style={[
-                                styles.logCleanStatusBadge,
-                                {
-                                  backgroundColor: isDark ? (isSuccess ? '#064E3B' : isFailed ? '#7F1D1D' : '#1E1B4B') : statusBg,
-                                  borderColor: isDark ? (isSuccess ? '#059669' : isFailed ? '#DC2626' : '#6366F1') : statusBorder,
-                                },
-                              ]}
-                            >
-                              <StatusIcon size={12} color={isDark ? (isSuccess ? '#34D399' : isFailed ? '#F87171' : '#A5B4FC') : statusText} strokeWidth={2.4} />
-                              <Text
-                                style={[
-                                  styles.logCleanStatusText,
-                                  { color: isDark ? (isSuccess ? '#34D399' : isFailed ? '#F87171' : '#A5B4FC') : statusText },
-                                ]}
-                              >
+                            {/* Official Clean Status Indicator (No loud colorful tabs) */}
+                            <View style={[styles.logCleanStatusBadge, isDark && styles.logCleanStatusBadgeDark]}>
+                              <View style={[styles.logCleanStatusDot, { backgroundColor: statusDotColor }]} />
+                              <Text style={[styles.logCleanStatusText, isDark && styles.textWhite]}>
                                 {status}
                               </Text>
                             </View>
@@ -1754,12 +1833,12 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
 
                             <View style={styles.logCleanFooterRight}>
                               <TouchableOpacity
-                                style={[styles.logInspectActionBtn, isDark && styles.logInspectActionBtnDark]}
+                                style={styles.logInspectActionBtn}
                                 onPress={() => handleInspect(item.id)}
-                                activeOpacity={0.7}
+                                activeOpacity={0.8}
                               >
-                                <Eye size={12} color={isDark ? '#818CF8' : '#4F46E5'} strokeWidth={2.2} />
-                                <Text style={[styles.logInspectActionBtnText, isDark && { color: '#818CF8' }]}>
+                                <Eye size={12} color="#FFFFFF" strokeWidth={2.2} />
+                                <Text style={styles.logInspectActionBtnText}>
                                   Inspect
                                 </Text>
                               </TouchableOpacity>
@@ -1825,123 +1904,304 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
             })()}
           </View>
         ) : (
-          /* ═══════════════════════════════════════════════════════════
-             TAB 3: TEMPLATES & AUTOMATIONS
-          ═══════════════════════════════════════════════════════════ */
+          /* ── TAB 2: AUTOMATIONS ── */
           <View style={styles.tabContent}>
-            {/* Executive Automated Rules Banner */}
-            <View style={styles.autoRuleHeaderCardOuter}>
-              <View style={[styles.autoRuleHeaderCard, isDark && styles.autoRuleHeaderCardDark]}>
-                <View style={styles.autoHeaderTopRow}>
-                  <View style={styles.autoHeaderBadge}>
-                    <Zap size={11} color="#A7F3D0" />
-                    <Text style={styles.autoHeaderBadgeText}>ENTERPRISE AUTONOMY</Text>
-                  </View>
-                  <View style={styles.autoStatusPill}>
-                    <View style={styles.autoPulseDot} />
-                    <Text style={styles.autoStatusText}>ENGINE ACTIVE</Text>
+            {/* Executive Automated Notifications Hero Card (Deep Slate/Cobalt with Faded Grid Design) */}
+            <View style={styles.autoHeaderCardOuter}>
+              <View
+                style={[
+                  styles.autoHeaderCard,
+                  {
+                    backgroundColor: isDark ? '#0F172A' : '#1E293B',
+                    borderColor: isDark ? '#334155' : '#334155',
+                  },
+                ]}
+              >
+                {/* Subtle Faded Grid Background Pattern */}
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <Svg width="100%" height="100%">
+                    <Defs>
+                      <Pattern id="autoEmailGrid" width="16" height="16" patternUnits="userSpaceOnUse">
+                        <Path
+                          d="M 16 0 L 0 0 0 16"
+                          fill="none"
+                          stroke="#94A3B8"
+                          strokeWidth="1"
+                          opacity={isDark ? 0.08 : 0.12}
+                        />
+                      </Pattern>
+                    </Defs>
+                    <Rect width="100%" height="100%" fill="url(#autoEmailGrid)" />
+                  </Svg>
+                </View>
+
+                {/* Subtle Watermark Bell Icon Attached to Inner Bottom Right */}
+                <View style={styles.autoWatermarkLogo} pointerEvents="none">
+                  <Svg width={72} height={72} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+                      stroke="#38BDF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                    <Path
+                      d="M13.73 21a2 2 0 0 1-3.46 0"
+                      stroke="#38BDF8"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={0.16}
+                    />
+                  </Svg>
+                </View>
+
+                <View style={styles.autoHeaderCardTop}>
+                  <View style={{ flex: 1, zIndex: 1 }}>
+                    <Text style={styles.autoHeaderTitle}>
+                      Automated Notifications
+                    </Text>
+                    <Text style={styles.autoHeaderSubtitle}>
+                      Instant member dispatch for expiration warnings, digital receipts, access check-in & welcome onboarding
+                    </Text>
                   </View>
                 </View>
-                <Text style={styles.autoRuleHeaderTitle}>Managed Transactional Triggers</Text>
-                <Text style={styles.autoHeaderDesc}>
-                  GymDeck automatically schedules and dispatches emails on critical membership lifecycle events.
-                </Text>
+              </View>
+
+              {/* Sculpted Bottom-Middle Cutout Notch - Perfectly Placed Over the Bottom Border */}
+              <View style={styles.autoBottomCutoutWrapper} pointerEvents="none">
+                <View
+                  style={[
+                    styles.autoBottomCutoutNotch,
+                    {
+                      backgroundColor: isDark ? '#080E14' : '#F8FAFC',
+                      borderColor: isDark ? '#334155' : '#334155',
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.autoBottomCutoutPill,
+                      {
+                        backgroundColor: isDark ? '#1E293B' : '#CBD5E1',
+                      },
+                    ]}
+                  />
+                </View>
               </View>
             </View>
 
-            {/* Standard Automation Rules Cards */}
-            <View style={styles.templatesList}>
-              {[
-                {
-                  id: 'auto-renewal',
-                  title: 'Automated 3-Day Expiry Notice',
-                  desc: 'Triggers automatically 3 days prior to plan expiry with renewal instructions',
-                  badge: 'Retention',
-                  enabled: true,
-                },
-                {
-                  id: 'auto-receipt',
-                  title: 'Instant Fee Receipt on Payment',
-                  desc: 'Dispatches GST compliant tax invoice immediately when fees are collected',
-                  badge: 'Finance',
-                  enabled: true,
-                },
-                {
-                  id: 'auto-welcome',
-                  title: 'New Member Induction Welcome',
-                  desc: 'Sends gym onboarding kit, locker rules & guidelines on registration',
-                  badge: 'Onboarding',
-                  enabled: true,
-                },
-              ].map((rule) => (
-                <View
-                  key={rule.id}
-                  style={[styles.autoRuleCard, isDark && styles.autoRuleCardDark]}
-                >
-                  <View style={styles.autoRuleTop}>
-                    <View style={{ flex: 1, paddingRight: 8 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={[styles.autoRuleTitle, isDark && styles.textWhite]}>
-                          {rule.title}
-                        </Text>
-                        <View style={styles.autoRuleBadge}>
-                          <Text style={styles.autoRuleBadgeText}>{rule.badge}</Text>
-                        </View>
-                      </View>
-                      <Text style={[styles.autoRuleDesc, isDark && { color: '#94A3B8' }]}>
-                        {rule.desc}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={rule.enabled}
-                      onValueChange={() => {}}
-                      trackColor={{ false: '#94A3B8', true: '#4F46E5' }}
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
+            {/* ── CARDLESS PERMISSION & ACCESS SECTION ── */}
+            <View style={styles.permSection}>
+              {/* Section Header */}
+              <View style={styles.permHeaderRow}>
+                <View style={[styles.permShieldIconWrap, isDark && styles.permShieldIconWrapDark]}>
+                  <ShieldCheck size={18} color={isDark ? '#E2E8F0' : '#0F172A'} strokeWidth={2.2} />
                 </View>
-              ))}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.permOverline}>DISPATCH AUTHORIZATION</Text>
+                  <Text style={[styles.permMainTitle, isDark && styles.textWhite]}>
+                    Automated Notifications
+                  </Text>
+                </View>
+              </View>
+
+              {/* Master Permission Toggle Row */}
+              <View style={[styles.permMasterRow, isDark && styles.permDividerDark]}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={[styles.permMasterTitle, isDark && styles.textWhite]}>
+                    Member Automation Dispatches
+                  </Text>
+                  <Text style={[styles.permMasterSub, isDark && styles.textMutedDark]}>
+                    Authorize automated notifications across all channels
+                  </Text>
+                </View>
+
+                {savingRuleId === 'master' ? (
+                  <ActivityIndicator size="small" color="#0F172A" />
+                ) : (
+                  <Switch
+                    value={autoRules.some((r) => r.enabled)}
+                    onValueChange={(newVal) => {
+                      setSavingRuleId('master');
+                      setTimeout(() => {
+                        setAutoRules((prev) => prev.map((r) => ({ ...r, enabled: newVal })));
+                        setSavingRuleId(null);
+                      }, 250);
+                    }}
+                    trackColor={{ false: '#CBD5E1', true: '#0F172A' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#CBD5E1"
+                  />
+                )}
+              </View>
+
+              {/* Permission Channels List */}
+              <View style={styles.permList}>
+                {[
+                  {
+                    id: 'auto-expiry',
+                    icon: Clock,
+                    title: 'Membership Expiry Alert',
+                    desc: 'Timely reminders before plan expiration with renewal link',
+                  },
+                  {
+                    id: 'auto-due',
+                    icon: Receipt,
+                    title: 'Payment & Fee Receipts',
+                    desc: 'Instant digital invoice and fee receipt sent upon payment',
+                  },
+                  {
+                    id: 'auto-checkin',
+                    icon: CalendarCheck,
+                    title: 'Attendance Check-In',
+                    desc: 'Instant facility visit confirmation to members',
+                  },
+                  {
+                    id: 'auto-welcome',
+                    icon: UserCheck,
+                    title: 'New Member Induction',
+                    desc: 'Welcome kit and rules sent upon joining',
+                  },
+                ].map((item, idx, arr) => {
+                  const rule = autoRules.find((r) => r.id === item.id) || { enabled: false };
+                  const isLast = idx === arr.length - 1;
+                  const Icon = item.icon;
+
+                  return (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.permItemRow,
+                        !isLast && styles.permItemBorder,
+                        !isLast && isDark && styles.permDividerDark,
+                      ]}
+                    >
+                      <View style={[styles.permItemIconWrap, isDark && styles.permItemIconWrapDark]}>
+                        <Icon size={16} color={isDark ? '#CBD5E1' : '#334155'} strokeWidth={2.2} />
+                      </View>
+
+                      <View style={{ flex: 1, marginRight: 10 }}>
+                        <Text style={[styles.permItemTitle, isDark && styles.textWhite]}>
+                          {item.title}
+                        </Text>
+                        <Text style={[styles.permItemDesc, isDark && styles.textMutedDark]}>
+                          {item.desc}
+                        </Text>
+                      </View>
+
+                      {savingRuleId === item.id ? (
+                        <ActivityIndicator size="small" color="#0F172A" />
+                      ) : (
+                        <Switch
+                          value={rule.enabled}
+                          onValueChange={() => {
+                            setSavingRuleId(item.id);
+                            setTimeout(() => {
+                              setAutoRules((prev) =>
+                                prev.map((r) => (r.id === item.id ? { ...r, enabled: !rule.enabled } : r))
+                              );
+                              setSavingRuleId(null);
+                            }, 250);
+                          }}
+                          trackColor={{ false: '#CBD5E1', true: '#0F172A' }}
+                          thumbColor="#FFFFFF"
+                          ios_backgroundColor="#CBD5E1"
+                        />
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
             </View>
 
-            {/* Standard Pre-built Templates Library */}
-            <Text style={[styles.sectionHeadingTitle, isDark && styles.textWhite, { marginTop: 14 }]}>
-              STANDARD OPERATIONAL TEMPLATES
-            </Text>
-            <View style={styles.presetTemplatesGrid}>
-              {CAMPAIGN_TYPES.slice(0, 4).map((tmpl) => (
-                <View
-                  key={tmpl.id}
-                  style={[styles.templateCardItem, isDark && styles.templateCardItemDark]}
-                >
-                  <View style={styles.templateCardItemHeader}>
-                    <Text style={[styles.templateCardItemTitle, isDark && styles.textWhite]}>
-                      {tmpl.label}
-                    </Text>
-                    <View style={styles.templateTagPill}>
-                      <Text style={styles.templateTagText}>{tmpl.badge}</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.templateSubjectBox, isDark && styles.templateSubjectBoxDark]} numberOfLines={1}>
-                    Subject: {tmpl.subject}
-                  </Text>
-                  <Text style={[styles.templateBodySnippet, isDark && { color: '#94A3B8' }]} numberOfLines={3}>
-                    {tmpl.body}
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.templateApplyBtn, isDark && styles.templateApplyBtnDark]}
-                    onPress={() => {
-                      handleSelectCampaign(tmpl.id);
-                      setActiveTab('compose');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.templateApplyBtnText, isDark && styles.textWhite]}>
-                      Use in Composer
-                    </Text>
-                    <ArrowRight size={12} color={isDark ? '#FFFFFF' : '#4F46E5'} />
-                  </TouchableOpacity>
+            {/* Interactive FAQs Card */}
+            <View style={[styles.autoFaqCard, isDark && styles.autoFaqCardDark]}>
+              <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                <Svg width="100%" height="100%">
+                  <Defs>
+                    <LinearGradient id="emailFaqFadeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <Stop
+                        offset="0%"
+                        stopColor={isDark ? '#0F172A' : '#FFFFFF'}
+                        stopOpacity={1}
+                      />
+                      <Stop
+                        offset="65%"
+                        stopColor={isDark ? '#0F172A' : '#FFFFFF'}
+                        stopOpacity={1}
+                      />
+                      <Stop
+                        offset="100%"
+                        stopColor={isDark ? '#080E14' : '#F8FAFC'}
+                        stopOpacity={0.88}
+                      />
+                    </LinearGradient>
+                  </Defs>
+                  <Rect width="100%" height="100%" fill="url(#emailFaqFadeGrad)" rx={14} />
+                </Svg>
+              </View>
+
+              <View style={[styles.autoFaqHeader, isDark && styles.autoFaqHeaderDark]}>
+                <View style={[styles.autoFaqIconWrap, isDark && styles.autoFaqIconWrapDark]}>
+                  <HelpCircle size={18} color={isDark ? '#38BDF8' : '#0284C7'} strokeWidth={2.4} />
                 </View>
-              ))}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.autoFaqKicker}>FREQUENTLY ASKED QUESTIONS</Text>
+                  <Text style={[styles.autoFaqHeaderTitle, isDark && styles.textWhite]}>
+                    Automation Rules & Delivery FAQ
+                  </Text>
+                </View>
+              </View>
+
+              {[
+                {
+                  id: 'faq-1',
+                  q: 'How are automated member updates dispatched?',
+                  a: 'Every notification is triggered instantly by GymDeck system events (such as biometric/manual check-in, fee payments, and upcoming expiration cycles). Messages are transmitted in the background through your verified GymDeck Mail relay without requiring manual intervention.',
+                },
+                {
+                  id: 'faq-2',
+                  q: 'Are payment receipts and expiration warnings sent automatically?',
+                  a: 'Yes. Upon receiving a member payment, an itemized GST-ready digital receipt is generated and dispatched immediately to the member’s email address. Expiration reminders are scheduled ahead of membership maturity to maximize renewals.',
+                },
+                {
+                  id: 'faq-3',
+                  q: 'How is member privacy and consent maintained?',
+                  a: 'GymDeck strictly honors member communication preferences. If a member requests not to receive notifications, their profile delivery flag is respected and automated promotional messages will not be sent.',
+                },
+                {
+                  id: 'faq-4',
+                  q: 'Are there extra message fees or third-party API costs?',
+                  a: 'No. Automations run directly through your official verified gym domain via GymDeck Mail MTA with zero third-party per-message fees or subscription surcharges.',
+                },
+              ].map((faq) => {
+                const isExpanded = expandedFaqId === faq.id;
+                return (
+                  <View key={faq.id} style={[styles.autoFaqItem, isDark && styles.autoFaqItemDark]}>
+                    <TouchableOpacity
+                      style={styles.autoFaqQuestionRow}
+                      onPress={() => setExpandedFaqId(isExpanded ? null : faq.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.autoFaqQuestionText, isDark && styles.textWhite]}>
+                        {faq.q}
+                      </Text>
+                      {isExpanded ? (
+                        <ChevronUp size={16} color={isDark ? '#94A3B8' : '#475569'} strokeWidth={2.2} />
+                      ) : (
+                        <ChevronDown size={16} color={isDark ? '#94A3B8' : '#475569'} strokeWidth={2.2} />
+                      )}
+                    </TouchableOpacity>
+                    {isExpanded && (
+                      <Text style={[styles.autoFaqAnswerText, isDark && styles.textMutedDark]}>
+                        {faq.a}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}
@@ -2178,51 +2438,85 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
         </View>
       </Modal>
 
-      {/* ─── INSPECTION MODAL ─── */}
-      <Modal visible={showInspectModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBoxLarge, isDark && styles.modalBoxDark]}>
+      {/* ─── INSPECTION MODAL (Smooth Bottom-to-Top Animation) ─── */}
+      <Modal visible={showInspectModal} transparent animationType="none" onRequestClose={closeInspectModal}>
+        <View style={styles.inspectModalRoot}>
+          {/* Backdrop with fade animation */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              styles.inspectModalBackdrop,
+              { opacity: inspectBackdropAnim },
+            ]}
+          >
+            <TouchableWithoutFeedback onPress={closeInspectModal}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
+          </Animated.View>
+
+          {/* Bottom Sheet Card sliding up smoothly */}
+          <Animated.View
+            style={[
+              styles.inspectSheetContainer,
+              isDark && styles.inspectSheetContainerDark,
+              { transform: [{ translateY: inspectSheetTranslateY }] },
+            ]}
+          >
+            {/* Pull indicator */}
+            <View style={styles.confirmPullIndicatorWrapper}>
+              <View style={[styles.confirmPullIndicator, isDark && { backgroundColor: '#334155' }]} />
+            </View>
+
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
-                <Eye size={16} color="#4F46E5" />
-                <View>
+                <View style={[styles.confirmBadgeIcon, isDark && { backgroundColor: '#1E293B' }]}>
+                  <Eye size={15} color={isDark ? '#E2E8F0' : '#0F172A'} strokeWidth={2.4} />
+                </View>
+                <View style={{ flex: 1 }}>
                   <Text style={[styles.modalTitle, isDark && styles.textWhite]}>Delivery Inspection</Text>
                   <Text style={[styles.modalSubSubject, isDark && { color: '#94A3B8' }]} numberOfLines={1}>
-                    {inspectData?.message?.subject}
+                    {inspectData?.message?.subject || 'Message Telemetry'}
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setShowInspectModal(false)} activeOpacity={0.7}>
-                <X size={18} color={isDark ? '#94A3B8' : '#64748B'} />
+
+              {/* Square close button with 5px curved corners */}
+              <TouchableOpacity
+                onPress={closeInspectModal}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={[styles.confirmSquareCloseBtn, isDark && styles.confirmSquareCloseBtnDark]}
+                activeOpacity={0.7}
+              >
+                <X size={14} color={isDark ? '#94A3B8' : '#64748B'} strokeWidth={2.4} />
               </TouchableOpacity>
             </View>
 
             {loadingInspect ? (
               <View style={styles.centerLoadingSmall}>
-                <ActivityIndicator size="small" color="#4F46E5" />
+                <ActivityIndicator size="small" color="#0F172A" />
                 <Text style={[styles.loadingTextSmall, isDark && { color: '#94A3B8' }]}>
                   Loading delivery breakdown...
                 </Text>
               </View>
             ) : (
               <View style={styles.inspectContent}>
-                {/* 3 Telemetry Tiles */}
+                {/* 3 Telemetry Tiles (Official, Clean & Non-Clumsy) */}
                 <View style={styles.inspectStatsGrid}>
                   <View style={[styles.inspectStatCard, isDark && styles.inspectStatCardDark]}>
-                    <Text style={[styles.inspectStatLabel, isDark && { color: '#94A3B8' }]}>TOTAL</Text>
+                    <Text style={[styles.inspectStatLabel, isDark && { color: '#94A3B8' }]}>TOTAL TARGETED</Text>
                     <Text style={[styles.inspectStatValue, isDark && styles.textWhite]}>
                       {inspectData?.message?.recipientCount ?? 0}
                     </Text>
                   </View>
-                  <View style={[styles.inspectStatCard, { backgroundColor: isDark ? '#064E3B' : '#ECFDF5' }]}>
-                    <Text style={styles.inspectStatLabelEmerald}>DELIVERED</Text>
-                    <Text style={styles.inspectStatValueEmerald}>
+                  <View style={[styles.inspectStatCard, isDark && styles.inspectStatCardDark]}>
+                    <Text style={[styles.inspectStatLabel, isDark && { color: '#94A3B8' }]}>DELIVERED</Text>
+                    <Text style={[styles.inspectStatValue, isDark && styles.textWhite]}>
                       {inspectData?.message?.deliveredCount ?? 0}
                     </Text>
                   </View>
-                  <View style={[styles.inspectStatCard, { backgroundColor: isDark ? '#450A0A' : '#FEF2F2' }]}>
-                    <Text style={styles.inspectStatLabelRose}>BOUNCED</Text>
-                    <Text style={styles.inspectStatValueRose}>
+                  <View style={[styles.inspectStatCard, isDark && styles.inspectStatCardDark]}>
+                    <Text style={[styles.inspectStatLabel, isDark && { color: '#94A3B8' }]}>BOUNCED</Text>
+                    <Text style={[styles.inspectStatValue, isDark && styles.textWhite]}>
                       {inspectData?.message?.bouncedCount ?? 0}
                     </Text>
                   </View>
@@ -2234,44 +2528,34 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
                 </Text>
                 <ScrollView style={[styles.inspectListScroll, isDark && styles.inspectListScrollDark]}>
                   {inspectData?.recipients && inspectData.recipients.length > 0 ? (
-                    inspectData.recipients.map((rec) => (
-                      <View
-                        key={rec.id}
-                        style={[styles.inspectRecipientRow, isDark && styles.inspectRecipientRowDark]}
-                      >
-                        <View style={styles.inspectRecipientLeft}>
-                          <Text style={[styles.inspectRecipientName, isDark && styles.textWhite]} numberOfLines={1}>
-                            {rec.recipientName || 'Member'}
-                          </Text>
-                          <Text style={[styles.inspectRecipientEmail, isDark && { color: '#94A3B8' }]} numberOfLines={1}>
-                            {rec.recipientEmail}
-                          </Text>
-                        </View>
+                    inspectData.recipients.map((rec) => {
+                      const isDelivered = rec.deliveryStatus === 'DELIVERED';
+                      const isBounced = rec.deliveryStatus === 'BOUNCED';
+                      const recDotColor = isDelivered ? '#10B981' : isBounced ? '#EF4444' : '#64748B';
+
+                      return (
                         <View
-                          style={[
-                            styles.deliveryStatusBadge,
-                            rec.deliveryStatus === 'DELIVERED'
-                              ? styles.statusCompletedPill
-                              : rec.deliveryStatus === 'BOUNCED'
-                              ? styles.statusBouncedPill
-                              : styles.statusDefaultPill,
-                          ]}
+                          key={rec.id}
+                          style={[styles.inspectRecipientRow, isDark && styles.inspectRecipientRowDark]}
                         >
-                          <Text
-                            style={[
-                              styles.deliveryStatusText,
-                              rec.deliveryStatus === 'DELIVERED'
-                                ? styles.statusCompletedText
-                                : rec.deliveryStatus === 'BOUNCED'
-                                ? styles.statusBouncedText
-                                : styles.statusDefaultText,
-                            ]}
-                          >
-                            {rec.deliveryStatus}
-                          </Text>
+                          <View style={styles.inspectRecipientLeft}>
+                            <Text style={[styles.inspectRecipientName, isDark && styles.textWhite]} numberOfLines={1}>
+                              {rec.recipientName || 'Member'}
+                            </Text>
+                            <Text style={[styles.inspectRecipientEmail, isDark && { color: '#94A3B8' }]} numberOfLines={1}>
+                              {rec.recipientEmail}
+                            </Text>
+                          </View>
+                          {/* Official Clean Status Indicator (Dot + Clean Monochromatic Badge) */}
+                          <View style={[styles.deliveryStatusBadge, isDark && styles.deliveryStatusBadgeDark]}>
+                            <View style={[styles.logCleanStatusDot, { backgroundColor: recDotColor }]} />
+                            <Text style={[styles.deliveryStatusText, isDark && styles.textWhite]}>
+                              {rec.deliveryStatus}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                    ))
+                      );
+                    })
                   ) : (
                     <Text style={[styles.noRecipientsText, isDark && { color: '#94A3B8' }, { marginVertical: 14 }]}>
                       No recipient delivery telemetry found.
@@ -2283,12 +2567,12 @@ export default function EmailHubView({ isDark = false, onClose }: EmailHubViewPr
 
             <TouchableOpacity
               style={styles.modalCloseButtonBottom}
-              onPress={() => setShowInspectModal(false)}
-              activeOpacity={0.8}
+              onPress={closeInspectModal}
+              activeOpacity={0.85}
             >
               <Text style={styles.modalCloseButtonBottomText}>Close</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -3253,8 +3537,10 @@ const styles = StyleSheet.create({
   },
   logKpiItem: {
     flex: 1,
+    flexBasis: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   logKpiDivider: {
     width: 1,
@@ -3262,11 +3548,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   logKpiLabel: {
-    fontSize: 8.5,
+    fontSize: 9,
     fontWeight: '800',
     color: '#64748B',
-    letterSpacing: 0.7,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   logKpiValue: {
     fontSize: 18,
@@ -3274,12 +3561,14 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     letterSpacing: -0.4,
     marginTop: 2,
+    textAlign: 'center',
   },
   logKpiSub: {
-    fontSize: 9.5,
+    fontSize: 10,
     color: '#94A3B8',
     fontWeight: '600',
     marginTop: 1,
+    textAlign: 'center',
   },
   permDividerDark: {
     borderColor: '#1E293B',
@@ -3290,24 +3579,26 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 14,
     zIndex: 20,
+    width: '100%',
   },
   logSearchAndFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    width: '100%',
   },
   logSearchBox: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     height: 40,
-    minWidth: 0,
   },
   logSearchBoxDark: {
     backgroundColor: '#0F172A',
@@ -3315,11 +3606,11 @@ const styles = StyleSheet.create({
   },
   logSearchInput: {
     flex: 1,
+    minWidth: 0,
     fontSize: 11.5,
     color: '#0F172A',
     fontWeight: '500',
     padding: 0,
-    minWidth: 0,
   },
   logDropdownBtn: {
     flexDirection: 'row',
@@ -3327,21 +3618,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 4,
     height: 40,
-    width: 82,
-    paddingHorizontal: 7,
+    width: 96,
+    paddingHorizontal: 8,
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    flexShrink: 0,
   },
   logDropdownBtnDark: {
     backgroundColor: '#0F172A',
     borderColor: '#1E293B',
   },
   logDropdownBtnActive: {
-    borderColor: '#C7D2FE',
-    backgroundColor: '#EEF2FF',
+    borderColor: '#BAE6FD',
+    backgroundColor: '#F0F9FF',
   },
   logDropdownBtnText: {
     flex: 1,
@@ -3351,7 +3641,7 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   logDropdownBtnTextActive: {
-    color: '#4F46E5',
+    color: '#0284C7',
   },
   logDropdownMenu: {
     backgroundColor: '#FFFFFF',
@@ -3457,14 +3747,14 @@ const styles = StyleSheet.create({
   },
   logCleanCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
+    padding: 13,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
     elevation: 1,
   },
   logCleanCardDark: {
@@ -3478,18 +3768,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   logCleanAvatarBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 9,
-    backgroundColor: '#EEF2FF',
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E0E7FF',
+    borderColor: '#E2E8F0',
   },
   logCleanAvatarBoxDark: {
-    backgroundColor: '#1E1B4B',
-    borderColor: '#312E81',
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
   },
   logCleanHeaderTextContainer: {
     flex: 1,
@@ -3516,25 +3806,37 @@ const styles = StyleSheet.create({
   logCleanStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    gap: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3.5,
+    borderRadius: 5,
     borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
     alignSelf: 'flex-start',
+  },
+  logCleanStatusBadgeDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  logCleanStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   logCleanStatusText: {
     fontSize: 9.5,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: '#334155',
   },
   logCleanContentBox: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
     marginBottom: 10,
   },
   logCleanContentBoxDark: {
@@ -3578,21 +3880,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
-    paddingVertical: 5.5,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: '#E0E7FF',
+    backgroundColor: '#000000',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   logInspectActionBtnDark: {
-    backgroundColor: '#1E1B4B',
-    borderColor: '#312E81',
+    backgroundColor: '#000000',
   },
   logInspectActionBtnText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 
   /* Empty State */
@@ -4349,6 +4648,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
   },
+  /* Inspect Modal Bottom Sheet */
+  inspectModalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  inspectModalBackdrop: {
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  inspectSheetContainer: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 20,
+    gap: 12,
+  },
+  inspectSheetContainerDark: {
+    backgroundColor: '#0F172A',
+    borderColor: '#1E293B',
+  },
+
   inspectContent: {
     gap: 10,
   },
@@ -4358,54 +4688,40 @@ const styles = StyleSheet.create({
   },
   inspectStatCard: {
     flex: 1,
-    borderRadius: 10,
-    padding: 8,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   inspectStatCardDark: {
     backgroundColor: '#1E293B',
+    borderColor: '#334155',
   },
   inspectStatLabel: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 8.5,
+    fontWeight: '800',
     color: '#64748B',
+    letterSpacing: 0.5,
   },
   inspectStatValue: {
     fontSize: 15,
     fontWeight: '900',
     marginTop: 2,
-  },
-  inspectStatLabelEmerald: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#065F46',
-  },
-  inspectStatValueEmerald: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#047857',
-    marginTop: 2,
-  },
-  inspectStatLabelRose: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#991B1B',
-  },
-  inspectStatValueRose: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#B91C1C',
-    marginTop: 2,
+    color: '#0F172A',
   },
   inspectListTitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: '#64748B',
+    textTransform: 'uppercase',
   },
   inspectListScroll: {
     maxHeight: 180,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -4416,7 +4732,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -4429,26 +4746,38 @@ const styles = StyleSheet.create({
   },
   inspectRecipientName: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   inspectRecipientEmail: {
-    fontSize: 9,
-    color: '#94A3B8',
+    fontSize: 9.5,
+    color: '#64748B',
     marginTop: 1,
   },
   deliveryStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  deliveryStatusBadgeDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
   },
   deliveryStatusText: {
-    fontSize: 8.5,
+    fontSize: 9,
     fontWeight: '800',
+    color: '#334155',
+    letterSpacing: 0.3,
   },
   modalCloseButtonBottom: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#000000',
     height: 38,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4472,6 +4801,195 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  textMutedDark: {
+    color: '#94A3B8',
+  },
+  /* Cardless Permission & Access Section */
+  permSection: {
+    marginBottom: 16,
+    paddingHorizontal: 2,
+  },
+  permHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  permShieldIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  permShieldIconWrapDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  permOverline: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  permMainTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    marginTop: 1,
+  },
+  permMasterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 4,
+  },
+  permMasterTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  permMasterSub: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  permList: {
+    paddingTop: 0,
+  },
+  permItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+  },
+  permItemBorder: {
+    borderBottomWidth: 1,
+    borderColor: '#F8FAFC',
+  },
+  permItemIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  permItemIconWrapDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  permItemTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  permItemDesc: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 1,
+    fontWeight: '500',
+  },
+
+  /* Professional FAQ Card */
+  autoFaqCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 14,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    paddingBottom: 20,
+    marginBottom: 20,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  autoFaqCardDark: {
+    borderColor: '#1E293B',
+  },
+  autoFaqHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  autoFaqHeaderDark: {
+    borderBottomColor: '#1E293B',
+  },
+  autoFaqIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  autoFaqIconWrapDark: {
+    backgroundColor: 'rgba(2, 132, 199, 0.15)',
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+  },
+  autoFaqKicker: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  autoFaqHeaderTitle: {
+    fontSize: 14.5,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  autoFaqItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  autoFaqItemDark: {
+    borderBottomColor: '#1E293B',
+  },
+  autoFaqQuestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  autoFaqQuestionText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    flex: 1,
+    marginRight: 10,
+    lineHeight: 17,
+  },
+  autoFaqAnswerText: {
+    fontSize: 11.5,
+    lineHeight: 17.5,
+    color: '#475569',
+    marginTop: 8,
+    paddingRight: 6,
+    fontWeight: '500',
   },
   loadingTextSmall: {
     fontSize: 11,

@@ -4549,8 +4549,10 @@ const styles = StyleSheet.create({
   },
   logKpiItem: {
     flex: 1,
+    flexBasis: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   logKpiDivider: {
     width: 1,
@@ -4558,11 +4560,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   logKpiLabel: {
-    fontSize: 8.5,
+    fontSize: 9,
     fontWeight: '800',
     color: '#64748B',
-    letterSpacing: 0.7,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   logKpiValue: {
     fontSize: 18,
@@ -4570,17 +4573,20 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     letterSpacing: -0.4,
     marginTop: 2,
+    textAlign: 'center',
   },
   logKpiSub: {
-    fontSize: 9.5,
+    fontSize: 10,
     color: '#94A3B8',
     fontWeight: '600',
     marginTop: 1,
+    textAlign: 'center',
   },
   logControlsSection: {
     gap: 10,
     marginBottom: 14,
     zIndex: 20,
+    width: '100%',
   },
   logFilterPillRow: {
     flexDirection: 'row',
@@ -4639,9 +4645,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    width: '100%',
   },
   logSearchBox: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -4658,6 +4666,7 @@ const styles = StyleSheet.create({
   },
   logSearchInput: {
     flex: 1,
+    minWidth: 0,
     fontSize: 11.5,
     color: '#0F172A',
     fontWeight: '500',
